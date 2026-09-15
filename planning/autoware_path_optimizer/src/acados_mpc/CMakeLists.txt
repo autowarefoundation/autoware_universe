@@ -25,7 +25,7 @@ set(GENERATED_MPC_FILES
 
 # CRITICAL: Mark files as generated so CMake knows to wait for them
 set_source_files_properties(${GENERATED_MPC_FILES} PROPERTIES GENERATED TRUE)
-# Get the parent directory of 'generators' so 'from generators.xxx' works
+# acados_mpc on PYTHONPATH so 'from generators...' and 'from utils...' work
 get_filename_component(PACKAGE_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}" ABSOLUTE)
 
 set(_template_path "${ACADOS_SOURCE_DIR}/interfaces/acados_template")
@@ -40,9 +40,12 @@ add_custom_command(
   OUTPUT ${GENERATED_MPC_FILES}
   COMMAND ${CMAKE_COMMAND} -E env ${_env_vars}
     ${ACADOS_SOURCE_DIR}/.venv/bin/python3
-    ${CMAKE_CURRENT_SOURCE_DIR}/generators/path_tracking_mpc_spatial_with_body_points.py
+    ${CMAKE_CURRENT_SOURCE_DIR}/generators/path_tracking_mpc_spatial.py
   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/generators/path_tracking_mpc_spatial_with_body_points.py
+  DEPENDS
+    ${CMAKE_CURRENT_SOURCE_DIR}/generators/path_tracking_mpc_spatial.py
+    ${CMAKE_CURRENT_SOURCE_DIR}/generators/bicycle_model_spatial.py
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils/symbolic_cubic_spline.py
   COMMENT "Generating acados MPC solver code"
 )
 
@@ -51,7 +54,7 @@ add_custom_target(generate_acados_code DEPENDS ${GENERATED_MPC_FILES})
 
 # 4. acados_interface library
 add_library(acados_interface SHARED
-  src/acados_interface.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/acados_interface.cpp
   ${GENERATED_MPC_FILES}
 )
 

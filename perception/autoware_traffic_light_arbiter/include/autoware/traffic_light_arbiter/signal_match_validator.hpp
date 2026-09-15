@@ -24,6 +24,7 @@
 
 #include <memory>
 #include <optional>
+#include <string>
 #include <unordered_set>
 #include <vector>
 
@@ -35,6 +36,8 @@ enum class SourcePriority {
   EXTERNAL,    // Prioritize external signals
   PERCEPTION   // Prioritize perception signals
 };
+
+SourcePriority to_source_priority(const std::string & source_priority);
 
 /**
  * @class SignalMatchValidator
@@ -53,9 +56,19 @@ public:
   using TrafficLightConstPtr = lanelet::TrafficLightConstPtr;
 
   /**
-   * @brief Default constructor for SignalMatchValidator.
+   * @brief Construct a validator with the source-priority mode fixed at
+   *        construction. The mode is immutable for the validator's lifetime.
+   *
+   * @param source_priority "confidence" (confidence-based selection),
+   *                        "external" (prioritize external), or
+   *                        "perception" (prioritize perception). Any other
+   *                        value is treated as "confidence", mirroring
+   *                        TrafficLightArbiterNode's parameter fallback.
    */
-  SignalMatchValidator() = default;
+  explicit SignalMatchValidator(const std::string & source_priority)
+  : source_priority_(to_source_priority(source_priority))
+  {
+  }
 
   /**
    * @brief Validates and compares traffic signal data from perception and external sources.
@@ -69,34 +82,25 @@ public:
    * @param external_signals Traffic signal data from external source.
    * @return A validated TrafficSignalArray.
    */
-  TrafficSignalArray validateSignals(
-    const TrafficSignalArray & perception_signals, const TrafficSignalArray & external_signals);
+  TrafficSignalArray validate_signals(
+    const TrafficSignalArray & perception_signals,
+    const TrafficSignalArray & external_signals) const;
 
   /**
-   * @brief Sets the pedestrian signals to be considered during validation.
+   * @brief Sets the pedestrian signal IDs to be considered during validation.
    *
-   * This method allows the specification of pedestrian signals, which are then
-   * used to adjust the validation logic, acknowledging their unique characteristics
-   * in traffic signal datasets.
+   * Pedestrian-classified signals receive distinct reconciliation handling in
+   * validate_signals(). The caller supplies the set of regulatory-element IDs
+   * (typically derived from crosswalk lanelets); only the IDs are needed for
+   * the routing decision.
    *
-   * @param pedestrian_signals A vector of pedestrian signal pointers.
+   * @param ids Set of regulatory-element IDs classified as pedestrian signals.
    */
-  void setPedestrianSignals(const std::vector<TrafficLightConstPtr> & pedestrian_signals);
-
-  /**
-   * @brief Sets the source priority for signal selection.
-   *
-   * This method sets the priority mode for selecting between perception and external signals.
-   * Options are CONFIDENCE (use confidence-based selection), EXTERNAL (prioritize external),
-   * or PERCEPTION (prioritize perception signals).
-   *
-   * @param source_priority The priority mode for signal selection.
-   */
-  void setSourcePriority(const SourcePriority source_priority);
+  void set_pedestrian_traffic_light_ids(std::unordered_set<lanelet::Id> ids);
 
 private:
   SourcePriority source_priority_;
-  std::unordered_set<lanelet::Id> map_pedestrian_signal_regulatory_elements_set_;
+  std::unordered_set<lanelet::Id> pedestrian_traffic_light_ids_;
 
   /**
    * @brief Checks if a given signal ID corresponds to a pedestrian signal.
@@ -107,7 +111,7 @@ private:
    * @param signal_id The ID of the signal to check.
    * @return True if the signal is a pedestrian signal, false otherwise.
    */
-  bool isPedestrianSignal(const lanelet::Id & signal_id);
+  bool is_pedestrian_traffic_light(const lanelet::Id & signal_id) const;
 };
 
 }  // namespace autoware::traffic_light

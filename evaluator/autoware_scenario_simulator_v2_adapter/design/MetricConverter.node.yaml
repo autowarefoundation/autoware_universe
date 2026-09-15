@@ -1,0 +1,55 @@
+autoware_system_design_format: 0.3.0
+# node information
+name: MetricConverter.node
+package:
+  name: autoware_scenario_simulator_v2_adapter
+  provider: autoware
+launch:
+  plugin: autoware::scenario_simulator_v2_adapter::MetricConverter
+  executable: autoware_scenario_simulator_v2_adapter_node
+  node_output: screen
+# interfaces
+# NOTE: metric subscriptions are created dynamically, one per topic listed in the
+# `metric_topic_list` parameter (defaults shown as representative sockets). For each
+# received metric a UserDefinedValue is published on a topic derived from the metric
+# name; these publishers are created at runtime and are not enumerated as static
+# sockets. The /diagnostics subscription and the aggregated diagnostic outputs
+# (one UserDefinedValue publisher per diagnostic group `output_topic_name` in
+# diagnostic_config.param.yaml) are likewise driven by configuration.
+subscribers:
+  - name: planning_evaluator_metrics
+    message_type: tier4_metric_msgs/msg/MetricArray
+    global: /planning/planning_evaluator/metrics
+  - name: control_evaluator_metrics
+    message_type: tier4_metric_msgs/msg/MetricArray
+    global: /control/control_evaluator/metrics
+  - name: processing_time_checker_metrics
+    message_type: tier4_metric_msgs/msg/MetricArray
+    global: /system/processing_time_checker/metrics
+  - name: diagnostics
+    message_type: diagnostic_msgs/msg/DiagnosticArray
+    global: /diagnostics
+publishers:
+  - name: overall_diagnostics
+    message_type: tier4_simulation_msgs/msg/UserDefinedValue
+    global: /diagnostics/scenario_simulator_v2_adapter/overall_diagnostics
+# parameters
+param_files:
+  - name: scenario_simulator_v2_adapter_param
+    default: $(find-pkg-share autoware_scenario_simulator_v2_adapter)/config/scenario_simulator_v2_adapter.param.yaml
+  - name: diagnostic_config_param
+    default: $(find-pkg-share autoware_scenario_simulator_v2_adapter)/config/diagnostic_config.param.yaml
+param_values:
+  - name: metric_topic_list
+    type: string_array
+    default:
+      - /planning/planning_evaluator/metrics
+      - /control/control_evaluator/metrics
+      - /system/processing_time_checker/metrics
+# processes
+processes:
+  - name: convert_metrics
+    trigger_conditions:
+      - on_input: planning_evaluator_metrics
+    outcomes:
+      - to_output: overall_diagnostics

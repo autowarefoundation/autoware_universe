@@ -29,6 +29,7 @@
 #include <visualization_msgs/msg/marker.hpp>
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -185,26 +186,45 @@ bool LidarFRNetNode::setStaticCropBoxTransform(const std::string & sensor_frame_
  */
 visualization_msgs::msg::Marker LidarFRNetNode::getMarkerMsg(rclcpp::Time stamp) const
 {
+  if (!ego_crop_box_marker_msg_) {
+    throw std::bad_optional_access();
+  }
   visualization_msgs::msg::Marker msg = *ego_crop_box_marker_msg_;
   msg.header.stamp = stamp;
   return msg;
 }
+
+namespace
+{
+
+const ros_utils::PointCloudLayout & getCloudFilteredLayout(
+  const std::optional<ros_utils::PointCloudLayout> & layout)
+{
+  if (!layout) {
+    throw std::bad_optional_access();
+  }
+  return *layout;
+}
+
+CloudFormat getFilteredOutputFormat(const std::optional<CloudFormat> & format)
+{
+  if (!format) {
+    throw std::bad_optional_access();
+  }
+  return *format;
+}
+
+}  // namespace
 
 /**
  * @brief On each point cloud: init filtered layout once from first message, skip if no subscribers,
  *        resolve static TF for crop box once if needed, allocate outputs, run pipeline, publish
  *        and debug.
  */
-void LidarFRNetNode::cloudCallback(
-  const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg)
+void LidarFRNetNode::initializeFilteredLayout(const cuda_blackboard::CudaPointCloud2 & msg)
 {
-  if (stop_watch_ptr_) {
-    stop_watch_ptr_->toc("processing/total", true);
-  }
-
-  // Initialize filtered layout from first message (preserves input format)
   std::call_once(init_filtered_layout_, [this, &msg]() {
-    const auto input_format = ros_utils::detectCloudFormat(msg->fields);
+    const auto input_format = ros_utils::detectCloudFormat(msg.fields);
     if (input_format == CloudFormat::UNKNOWN) {
       throw std::runtime_error("Unsupported input point cloud format.");
     }
@@ -226,8 +246,11 @@ void LidarFRNetNode::cloudCallback(
       to_string(output_format), cloud_filtered_layout_->fields.size(),
       cloud_filtered_layout_->point_step);
   });
+}
 
-  const auto active_comm = utils::ActiveComm(
+utils::ActiveComm LidarFRNetNode::getActiveComm()
+{
+  return utils::ActiveComm(
     cloud_seg_pub_->get_subscription_count() +
         cloud_seg_pub_->get_intra_process_subscription_count() >
       0,
@@ -237,75 +260,106 @@ void LidarFRNetNode::cloudCallback(
     cloud_filtered_pub_->get_subscription_count() +
         cloud_filtered_pub_->get_intra_process_subscription_count() >
       0);
+}
 
+bool LidarFRNetNode::ensureCropBoxTransform(const cuda_blackboard::CudaPointCloud2 & msg)
+{
+  if (!crop_box_enabled_) {
+    return true;
+  }
+  if (crop_sensor_to_ref_.has_value()) {
+    return true;
+  }
+  return setStaticCropBoxTransform(msg.header.frame_id);
+}
+
+const std::array<float, 12> * LidarFRNetNode::getCropSensorToRefPtr() const
+{
+  return crop_sensor_to_ref_.has_value() ? &*crop_sensor_to_ref_ : nullptr;
+}
+
+void LidarFRNetNode::publishOutputMessages(
+  const utils::ActiveComm & active_comm,
+  std::unique_ptr<cuda_blackboard::CudaPointCloud2> & cloud_seg_msg_ptr,
+  std::unique_ptr<cuda_blackboard::CudaPointCloud2> & cloud_viz_msg_ptr,
+  std::unique_ptr<cuda_blackboard::CudaPointCloud2> & cloud_filtered_msg_ptr)
+{
+  if (active_comm.seg) {
+    cloud_seg_pub_->publish(std::move(cloud_seg_msg_ptr));
+  }
+  if (active_comm.viz) {
+    cloud_viz_pub_->publish(std::move(cloud_viz_msg_ptr));
+  }
+  if (active_comm.filtered) {
+    cloud_filtered_pub_->publish(std::move(cloud_filtered_msg_ptr));
+  }
+}
+
+void LidarFRNetNode::publishDebugInfo(
+  const cuda_blackboard::CudaPointCloud2 & msg,
+  const std::unordered_map<std::string, double> & proc_timing)
+{
+  if (!(debug_publisher_ptr_ && stop_watch_ptr_)) {
+    return;
+  }
+
+  last_processing_time_ms_.emplace(stop_watch_ptr_->toc("processing/total", true));
+  const double cyclic_time_ms = stop_watch_ptr_->toc("cyclic", true);
+  const double pipeline_latency_ms =
+    std::chrono::duration<double, std::milli>(
+      std::chrono::nanoseconds((this->get_clock()->now() - msg.header.stamp).nanoseconds()))
+      .count();
+  debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
+    "debug/cyclic_time_ms", cyclic_time_ms);
+  debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
+    "debug/pipeline_latency_ms", pipeline_latency_ms);
+  debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
+    "debug/processing_time/total_ms", *last_processing_time_ms_);
+  for (const auto & [topic, time_ms] : proc_timing) {
+    debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
+      topic, time_ms);
+  }
+}
+
+void LidarFRNetNode::cloudCallback(
+  const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg)
+{
+  if (stop_watch_ptr_) {
+    stop_watch_ptr_->toc("processing/total", true);
+  }
+
+  initializeFilteredLayout(*msg);
+
+  const auto active_comm = getActiveComm();
   if (!active_comm) {
     return;
   }
 
-  // Static transform sensor to reference for crop box: lookup once, then use cached value
-  if (crop_box_enabled_) {
-    if (!crop_sensor_to_ref_.has_value()) {
-      if (!setStaticCropBoxTransform(msg->header.frame_id)) {
-        return;
-      }
-    }
+  if (!ensureCropBoxTransform(*msg)) {
+    return;
   }
 
-  const std::array<float, 12> * crop_sensor_to_ref_ptr =
-    crop_sensor_to_ref_.has_value() ? &*crop_sensor_to_ref_ : nullptr;
+  const auto * crop_sensor_to_ref_ptr = getCropSensorToRefPtr();
 
-  // Allocate output messages with profile max capacity (num_points after interpolation can exceed
-  // input count)
   auto cloud_seg_msg_ptr =
     ros_utils::generatePointCloudMessageFromInput(*msg, cloud_seg_layout_, max_output_points_);
   auto cloud_viz_msg_ptr =
     ros_utils::generatePointCloudMessageFromInput(*msg, cloud_viz_layout_, max_output_points_);
-  auto cloud_filtered_msg_ptr = ros_utils::generatePointCloudMessageFromInput(
-    *msg, *cloud_filtered_layout_, max_output_points_);
+  const auto & cloud_filtered_layout = getCloudFilteredLayout(cloud_filtered_layout_);
+  auto cloud_filtered_msg_ptr =
+    ros_utils::generatePointCloudMessageFromInput(*msg, cloud_filtered_layout, max_output_points_);
 
   std::unordered_map<std::string, double> proc_timing;
+  const auto filtered_output_format = getFilteredOutputFormat(filtered_output_format_);
   if (!frnet_->process(
         msg, *cloud_seg_msg_ptr, *cloud_viz_msg_ptr, *cloud_filtered_msg_ptr,
-        *filtered_output_format_, active_comm, proc_timing, crop_sensor_to_ref_ptr))
+        filtered_output_format, active_comm, proc_timing, crop_sensor_to_ref_ptr)) {
     return;
-
-  // Publish output messages
-  if (active_comm.seg) {
-    cloud_seg_pub_->publish(std::move(cloud_seg_msg_ptr));
   }
 
-  if (active_comm.viz) {
-    cloud_viz_pub_->publish(std::move(cloud_viz_msg_ptr));
-  }
-
-  if (active_comm.filtered) {
-    cloud_filtered_pub_->publish(std::move(cloud_filtered_msg_ptr));
-  }
-
+  publishOutputMessages(active_comm, cloud_seg_msg_ptr, cloud_viz_msg_ptr, cloud_filtered_msg_ptr);
   publishEgoCropBoxDebug(rclcpp::Time(msg->header.stamp));
-
-  // Note: published_time_pub_ cannot be used with CudaBlackboardPublisher
-  // because it doesn't inherit from rclcpp::PublisherBase
-  // published_time_pub_->publish_if_subscribed(cloud_seg_pub_, msg->header.stamp);
-
-  if (debug_publisher_ptr_ && stop_watch_ptr_) {
-    last_processing_time_ms_.emplace(stop_watch_ptr_->toc("processing/total", true));
-    const double cyclic_time_ms = stop_watch_ptr_->toc("cyclic", true);
-    const double pipeline_latency_ms =
-      std::chrono::duration<double, std::milli>(
-        std::chrono::nanoseconds((this->get_clock()->now() - msg->header.stamp).nanoseconds()))
-        .count();
-    debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
-      "debug/cyclic_time_ms", cyclic_time_ms);
-    debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
-      "debug/pipeline_latency_ms", pipeline_latency_ms);
-    debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
-      "debug/processing_time/total_ms", *last_processing_time_ms_);
-    for (const auto & [topic, time_ms] : proc_timing) {
-      debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
-        topic, time_ms);
-    }
-  }
+  publishDebugInfo(*msg, proc_timing);
 }
 
 /**

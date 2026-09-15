@@ -37,6 +37,9 @@ bool CameraInfoSubscriber::is_camera_info_nullopt() const
 
 std::string CameraInfoSubscriber::get_frame_id() const
 {
+  if (!opt_info_.has_value()) {
+    throw std::runtime_error("camera_info is not ready but it's accessed");
+  }
   return opt_info_->header.frame_id;
 }
 

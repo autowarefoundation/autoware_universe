@@ -38,6 +38,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <unordered_map>
 
 namespace autoware::lidar_frnet
 {
@@ -133,6 +134,18 @@ private:
    * @return Marker (call only when ego_crop_box_marker_msg_ has value)
    */
   visualization_msgs::msg::Marker getMarkerMsg(rclcpp::Time stamp) const;
+  void initializeFilteredLayout(const cuda_blackboard::CudaPointCloud2 & msg);
+  utils::ActiveComm getActiveComm();
+  bool ensureCropBoxTransform(const cuda_blackboard::CudaPointCloud2 & msg);
+  const std::array<float, 12> * getCropSensorToRefPtr() const;
+  void publishOutputMessages(
+    const utils::ActiveComm & active_comm,
+    std::unique_ptr<cuda_blackboard::CudaPointCloud2> & cloud_seg_msg_ptr,
+    std::unique_ptr<cuda_blackboard::CudaPointCloud2> & cloud_viz_msg_ptr,
+    std::unique_ptr<cuda_blackboard::CudaPointCloud2> & cloud_filtered_msg_ptr);
+  void publishDebugInfo(
+    const cuda_blackboard::CudaPointCloud2 & msg,
+    const std::unordered_map<std::string, double> & proc_timing);
 };
 
 }  // namespace autoware::lidar_frnet

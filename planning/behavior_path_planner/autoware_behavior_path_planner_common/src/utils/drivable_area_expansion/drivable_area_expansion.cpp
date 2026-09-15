@@ -256,9 +256,10 @@ std::vector<double> calculate_maximum_distance(
         maximum_distances[i + 1] = 0.0;
         break;
       }
-      if (std::all_of(
-            uncrossable_poly.outer().begin(), uncrossable_poly.outer().end(),
-            is_point_on_correct_side)) {
+      if (
+        std::all_of(
+          uncrossable_poly.outer().begin(), uncrossable_poly.outer().end(),
+          is_point_on_correct_side)) {
         const auto bound_to_poly_dist = boost::geometry::distance(segment_ls, uncrossable_poly);
         maximum_distances[i] = std::min(maximum_distances[i], bound_to_poly_dist);
         maximum_distances[i + 1] = std::min(maximum_distances[i + 1], bound_to_poly_dist);

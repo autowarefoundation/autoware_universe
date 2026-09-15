@@ -2,6 +2,16 @@
 Changelog for package autoware_external_cmd_selector
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* fix(external_cmd_selector): data race bug (`#12887 <https://github.com/autowarefoundation/autoware_universe/issues/12887>`_)
+  * fix data race bug
+  * delete unnecessary comment
+  * use atomic
+  ---------
+* Contributors: Koichi Imai, github-actions
+
 0.51.0 (2026-05-01)
 -------------------
 

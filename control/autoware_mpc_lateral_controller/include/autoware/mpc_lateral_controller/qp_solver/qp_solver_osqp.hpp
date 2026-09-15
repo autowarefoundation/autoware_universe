@@ -17,7 +17,6 @@
 
 #include "autoware/mpc_lateral_controller/qp_solver/qp_solver_interface.hpp"
 #include "autoware/osqp_interface/osqp_interface.hpp"
-#include "rclcpp/rclcpp.hpp"
 
 namespace autoware::motion::control::mpc_lateral_controller
 {
@@ -29,7 +28,7 @@ public:
   /**
    * @brief constructor
    */
-  QPSolverOSQP(const rclcpp::Logger & logger, rclcpp::Clock::SharedPtr clock_);
+  QPSolverOSQP() = default;
 
   /**
    * @brief destructor
@@ -46,9 +45,10 @@ public:
    * @param [in] lb_a parameter matrix for constraint lb_a < a*u < ub_a (not used here)
    * @param [in] ub_a parameter matrix for constraint lb_a < a*u < ub_a (not used here)
    * @param [out] u optimal variable vector
-   * @return true if the problem was solved
+   * @return solve result, including success flag and an optional warning message for the caller
+   * to log
    */
-  bool solve(
+  QPSolverResult solve(
     const Eigen::MatrixXd & h_mat, const Eigen::MatrixXd & f_vec, const Eigen::MatrixXd & a,
     const Eigen::VectorXd & lb, const Eigen::VectorXd & ub, const Eigen::VectorXd & lb_a,
     const Eigen::VectorXd & ub_a, Eigen::VectorXd & u) override;
@@ -59,8 +59,6 @@ public:
 
 private:
   autoware::osqp_interface::OSQPInterface osqpsolver_;
-  rclcpp::Logger logger_;
-  rclcpp::Clock::SharedPtr clock_;
 };
 }  // namespace autoware::motion::control::mpc_lateral_controller
 #endif  // AUTOWARE__MPC_LATERAL_CONTROLLER__QP_SOLVER__QP_SOLVER_OSQP_HPP_

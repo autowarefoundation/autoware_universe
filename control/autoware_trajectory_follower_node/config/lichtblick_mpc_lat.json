@@ -1,0 +1,214 @@
+{
+  "configById": {
+    "Plot!lat_0": {
+      "paths": [
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/control/trajectory_follower/lateral/diagnostic.data[5]",
+          "enabled": true,
+          "color": "#1f77b4",
+          "label": "lateral error"
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/control/trajectory_follower/lateral/diagnostic.data[8]",
+          "enabled": true,
+          "color": "#d62728",
+          "label": "yaw error"
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/control/trajectory_follower/lateral/diagnostic.data[0]",
+          "enabled": true,
+          "color": "#1ac938",
+          "label": "steer cmd (final)"
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/control/trajectory_follower/lateral/diagnostic.data[2]",
+          "enabled": true,
+          "color": "#ff7f0e",
+          "label": "steer cmd (FF-filtered)"
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/control/trajectory_follower/lateral/diagnostic.data[3]",
+          "enabled": true,
+          "color": "#f14cc1",
+          "label": "steer cmd (FF-raw)"
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/control/trajectory_follower/lateral/diagnostic.data[4]",
+          "enabled": true,
+          "color": "#9467bd",
+          "label": "steer measured"
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/control/trajectory_follower/lateral/diagnostic.data[1]",
+          "enabled": true,
+          "color": "#17becf",
+          "label": "steer cmd (mpc-raw)"
+        }
+      ],
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "showPlotValuesInLegend": false,
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "sidebarDimension": 240,
+      "lichtblickPanelTitle": "Lateral Controller Info"
+    },
+    "Plot!lat_1": {
+      "paths": [
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/control/trajectory_follower/lateral/diagnostic.data[9]",
+          "enabled": true,
+          "color": "#1f77b4",
+          "label": "trajectory velocity"
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/control/trajectory_follower/lateral/diagnostic.data[10]",
+          "enabled": true,
+          "color": "#d62728",
+          "label": "current velocity"
+        }
+      ],
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "showPlotValuesInLegend": false,
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "sidebarDimension": 240,
+      "lichtblickPanelTitle": "Velocity"
+    },
+    "Plot!lat_2": {
+      "paths": [
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/control/trajectory_follower/lateral/diagnostic.data[14]",
+          "enabled": true,
+          "color": "#d62728",
+          "label": "smoothed"
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/control/trajectory_follower/lateral/diagnostic.data[15]",
+          "enabled": true,
+          "color": "#1f77b4",
+          "label": "raw"
+        }
+      ],
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "showPlotValuesInLegend": false,
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "sidebarDimension": 240,
+      "lichtblickPanelTitle": "path curvature"
+    },
+    "Plot!lat_3": {
+      "paths": [
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/control/trajectory_follower/lateral/diagnostic.data[11]",
+          "enabled": true,
+          "color": "#1ac938",
+          "label": "steering cmd"
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/control/trajectory_follower/lateral/diagnostic.data[12]",
+          "enabled": true,
+          "color": "#ff7f0e",
+          "label": "steering measured "
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/control/trajectory_follower/lateral/diagnostic.data[13]",
+          "enabled": true,
+          "color": "#d62728",
+          "label": "path curvature (smoothed)"
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/control/trajectory_follower/lateral/diagnostic.data[17]",
+          "enabled": true,
+          "color": "#1f77b4",
+          "label": "steering predicted"
+        }
+      ],
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "showPlotValuesInLegend": false,
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "sidebarDimension": 240,
+      "lichtblickPanelTitle": "angular-velocity converted from"
+    },
+    "Plot!lat_4": {
+      "paths": [
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/control/trajectory_follower/lateral/diagnostic.data[7]",
+          "enabled": true,
+          "color": "#1ac938",
+          "label": "desired yaw"
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/control/trajectory_follower/lateral/diagnostic.data[6]",
+          "enabled": true,
+          "color": "#ff7f0e",
+          "label": "current yaw"
+        }
+      ],
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "showPlotValuesInLegend": false,
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "sidebarDimension": 240,
+      "lichtblickPanelTitle": "yaw"
+    }
+  },
+  "globalVariables": {},
+  "userNodes": {},
+  "playbackConfig": {
+    "speed": 1
+  },
+  "layout": {
+    "first": {
+      "first": "Plot!lat_0",
+      "second": {
+        "first": "Plot!lat_1",
+        "second": "Plot!lat_2",
+        "direction": "column",
+        "splitPercentage": 50
+      },
+      "direction": "column",
+      "splitPercentage": 50
+    },
+    "second": {
+      "first": "Plot!lat_3",
+      "second": "Plot!lat_4",
+      "direction": "column",
+      "splitPercentage": 71.97149643705464
+    },
+    "direction": "column",
+    "splitPercentage": 50
+  }
+}

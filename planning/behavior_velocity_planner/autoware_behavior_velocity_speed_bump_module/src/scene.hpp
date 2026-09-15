@@ -1,4 +1,4 @@
-// Copyright 2020 Tier IV, Inc., Leo Drive Teknoloji A.Ş.
+// Copyright 2025 Tier IV, Inc., Leo Drive Teknoloji A.Ş.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,10 +17,9 @@
 
 #include "util.hpp"
 
-#include <autoware/behavior_velocity_planner_common/scene_module_interface.hpp>
+#include <autoware/behavior_velocity_planner_common/experimental/scene_module_interface.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/speed_bump.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
-#include <rclcpp/rclcpp.hpp>
 
 #include <memory>
 #include <utility>
@@ -28,17 +27,16 @@
 
 namespace autoware::behavior_velocity_planner
 {
-using autoware_internal_planning_msgs::msg::PathWithLaneId;
-
-class SpeedBumpModule : public SceneModuleInterface
+class SpeedBumpModule : public experimental::SceneModuleInterface
 {
 public:
   struct DebugData
   {
     double base_link2front;
-    PathPolygonIntersectionStatus path_polygon_intersection_status;
-    std::vector<geometry_msgs::msg::Pose> slow_start_poses;
-    std::vector<geometry_msgs::msg::Point> slow_end_points;
+    std::optional<geometry_msgs::msg::Point> first_intersection_point;
+    std::optional<geometry_msgs::msg::Point> second_intersection_point;
+    std::optional<geometry_msgs::msg::Pose> slow_start_pose;
+    std::optional<geometry_msgs::msg::Point> slow_end_point;
     std::vector<geometry_msgs::msg::Point> speed_bump_polygon;
   };
 
@@ -54,21 +52,23 @@ public:
   };
 
   SpeedBumpModule(
-    const int64_t module_id, const int64_t lane_id,
-    const lanelet::autoware::SpeedBump & speed_bump_reg_elem, const PlannerParam & planner_param,
-    const rclcpp::Logger & logger, const rclcpp::Clock::SharedPtr clock,
+    const lanelet::Id module_id, const lanelet::autoware::SpeedBump & speed_bump_reg_elem,
+    const PlannerParam & planner_param, const rclcpp::Logger & logger,
+    const rclcpp::Clock::SharedPtr clock,
     const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
     const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
       planning_factor_interface);
 
-  bool modifyPathVelocity(PathWithLaneId * path) override;
+  bool modifyPathVelocity(
+    experimental::Trajectory & path, const std::vector<geometry_msgs::msg::Point> & left_bound,
+    const std::vector<geometry_msgs::msg::Point> & right_bound,
+    const PlannerData & planner_data) override;
 
   visualization_msgs::msg::MarkerArray createDebugMarkerArray() override;
   autoware::motion_utils::VirtualWalls createVirtualWalls() override;
 
 private:
-  int64_t module_id_;
-  int64_t lane_id_;
+  lanelet::Id module_id_;
 
   // Speed Bump Regulatory Element
   const lanelet::autoware::SpeedBump & speed_bump_reg_elem_;
@@ -80,10 +80,11 @@ private:
   DebugData debug_data_;
 
   bool applySlowDownSpeed(
-    PathWithLaneId & output, const float speed_bump_speed,
-    const PathPolygonIntersectionStatus & path_polygon_intersection_status);
+    experimental::Trajectory & path,
+    const speed_bump::PolygonIntersection & path_polygon_intersection,
+    const PlannerData & planner_data);
 
-  float speed_bump_slow_down_speed_;
+  double speed_bump_slow_down_speed_;
 };
 
 }  // namespace autoware::behavior_velocity_planner

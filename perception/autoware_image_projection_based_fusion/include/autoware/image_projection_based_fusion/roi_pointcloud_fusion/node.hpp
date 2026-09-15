@@ -34,17 +34,13 @@ public:
   explicit RoiPointCloudFusionNode(const rclcpp::NodeOptions & options);
 
 private:
-  AUTOWARE_PUBLISHER_PTR(ClusterMsgType) agnocast_pub_ptr_;
-  rclcpp::Publisher<PointCloudMsgType>::SharedPtr point_pub_ptr_;
-  rclcpp::Publisher<PointCloudMsgType>::SharedPtr cluster_debug_pub_;
+  AUTOWARE_PUBLISHER_PTR(PointCloudMsgType) cluster_debug_pub_;
 
   void fuse_on_single_image(
     const PointCloudMsgType & input_pointcloud_msg, const Det2dStatus<RoiMsgType> & det2d_status,
     const RoiMsgType & input_rois_msg, PointCloudMsgType & output_pointcloud_msg) override;
 
   void postprocess(const PointCloudMsgType & pointcloud_msg, ClusterMsgType & output_msg) override;
-
-  void publish(const ClusterMsgType & output_msg) override;
 
   int min_cluster_size_{1};
   int max_cluster_size_{20};

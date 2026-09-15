@@ -8,27 +8,33 @@
       "properties": {
         "min_points_num": {
           "type": "array",
+          "minItems": 10,
+          "maxItems": 10,
           "items": {
             "type": "integer"
           },
-          "default": [10, 10, 10, 10, 10, 10, 10, 10],
-          "description": "The minimum number of obstacle point clouds in DetectedObjects"
+          "default": [10, 10, 10, 10, 10, 10, 10, 10, 10, 10],
+          "description": "The minimum number of obstacle point clouds in DetectedObjects. Order: [UNKNOWN, CAR, TRUCK, BUS, TRAILER, MOTORBIKE, BICYCLE, PEDESTRIAN, ANIMAL, HAZARD]"
         },
         "max_points_num": {
           "type": "array",
+          "minItems": 10,
+          "maxItems": 10,
           "items": {
             "type": "integer"
           },
-          "default": [10, 10, 10, 10, 10, 10, 10, 10],
-          "description": "The max number of obstacle point clouds in DetectedObjects"
+          "default": [10, 10, 10, 10, 10, 10, 10, 10, 10, 10],
+          "description": "The max number of obstacle point clouds in DetectedObjects. Order: [UNKNOWN, CAR, TRUCK, BUS, TRAILER, MOTORBIKE, BICYCLE, PEDESTRIAN, ANIMAL, HAZARD]"
         },
         "min_points_and_distance_ratio": {
           "type": "array",
+          "minItems": 10,
+          "maxItems": 10,
           "items": {
             "type": "number"
           },
-          "default": [800, 800, 800, 800, 800, 800, 800, 800],
-          "description": "Threshold value of the number of point clouds per object when the distance from baselink is 1m, because the number of point clouds varies with the distance from baselink."
+          "default": [800, 800, 800, 800, 800, 800, 800, 800, 800, 800],
+          "description": "Threshold value of the number of point clouds per object when the distance from baselink is 1m, because the number of point clouds varies with the distance from baselink. Order: [UNKNOWN, CAR, TRUCK, BUS, TRAILER, MOTORBIKE, BICYCLE, PEDESTRIAN, ANIMAL, HAZARD]"
         },
         "validate_max_distance_m": {
           "type": "number",

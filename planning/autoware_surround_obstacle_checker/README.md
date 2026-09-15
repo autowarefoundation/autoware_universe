@@ -116,3 +116,8 @@ As mentioned in stop condition section, it prevents chattering by changing thres
 
 To perform stop planning, it is necessary to get obstacle pointclouds data.
 Hence, it does not plan stopping if the obstacle is in blind spot.
+
+Dynamic object labels supported by this node are:
+`unknown`, `car`, `truck`, `bus`, `trailer`, `motorcycle`, `bicycle`, `pedestrian`, `animal`, `hazard`, `over_drivable`, and `under_drivable`.
+
+The default config enables checks for `animal` and `hazard`, and disables them for `over_drivable` and `under_drivable`.

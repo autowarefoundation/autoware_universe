@@ -1,0 +1,8 @@
+/**:
+  ros__parameters:
+    detection3d:
+      bbox_voxel_size: [0.96, 0.96, 8.0]
+      has_twist: true
+      num_proposals: 500
+      post_center_range: [-132.88, -132.88, -5.0, 132.88, 132.88, 12.0]
+      class_names: ["CAR", "TRUCK", "BUS", "BICYCLE", "PEDESTRIAN", "TRAFFIC_CONE", "BARRIER"]

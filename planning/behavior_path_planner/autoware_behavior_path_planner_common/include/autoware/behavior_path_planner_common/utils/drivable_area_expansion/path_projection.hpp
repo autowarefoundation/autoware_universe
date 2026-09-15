@@ -183,4 +183,3 @@ inline LineString2d sub_linestring(
 
 // clang-format off
 #endif  // AUTOWARE__BEHAVIOR_PATH_PLANNER_COMMON__UTILS__DRIVABLE_AREA_EXPANSION__PATH_PROJECTION_HPP_  // NOLINT
-// clang-format on

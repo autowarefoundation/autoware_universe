@@ -129,8 +129,9 @@ bool checkCollisionBetweenPathFootprintsAndObjects(
   const PredictedObjects & dynamic_objects, const double margin)
 {
   for (const auto & p : ego_path.points) {
-    if (checkCollisionBetweenFootprintAndObjects(
-          local_vehicle_footprint, p.point.pose, dynamic_objects, margin)) {
+    if (
+      checkCollisionBetweenFootprintAndObjects(
+        local_vehicle_footprint, p.point.pose, dynamic_objects, margin)) {
       return true;
     }
   }
@@ -292,9 +293,10 @@ void fillLaneIdsFromMap(Iterator begin, Iterator end, const lanelet::ConstLanele
 {
   for (auto it = begin; it != end; ++it) {
     const auto point = it->point;
-    if (const auto lanelet_opt =
-          experimental::lanelet2_utils::get_closest_lanelet(lanelets, point.pose);
-        lanelet_opt) {
+    if (
+      const auto lanelet_opt =
+        experimental::lanelet2_utils::get_closest_lanelet(lanelets, point.pose);
+      lanelet_opt) {
       // TODO(hisaki): Writing "it->lane_ids = {lanelet.id()}" may cause a segmentation fault.
       // I'm not sure of the reason. (╥﹏╥)
       auto & ids = it->lane_ids;
@@ -480,9 +482,10 @@ PathWithLaneId refinePathForGoal(
     filtered_path.points.back().point.longitudinal_velocity_mps = 0.0;
   }
 
-  if (set_goal(
-        search_radius_range, search_rad_range, output_path_interval, filtered_path, goal,
-        goal_lane_id, get_lanelet_by_id, &path_with_goal)) {
+  if (
+    set_goal(
+      search_radius_range, search_rad_range, output_path_interval, filtered_path, goal,
+      goal_lane_id, get_lanelet_by_id, &path_with_goal)) {
     return path_with_goal;
   }
   return filtered_path;
@@ -1796,9 +1799,7 @@ std::optional<double> calc_point_dist_to_closest_lane_boundary(
     return std::nullopt;
   }
 
-  const auto local_footprint = vehicle_info.createFootprint();
-  const auto vehicle_footprint = autoware_utils::transform_vector(
-    local_footprint, autoware_utils::pose2transform(ego_baselink_pose));
+  const auto vehicle_footprint = vehicle_info.createFootprint(0.0, ego_baselink_pose);
 
   const auto fp_corner_idx = (direction == "left")
                                ? vehicle_info_utils::VehicleInfo::FrontLeftIndex

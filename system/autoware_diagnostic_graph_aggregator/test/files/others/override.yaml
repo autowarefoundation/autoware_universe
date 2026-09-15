@@ -1,0 +1,23 @@
+units:
+  - type: diag
+    path: path0
+    node: dummy
+    name: name0
+    allow_override_for_debugging: true
+
+  - type: diag
+    path: path1
+    node: dummy
+    name: name1
+    allow_override_for_debugging: true
+
+  - type: diag
+    path: path2
+    node: dummy
+    name: name2
+    allow_override_for_debugging: true
+
+  - type: diag
+    path: path3
+    node: dummy
+    name: name3

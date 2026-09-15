@@ -214,17 +214,15 @@ Polygon2d toFootprint(
   vehicle_info.right_overhang_m = width / 2;
   vehicle_info.wheel_tread_m = 0.0;
 
-  auto base_footprint = vehicle_info.createFootprint();
+  // calculate footprint at pose position and orientation
+  auto footprint = vehicle_info.createFootprint(0.0, base_link_pose);
 
   // remove center point
-  auto center_left_index = base_footprint.begin() + 5;
-  auto center_right_index = base_footprint.begin() + 2;
+  auto center_left_index = footprint.begin() + 5;
+  auto center_right_index = footprint.begin() + 2;
 
-  base_footprint.erase(center_left_index);
-  base_footprint.erase(center_right_index);
-
-  auto footprint = autoware_utils::transform_vector(
-    base_footprint, autoware_utils::pose2transform(base_link_pose));
+  footprint.erase(center_left_index);
+  footprint.erase(center_right_index);
 
   Polygon2d polygon;
   polygon.outer() = footprint;

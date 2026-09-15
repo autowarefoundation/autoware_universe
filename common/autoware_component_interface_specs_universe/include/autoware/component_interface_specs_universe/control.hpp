@@ -15,6 +15,7 @@
 #ifndef AUTOWARE__COMPONENT_INTERFACE_SPECS_UNIVERSE__CONTROL_HPP_
 #define AUTOWARE__COMPONENT_INTERFACE_SPECS_UNIVERSE__CONTROL_HPP_
 
+#include <autoware/component_interface_specs/control.hpp>
 #include <rclcpp/qos.hpp>
 
 #include <tier4_control_msgs/msg/is_paused.hpp>
@@ -27,6 +28,20 @@
 namespace autoware::component_interface_specs_universe::control
 {
 
+// Re-export the core specs so universe consumers keep resolving the canonical
+// (single-version-authority) type; core is the sole definition and version authority.
+using autoware::component_interface_specs::control::ControlCommand;
+using autoware::component_interface_specs::control::ControlModeRequest;
+using autoware::component_interface_specs::control::GearCommand;
+using autoware::component_interface_specs::control::HazardLightsCommand;
+using autoware::component_interface_specs::control::PredictedTrajectory;
+using autoware::component_interface_specs::control::Specs;
+using autoware::component_interface_specs::control::TurnIndicatorsCommand;
+using autoware::component_interface_specs::control::version;
+
+// tier4-only specs kept here: they are typed on tier4_* messages and stay
+// unversioned until vendor-specific specs get their own versioned registry
+// separate from core's OSS-facing Specs tuple; they are not part of it yet.
 struct ActuationCommand
 {
   using Message = tier4_vehicle_msgs::msg::ActuationCommandStamped;

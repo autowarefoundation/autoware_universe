@@ -47,6 +47,7 @@ GetIndicesPairsImplicitGemmPluginCreator::GetIndicesPairsImplicitGemmPluginCreat
   plugin_attributes_.emplace_back(
     "subm", nullptr, PluginFieldType::kINT32, 1);  // cSpell:ignore subm
   plugin_attributes_.emplace_back("transpose", nullptr, PluginFieldType::kINT32, 1);
+  plugin_attributes_.emplace_back("do_sort", nullptr, PluginFieldType::kINT32, 1);
 
   fc_.nbFields = plugin_attributes_.size();
   fc_.fields = plugin_attributes_.data();
@@ -69,7 +70,16 @@ IPluginV3 * GetIndicesPairsImplicitGemmPluginCreator::createPlugin(
       nvinfer1::PluginField const * fields{fc->fields};
       std::int32_t num_fields{fc->nbFields};
 
-      PLUGIN_VALIDATE(num_fields == 11);
+      // Accept 11 (legacy ONNX without do_sort) or 12 (with do_sort attribute).
+      PLUGIN_VALIDATE(num_fields == 11 || num_fields == 12);
+
+      if (num_fields == 11) {
+        std::ostringstream ss;
+        ss << name << ": legacy ONNX (11 plugin fields, missing do_sort). "
+           << "Re-export ONNX with explicit do_sort; 11-field support will be removed later. "
+           << "Using default do_sort=1.";
+        logWarning(ss.str().c_str());
+      }
 
       GetIndicesPairsImplicitGemmParameters parameters;
 
@@ -199,6 +209,10 @@ IPluginV3 * GetIndicesPairsImplicitGemmPluginCreator::createPlugin(
         if (attr_name == "transpose") {
           PLUGIN_VALIDATE(type == nvinfer1::PluginFieldType::kINT32);
           parameters.transpose = static_cast<std::int32_t const *>(fields[i].data)[0];
+        }
+        if (attr_name == "do_sort") {
+          PLUGIN_VALIDATE(type == nvinfer1::PluginFieldType::kINT32);
+          parameters.do_sort = static_cast<std::int32_t const *>(fields[i].data)[0];
         }
       }
 

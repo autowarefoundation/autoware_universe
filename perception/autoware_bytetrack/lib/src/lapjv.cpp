@@ -67,6 +67,7 @@ int_t ccrrt_dense(
   }
   PRINT_COST_ARRAY(v, n);
   PRINT_INDEX_ARRAY(y, n);
+  // NOLINTNEXTLINE(bugprone-assignment-in-if-condition)
   NEW(unique, boolean, n);
   memset(unique, TRUE, n);
   {
@@ -253,7 +254,9 @@ int_t find_path_dense(
   int_t * cols;
   cost_t * d;
 
+  // NOLINTNEXTLINE(bugprone-assignment-in-if-condition)
   NEW(cols, int_t, n);
+  // NOLINTNEXTLINE(bugprone-assignment-in-if-condition)
   NEW(d, cost_t, n);
 
   for (uint_t i = 0; i < n; i++) {
@@ -310,6 +313,7 @@ int_t ca_dense(
 {
   int_t * pred;
 
+  // NOLINTNEXTLINE(bugprone-assignment-in-if-condition)
   NEW(pred, int_t, n);
 
   for (int_t * pfree_i = free_rows; pfree_i < free_rows + n_free_rows; pfree_i++) {
@@ -346,7 +350,9 @@ int lapjv_internal(const uint_t n, cost_t * cost[], int_t * x, int_t * y)
   int_t * free_rows;
   cost_t * v;
 
+  // NOLINTNEXTLINE(bugprone-assignment-in-if-condition)
   NEW(free_rows, int_t, n);
+  // NOLINTNEXTLINE(bugprone-assignment-in-if-condition)
   NEW(v, cost_t, n);
   ret = ccrrt_dense(n, cost, free_rows, x, y, v);
   int i = 0;

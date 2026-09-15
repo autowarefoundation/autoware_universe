@@ -145,7 +145,7 @@ protected:
       [this](MarkerArray::ConstSharedPtr msg) { received_markers_ = msg; });
 
     executor_ = std::make_shared<rclcpp::executors::SingleThreadedExecutor>();
-    executor_->add_node(node_);
+    executor_->add_node(node_->get_node_base_interface());
     executor_->add_node(test_node_);
     received_markers_.reset();
   }

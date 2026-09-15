@@ -15,23 +15,29 @@
 #ifndef AUTOWARE__TRAJECTORY_MODIFIER__TRAJECTORY_MODIFIER_PLUGINS__STOP_POINT_FIXER_HPP_
 #define AUTOWARE__TRAJECTORY_MODIFIER__TRAJECTORY_MODIFIER_PLUGINS__STOP_POINT_FIXER_HPP_
 
-#include "autoware/trajectory_modifier/trajectory_modifier_plugins/trajectory_modifier_plugin_base.hpp"
+#include "autoware/trajectory_modifier/trajectory_modifier_plugin_base.hpp"
 
 namespace autoware::trajectory_modifier::plugin
 {
+using autoware::trajectory_modifier::TrajectoryModifierData;
+using autoware::trajectory_modifier::TrajectoryModifierParams;
+using autoware::trajectory_modifier::plugin::ProcessingResult;
+using autoware::trajectory_modifier::plugin::TrajectoryModifierPluginBase;
+using autoware::trajectory_modifier::plugin::TrajectoryPoints;
+using ModifierParams = trajectory_modifier_params::Params;
 
 class StopPointFixer : public TrajectoryModifierPluginBase
 {
 public:
   StopPointFixer() = default;
 
-  bool modify_trajectory(TrajectoryPoints & traj_points, const InputData & input) override;
+  ProcessingResult process(TrajectoryPoints & traj_points, TrajectoryModifierData & input) override;
 
   bool is_long_stop_trajectory(const TrajectoryPoints & traj_points) const;
   bool is_stop_point_close_to_ego(
-    const TrajectoryPoints & traj_points, const InputData & input) const;
+    const TrajectoryPoints & traj_points, const TrajectoryModifierData & input) const;
   [[nodiscard]] bool is_trajectory_modification_required(
-    const TrajectoryPoints & traj_points, const InputData & input) override;
+    const TrajectoryPoints & traj_points, const TrajectoryModifierData & input);
 
   void update_params(const TrajectoryModifierParams & params) override
   {
@@ -39,13 +45,13 @@ public:
     enabled_ = params.use_stop_point_fixer;
   }
 
-  const TrajectoryModifierParams::StopPointFixer & get_params() const { return params_; }
+  const ModifierParams::StopPointFixer & get_params() const { return params_; }
 
 protected:
   void on_initialize(const TrajectoryModifierParams & params) override;
 
 private:
-  TrajectoryModifierParams::StopPointFixer params_;
+  ModifierParams::StopPointFixer params_;
 };
 
 }  // namespace autoware::trajectory_modifier::plugin

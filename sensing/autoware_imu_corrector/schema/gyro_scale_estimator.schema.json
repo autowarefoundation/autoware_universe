@@ -24,7 +24,7 @@
         "threshold_to_estimate_scale": {
           "type": "number",
           "description": "Angular speed radians for scale estimation threshold.",
-          "default": 0.1
+          "default": 0.05
         },
         "percentage_scale_rate_allow_correct": {
           "type": "number",
@@ -147,7 +147,7 @@
             "decay_coefficient": {
               "type": "number",
               "description": "Decay coefficient for EKF.",
-              "default": 0.99999998
+              "default": 0.9999999998
             },
             "samples_in_bounds_to_init": {
               "type": "integer",

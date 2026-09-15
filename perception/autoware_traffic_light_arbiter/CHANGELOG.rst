@@ -2,6 +2,66 @@
 Changelog for package autoware_traffic_light_arbiter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* refactor(autoware_traffic_light_arbiter): consolidate external snapshot in arbitrate() (`#12878 <https://github.com/autowarefoundation/autoware_universe/issues/12878>`_)
+  Replace the hand-rolled external-aggregation loop in arbitrate() with an
+  ExternalSnapshot built by collect_external_snapshot(). The snapshot bundles the
+  external-signal array, the freshest stamp, and a has-any flag, so the
+  perception-staleness check and latest_input_time now read one source of truth
+  instead of recomputing the running max.
+  Fold the matching/priority dispatch's inner for-loops into a route_signals()
+  helper that loops route_signal() over an array. The policy decision stays in
+  arbitrate(). No behavior change; core unit tests unchanged and green.
+* refactor(autoware_traffic_light_arbiter): drop unused includes and alias (`#12868 <https://github.com/autowarefoundation/autoware_universe/issues/12868>`_)
+  Remove headers and a type alias that the arbiter core no longer references:
+  - core.hpp: <builtin_interfaces/msg/time.hpp> (core uses only rclcpp::Time),
+  <tuple>, and the unused TrafficLightConstPtr alias.
+  - core.cpp: <tuple>.
+  Add <builtin_interfaces/msg/time.hpp> to the node header, which uses
+  builtin_interfaces::msg::Time directly and previously relied on a transitive
+  include. No behavior change.
+  Co-authored-by: Junya Sasaki <junya.sasaki@tier4.jp>
+* fix(perception): fix test for `agnocast_wrapper::Node` (`#12861 <https://github.com/autowarefoundation/autoware_universe/issues/12861>`_)
+  * fix test for agnocast_wrapper::Node
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* refactor(autoware_traffic_light_arbiter): drop expired-signal return values from ingest API (`#12848 <https://github.com/autowarefoundation/autoware_universe/issues/12848>`_)
+  The ExpiredExternalSignal lists returned by ingest_perception/ingest_external existed only to feed a Node DEBUG log. Eviction correctness is already pinned by the evictedExternalEntryAbsentFromOutput test through the public arbitrate() output, so the runtime log adds no coverage a test does not.
+  Simplify the Core API: ingest_perception returns void, ingest_external returns bool, sweep_expired_external_signals returns void, and the ExpiredExternalSignal/ExternalIngestResult structs are removed. Cache eviction is unchanged; only the expired-entry DEBUG logging is dropped from the Node. Drops ingestPerceptionReportsExpiredExternalEntry (asserted only the removed return value); the ingestExternal* tests follow the bool return.
+* refactor(autoware_traffic_light_arbiter): make arbitrate() immutable and extract its helpers (`#12789 <https://github.com/autowarefoundation/autoware_universe/issues/12789>`_)
+  * Immutable API: Refactors TrafficLightArbiterCore to make arbitrate() a const method that returns its result by value via std::optional instead of using out-parameters.
+  * Improved Readability: Extracts complex in-body lambdas into named helper functions within the .cpp file, keeping the header clean and readable.
+  * Zero-Copy Preserved: Maintains the agnocast zero-copy publish path by copying the output into a freshly loaned message buffer, with no changes to the system's output behavior.
+* fix(autoware_traffic_light_arbiter): fix arbitrate argument in test (`#12750 <https://github.com/autowarefoundation/autoware_universe/issues/12750>`_)
+  fix arbitrate argument
+* test(autoware_traffic_light_arbiter): add unit tests for logic (`#12723 <https://github.com/autowarefoundation/autoware_universe/issues/12723>`_)
+  - Adds 40 unit tests for `TrafficLightArbiterCore`, organised by (mode × concern) and pinning one observable behaviour per test at the public-contract level.
+  - Tests are written as free `TEST()` functions backed by a `make_arbiter(priority, enable_signal_matching)` factory; suite names (`TrafficLightArbiterCoreSignalMatching`, `*ConfidencePriority`, etc.) preserve mode-based grouping in gtest output.
+  - Helpers are flat and domain-oriented: `make_signal` / `make_element` / `make_prediction` compose inputs without intermediate vector-of-groups nesting, and `observed\_*` helpers accept `std::optional<TrafficLightGroupArray>` directly so call sites need no `ASSERT_TRUE` guards.
+  - Test-local enum values (`SourcePriority::*`, `TrafficLightElement::*`) and tolerance defaults are aliased at namespace scope (`CONFIDENCE`, `RED`, `CIRCLE`, `default_external_delay_tolerance`, ...) — call sites read in domain terms.
+  - Production code is untouched; `CMakeLists.txt` only adds the new core gtest target.
+* feat(traffic_light_arbiter): apply `agnocast_wrapper::Node` to traffic_light_arbitor (`#12707 <https://github.com/autowarefoundation/autoware_universe/issues/12707>`_)
+  * apply agnocast
+  * fix cpplint
+  * fix to use SingleThreadedExecutor
+  ---------
+* feat(traffic_light_arbiter): apply autoware_agnocast_wrapper for CIE (`#12713 <https://github.com/autowarefoundation/autoware_universe/issues/12713>`_)
+* refactor(autoware_traffic_light_arbiter): extract TrafficLightArbiterCore from Node (`#12660 <https://github.com/autowarefoundation/autoware_universe/issues/12660>`_)
+  Split arbitration logic from the ROS node into a ROS-free TrafficLightArbiterCore (arbitration state + decisions) and a thin TrafficLightArbiter adapter (param load, sub/pub wiring, msg conversion, publish, logging).
+  Core public surface: set_map(LaneletMapConstPtr); ingest_perception(msg) and ingest_external(msg, current_time) returning expired-entry diagnostics for the Node to log; arbitrate() returning ArbitrationResult { output, off_map_signal_ids, latest_input_time } with stamp inheritance left to the Node.
+  Tolerances (external_delay_tolerance, external_time_tolerance, perception_time_tolerance) are owned by Core; perception staleness against the freshest external is evaluated non-destructively inside arbitrate() so ingest_perception remains the sole writer of latest_perception_msg\_.
+  Interface changes: none. Topics and all five parameters are unchanged in name, type, default, and effect.
+  Observable behavior is preserved — 31 ROS tests (test_node 7 + characterization 24) pass unchanged, and RCLCPP_COMPONENTS_REGISTER_NODE is retained so the node still loads as a composable component.
+* test(autoware_traffic_light_arbiter): add characterization test suite (`#12632 <https://github.com/autowarefoundation/autoware_universe/issues/12632>`_)
+  test(autoware_traffic_light_arbiter): add characterization test suite
+  Pin the arbiter's behaviour with 24 atomic tests across Signal Matching
+  mode, Priority-based mode, and focused boundary specs. Self-contained
+  (no autoware_test_utils / YAML); 96.7% line coverage. Spec matrix in PR.
+* Contributors: Koichi Imai, Masaki Baba, Takayuki AKAMINE, atsushi yano, github-actions
+
 0.51.0 (2026-05-01)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

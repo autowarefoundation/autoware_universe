@@ -1,0 +1,67 @@
+autoware_system_design_format: 0.3.0
+# node information
+name: LidarMarkerLocalizer.node
+package:
+  name: autoware_lidar_marker_localizer
+  provider: autoware
+launch:
+  plugin: autoware::lidar_marker_localizer::LidarMarkerLocalizer
+  executable: autoware_lidar_marker_localizer_node
+# interfaces
+subscribers:
+  - name: pointcloud
+    message_type: sensor_msgs/msg/PointCloud2
+  - name: ekf_pose
+    message_type: geometry_msgs/msg/PoseWithCovarianceStamped
+  - name: lanelet2_map
+    message_type: autoware_map_msgs/msg/LaneletMapBin
+publishers:
+  - name: pose_with_covariance
+    message_type: geometry_msgs/msg/PoseWithCovarianceStamped
+  - name: marker_mapped
+    message_type: visualization_msgs/msg/MarkerArray
+    remap_target: ~/debug/marker_mapped
+  - name: marker_detected
+    message_type: geometry_msgs/msg/PoseArray
+    remap_target: ~/debug/marker_detected
+  - name: debug_pose_with_covariance
+    message_type: geometry_msgs/msg/PoseWithCovarianceStamped
+    remap_target: ~/debug/pose_with_covariance
+  - name: marker_pointcloud
+    message_type: sensor_msgs/msg/PointCloud2
+    remap_target: ~/debug/marker_pointcloud
+  - name: center_intensity_grid
+    message_type: nav_msgs/msg/OccupancyGrid
+    remap_target: ~/debug/center_intensity_grid
+  - name: positive_grid
+    message_type: nav_msgs/msg/OccupancyGrid
+    remap_target: ~/debug/positive_grid
+  - name: negative_grid
+    message_type: nav_msgs/msg/OccupancyGrid
+    remap_target: ~/debug/negative_grid
+  - name: matched_grid
+    message_type: nav_msgs/msg/OccupancyGrid
+    remap_target: ~/debug/matched_grid
+  - name: vote_grid
+    message_type: nav_msgs/msg/OccupancyGrid
+    remap_target: ~/debug/vote_grid
+  - name: diagnostics
+    message_type: diagnostic_msgs/msg/DiagnosticArray
+    global: /diagnostics
+servers:
+  - name: trigger_node_srv
+    message_type: std_srvs/srv/SetBool
+    remap_target: ~/service/trigger_node_srv
+# parameters
+param_files:
+  - name: lidar_marker_localizer_param
+    default: config/lidar_marker_localizer.param.yaml
+param_values: []
+# processes
+processes:
+  - name: estimate_pose_from_lidar_marker
+    trigger_conditions:
+      - on_input: pointcloud
+    outcomes:
+      - to_output: pose_with_covariance
+      - to_output: diagnostics

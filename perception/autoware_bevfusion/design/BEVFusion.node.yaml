@@ -1,0 +1,93 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: BEVFusion.node
+
+package:
+  name: autoware_bevfusion
+  provider: autoware
+
+launch:
+  plugin: autoware::bevfusion::BEVFusionNode
+  executable: autoware_bevfusion_node
+  node_output: screen
+
+# interfaces
+# unified node covering both model modes (bevfusion_lidar / bevfusion_camera_lidar).
+# pointcloud uses cuda_blackboard (CudaPointCloud2); shown as sensor_msgs/msg/PointCloud2.
+# the six camera image + camera_info sockets are used in the camera-lidar fusion mode.
+subscribers:
+  - name: pointcloud
+    message_type: sensor_msgs/msg/PointCloud2
+    remap_target: ~/input/pointcloud
+  - name: pointcloud_cuda
+    message_type: sensor_msgs/msg/PointCloud2
+    remap_target: ~/input/pointcloud/cuda
+  - name: camera_info0
+    message_type: sensor_msgs/msg/CameraInfo
+    remap_target: ~/input/camera_info0
+  - name: camera_info1
+    message_type: sensor_msgs/msg/CameraInfo
+    remap_target: ~/input/camera_info1
+  - name: camera_info2
+    message_type: sensor_msgs/msg/CameraInfo
+    remap_target: ~/input/camera_info2
+  - name: camera_info3
+    message_type: sensor_msgs/msg/CameraInfo
+    remap_target: ~/input/camera_info3
+  - name: camera_info4
+    message_type: sensor_msgs/msg/CameraInfo
+    remap_target: ~/input/camera_info4
+  - name: camera_info5
+    message_type: sensor_msgs/msg/CameraInfo
+    remap_target: ~/input/camera_info5
+  - name: image0
+    message_type: sensor_msgs/msg/Image
+    remap_target: ~/input/image0
+  - name: image1
+    message_type: sensor_msgs/msg/Image
+    remap_target: ~/input/image1
+  - name: image2
+    message_type: sensor_msgs/msg/Image
+    remap_target: ~/input/image2
+  - name: image3
+    message_type: sensor_msgs/msg/Image
+    remap_target: ~/input/image3
+  - name: image4
+    message_type: sensor_msgs/msg/Image
+    remap_target: ~/input/image4
+  - name: image5
+    message_type: sensor_msgs/msg/Image
+    remap_target: ~/input/image5
+
+publishers:
+  - name: objects
+    message_type: autoware_perception_msgs/msg/DetectedObjects
+    remap_target: ~/output/objects
+
+# parameters
+param_files:
+  - name: model_param
+    default: config/bevfusion_lidar.param.yaml
+  - name: common_param
+    default: config/common_bevfusion.param.yaml
+  - name: ml_package_param
+    default: ml_package_bevfusion_lidar.param.yaml
+  - name: class_remapper_param
+    default: detection_class_remapper.param.yaml
+
+param_values:
+  - name: use_compressed_images
+    type: bool
+    default: false
+  - name: build_only
+    type: bool
+    default: false
+
+# processes
+processes:
+  - name: detect
+    trigger_conditions:
+      - on_input: pointcloud
+    outcomes:
+      - to_output: objects

@@ -1,0 +1,35 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: ImageDiag.node
+
+package:
+  name: autoware_image_diagnostics
+  provider: autoware
+
+launch:
+  plugin: autoware::image_diagnostics::ImageDiagNode
+  executable: image_diagnostics_node
+  node_output: screen
+
+# interfaces
+subscribers:
+  - name: raw_image
+    message_type: sensor_msgs/msg/Image
+    remap_target: input/raw_image
+
+publishers: []
+
+# parameters
+param_files:
+  - name: param_file
+    default: config/image_diagnostics_node.param.yaml
+
+param_values: []
+
+# processes
+processes:
+  - name: diagnose
+    trigger_conditions:
+      - on_input: raw_image
+    outcomes: []

@@ -48,6 +48,7 @@ std::shared_ptr<ScenarioSelectorNode> generateNode()
   node_options.append_parameter_override("th_stopped_time_sec", 1.0);
   node_options.append_parameter_override("th_stopped_velocity_mps", 0.01);
   node_options.append_parameter_override("enable_mode_switching", true);
+  node_options.append_parameter_override("allow_area", false);
   auto test_target_node = std::make_shared<ScenarioSelectorNode>(node_options);
 
   return std::make_shared<ScenarioSelectorNode>(node_options);

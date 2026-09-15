@@ -12,22 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#define EIGEN_MPL2_ONLY
-
 #include "traffic_light_map_based_detector_node.hpp"
-
-#include <Eigen/Core>
-#include <autoware/traffic_light_utils/traffic_light_utils.hpp>
-#include <tf2/LinearMath/Matrix3x3.hpp>
-#include <tf2/LinearMath/Transform.hpp>
-
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <algorithm>
 #include <memory>
 #include <stdexcept>
 #include <string>
-#include <vector>
 
 namespace autoware::traffic_light
 {
@@ -47,15 +37,11 @@ MapBasedDetector::MapBasedDetector(const rclcpp::NodeOptions & node_options)
     this->declare_parameter<double>("max_vibration_depth"),
     this->declare_parameter<double>("max_detection_range"),
     this->declare_parameter<double>("car_traffic_light_max_angle_range"),
-    this->declare_parameter<double>("pedestrian_traffic_light_max_angle_range")};
-  // transform sampling config
-  transform_sampling_config_ = {
+    this->declare_parameter<double>("pedestrian_traffic_light_max_angle_range"),
     this->declare_parameter<double>("min_timestamp_offset"),
     this->declare_parameter<double>("max_timestamp_offset")};
 
-  if (
-    transform_sampling_config_.max_timestamp_offset <
-    transform_sampling_config_.min_timestamp_offset) {
+  if (detector_config_.max_timestamp_offset < detector_config_.min_timestamp_offset) {
     throw std::invalid_argument(
       "max_timestamp_offset must be greater than or equal to min_timestamp_offset");
   }
@@ -79,19 +65,6 @@ MapBasedDetector::MapBasedDetector(const rclcpp::NodeOptions & node_options)
   viz_pub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("~/debug/markers", 1);
 }
 
-bool MapBasedDetector::get_transform(
-  const rclcpp::Time & t, const std::string & frame_id, tf2::Transform & tf) const
-{
-  try {
-    geometry_msgs::msg::TransformStamped transform =
-      tf_buffer_.lookupTransform("map", frame_id, t, rclcpp::Duration::from_seconds(0.2));
-    tf2::fromMsg(transform.transform, tf);
-  } catch (const tf2::TransformException & ex) {
-    return false;
-  }
-  return true;
-}
-
 void MapBasedDetector::camera_info_callback(
   const sensor_msgs::msg::CameraInfo::ConstSharedPtr input_msg)
 {
@@ -99,30 +72,23 @@ void MapBasedDetector::camera_info_callback(
     return;
   }
 
-  /* Camera pose in the period */
-  std::vector<StampedTransform> tf_map2camera_samples;
-  rclcpp::Time t1 = rclcpp::Time(input_msg->header.stamp) +
-                    rclcpp::Duration::from_seconds(transform_sampling_config_.min_timestamp_offset);
-  rclcpp::Time t2 = rclcpp::Time(input_msg->header.stamp) +
-                    rclcpp::Duration::from_seconds(transform_sampling_config_.max_timestamp_offset);
-  rclcpp::Duration interval = rclcpp::Duration::from_seconds(0.01);
-  for (auto t = t1; t <= t2; t += interval) {
-    tf2::Transform tf;
-    if (get_transform(t, input_msg->header.frame_id, tf)) {
-      tf_map2camera_samples.push_back({t, tf});
-    }
-  }
-  /* Camera pose at the exact moment */
-  tf2::Transform tf_map2camera;
-  if (!get_transform(
-        rclcpp::Time(input_msg->header.stamp), input_msg->header.frame_id, tf_map2camera)) {
+  // Wait for the transform at the exact moment to become available. detector_->detect() itself
+  // looks up transforms through tf2::BufferCore, which has no wait capability, so the wait is
+  // done here via tf2_ros::Buffer instead.
+  const rclcpp::Time latest_required_stamp =
+    rclcpp::Time(input_msg->header.stamp) +
+    rclcpp::Duration::from_seconds(std::max(0.0, detector_config_.max_timestamp_offset));
+  std::string error_msg;
+  if (!tf_buffer_.canTransform(
+        "map", input_msg->header.frame_id, latest_required_stamp,
+        rclcpp::Duration::from_seconds(0.2), &error_msg)) {
     RCLCPP_WARN_THROTTLE(
-      get_logger(), *get_clock(), 5000, "failed to get transform from map frame to camera frame");
+      get_logger(), *get_clock(), 5000,
+      "failed to get transform from map frame to camera frame: %s", error_msg.c_str());
     return;
   }
-  tf_map2camera_samples.push_back({input_msg->header.stamp, tf_map2camera});
 
-  auto result = detector_->detect(tf_map2camera_samples, *input_msg);
+  auto result = detector_->detect(tf_buffer_, *input_msg);
 
   roi_pub_->publish(result.rough_rois);
   expect_roi_pub_->publish(result.expect_rois);

@@ -1,0 +1,41 @@
+autoware_system_design_format: 0.3.0
+# node information
+name: PerceptionAnalyticsPublisher.node
+package:
+  name: autoware_perception_online_evaluator
+  provider: autoware
+launch:
+  plugin: autoware::perception_diagnostics::PerceptionAnalyticsPublisherNode
+  executable: autoware_perception_analytics_publisher_node
+  node_output: screen
+# interfaces
+subscribers:
+  - name: objects
+    message_type: autoware_perception_msgs/msg/PredictedObjects
+  - name: meas_to_tracked_latency
+    message_type: autoware_internal_debug_msgs/msg/Float64Stamped
+    global: /perception/object_recognition/tracking/multi_object_tracker/debug/meas_to_tracked_object_ms
+  - name: prediction_latency
+    message_type: autoware_internal_debug_msgs/msg/Float64Stamped
+    global: /perception/object_recognition/prediction/map_based_prediction/debug/processing_time_ms
+publishers:
+  - name: perception_analytics
+    message_type: tier4_metric_msgs/msg/MetricArray
+# parameters
+param_files:
+  - name: perception_analytics_publisher_param
+    default: $(find-pkg-share autoware_perception_online_evaluator)/param/perception_analytics_publisher.defaults.yaml
+param_values:
+  - name: meas_to_tracked_latency_topic_name
+    type: string
+    default: /perception/object_recognition/tracking/multi_object_tracker/debug/meas_to_tracked_object_ms
+  - name: prediction_latency_topic_name
+    type: string
+    default: /perception/object_recognition/prediction/map_based_prediction/debug/processing_time_ms
+# processes
+processes:
+  - name: publish_perception_analytics
+    trigger_conditions:
+      - on_input: objects
+    outcomes:
+      - to_output: perception_analytics

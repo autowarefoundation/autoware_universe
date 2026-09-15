@@ -1,0 +1,37 @@
+autoware_system_design_format: 0.3.0
+# node information
+name: TrajectoryModifier.node
+package:
+  name: autoware_trajectory_modifier
+  provider: autoware
+launch:
+  plugin: autoware::trajectory_modifier::TrajectoryModifier
+  executable: autoware_trajectory_modifier_node
+# interfaces
+subscribers:
+  - name: candidate_trajectories
+    message_type: autoware_internal_planning_msgs/msg/CandidateTrajectories
+publishers:
+  - name: candidate_trajectories
+    message_type: autoware_internal_planning_msgs/msg/CandidateTrajectories
+  - name: processing_time_detail
+    message_type: autoware_internal_debug_msgs/msg/ProcessingTimeTree
+    remap_target: ~/debug/processing_time_detail
+  - name: cluster_points
+    message_type: sensor_msgs/msg/PointCloud2
+    remap_target: ~/obstacle_stop/debug/cluster_points
+  - name: marker
+    message_type: visualization_msgs/msg/MarkerArray
+    remap_target: ~/obstacle_stop/debug/marker
+# parameters
+param_files:
+  - name: trajectory_modifier_param
+    default: config/trajectory_modifier.param.yaml
+param_values: []
+# processes
+processes:
+  - name: modify_trajectory
+    trigger_conditions:
+      - on_input: candidate_trajectories
+    outcomes:
+      - to_output: candidate_trajectories

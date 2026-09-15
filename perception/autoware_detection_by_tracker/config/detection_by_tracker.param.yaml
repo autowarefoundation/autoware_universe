@@ -8,3 +8,5 @@
     tracker_ignore_label.MOTORCYCLE : false
     tracker_ignore_label.BICYCLE : false
     tracker_ignore_label.PEDESTRIAN : false
+    tracker_ignore_label.ANIMAL : false
+    tracker_ignore_label.HAZARD : true

@@ -2,6 +2,36 @@
 Changelog for package autoware_bevfusion
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(autoware_bevfusion): update parameter and process for TRAFFIC_CONE and BARRIER classes (`#12732 <https://github.com/autowarefoundation/autoware_universe/issues/12732>`_)
+  update parameter and process for TRAFFIC_CONE and BARRIER classes
+* feat(autoware_bevfusion): add diagnostic declaration (`#12681 <https://github.com/autowarefoundation/autoware_universe/issues/12681>`_)
+* feat(BEVFusion): add confidence thresholds filtering based on class and distance to detection boxes (`#12637 <https://github.com/autowarefoundation/autoware_universe/issues/12637>`_)
+  * Update maintaner name in streampetr
+  * Update maintaner name in streampetr
+  * Add distance_bin_upper_limits and score_thresholds to bevfusion ml_package
+  * Fix comment
+  * Add cuda_utils to postprocessing
+  * Add cuda_utils to postprocessing
+  * Add cuda_utils to postprocessing
+  * Fix bevfusion config
+  * Fix bevfusion config
+  * Fix bevfusion config
+  * Fix bevfusion config
+  * Remove mdel_params
+  * Add support to duplicate classes
+  * Add is_score_keep
+  * Update schema definition for the new params
+  * Update schema definition for the new params
+  * Resolve comments
+  * Move thresholds back to launch file
+  * Update schema json
+  * Update json requirements
+  ---------
+* Contributors: Kaan Çolak, Kok Seang Tan, Masaki Baba, github-actions
+
 0.51.0 (2026-05-01)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

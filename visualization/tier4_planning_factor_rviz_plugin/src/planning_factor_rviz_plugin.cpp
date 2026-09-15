@@ -153,6 +153,7 @@ visualization_msgs::msg::MarkerArray createTargetMarker(
 // Definition of static member variables
 std::mutex PlanningFactorRvizPlugin::s_mutex_;
 std::optional<double> PlanningFactorRvizPlugin::s_baselink2front_;
+std::optional<double> PlanningFactorRvizPlugin::s_baselink2rear_;
 bool PlanningFactorRvizPlugin::s_request_started_{false};
 
 void PlanningFactorRvizPlugin::start_vehicle_info_request()
@@ -188,7 +189,7 @@ void PlanningFactorRvizPlugin::start_vehicle_info_request()
 
       // Send request
       auto request = std::make_shared<rcl_interfaces::srv::GetParameters::Request>();
-      request->names = {"wheel_base", "front_overhang"};
+      request->names = {"wheel_base", "front_overhang", "rear_overhang"};
       auto future = client->async_send_request(request);
 
       // Wait for response
@@ -196,11 +197,13 @@ void PlanningFactorRvizPlugin::start_vehicle_info_request()
         rclcpp::spin_until_future_complete(node, future, std::chrono::seconds(10)) ==
         rclcpp::FutureReturnCode::SUCCESS) {
         const auto & response = future.get();
-        if (response->values.size() >= 2) {
+        if (response->values.size() >= 3) {
           const double wheel_base = response->values[0].double_value;
           const double front_overhang = response->values[1].double_value;
+          const double rear_overhang = response->values[2].double_value;
           std::lock_guard<std::mutex> lock(s_mutex_);
           s_baselink2front_ = wheel_base + front_overhang;
+          s_baselink2rear_ = rear_overhang;
         }
       }
     } catch (...) {
@@ -212,12 +215,16 @@ void PlanningFactorRvizPlugin::start_vehicle_info_request()
 void PlanningFactorRvizPlugin::processMessage(
   const autoware_internal_planning_msgs::msg::PlanningFactorArray::ConstSharedPtr msg)
 {
-  // Get cached baselink2front value
+  // Cache both bumper offsets so STOP visualization can respect reverse maneuvers.
   double baselink2front = 0.0;
+  double baselink2rear = 0.0;
   {
     std::lock_guard<std::mutex> lock(s_mutex_);
     if (s_baselink2front_.has_value()) {
       baselink2front = s_baselink2front_.value();
+    }
+    if (s_baselink2rear_.has_value()) {
+      baselink2rear = s_baselink2rear_.value();
     }
   }
 
@@ -228,24 +235,39 @@ void PlanningFactorRvizPlugin::processMessage(
     switch (factor.behavior) {
       case autoware_internal_planning_msgs::msg::PlanningFactor::STOP:
         for (const auto & control_point : factor.control_points) {
+          // Planning factors already carry driving direction. Use the matching bumper offset so
+          // STOP walls align with the effective leading edge in reverse as well as forward.
+          const double longitudinal_offset =
+            factor.is_driving_forward ? baselink2front : baselink2rear;
           const auto virtual_wall = createStopVirtualWallMarker(
-            control_point.pose, text, msg->header.stamp, i++, baselink2front);
+            control_point.pose, text, msg->header.stamp, i++, longitudinal_offset, "",
+            factor.is_driving_forward);
           add_marker(std::make_shared<visualization_msgs::msg::MarkerArray>(virtual_wall));
         }
         break;
 
       case autoware_internal_planning_msgs::msg::PlanningFactor::SLOW_DOWN:
         for (const auto & control_point : factor.control_points) {
+          // Planning factors already carry driving direction. Use the matching bumper offset so
+          // SLOWDOWN walls align with the effective leading edge in reverse as well as forward.
+          const double longitudinal_offset =
+            factor.is_driving_forward ? baselink2front : baselink2rear;
           const auto virtual_wall = createSlowDownVirtualWallMarker(
-            control_point.pose, text, msg->header.stamp, i++, baselink2front);
+            control_point.pose, text, msg->header.stamp, i++, longitudinal_offset, "",
+            factor.is_driving_forward);
           add_marker(std::make_shared<visualization_msgs::msg::MarkerArray>(virtual_wall));
         }
         break;
 
       case autoware_internal_planning_msgs::msg::PlanningFactor::UNKNOWN:
         for (const auto & control_point : factor.control_points) {
+          // Planning factors already carry driving direction. Use the matching bumper offset so
+          // UNKNOWN walls align with the effective leading edge in reverse as well as forward.
+          const double longitudinal_offset =
+            factor.is_driving_forward ? baselink2front : baselink2rear;
           const auto virtual_wall = createSlowDownVirtualWallMarker(
-            control_point.pose, text, msg->header.stamp, i++, baselink2front);
+            control_point.pose, text, msg->header.stamp, i++, longitudinal_offset, "",
+            factor.is_driving_forward);
           add_marker(std::make_shared<visualization_msgs::msg::MarkerArray>(virtual_wall));
         }
         break;

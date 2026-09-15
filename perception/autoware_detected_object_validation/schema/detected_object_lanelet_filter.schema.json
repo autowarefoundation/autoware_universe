@@ -48,6 +48,16 @@
               "type": "boolean",
               "default": false,
               "description": "If true, pedestrian objects are filtered."
+            },
+            "ANIMAL": {
+              "type": "boolean",
+              "default": false,
+              "description": "If true, animal objects are filtered."
+            },
+            "HAZARD": {
+              "type": "boolean",
+              "default": false,
+              "description": "If true, hazard objects are filtered."
             }
           },
           "required": [
@@ -58,7 +68,9 @@
             "TRAILER",
             "MOTORCYCLE",
             "BICYCLE",
-            "PEDESTRIAN"
+            "PEDESTRIAN",
+            "ANIMAL",
+            "HAZARD"
           ]
         },
         "filter_settings": {

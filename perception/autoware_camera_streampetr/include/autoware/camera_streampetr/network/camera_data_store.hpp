@@ -16,13 +16,16 @@
 #define AUTOWARE__CAMERA_STREAMPETR__NETWORK__CAMERA_DATA_STORE_HPP_
 
 #include "autoware/camera_streampetr/cuda_utils.hpp"
+#include "autoware/camera_streampetr/network/camera_ego_mask.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 
 #include <sensor_msgs/msg/camera_info.hpp>
 #include <sensor_msgs/msg/image.hpp>
 
+#include <atomic>
 #include <condition_variable>
+#include <cstdint>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -40,9 +43,21 @@ class CameraDataStore
   using Tensor = cuda::Tensor;
 
 public:
+  // Per-camera health snapshot for diagnostics.
+  struct CameraStatus
+  {
+    bool camera_info_received{false};
+    bool image_received{false};
+    // Sticky until a valid frame arrives.
+    bool input_rejected{false};
+    // Header stamp of the newest accepted frame, in epoch seconds; -1.0 until the first frame.
+    double last_image_timestamp{-1.0};
+  };
+
   CameraDataStore(
     rclcpp::Node * node, const int rois_number, const int image_height, const int image_width,
-    const int anchor_camera_id, const bool is_distorted_image);
+    const int anchor_camera_id, const bool is_distorted_image,
+    const EgoMaskParams & ego_mask_params);
   ~CameraDataStore();
   void update_camera_image(
     const int camera_id, const Image::ConstSharedPtr & input_camera_image_msg);
@@ -51,6 +66,7 @@ public:
   bool check_if_all_camera_image_received() const;
   bool check_if_all_camera_info_received() const;
   float check_if_all_images_synced() const;
+  std::vector<CameraStatus> get_camera_status() const;
   float get_preprocess_time_ms() const;
   std::vector<float> get_camera_info_vector() const;
   std::shared_ptr<cuda::Tensor> get_image_input() const;
@@ -82,14 +98,26 @@ private:
     const int camera_id, const Image::ConstSharedPtr & input_camera_image_msg) const;
   std::unique_ptr<Tensor> process_distorted_image(
     const int camera_id, const Image::ConstSharedPtr & input_camera_image_msg,
-    ImageProcessingParams & params);
+    ImageProcessingParams & params, const bool swap_rb);
   std::unique_ptr<Tensor> process_regular_image(
     const Image::ConstSharedPtr & input_camera_image_msg, const ImageProcessingParams & params,
-    const int camera_id);
+    const int camera_id, const bool swap_rb);
   void update_metadata_and_timing(
     const int camera_id, const Image::ConstSharedPtr & input_camera_image_msg,
     const std::chrono::high_resolution_clock::time_point & start_time);
   void compute_undistortion_maps(const int camera_id);
+  void build_ego_mask_gpu(const int camera_id);
+  void build_ego_mask_gpu(const int camera_id, const int width, const int height);
+  bool is_ego_mask_current(const int camera_id, const int width, const int height) const;
+  void copy_ego_mask_gpu(
+    const int camera_id, const std::vector<std::uint8_t> & raster, const int width,
+    const int height);
+
+  // Entrance check for every incoming frame: validates the encoding (rgb8/bgr8, reporting via
+  // swap_rb whether the buffer needs a BGR -> RGB conversion right after upload) and the buffer
+  // geometry.
+  bool validate_image_message(
+    const int camera_id, const Image::ConstSharedPtr & input_camera_image_msg, bool & swap_rb);
 
   const size_t rois_number_;
   const int image_height_;
@@ -100,6 +128,9 @@ private:
   const bool is_distorted_image_;
 
   rclcpp::Logger logger_;
+  rclcpp::Clock::SharedPtr clock_;
+  // Written by camera callback threads, read by the node thread, hence atomic.
+  std::vector<std::atomic<bool>> input_rejected_;
   std::vector<CameraInfo::ConstSharedPtr> camera_info_list_;
   std::shared_ptr<Tensor> image_input_;
   std::shared_ptr<Tensor> image_input_mean_;
@@ -112,6 +143,12 @@ private:
   std::vector<std::shared_ptr<Tensor>> undistort_map_x_gpu_;
   std::vector<std::shared_ptr<Tensor>> undistort_map_y_gpu_;
   std::vector<bool> undistortion_maps_computed_;
+
+  std::vector<std::optional<EgoMaskRoiConfig>> ego_mask_roi_configs_;
+  std::vector<std::shared_ptr<Tensor>> ego_mask_gpu_;
+  std::vector<int> ego_mask_width_;
+  std::vector<int> ego_mask_height_;
+  std::vector<bool> ego_mask_built_;
 
   // multithreading variables
   mutable std::mutex freeze_mutex_;

@@ -17,8 +17,17 @@
 
 #include <Eigen/Core>
 
+#include <string>
+
 namespace autoware::motion::control::mpc_lateral_controller
 {
+
+/// Result of a QP solve, carrying an optional warning for the caller to log
+struct QPSolverResult
+{
+  bool success{true};
+  std::string warning_message{};
+};
 
 /// Interface for solvers of Quadratic Programming (QP) problems
 class QPSolverInterface
@@ -39,9 +48,10 @@ public:
    * @param [in] lb_a parameter matrix for constraint lb_a < a*u < ub_a
    * @param [in] ub_a parameter matrix for constraint lb_a < a*u < ub_a
    * @param [out] u optimal variable vector
-   * @return true if the problem was solved
+   * @return solve result, including success flag and an optional warning message for the caller
+   * to log
    */
-  virtual bool solve(
+  virtual QPSolverResult solve(
     const Eigen::MatrixXd & h_mat, const Eigen::MatrixXd & f_vec, const Eigen::MatrixXd & a,
     const Eigen::VectorXd & lb, const Eigen::VectorXd & ub, const Eigen::VectorXd & lb_a,
     const Eigen::VectorXd & ub_a, Eigen::VectorXd & u) = 0;

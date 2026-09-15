@@ -13,28 +13,44 @@
 // limitations under the License.
 
 #include "autoware/argsort_ops/argsort.hpp"
+#include "autoware/tensorrt_plugins/kernel_utils.hpp"
 
 #include <cub/cub.cuh>
 
-#include <thrust/device_ptr.h>
-#include <thrust/execution_policy.h>
-#include <thrust/sequence.h>
+#include <cstddef>
+
+namespace
+{
+
+constexpr int kThreadsPerBlock = 256;
+
+}  // namespace
 
 cudaError_t argsort(
   const std::int64_t * input_d, std::int64_t * output_d, void * workspace, std::size_t num_elements,
   std::size_t argsort_workspace_size, cudaStream_t stream)
 {
-  int workspace_offset = (argsort_workspace_size + sizeof(std::int64_t) - 1) / sizeof(std::int64_t);
-  thrust::device_ptr<std::int64_t> idx_ptr(
-    &reinterpret_cast<std::int64_t *>(workspace)[workspace_offset]);
+  if (num_elements == 0U) {
+    return cudaSuccess;
+  }
 
-  thrust::sequence(thrust::cuda::par.on(stream), idx_ptr, idx_ptr + num_elements, 0);
+  const auto scratch_offset =
+    autoware::tensorrt_plugins::align_up(argsort_workspace_size, alignof(std::int64_t));
+  auto * input_idx_d =
+    reinterpret_cast<std::int64_t *>(reinterpret_cast<std::byte *>(workspace) + scratch_offset);
+  auto * input_sorted_d = input_idx_d + num_elements;
 
-  std::int64_t * input_sorted_d = thrust::raw_pointer_cast(idx_ptr) + num_elements;
+  const auto num_blocks =
+    static_cast<unsigned int>((num_elements + kThreadsPerBlock - 1U) / kThreadsPerBlock);
+  autoware::tensorrt_plugins::fill_iota<<<num_blocks, kThreadsPerBlock, 0, stream>>>(
+    input_idx_d, num_elements);
+  if (const auto status = cudaPeekAtLastError(); status != cudaSuccess) {
+    return status;
+  }
 
   return cub::DeviceRadixSort::SortPairs(
-    workspace, argsort_workspace_size, input_d, input_sorted_d, thrust::raw_pointer_cast(idx_ptr),
-    output_d, num_elements, 0, 64, stream);
+    workspace, argsort_workspace_size, input_d, input_sorted_d, input_idx_d, output_d, num_elements,
+    0, 64, stream);
 }
 
 std::size_t get_argsort_workspace_size(std::size_t num_elements)

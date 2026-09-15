@@ -1,0 +1,45 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: LabelBasedEuclideanCluster.node
+
+package:
+  name: autoware_euclidean_cluster
+  provider: autoware
+
+launch:
+  plugin: autoware::euclidean_cluster::LabelBasedEuclideanClusterNode
+  executable: label_based_euclidean_cluster_node
+  node_output: screen
+
+# interfaces
+# the input cloud carries per-point semantic labels; clustering and shape estimation run per label
+subscribers:
+  - name: pointcloud
+    message_type: sensor_msgs/msg/PointCloud2
+    remap_target: input/pointcloud
+
+publishers:
+  - name: objects
+    message_type: autoware_perception_msgs/msg/DetectedObjects
+    remap_target: output/objects
+  - name: clustered_pointcloud
+    message_type: sensor_msgs/msg/PointCloud2
+    remap_target: output/pointcloud
+
+# parameters
+param_files:
+  - name: param_path
+    schema: schema/label_based_euclidean_cluster.schema.json
+    default: config/label_based_euclidean_cluster.param.yaml
+
+param_values: []
+
+# processes
+processes:
+  - name: cluster
+    trigger_conditions:
+      - on_input: pointcloud
+    outcomes:
+      - to_output: objects
+      - to_output: clustered_pointcloud

@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <autoware/agnocast_wrapper/node.hpp>
+#include <autoware/agnocast_wrapper/tf2.hpp>
 #include <autoware/lanelet2_utils/conversion.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <tf2/LinearMath/Quaternion.hpp>
@@ -20,7 +22,6 @@
 
 #include <lanelet2_core/LaneletMap.h>
 #include <lanelet2_core/geometry/Point.h>
-#include <tf2_ros/static_transform_broadcaster.h>
 
 #include <memory>
 #include <string>
@@ -28,7 +29,7 @@
 
 namespace autoware::map_tf_generator
 {
-class VectorMapTFGeneratorNode : public rclcpp::Node
+class VectorMapTFGeneratorNode : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit VectorMapTFGeneratorNode(const rclcpp::NodeOptions & options)
@@ -40,18 +41,20 @@ public:
       "vector_map", rclcpp::QoS{1}.transient_local(),
       std::bind(&VectorMapTFGeneratorNode::on_vector_map, this, std::placeholders::_1));
 
-    static_broadcaster_ = std::make_shared<tf2_ros::StaticTransformBroadcaster>(this);
+    static_broadcaster_ =
+      std::make_shared<autoware::agnocast_wrapper::StaticTransformBroadcaster>(*this);
   }
 
 private:
   std::string map_frame_;
   std::string viewer_frame_;
-  rclcpp::Subscription<autoware_map_msgs::msg::LaneletMapBin>::SharedPtr sub_;
+  AUTOWARE_SUBSCRIPTION_PTR(autoware_map_msgs::msg::LaneletMapBin) sub_;
 
-  std::shared_ptr<tf2_ros::StaticTransformBroadcaster> static_broadcaster_;
+  std::shared_ptr<autoware::agnocast_wrapper::StaticTransformBroadcaster> static_broadcaster_;
   std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr_;
 
-  void on_vector_map(const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr msg)
+  void on_vector_map(
+    const AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_map_msgs::msg::LaneletMapBin) & msg)
   {
     lanelet_map_ptr_ = autoware::experimental::lanelet2_utils::remove_const(
       autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*msg));

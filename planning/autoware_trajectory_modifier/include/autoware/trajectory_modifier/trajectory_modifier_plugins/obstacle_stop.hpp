@@ -15,14 +15,16 @@
 #ifndef AUTOWARE__TRAJECTORY_MODIFIER__TRAJECTORY_MODIFIER_PLUGINS__OBSTACLE_STOP_HPP_
 #define AUTOWARE__TRAJECTORY_MODIFIER__TRAJECTORY_MODIFIER_PLUGINS__OBSTACLE_STOP_HPP_
 
-#include "autoware/trajectory_modifier/trajectory_modifier_plugins/trajectory_modifier_plugin_base.hpp"
+#include "autoware/trajectory_modifier/trajectory_modifier_plugin_base.hpp"
 #include "autoware/trajectory_modifier/trajectory_modifier_utils/obstacle_stop_utils.hpp"
 #include "autoware/trajectory_modifier/trajectory_modifier_utils/utils.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 
+#include <autoware_internal_debug_msgs/msg/string_stamped.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 
+#include <functional>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -30,6 +32,13 @@
 
 namespace autoware::trajectory_modifier::plugin
 {
+using autoware::trajectory_modifier::TrajectoryModifierData;
+using autoware::trajectory_modifier::TrajectoryModifierParams;
+using autoware::trajectory_modifier::plugin::ProcessingResult;
+using autoware::trajectory_modifier::plugin::TrajectoryModifierPluginBase;
+using autoware::trajectory_modifier::plugin::TrajectoryPoints;
+using ModifierParams = trajectory_modifier_params::Params;
+using autoware_internal_debug_msgs::msg::StringStamped;
 using autoware_internal_planning_msgs::msg::SafetyFactor;
 using autoware_internal_planning_msgs::msg::SafetyFactorArray;
 using autoware_perception_msgs::msg::PredictedObjects;
@@ -46,14 +55,14 @@ class ObstacleStop : public TrajectoryModifierPluginBase
 public:
   ObstacleStop() = default;
 
-  bool modify_trajectory(TrajectoryPoints & traj_points, const InputData & input) override;
+  ProcessingResult process(TrajectoryPoints & traj_points, TrajectoryModifierData & input) override;
 
   [[nodiscard]] bool is_trajectory_modification_required(
-    const TrajectoryPoints & traj_points, const InputData & input) override;
+    const TrajectoryPoints & traj_points, const TrajectoryModifierData & input);
 
   void update_params(const TrajectoryModifierParams & params) override;
 
-  const TrajectoryModifierParams::ObstacleStop & get_params() const { return params_; }
+  const ModifierParams::ObstacleStop & get_params() const { return params_; }
 
   void publish_debug_data([[maybe_unused]] const std::string & ns) const override;
 
@@ -61,7 +70,8 @@ protected:
   void on_initialize(const TrajectoryModifierParams & params) override;
 
 private:
-  TrajectoryModifierParams::ObstacleStop params_;
+  ModifierParams::ObstacleStop params_;
+  ModifierParams::StoppingConstraints stopping_params_;
 
   std::optional<CollisionPoint> nearest_collision_point_;
 
@@ -78,19 +88,19 @@ private:
   std::unordered_map<utils::obstacle_stop::ObjectType, double> object_decel_map_;
 
   MarkerArray marker_array_;
-  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr debug_viz_pub_;
-  rclcpp::Publisher<PointCloud2>::SharedPtr pub_clustered_pointcloud_;
+  PublisherHandle<visualization_msgs::msg::MarkerArray> debug_viz_pub_;
+  PublisherHandle<PointCloud2> pub_filtered_pointcloud_;
+  PublisherHandle<StringStamped> pub_debug_text_;
 
-  void check_obstacles(const TrajectoryPoints & traj_points, const InputData & input);
+  void check_obstacles(const TrajectoryPoints & traj_points, const TrajectoryModifierData & input);
   std::optional<CollisionPoint> check_predicted_objects(
-    const TrajectoryPoints & traj_points, const InputData & input);
+    const TrajectoryPoints & traj_points, const TrajectoryModifierData & input);
   std::optional<CollisionPoint> check_pointcloud(
-    const TrajectoryPoints & traj_points, const InputData & input);
+    const TrajectoryPoints & traj_points, const TrajectoryModifierData & input);
 
-  bool set_stop_point(TrajectoryPoints & traj_points, const InputData & input);
+  bool set_stop_point(TrajectoryPoints & traj_points, const TrajectoryModifierData & input);
 
-  bool apply_stopping(
-    TrajectoryPoints & traj_points, const double target_stop_point_arc_length) const;
+  void publish_debug_string(bool is_safe) const;
 };
 
 }  // namespace autoware::trajectory_modifier::plugin

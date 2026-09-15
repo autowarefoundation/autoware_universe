@@ -9,6 +9,8 @@
       MOTORCYCLE : false
       BICYCLE : false
       PEDESTRIAN : false
+      ANIMAL : false
+      HAZARD : false
 
     upper_bound_x: 100.0
     lower_bound_x: 0.0

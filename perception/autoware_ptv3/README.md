@@ -20,17 +20,40 @@ Autoware installs it automatically in its setup script. If needed, the user can 
 
 ### Output
 
-| Name                                   | Type                                                | Description                                             |
-| -------------------------------------- | --------------------------------------------------- | ------------------------------------------------------- |
-| `~/output/pointcloud/segmentation`     | `sensor_msgs::msg::PointCloud2`                     | XYZ cloud with class ID and probability fields.         |
-| `~/output/pointcloud/visualization`    | `sensor_msgs::msg::PointCloud2`                     | XYZ cloud with RGB field.                               |
-| `~/output/pointcloud/filtered`         | `sensor_msgs::msg::PointCloud2`                     | Filtered cloud in the requested `filter.output_format`. |
-| `debug/cyclic_time_ms`                 | `autoware_internal_debug_msgs::msg::Float64Stamped` | Cyclic time (ms).                                       |
-| `debug/pipeline_latency_ms`            | `autoware_internal_debug_msgs::msg::Float64Stamped` | Pipeline latency time (ms).                             |
-| `debug/processing_time/preprocess_ms`  | `autoware_internal_debug_msgs::msg::Float64Stamped` | Preprocess (ms).                                        |
-| `debug/processing_time/inference_ms`   | `autoware_internal_debug_msgs::msg::Float64Stamped` | Inference time (ms).                                    |
-| `debug/processing_time/postprocess_ms` | `autoware_internal_debug_msgs::msg::Float64Stamped` | Postprocess time (ms).                                  |
-| `debug/processing_time/total_ms`       | `autoware_internal_debug_msgs::msg::Float64Stamped` | Total processing time (ms).                             |
+| Name                                   | Type                                                | Description                                                         |
+| -------------------------------------- | --------------------------------------------------- | ------------------------------------------------------------------- |
+| `~/output/pointcloud/segmentation`     | `sensor_msgs::msg::PointCloud2`                     | `PointXYZCPE` cloud with class ID, probability, and entropy fields. |
+| `~/output/pointcloud/visualization`    | `sensor_msgs::msg::PointCloud2`                     | XYZ cloud with RGB field.                                           |
+| `~/output/pointcloud/filtered`         | `sensor_msgs::msg::PointCloud2`                     | Filtered cloud in the requested `filter.output_format`.             |
+| `~/output/objects`                     | `autoware_perception_msgs::msg::DetectedObjects`    | Detected 3D objects after score filtering and IoU NMS.              |
+| `debug/cyclic_time_ms`                 | `autoware_internal_debug_msgs::msg::Float64Stamped` | Cyclic time (ms).                                                   |
+| `debug/pipeline_latency_ms`            | `autoware_internal_debug_msgs::msg::Float64Stamped` | Pipeline latency time (ms).                                         |
+| `debug/processing_time/preprocess_ms`  | `autoware_internal_debug_msgs::msg::Float64Stamped` | Preprocess (ms).                                                    |
+| `debug/processing_time/inference_ms`   | `autoware_internal_debug_msgs::msg::Float64Stamped` | Inference time (ms).                                                |
+| `debug/processing_time/postprocess_ms` | `autoware_internal_debug_msgs::msg::Float64Stamped` | Postprocess time (ms).                                              |
+| `debug/processing_time/total_ms`       | `autoware_internal_debug_msgs::msg::Float64Stamped` | Total processing time (ms).                                         |
+
+#### Segmentation point cloud format
+
+The `~/output/pointcloud/segmentation` topic uses the naturally aligned `PointXYZCPE` point type.
+Its `point_step` is 24 bytes.
+
+| Field         | Data type | Offset | Description                                                                                                                |
+| ------------- | --------- | -----: | -------------------------------------------------------------------------------------------------------------------------- |
+| `x`           | `FLOAT32` |      0 | X coordinate in meters.                                                                                                    |
+| `y`           | `FLOAT32` |      4 | Y coordinate in meters.                                                                                                    |
+| `z`           | `FLOAT32` |      8 | Z coordinate in meters.                                                                                                    |
+| `class_id`    | `UINT8`   |     12 | Predicted class encoded as `autoware::point_types::PointCloudClassification`; `INVALID` (255) represents an invalid label. |
+| `probability` | `FLOAT32` |     16 | Probability of the predicted class.                                                                                        |
+| `entropy`     | `FLOAT32` |     20 | Shannon entropy normalized by the logarithm of the number of classes.                                                      |
+
+Bytes 13 through 15 are alignment padding. The output is intentionally not packed so that the
+floating-point fields remain naturally aligned on both the CPU and GPU.
+
+Points with an invalid label (`class_id` = `PointCloudClassification::INVALID`, that is 255) have no
+class distribution: their `probability` is `0.0` and their `entropy` is `NaN`, which is the default
+value of `autoware::point_types::PointXYZCPE::entropy` and means "not available". Consumers must
+therefore guard against `NaN` before using the `entropy` field.
 
 ## Parameters
 
@@ -42,8 +65,16 @@ Autoware installs it automatically in its setup script. If needed, the user can 
 
 {{ json_to_markdown("perception/autoware_ptv3/schema/ml_package_ptv3.schema.json") }}
 
-`filter.*` parameters are configured in `config/ptv3.param.yaml`, while class metadata and the
-visualization `palette` are configured in `config/ml_package_ptv3.param.yaml`.
+`filter.*` and `class_mapping.*` parameters are configured in `config/ptv3.param.yaml`, while
+class metadata and the visualization `palette` are configured in
+`config/ml_package_ptv3_seg3d_head.param.yaml`.
+
+`segmentation3d.class_mapping` maps each segmentation class name to the
+`autoware::point_types::PointCloudClassification` value published in the segmentation point cloud's
+`class_id` field. Its keys must match `segmentation3d.class_names` exactly, and every entry of
+`class_names` must be present — the node fails to start otherwise, naming the missing class. This
+makes the consolidation of model classes (for example `traffic_cone`, `debris` and `vertical_thin`
+into `HAZARD`) a configuration choice rather than a compile-time constant.
 
 ### The `build_only` option
 
@@ -82,7 +113,9 @@ The model was trained on the T4Dataset using approximately 4,000 frames and is a
 
 ### `Fail to create host memory`
 
-This error may occur when the system runs out of memory during TensorRT engine building. To mitigate this issue, consider reducing the `voxels_num` maximum limit in the model parameters, which controls the maximum number of voxels processed by the model. For the instance, using GPU with 8 GB of memory, setting maximum `voxels_num` to 192'000 may help to avoid this error.
+This error may occur when TensorRT cannot satisfy the memory requirements for building an engine. A `workspace_size` that is too small can prevent TensorRT from using the tactics needed for the configured input profiles. Conversely, a `workspace_size` that is too large can allow memory usage to exceed the GPU's available VRAM. A large maximum value in `encoder.voxels_num` also increases the size of TensorRT profiles and intermediate buffers.
+
+Adjust the `workspace_size` values and the maximum `encoder.voxels_num` value in `config/ptv3.param.yaml` to fit the available GPU memory. Finding a suitable balance between these parameters can resolve the issue.
 
 ## References/External links
 

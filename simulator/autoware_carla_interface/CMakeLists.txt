@@ -52,6 +52,7 @@ ament_python_install_package(${PROJECT_NAME}
 install(PROGRAMS
   scripts/autoware_carla_interface
   scripts/multi_camera_combiner
+  scripts/spectator_follow
   DESTINATION lib/${PROJECT_NAME}
 )
 

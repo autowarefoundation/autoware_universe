@@ -1,0 +1,58 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: MrmEmergencyStopOperator.node
+
+package:
+  name: autoware_mrm_emergency_stop_operator
+  provider: autoware
+
+launch:
+  plugin: autoware::mrm_emergency_stop_operator::MrmEmergencyStopOperator
+  executable: autoware_mrm_emergency_stop_operator_node
+  node_output: screen
+
+# interfaces
+subscribers:
+  - name: control_cmd
+    message_type: autoware_control_msgs/msg/Control
+    remap_target: ~/input/control/control_cmd
+  - name: driving_mode_request
+    message_type: tier4_system_msgs/msg/DrivingModeRequest
+    remap_target: ~/input/driving_mode_request
+  - name: driving_mode_info
+    message_type: tier4_system_msgs/msg/DrivingModeInfo
+    remap_target: ~/input/driving_mode_info
+
+publishers:
+  - name: status
+    message_type: tier4_system_msgs/msg/MrmBehaviorStatus
+    remap_target: ~/output/mrm/emergency_stop/status
+  - name: control_cmd
+    message_type: autoware_control_msgs/msg/Control
+    remap_target: ~/output/mrm/emergency_stop/control_cmd
+  - name: mrm_state
+    message_type: tier4_system_msgs/msg/DrivingModeMrmState
+    remap_target: ~/output/mrm_state
+
+servers:
+  - name: operate
+    message_type: tier4_system_msgs/srv/OperateMrm
+    remap_target: ~/input/mrm/emergency_stop/operate
+
+# parameters
+param_files:
+  - name: param_file
+    default: config/mrm_emergency_stop_operator.param.yaml
+
+param_values: []
+
+# processes
+processes:
+  - name: operate
+    trigger_conditions:
+      - on_input: control_cmd
+    outcomes:
+      - to_output: status
+      - to_output: control_cmd
+      - to_output: mrm_state

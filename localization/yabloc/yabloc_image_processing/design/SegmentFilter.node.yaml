@@ -1,0 +1,40 @@
+autoware_system_design_format: 0.3.0
+# node information
+name: SegmentFilter.node
+package:
+  name: yabloc_image_processing
+  provider: autoware
+launch:
+  plugin: yabloc::segment_filter::SegmentFilter
+  executable: yabloc_segment_filter_node
+# interfaces
+subscribers:
+  - name: line_segments_cloud
+    message_type: sensor_msgs/msg/PointCloud2
+  - name: graph_segmented
+    message_type: sensor_msgs/msg/Image
+  - name: camera_info
+    message_type: sensor_msgs/msg/CameraInfo
+publishers:
+  - name: projected_line_segments_cloud
+    message_type: sensor_msgs/msg/PointCloud2
+  - name: debug_line_segments
+    message_type: sensor_msgs/msg/PointCloud2
+    remap_target: ~/debug/debug_line_segments
+  - name: projected_image
+    message_type: sensor_msgs/msg/Image
+    remap_target: ~/debug/projected_image
+# parameters
+param_files:
+  - name: segment_filter_param
+    default: config/segment_filter.param.yaml
+param_values: []
+# processes
+processes:
+  - name: filter_segments
+    trigger_conditions:
+      - on_input: graph_segmented
+    outcomes:
+      - to_output: projected_line_segments_cloud
+      - to_output: debug_line_segments
+      - to_output: projected_image

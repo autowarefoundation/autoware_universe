@@ -16,6 +16,7 @@
 
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
 #include <autoware/lanelet2_utils/conversion.hpp>
+#include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware/trajectory/utils/crossed.hpp>
 #include <autoware/trajectory/utils/find_nearest.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
@@ -68,7 +69,7 @@ std::optional<double> findLastCollisionBeforeLine(
 template <class T>
 std::optional<double> calcArcLengthFromCollision(
   const Trajectory & path, const double end_line_s, const T & line,
-  const PlannerData & planner_data)
+  const PlannerData & planner_data, const double leading_bumper_longitudinal_offset_m)
 {
   const auto collision = findLastCollisionBeforeLine(path, end_line_s, line);
   if (!collision) {
@@ -82,12 +83,19 @@ std::optional<double> calcArcLengthFromCollision(
     return std::nullopt;
   }
 
-  return *collision - *ego_s - planner_data.vehicle_info_.max_longitudinal_offset_m;
+  return *collision - *ego_s - leading_bumper_longitudinal_offset_m;
 }
 
 bool hasRightOfWay(const tier4_v2x_msgs::msg::VirtualTrafficLightState & state)
 {
   return state.approval;
+}
+
+double calcLeadingBumperLongitudinalOffset(
+  const autoware::vehicle_info_utils::VehicleInfo & vehicle_info, const bool is_driving_forward)
+{
+  return is_driving_forward ? vehicle_info.max_longitudinal_offset_m
+                            : std::abs(vehicle_info.min_longitudinal_offset_m);
 }
 }  // namespace
 
@@ -234,6 +242,13 @@ bool VirtualTrafficLightModule::modifyPathVelocity(
 {
   // Initialize
   setInfrastructureCommand({});
+
+  const auto path_points = path.restore();
+  const auto is_driving_forward = autoware::motion_utils::isDrivingForward(path_points);
+  module_data_.is_driving_forward = is_driving_forward.value_or(true);
+
+  module_data_.leading_bumper_longitudinal_offset_m = calcLeadingBumperLongitudinalOffset(
+    planner_data.vehicle_info_, module_data_.is_driving_forward);
 
   // Calculate path index of end line
   // NOTE: In order to deal with u-turn or self-crossing path, only start/stop lines before the end
@@ -387,8 +402,9 @@ bool VirtualTrafficLightModule::isBeforeStartLine(
 {
   // Since the module is registered, a collision should be detected usually.
   // Therefore if no collision found, vehicle's path is fully after the line.
-  const auto arc_length =
-    calcArcLengthFromCollision(path, end_line_s, map_data_.start_line, planner_data);
+  const auto arc_length = calcArcLengthFromCollision(
+    path, end_line_s, map_data_.start_line, planner_data,
+    module_data_.leading_bumper_longitudinal_offset_m);
   return arc_length && *arc_length > 0;
 }
 
@@ -397,8 +413,9 @@ bool VirtualTrafficLightModule::isBeforeStopLine(
 {
   // Since the module is registered, a collision should be detected usually.
   // Therefore if no collision found, vehicle's path is fully after the line.
-  const auto arc_length =
-    calcArcLengthFromCollision(path, end_line_s, *map_data_.stop_line, planner_data);
+  const auto arc_length = calcArcLengthFromCollision(
+    path, end_line_s, *map_data_.stop_line, planner_data,
+    module_data_.leading_bumper_longitudinal_offset_m);
   return arc_length && *arc_length > -planner_param_.dead_line_margin;
 }
 
@@ -412,16 +429,18 @@ bool VirtualTrafficLightModule::isAfterAnyEndLine(
 
   // If the goal is set before the end line, collision will not be detected.
   // Therefore if there is no collision, the ego vehicle is assumed to be before the end line.
-  const auto arc_length =
-    calcArcLengthFromCollision(path, end_line_s, map_data_.end_lines, planner_data);
+  const auto arc_length = calcArcLengthFromCollision(
+    path, end_line_s, map_data_.end_lines, planner_data,
+    module_data_.leading_bumper_longitudinal_offset_m);
   return arc_length && *arc_length < -planner_param_.dead_line_margin;
 }
 
 bool VirtualTrafficLightModule::isNearAnyEndLine(
   const Trajectory & path, const double end_line_s, const PlannerData & planner_data) const
 {
-  const auto arc_length =
-    calcArcLengthFromCollision(path, end_line_s, map_data_.end_lines, planner_data);
+  const auto arc_length = calcArcLengthFromCollision(
+    path, end_line_s, map_data_.end_lines, planner_data,
+    module_data_.leading_bumper_longitudinal_offset_m);
   return arc_length && std::abs(*arc_length) < planner_param_.near_line_distance;
 }
 
@@ -441,7 +460,7 @@ void VirtualTrafficLightModule::insertStopVelocityAtStopLine(
   Trajectory & path, const double end_line_s, const PlannerData & planner_data)
 {
   const auto collision = findLastCollisionBeforeLine(path, end_line_s, *map_data_.stop_line);
-  const auto offset = -planner_data.vehicle_info_.max_longitudinal_offset_m;
+  const auto offset = -module_data_.leading_bumper_longitudinal_offset_m;
 
   const auto ego_s = autoware::experimental::trajectory::find_first_nearest_index(
     path, planner_data.current_odometry->pose, planner_data.ego_nearest_dist_threshold,
@@ -471,12 +490,12 @@ void VirtualTrafficLightModule::insertStopVelocityAtStopLine(
   planning_factor_interface_->add(
     path.restore(), planner_data.current_odometry->pose, stop_pose,
     autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
-    autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/, 0.0,
+    autoware_internal_planning_msgs::msg::SafetyFactorArray{}, module_data_.is_driving_forward, 0.0,
     0.0 /*shift distance*/, "");
 
   // Set data for visualization
   module_data_.stop_head_pose_at_stop_line = autoware_utils::calc_offset_pose(
-    stop_pose, planner_data.vehicle_info_.max_longitudinal_offset_m, 0.0, 0.0);
+    stop_pose, module_data_.leading_bumper_longitudinal_offset_m, 0.0, 0.0);
 }
 
 void VirtualTrafficLightModule::insertStopVelocityAtEndLine(
@@ -494,7 +513,7 @@ void VirtualTrafficLightModule::insertStopVelocityAtEndLine(
     path.longitudinal_velocity_mps() = 0.0;
     stop_pose = planner_data.current_odometry->pose;
   } else {
-    const auto offset = -planner_data.vehicle_info_.max_longitudinal_offset_m;
+    const auto offset = -module_data_.leading_bumper_longitudinal_offset_m;
     path.longitudinal_velocity_mps()
       .range(std::max(0., *collision + offset), path.length())
       .set(0.0);
@@ -505,12 +524,12 @@ void VirtualTrafficLightModule::insertStopVelocityAtEndLine(
   planning_factor_interface_->add(
     path.restore(), planner_data.current_odometry->pose, stop_pose,
     autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
-    autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/, 0.0,
+    autoware_internal_planning_msgs::msg::SafetyFactorArray{}, module_data_.is_driving_forward, 0.0,
     0.0 /*shift distance*/, "");
 
   // Set data for visualization
   module_data_.stop_head_pose_at_end_line = autoware_utils::calc_offset_pose(
-    stop_pose, planner_data.vehicle_info_.max_longitudinal_offset_m, 0.0, 0.0);
+    stop_pose, module_data_.leading_bumper_longitudinal_offset_m, 0.0, 0.0);
 }
 
 std::optional<tier4_v2x_msgs::msg::InfrastructureCommand>

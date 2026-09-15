@@ -17,12 +17,12 @@
 
 #include "rclcpp/rclcpp.hpp"
 
+#include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>
+#include <autoware/agnocast_wrapper/node.hpp>
+#include <autoware/agnocast_wrapper/tf2.hpp>
 #include <autoware_utils_geometry/geometry.hpp>
 
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
-
-#include <tf2_ros/buffer.h>
-#include <tf2_ros/transform_listener.h>
 
 #include <string>
 #include <unordered_map>
@@ -33,7 +33,7 @@ namespace autoware::object_sorter
 using Label = autoware_perception_msgs::msg::ObjectClassification;
 
 template <typename ObjsMsgType>
-class ObjectSorterBase : public rclcpp::Node
+class ObjectSorterBase : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit ObjectSorterBase(
@@ -60,18 +60,18 @@ public:
 
 private:
   void setupSortTarget(bool use_distance_thresholding);
-  void objectCallback(const typename ObjsMsgType::ConstSharedPtr input_msg);
+  void objectCallback(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(ObjsMsgType) & input_msg);
   void splitByVelocity(const ObjsMsgType & input_object);
   void splitByRange(const ObjsMsgType & input_object);
 
   // Subscriber
-  typename rclcpp::Subscription<ObjsMsgType>::SharedPtr sub_objects_{};
+  AUTOWARE_SUBSCRIPTION_PTR(ObjsMsgType) sub_objects_ {};
 
   // Publisher
-  typename rclcpp::Publisher<ObjsMsgType>::SharedPtr pub_output_objects_{};
+  AUTOWARE_PUBLISHER_PTR(ObjsMsgType) pub_output_objects_ {};
 
-  tf2_ros::Buffer tf_buffer_;
-  tf2_ros::TransformListener tf_listener_;
+  autoware::agnocast_wrapper::Buffer tf_buffer_;
+  autoware::agnocast_wrapper::TransformListener tf_listener_;
 
   // Parameter
   std::string range_calc_frame_id_;

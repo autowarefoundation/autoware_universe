@@ -13,8 +13,11 @@
 // limitations under the License.
 
 #include "autoware/trajectory_modifier/trajectory_modifier_plugins/obstacle_stop.hpp"
+#include "trajectory_modifier_test_utils.hpp"
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
+#include <autoware/point_types/memory.hpp>
+#include <autoware/point_types/types.hpp>
 #include <autoware_test_utils/autoware_test_utils.hpp>
 #include <autoware_trajectory_modifier/trajectory_modifier_param.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -25,11 +28,11 @@
 #include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
-#include <sensor_msgs/point_cloud2_iterator.hpp>
 
 #include <gtest/gtest.h>
 
 #include <chrono>
+#include <cstring>
 #include <memory>
 #include <string>
 #include <thread>
@@ -39,9 +42,11 @@
 namespace
 {
 using autoware::trajectory_modifier::TrajectoryModifierContext;
-using autoware::trajectory_modifier::plugin::InputData;
+using autoware::trajectory_modifier::TrajectoryModifierData;
+using autoware::trajectory_modifier::TrajectoryModifierParams;
 using autoware::trajectory_modifier::plugin::ObstacleStop;
 using autoware::trajectory_modifier::plugin::TrajectoryPoints;
+using autoware::trajectory_modifier::test::process_plugin;
 using autoware_perception_msgs::msg::ObjectClassification;
 using autoware_perception_msgs::msg::PredictedObject;
 using autoware_perception_msgs::msg::PredictedObjects;
@@ -129,46 +134,44 @@ PredictedObjects::ConstSharedPtr make_blocking_car(double x, double y)
   return std::make_shared<const PredictedObjects>(predicted_objects);
 }
 
-// Build a dense pointcloud cluster the obstacle_stop pipeline will detect.
-sensor_msgs::msg::PointCloud2::ConstSharedPtr make_blocking_pointcloud_cluster(
-  double center_x, double center_y, double height)
+// Build a single blocking PointXYZCPE point. obstacle_stop evaluates points independently
+// (no voxel/clustering), so a dense cluster is unnecessary and can confuse the tracker when
+// neighboring points fall within pcd_distance_th.
+sensor_msgs::msg::PointCloud2::ConstSharedPtr make_blocking_pointcloud(double x, double y, double z)
 {
-  constexpr int voxel_count_x = 4;
-  constexpr int voxel_count_y = 3;
-  constexpr int points_per_voxel = 3;
+  using autoware::point_types::PointCloudClassification;
+  using autoware::point_types::PointXYZCPE;
 
   sensor_msgs::msg::PointCloud2 cloud;
   cloud.header.frame_id = "map";
-  sensor_msgs::PointCloud2Modifier modifier(cloud);
-  modifier.setPointCloud2FieldsByString(1, "xyz");
-  modifier.resize(voxel_count_x * voxel_count_y * points_per_voxel);
+  cloud.height = 1;
+  cloud.width = 1;
+  cloud.is_dense = true;
+  cloud.is_bigendian = false;
+  cloud.fields = autoware::point_types::create_fields_point_xyzcpe();
+  cloud.point_step = sizeof(PointXYZCPE);
+  cloud.row_step = cloud.point_step * cloud.width;
+  cloud.data.resize(cloud.row_step);
 
-  sensor_msgs::PointCloud2Iterator<float> iter_x(cloud, "x");
-  sensor_msgs::PointCloud2Iterator<float> iter_y(cloud, "y");
-  sensor_msgs::PointCloud2Iterator<float> iter_z(cloud, "z");
-  for (int xi = 0; xi < voxel_count_x; ++xi) {
-    for (int yi = 0; yi < voxel_count_y; ++yi) {
-      for (int p = 0; p < points_per_voxel; ++p) {
-        *iter_x = static_cast<float>(center_x + 0.2 * xi + 0.05 + 0.01 * p);
-        *iter_y = static_cast<float>(center_y + 0.2 * yi + 0.05);
-        *iter_z = static_cast<float>(height);
-        ++iter_x;
-        ++iter_y;
-        ++iter_z;
-      }
-    }
-  }
+  PointXYZCPE point;
+  point.x = static_cast<float>(x);
+  point.y = static_cast<float>(y);
+  point.z = static_cast<float>(z);
+  // INVALID maps to target type "unknown" used by the integration test params.
+  point.class_id = static_cast<std::uint8_t>(PointCloudClassification::INVALID);
+  point.probability = 1.0F;
+  std::memcpy(cloud.data.data(), &point, sizeof(PointXYZCPE));
 
   return std::make_shared<const sensor_msgs::msg::PointCloud2>(cloud);
 }
 
-InputData create_input_data(
+TrajectoryModifierData create_input_data(
   Odometry::ConstSharedPtr current_odometry,
   AccelWithCovarianceStamped::ConstSharedPtr current_acceleration,
   PredictedObjects::ConstSharedPtr predicted_objects = nullptr,
   sensor_msgs::msg::PointCloud2::ConstSharedPtr obstacle_pointcloud = nullptr)
 {
-  InputData input;
+  TrajectoryModifierData input;
   input.current_odometry = std::move(current_odometry);
   input.current_acceleration = std::move(current_acceleration);
   input.predicted_objects = std::move(predicted_objects);
@@ -196,19 +199,20 @@ protected:
 
     set_up_default_params();
 
-    // Create the context and the plugin once. Tests build per-frame InputData inline,
+    // Create the context and the plugin once. Tests build per-frame TrajectoryModifierData inline,
     // and inject any required TF directly into context_->tf_buffer.
     context_ = std::make_shared<TrajectoryModifierContext>(node_.get());
     plugin_ = std::make_unique<ObstacleStop>();
-    plugin_->initialize("test_obstacle_stop", node_.get(), time_keeper_, context_, params_);
+    plugin_->initialize(
+      "test_obstacle_stop", node_.get(), time_keeper_, context_, TrajectoryModifierParams{params_});
   }
 
   void TearDown() override
   {
+    rclcpp::shutdown();
     plugin_.reset();
     context_.reset();
     node_.reset();
-    rclcpp::shutdown();
   }
 
   void set_up_default_params()
@@ -217,17 +221,18 @@ protected:
     params_.use_stop_point_fixer = false;
     params_.trajectory_time_step = 0.1;
 
+    params_.stopping_constraints.nominal_deceleration = 1.0;
+    params_.stopping_constraints.maximum_deceleration = 4.0;
+    params_.stopping_constraints.jerk_limit = 3.0;
+    params_.stopping_constraints.arrived_distance_threshold = 0.5;
+
     auto & p = params_.obstacle_stop;
     p.use_objects = true;
     p.use_pointcloud = true;
     p.enable_stop_for_objects = true;
     p.enable_stop_for_pointcloud = true;
     p.stop_margin = 6.0;
-    p.nominal_stopping_decel = 1.0;
-    p.maximum_stopping_decel = 4.0;
-    p.stopping_jerk = 3.0;
     p.lateral_margin = 0.5;
-    p.arrived_distance_threshold = 0.5;
 
     p.obstacle_tracking.on_time_buffer = 0.01;
     p.obstacle_tracking.off_time_buffer = 1.0;
@@ -236,25 +241,19 @@ protected:
     p.obstacle_tracking.pcd_distance_th = 0.5;
     p.obstacle_tracking.grace_period = 0.5;
 
-    p.objects.object_types = {"car"};
-    p.objects.max_velocity_th = 1.0;
+    p.objects.target_objects.bbox = {"car"};
+    p.objects.target_objects.polygon = {"car"};
 
+    p.pointcloud.target_types = {"unknown"};
     p.pointcloud.height_buffer = 0.5;
     p.pointcloud.min_height = 0.2;
-    p.pointcloud.voxel_grid_filter.x = 0.2;
-    p.pointcloud.voxel_grid_filter.y = 0.2;
-    p.pointcloud.voxel_grid_filter.z = 0.2;
-    p.pointcloud.voxel_grid_filter.min_size = 3;
-    p.pointcloud.clustering.tolerance = 0.3;
-    p.pointcloud.clustering.min_height = 0.5;
-    p.pointcloud.clustering.min_size = 10;
-    p.pointcloud.clustering.max_size = 10000;
 
     p.rss_params.enable = true;
     p.rss_params.object_decel.car = 1.5;
     p.rss_params.reaction_time = 0.2;
     p.rss_params.safety_margin = 2.0;
-    p.rss_params.min_vel_th = 0.5;
+    p.rss_params.ego_decel = 4.0;
+    p.rss_params.lookahead_horizon = 1.5;
   }
 
   std::shared_ptr<rclcpp::Node> node_;
@@ -268,11 +267,11 @@ TEST_F(ObstacleStopIntegrationTest, TrajectoryNotModifiedWhenDisabled)
 {
   // Arrange
   params_.use_obstacle_stop = false;
-  plugin_->update_params(params_);
+  plugin_->update_params(TrajectoryModifierParams{params_});
   TrajectoryPoints trajectory;
 
   // Act
-  const bool modified = plugin_->modify_trajectory(trajectory, InputData{});
+  const bool modified = process_plugin(*plugin_, trajectory, TrajectoryModifierData{});
 
   // Assert
   EXPECT_FALSE(modified);
@@ -284,7 +283,7 @@ TEST_F(ObstacleStopIntegrationTest, TrajectoryNotModifiedForEmptyTrajectory)
   TrajectoryPoints empty_trajectory;
 
   // Act
-  const bool modified = plugin_->modify_trajectory(empty_trajectory, InputData{});
+  const bool modified = process_plugin(*plugin_, empty_trajectory, TrajectoryModifierData{});
 
   // Assert
   EXPECT_FALSE(modified);
@@ -297,7 +296,7 @@ TEST_F(ObstacleStopIntegrationTest, TrajectoryNotModifiedWhenNoObstaclesDetected
   const auto input = create_input_data(make_odometry(0.0, 0.0, 8.0), make_acceleration(0.0));
 
   // Act
-  const bool modified = plugin_->modify_trajectory(trajectory, input);
+  const bool modified = process_plugin(*plugin_, trajectory, input);
 
   // Assert
   EXPECT_FALSE(modified);
@@ -312,9 +311,9 @@ TEST_F(ObstacleStopIntegrationTest, TrajectoryNotModifiedWhenObjectIsBesidePath)
     create_input_data(make_odometry(0.0, 0.0, 8.0), make_acceleration(0.0), car_beside_path);
 
   // Act
-  plugin_->modify_trajectory(trajectory, input);
+  process_plugin(*plugin_, trajectory, input);
   std::this_thread::sleep_for(std::chrono::milliseconds(50));
-  const bool modified = plugin_->modify_trajectory(trajectory, input);
+  const bool modified = process_plugin(*plugin_, trajectory, input);
 
   // Assert
   EXPECT_FALSE(modified);
@@ -330,15 +329,42 @@ TEST_F(ObstacleStopIntegrationTest, TrajectoryModifiedWhenObjectBlocksPath)
 
   // Act: obstacle tracker requires `on_time_buffer` of continuous observation
   //      before becoming active
-  plugin_->modify_trajectory(trajectory, input);
+  process_plugin(*plugin_, trajectory, input);
   std::this_thread::sleep_for(std::chrono::milliseconds(50));
-  const bool modified = plugin_->modify_trajectory(trajectory, input);
+  const bool modified = process_plugin(*plugin_, trajectory, input);
 
   // Assert
   EXPECT_TRUE(modified);
 }
 
 TEST_F(ObstacleStopIntegrationTest, StopPointInsertedBeforeObject)
+{
+  // Arrange
+  constexpr double object_x = 25.0;
+  auto trajectory = create_straight_trajectory(30.0, 8.0);
+  const auto car_blocking_path = make_blocking_car(object_x, 0.0);
+  const auto input =
+    create_input_data(make_odometry(0.0, 0.0, 8.0), make_acceleration(0.0), car_blocking_path);
+
+  // Act: obstacle tracker requires `on_time_buffer` of continuous observation
+  //      before becoming active
+  process_plugin(*plugin_, trajectory, input);
+  std::this_thread::sleep_for(std::chrono::milliseconds(50));
+  const bool modified = process_plugin(*plugin_, trajectory, input);
+
+  // Assert
+  ASSERT_TRUE(modified);
+  EXPECT_FLOAT_EQ(trajectory.back().longitudinal_velocity_mps, 0.0F);
+  EXPECT_LT(trajectory.back().pose.position.x, object_x);
+
+  const auto obj_length = car_blocking_path->objects.at(0).shape.dimensions.x;
+  const auto ego_front_offset = context_->vehicle_info.max_longitudinal_offset_m;
+  const auto expected_stop_margin =
+    params_.obstacle_stop.stop_margin + ego_front_offset + obj_length / 2.0;
+  EXPECT_NEAR(object_x - trajectory.back().pose.position.x, expected_stop_margin, 0.1);
+}
+
+TEST_F(ObstacleStopIntegrationTest, StopPointInsertedBeforeObject_ReachMaxDecel)
 {
   // Arrange
   constexpr double object_x = 20.0;
@@ -349,34 +375,64 @@ TEST_F(ObstacleStopIntegrationTest, StopPointInsertedBeforeObject)
 
   // Act: obstacle tracker requires `on_time_buffer` of continuous observation
   //      before becoming active
-  plugin_->modify_trajectory(trajectory, input);
+  process_plugin(*plugin_, trajectory, input);
   std::this_thread::sleep_for(std::chrono::milliseconds(50));
-  const bool modified = plugin_->modify_trajectory(trajectory, input);
+  const bool modified = process_plugin(*plugin_, trajectory, input);
 
   // Assert
   ASSERT_TRUE(modified);
-  EXPECT_NEAR(trajectory.back().longitudinal_velocity_mps, 0.0F, 0.1F);
+  EXPECT_FLOAT_EQ(trajectory.back().longitudinal_velocity_mps, 0.0F);
   EXPECT_LT(trajectory.back().pose.position.x, object_x);
+
+  const auto expected_stop_margin = 6.96;  // Computed based on max_decel limit and jerk limit
+  EXPECT_NEAR(object_x - trajectory.back().pose.position.x, expected_stop_margin, 0.1);
 }
 
-TEST_F(ObstacleStopIntegrationTest, StopPointInsertedForBlockingPointcloudCluster)
+TEST_F(ObstacleStopIntegrationTest, StopPointInsertedForBlockingPointcloud)
 {
   // Arrange
-  constexpr double cluster_center_x = 15.0;
+  constexpr double obstacle_x = 25.0;
   auto trajectory = create_straight_trajectory(30.0, 8.0);
-  const auto pointcloud_blocking_path =
-    make_blocking_pointcloud_cluster(cluster_center_x, 0.0, 0.7);
+  const auto pointcloud_blocking_path = make_blocking_pointcloud(obstacle_x, 0.0, 0.7);
   const auto input = create_input_data(
     make_odometry(0.0, 0.0, 8.0), make_acceleration(0.0), nullptr, pointcloud_blocking_path);
 
   // Act: obstacle tracker requires `on_time_buffer` of continuous observation
   //      before becoming active
-  plugin_->modify_trajectory(trajectory, input);
+  process_plugin(*plugin_, trajectory, input);
   std::this_thread::sleep_for(std::chrono::milliseconds(50));
-  const bool modified = plugin_->modify_trajectory(trajectory, input);
+  const bool modified = process_plugin(*plugin_, trajectory, input);
 
   // Assert
   ASSERT_TRUE(modified);
-  EXPECT_NEAR(trajectory.back().longitudinal_velocity_mps, 0.0F, 0.1F);
-  EXPECT_LT(trajectory.back().pose.position.x, cluster_center_x);
+  EXPECT_FLOAT_EQ(trajectory.back().longitudinal_velocity_mps, 0.0F);
+  EXPECT_LT(trajectory.back().pose.position.x, obstacle_x);
+
+  const auto ego_front_offset = context_->vehicle_info.max_longitudinal_offset_m;
+  const auto expected_stop_margin = params_.obstacle_stop.stop_margin + ego_front_offset;
+  EXPECT_NEAR(obstacle_x - trajectory.back().pose.position.x, expected_stop_margin, 0.1);
+}
+
+TEST_F(ObstacleStopIntegrationTest, StopPointInsertedForBlockingPointcloud_ReachMaxDecel)
+{
+  // Arrange
+  constexpr double obstacle_x = 15.0;
+  auto trajectory = create_straight_trajectory(30.0, 8.0);
+  const auto pointcloud_blocking_path = make_blocking_pointcloud(obstacle_x, 0.0, 0.7);
+  const auto input = create_input_data(
+    make_odometry(0.0, 0.0, 8.0), make_acceleration(0.0), nullptr, pointcloud_blocking_path);
+
+  // Act: obstacle tracker requires `on_time_buffer` of continuous observation
+  //      before becoming active
+  process_plugin(*plugin_, trajectory, input);
+  std::this_thread::sleep_for(std::chrono::milliseconds(50));
+  const bool modified = process_plugin(*plugin_, trajectory, input);
+
+  // Assert
+  ASSERT_TRUE(modified);
+  EXPECT_FLOAT_EQ(trajectory.back().longitudinal_velocity_mps, 0.0F);
+  EXPECT_LT(trajectory.back().pose.position.x, obstacle_x);
+
+  const auto expected_stop_margin = 1.96;  // Computed based on max_decel limit and jerk limit
+  EXPECT_NEAR(obstacle_x - trajectory.back().pose.position.x, expected_stop_margin, 0.1);
 }

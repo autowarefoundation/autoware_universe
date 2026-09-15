@@ -2,6 +2,20 @@
 Changelog for package autoware_mrm_emergency_stop_operator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(emergency_stop_operator): add driving mode interface (`#12759 <https://github.com/autowarefoundation/autoware_universe/issues/12759>`_)
+  * add driving mode interface
+  * remove unused files
+  * use mode info topic
+  * add mrm state definition
+  * fix variable naming
+  * move driving mode related code
+  ---------
+  Co-authored-by: Junya Sasaki <junya.sasaki@tier4.jp>
+* Contributors: Takagi, Isamu, github-actions
+
 0.51.0 (2026-05-01)
 -------------------
 

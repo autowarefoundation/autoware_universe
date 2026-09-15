@@ -1,0 +1,76 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: ExternalCmdConverter.node
+
+package:
+  name: autoware_external_cmd_converter
+  provider: autoware
+
+launch:
+  plugin: autoware::external_cmd_converter::ExternalCmdConverterNode
+  executable: external_cmd_converter_node
+  node_output: screen
+
+# interfaces
+subscribers:
+  - name: pedals_cmd
+    message_type: autoware_adapi_v1_msgs/msg/PedalsCommand
+    remap_target: in/pedals_cmd
+  - name: steering_cmd
+    message_type: autoware_adapi_v1_msgs/msg/SteeringCommand
+    remap_target: in/steering_cmd
+  - name: gear_cmd
+    message_type: autoware_vehicle_msgs/msg/GearCommand
+    remap_target: in/gear_cmd
+  - name: heartbeat
+    message_type: autoware_adapi_v1_msgs/msg/ManualOperatorHeartbeat
+    remap_target: in/heartbeat
+  - name: current_gate_mode
+    message_type: tier4_control_msgs/msg/GateMode
+    remap_target: in/current_gate_mode
+  - name: odometry
+    message_type: nav_msgs/msg/Odometry
+    remap_target: in/odometry
+
+publishers:
+  - name: control_cmd
+    message_type: autoware_control_msgs/msg/Control
+    remap_target: out/control_cmd
+
+# parameters
+param_files:
+  - name: parameters
+    default: config/external_cmd_converter.param.yaml
+
+param_values:
+  - name: csv_path_accel_map
+    type: string
+    default: $(find-pkg-share autoware_raw_vehicle_cmd_converter)/data/default/accel_map.csv
+  - name: csv_path_brake_map
+    type: string
+    default: $(find-pkg-share autoware_raw_vehicle_cmd_converter)/data/default/brake_map.csv
+  - name: ref_vel_gain
+    default: 3.0
+  - name: timer_rate
+    default: 10.0
+  - name: wait_for_first_topic
+    default: true
+  - name: control_command_timeout
+    default: 1.0
+  - name: emergency_stop_timeout
+    default: 3.0
+
+# processes
+processes:
+  - name: convert_commands
+    trigger_conditions:
+      - and:
+          - on_input: pedals_cmd
+          - on_input: heartbeat
+          - on_input: steering_cmd
+          - on_input: odometry
+          - on_input: gear_cmd
+          - on_input: current_gate_mode
+    outcomes:
+      - to_output: control_cmd

@@ -84,9 +84,8 @@ private:
   bool enable_control_cmd_horizon_pub_{false};
   boost::optional<LongitudinalOutput> longitudinal_output_{boost::none};
 
-  std::shared_ptr<diagnostic_updater::Updater> diag_updater_ =
-    std::make_shared<diagnostic_updater::Updater>(
-      this);  // Diagnostic updater for publishing diagnostic data.
+  std::shared_ptr<diagnostic_updater::Updater>
+    diag_updater_;  // Diagnostic updater for publishing diagnostic data.
 
   std::shared_ptr<trajectory_follower::LongitudinalControllerBase> longitudinal_controller_;
   std::shared_ptr<trajectory_follower::LateralControllerBase> lateral_controller_;

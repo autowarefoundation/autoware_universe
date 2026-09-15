@@ -70,6 +70,28 @@
               "description": "maximum distance to the predicted objects to be considered",
               "type": "number",
               "default": 30.0
+            },
+            "excluded_labels": {
+              "description": "object classification labels excluded from closest_object_distance metric",
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "unknown",
+                  "car",
+                  "truck",
+                  "bus",
+                  "trailer",
+                  "motorcycle",
+                  "bicycle",
+                  "pedestrian",
+                  "animal",
+                  "hazard",
+                  "over_drivable",
+                  "under_drivable"
+                ]
+              },
+              "default": ["unknown"]
             }
           }
         }

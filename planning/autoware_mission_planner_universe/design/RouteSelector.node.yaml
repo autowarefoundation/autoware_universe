@@ -1,0 +1,69 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: RouteSelector.node
+
+package:
+  name: autoware_mission_planner_universe
+  provider: autoware
+
+launch:
+  plugin: autoware::mission_planner_universe::RouteSelector
+  executable: route_selector
+  node_output: screen
+
+# interfaces
+subscribers:
+  - name: planner_route
+    message_type: autoware_planning_msgs/msg/LaneletRoute
+    remap_target: ~/planner/route
+  - name: planner_state
+    message_type: autoware_planning_msgs/msg/RouteState
+    remap_target: ~/planner/state
+
+publishers:
+  - name: route
+    message_type: autoware_planning_msgs/msg/LaneletRoute
+    remap_target: ~/main/route
+  - name: state
+    message_type: autoware_planning_msgs/msg/RouteState
+    remap_target: ~/main/state
+
+servers:
+  - name: clear_route
+    message_type: autoware_planning_msgs/srv/ClearRoute
+    remap_target: ~/main/clear_route
+  - name: set_lanelet_route
+    message_type: autoware_planning_msgs/srv/SetLaneletRoute
+    remap_target: ~/main/set_lanelet_route
+  - name: set_waypoint_route
+    message_type: autoware_planning_msgs/srv/SetWaypointRoute
+    remap_target: ~/main/set_waypoint_route
+
+clients:
+  - name: planner_clear_route
+    message_type: autoware_planning_msgs/srv/ClearRoute
+    remap_target: ~/planner/clear_route
+  - name: planner_set_lanelet_route
+    message_type: autoware_planning_msgs/srv/SetLaneletRoute
+    remap_target: ~/planner/set_lanelet_route
+  - name: planner_set_waypoint_route
+    message_type: autoware_planning_msgs/srv/SetWaypointRoute
+    remap_target: ~/planner/set_waypoint_route
+
+# parameters
+param_values: []
+param_files: []
+
+# processes
+processes:
+  - name: on_route_update
+    trigger_conditions:
+      - on_input: planner_route
+    outcomes:
+      - to_output: route
+  - name: on_state_update
+    trigger_conditions:
+      - on_input: planner_state
+    outcomes:
+      - to_output: state

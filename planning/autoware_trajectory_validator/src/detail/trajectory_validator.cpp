@@ -1,0 +1,138 @@
+// Copyright 2026 TIER IV, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#include "autoware/trajectory_validator/detail/trajectory_validator.hpp"
+
+#include "autoware/trajectory_validator/detail/risk_utils.hpp"
+
+#include <autoware_utils_system/stop_watch.hpp>
+#include <autoware_utils_uuid/uuid_helper.hpp>
+
+#include <algorithm>
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
+#include <utility>
+#include <vector>
+
+namespace autoware::trajectory_validator
+{
+using autoware_trajectory_validator::msg::RiskLevel;
+using autoware_trajectory_validator::msg::ValidationReport;
+
+TrajectoryValidatorReport TrajectoryValidator::process(
+  const autoware_internal_planning_msgs::msg::CandidateTrajectories & input_trajectories,
+  const std::unordered_set<std::string> & active_filter_names,
+  const ValidatorContext & context) const
+{
+  TrajectoryValidatorReport report;
+  autoware_utils_system::StopWatch<std::chrono::milliseconds> stop_watch;
+  stop_watch.tic("Total");
+
+  // O(N) Map UUID to generator names upfront to preserve performance
+  std::unordered_map<std::string, std::string> uuid_to_name;
+  uuid_to_name.reserve(input_trajectories.generator_info.size());
+  for (const auto & info : input_trajectories.generator_info) {
+    uuid_to_name[autoware_utils_uuid::to_hex_string(info.generator_id)] = info.generator_name.data;
+  }
+
+  for (const auto & candidate_trajectory : input_trajectories.candidate_trajectories) {
+    EvaluationTable table;
+    const auto hex_generator_id =
+      autoware_utils_uuid::to_hex_string(candidate_trajectory.generator_id);
+    table.generator_id = hex_generator_id;
+
+    std::vector<autoware_trajectory_validator::msg::MetricReport> combined_metrics;
+
+    for (const auto & plugin : plugins_) {
+      PluginEvaluation evaluation;
+      evaluation.plugin_name = plugin->get_name();
+      evaluation.is_shadow_mode = plugin->is_shadow_mode();
+
+      stop_watch.tic(evaluation.plugin_name);
+      const auto res = plugin->is_feasible(candidate_trajectory, context);
+
+      RiskLevel risk_level;
+      if (!res) {
+        evaluation.is_feasible = false;
+        evaluation.reason = res.error();
+        // NOTE: If the plugin fails unexpectedly, treat it as a DANGER risk level.
+        risk_level.level = RiskLevel::DANGER;
+      } else {
+        const auto & val = res.value();
+        evaluation.is_feasible = val.is_feasible;
+        if (!val.is_feasible) {
+          evaluation.reason = "Found failed metrics";
+        }
+        risk_level.level = worst_risk_level(val.metrics);
+        combined_metrics.insert(combined_metrics.end(), val.metrics.begin(), val.metrics.end());
+        report.planning_factors.factors.insert(
+          report.planning_factors.factors.end(), val.planning_factors.factors.begin(),
+          val.planning_factors.factors.end());
+      }
+
+      combined_metrics.push_back(
+        autoware_trajectory_validator::build<autoware_trajectory_validator::msg::MetricReport>()
+          .validator_name(plugin->get_name())
+          .validator_category(plugin->category())
+          .metric_name("trajectory_feasibility")
+          .metric_value(evaluation.is_feasible ? 1.0 : 0.0)
+          .risk(risk_level));
+      report.processing_time_ms[evaluation.plugin_name] += stop_watch.toc(evaluation.plugin_name);
+
+      table.plugin_evaluations.push_back(evaluation);
+    }
+
+    report.evaluation_tables.push_back(table);
+
+    if (table.all_acceptable()) {
+      report.valid_trajectories.candidate_trajectories.push_back(candidate_trajectory);
+    }
+
+    if (table.all_feasible()) {
+      report.num_feasible_trajectories++;
+    }
+
+    // only consider metrics from active filters for final trajectory risk level
+    std::vector<autoware_trajectory_validator::msg::MetricReport> active_metrics;
+    std::copy_if(
+      combined_metrics.begin(), combined_metrics.end(), std::back_inserter(active_metrics),
+      [&](const auto & metric) { return active_filter_names.count(metric.validator_name) > 0; });
+
+    RiskLevel risk_level;
+    risk_level.level = worst_risk_level(active_metrics);
+    report.validation_reports.push_back(
+      autoware_trajectory_validator::build<autoware_trajectory_validator::msg::ValidationReport>()
+        .trajectory_stamp(candidate_trajectory.header.stamp)
+        .generator_id(candidate_trajectory.generator_id)
+        .generator_name(uuid_to_name.at(hex_generator_id))
+        .risk(risk_level)
+        .metrics(std::move(combined_metrics)));
+  }
+
+  for (const auto & traj : report.valid_trajectories.candidate_trajectories) {
+    auto it = std::find_if(
+      input_trajectories.generator_info.begin(), input_trajectories.generator_info.end(),
+      [&](const auto & info) { return traj.generator_id.uuid == info.generator_id.uuid; });
+
+    if (it != input_trajectories.generator_info.end()) {
+      report.valid_trajectories.generator_info.push_back(*it);
+    }
+  }
+
+  report.processing_time_ms["Total"] = stop_watch.toc("Total");
+  return report;
+}
+
+}  // namespace autoware::trajectory_validator

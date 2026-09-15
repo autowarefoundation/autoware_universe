@@ -16,8 +16,17 @@
 #define AUTOWARE__PTV3__ROS_UTILS_HPP_
 
 #include "autoware/ptv3/preprocess/point_type.hpp"
+#include "autoware/ptv3/utils.hpp"
 
 #include <autoware/point_types/types.hpp>
+#include <rclcpp/rclcpp.hpp>
+
+#include <autoware_perception_msgs/msg/detected_object.hpp>
+
+#include <cstdint>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 #define CHECK_OFFSET(structure1, structure2, field)             \
   static_assert(                                                \
@@ -40,6 +49,42 @@ CHECK_FIELD(CloudPointType, autoware::point_types::PointXYZIRC, y);
 CHECK_FIELD(CloudPointType, autoware::point_types::PointXYZIRC, z);
 CHECK_FIELD(CloudPointType, autoware::point_types::PointXYZIRC, intensity);
 static_assert(sizeof(CloudPointType) == sizeof(autoware::point_types::PointXYZIRC));
+
+/**
+ * @brief Convert a decoded detection box into a DetectedObject message.
+ *
+ * @param box3d Decoded detection box.
+ * @param class_names Detection class names indexed by box label.
+ * @param has_twist Whether to populate the object twist from box velocity.
+ * @param obj Output object to fill.
+ */
+void box3d_to_detected_object(
+  const Box3D & box3d, const std::vector<std::string> & class_names, bool has_twist,
+  autoware_perception_msgs::msg::DetectedObject & obj);
+
+/**
+ * @brief Map a detection class name to an ObjectClassification label.
+ *
+ * @param class_name Detection class name.
+ * @return Matching ObjectClassification label, or UNKNOWN.
+ */
+std::uint8_t get_classification_type(const std::string & class_name);
+
+/**
+ * @brief Declare and resolve segmentation3d.class_mapping.
+ *
+ * @details One `segmentation3d.class_mapping.<class_name>` parameter is declared per entry of
+ * class_names, so mapping entries for classes the loaded model does not output are never read.
+ *
+ * @param node Node used to declare the parameters.
+ * @param class_names Segmentation class names from segmentation3d.class_names.
+ * @param descriptor Descriptor applied to each declared parameter.
+ * @return Class name to PointCloudClassification name, one entry per class name.
+ * @throws std::runtime_error if a class name has no entry in the mapping.
+ */
+std::unordered_map<std::string, std::string> declare_class_mapping(
+  rclcpp::Node & node, const std::vector<std::string> & class_names,
+  const rcl_interfaces::msg::ParameterDescriptor & descriptor);
 
 }  // namespace autoware::ptv3
 

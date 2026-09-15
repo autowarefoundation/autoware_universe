@@ -15,11 +15,14 @@
 #ifndef AUTOWARE__TRAJECTORY_RANKER__DATA_STRUCTS_HPP_
 #define AUTOWARE__TRAJECTORY_RANKER__DATA_STRUCTS_HPP_
 
+#include <autoware_trajectory_ranker/autoware_trajectory_ranker_param.hpp>
+
 #include <autoware_internal_planning_msgs/msg/candidate_trajectory.hpp>
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 #include <autoware_vehicle_msgs/msg/steering_report.hpp>
+#include <autoware_vehicle_msgs/msg/turn_indicators_command.hpp>
 #include <std_msgs/msg/header.hpp>
 #include <unique_identifier_msgs/msg/uuid.hpp>
 
@@ -37,6 +40,7 @@ using autoware_perception_msgs::msg::PredictedObjects;
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using autoware_vehicle_msgs::msg::SteeringReport;
+using autoware_vehicle_msgs::msg::TurnIndicatorsCommand;
 using std_msgs::msg::Header;
 using unique_identifier_msgs::msg::UUID;
 
@@ -47,12 +51,10 @@ struct CoreData
   CoreData(
     const std::shared_ptr<TrajectoryPoints> & points,
     const std::shared_ptr<TrajectoryPoints> & previous_points,
-    const std::shared_ptr<PredictedObjects> & objects,
     const std::shared_ptr<lanelet::ConstLanelets> & preferred_lanes, const std::string & tag)
   : original{points},
     points{points},
     previous_points{previous_points},
-    objects{objects},
     preferred_lanes{preferred_lanes},
     tag{tag}
   {
@@ -62,49 +64,43 @@ struct CoreData
     const std::shared_ptr<TrajectoryPoints> & original,
     const std::shared_ptr<TrajectoryPoints> & points,
     const std::shared_ptr<TrajectoryPoints> & previous_points,
-    const std::shared_ptr<PredictedObjects> & objects,
     const std::shared_ptr<lanelet::ConstLanelets> & preferred_lanes, const Header & header,
     const UUID & generator_id,
-    const std::shared_ptr<std::deque<Trajectory>> & trajectory_history = nullptr)
+    const std::shared_ptr<std::deque<Trajectory>> & trajectory_history = nullptr,
+    const TurnIndicatorsCommand & turn_indicators_command = TurnIndicatorsCommand{})
   : original{original},
     points{points},
     previous_points{previous_points},
-    objects{objects},
     preferred_lanes{preferred_lanes},
     tag{"__anon"},
     header{header},
     generator_id{generator_id},
-    trajectory_history{trajectory_history}
+    trajectory_history{trajectory_history},
+    turn_indicators_command{turn_indicators_command}
   {
   }
 
   std::shared_ptr<TrajectoryPoints> original;
   std::shared_ptr<TrajectoryPoints> points;
   std::shared_ptr<TrajectoryPoints> previous_points;
-  std::shared_ptr<PredictedObjects> objects;
   std::shared_ptr<SteeringReport> steering;
   std::shared_ptr<lanelet::ConstLanelets> preferred_lanes;
   std::string tag;
   Header header;
   UUID generator_id;
   std::shared_ptr<std::deque<Trajectory>> trajectory_history;
+  TurnIndicatorsCommand turn_indicators_command;
 };
 
-struct EvaluatorParameters
+struct EvaluatorParameters : public trajectory_ranker_params::Params::Evaluation
 {
-  explicit EvaluatorParameters(const size_t metrics_num, const size_t sample_num)
-  : sample_num{sample_num},
-    time_decay_weight(metrics_num, std::vector<float>(sample_num, 0.0f)),
-    score_weight(metrics_num, 0.0f),
-    metrics_max_value(metrics_num, 0.0f)
+  std::vector<std::vector<double>> time_decay_weight;
+  std::vector<double> score_weight;
+
+  explicit EvaluatorParameters(const trajectory_ranker_params::Params::Evaluation & params)
+  : trajectory_ranker_params::Params::Evaluation(params)
   {
   }
-
-  size_t sample_num;
-  float resolution;
-  std::vector<std::vector<float>> time_decay_weight;  // [metrics][samples]
-  std::vector<float> score_weight;
-  std::vector<float> metrics_max_value;
 };
 
 // Result of evaluation
@@ -120,6 +116,7 @@ struct EvaluationResult
   UUID uuid() const { return data->generator_id; }
   std::shared_ptr<TrajectoryPoints> original() const { return data->original; }
   std::shared_ptr<TrajectoryPoints> points() const { return data->points; }
+  TurnIndicatorsCommand turn_indicators_command() const { return data->turn_indicators_command; }
   float total() const { return total_score; }
 };
 

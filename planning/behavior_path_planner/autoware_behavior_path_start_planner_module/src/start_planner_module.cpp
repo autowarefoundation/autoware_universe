@@ -107,7 +107,9 @@ StartPlannerModule::StartPlannerModule(
   std::unordered_map<std::string, std::shared_ptr<ObjectsOfInterestMarkerInterface>> &
     objects_of_interest_marker_interface_ptr_map,
   const std::shared_ptr<PlanningFactorInterface> planning_factor_interface)
-: SceneModuleInterface{name, node, rtc_interface_ptr_map, objects_of_interest_marker_interface_ptr_map, planning_factor_interface},  // NOLINT
+: SceneModuleInterface{
+    name, node, rtc_interface_ptr_map, objects_of_interest_marker_interface_ptr_map,
+    planning_factor_interface},  // NOLINT
   parameters_{parameters},
   vehicle_info_{autoware::vehicle_info_utils::VehicleInfoUtils(node).getVehicleInfo()},
   is_freespace_planner_cb_running_{false}
@@ -414,8 +416,7 @@ bool StartPlannerModule::hasCollisionWithDynamicObjects() const
 bool StartPlannerModule::isInsideLanelets() const
 {
   const auto & current_pose = planner_data_->self_odometry->pose.pose;
-  const auto vehicle_footprint = autoware_utils::transform_vector(
-    vehicle_info_.createFootprint(), autoware_utils::pose2transform(current_pose));
+  const auto vehicle_footprint = vehicle_info_.createFootprint(0.0, current_pose);
 
   lanelet::BasicPolygon2d footprint_polygon;
   for (const auto & point : vehicle_footprint) {
@@ -655,9 +656,7 @@ StartPlannerModule::getGapBetweenEgoAndLaneBorder(
   const double starting_pose_lateral_offset) const
 {
   geometry_msgs::msg::Pose ego_overhang_point_as_pose;
-  const auto local_vehicle_footprint = vehicle_info_.createFootprint();
-  const auto vehicle_footprint = autoware_utils::transform_vector(
-    local_vehicle_footprint, autoware_utils::pose2transform(ego_pose));
+  const auto vehicle_footprint = vehicle_info_.createFootprint(0.0, ego_pose);
   std::optional<double> smallest_lateral_gap_between_ego_and_border;
   std::optional<double> smallest_lateral_gap_between_ego_and_farthest_border;
   auto corresponding_lateral_gap_with_other_lane_bound = std::numeric_limits<double>::max();
@@ -1238,9 +1237,10 @@ void StartPlannerModule::planWithPriority(
 
     for (const auto & collision_check_margin : parameters_->collision_check_margins) {
       for (const auto & [index, planner] : order_priority) {
-        if (findPullOutPath(
-              start_pose_candidates[index], planner, refined_start_pose, goal_pose,
-              collision_check_margin, debug_data_vector)) {
+        if (
+          findPullOutPath(
+            start_pose_candidates[index], planner, refined_start_pose, goal_pose,
+            collision_check_margin, debug_data_vector)) {
           debug_data_.selected_start_pose_candidate_index = index;
           debug_data_.margin_for_start_pose_candidate = collision_check_margin;
           set_planner_evaluation_table(debug_data_vector);
@@ -1623,9 +1623,10 @@ std::vector<Pose> StartPlannerModule::searchPullOutStartPoseCandidates(
       back_path_from_start_pose.points, start_pose.position, -back_distance);
     if (!backed_pose) continue;
 
-    if (utils::checkCollisionBetweenFootprintAndObjects(
-          local_vehicle_footprint, *backed_pose, front_stop_objects_in_pull_out_lanes,
-          parameters_->collision_check_margin_from_front_object))
+    if (
+      utils::checkCollisionBetweenFootprintAndObjects(
+        local_vehicle_footprint, *backed_pose, front_stop_objects_in_pull_out_lanes,
+        parameters_->collision_check_margin_from_front_object))
       continue;
 
     const double backed_pose_arc_length =
@@ -1643,9 +1644,10 @@ std::vector<Pose> StartPlannerModule::searchPullOutStartPoseCandidates(
       continue;
     }
 
-    if (utils::checkCollisionBetweenFootprintAndObjects(
-          local_vehicle_footprint, *backed_pose, stop_objects_in_pull_out_lanes,
-          parameters_->collision_check_margins.back())) {
+    if (
+      utils::checkCollisionBetweenFootprintAndObjects(
+        local_vehicle_footprint, *backed_pose, stop_objects_in_pull_out_lanes,
+        parameters_->collision_check_margins.back())) {
       break;  // poses behind this has a collision, so break.
     }
 
