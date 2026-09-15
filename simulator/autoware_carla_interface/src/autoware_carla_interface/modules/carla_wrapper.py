@@ -242,18 +242,18 @@ class SensorWrapper(object):
 
     def _configure_camera_attributes(self, bp, spec):
         """Configure camera-specific attributes."""
-        bp.set_attribute("image_size_x", str(spec["image_size_x"]))
-        bp.set_attribute("image_size_y", str(spec["image_size_y"]))
-        bp.set_attribute("fov", str(spec["fov"]))
+        self._set_attribute_if_supported(bp, "image_size_x", str(spec["image_size_x"]))
+        self._set_attribute_if_supported(bp, "image_size_y", str(spec["image_size_y"]))
+        self._set_attribute_if_supported(bp, "fov", str(spec["fov"]))
 
     def _configure_lidar_attributes(self, bp, spec):
         """Configure LiDAR-specific attributes."""
-        bp.set_attribute("range", str(spec["range"]))
-        bp.set_attribute("rotation_frequency", str(spec["rotation_frequency"]))
-        bp.set_attribute("channels", str(spec["channels"]))
-        bp.set_attribute("upper_fov", str(spec["upper_fov"]))
-        bp.set_attribute("lower_fov", str(spec["lower_fov"]))
-        bp.set_attribute("points_per_second", str(spec["points_per_second"]))
+        self._set_attribute_if_supported(bp, "range", str(spec["range"]))
+        self._set_attribute_if_supported(bp, "rotation_frequency", str(spec["rotation_frequency"]))
+        self._set_attribute_if_supported(bp, "channels", str(spec["channels"]))
+        self._set_attribute_if_supported(bp, "upper_fov", str(spec["upper_fov"]))
+        self._set_attribute_if_supported(bp, "lower_fov", str(spec["lower_fov"]))
+        self._set_attribute_if_supported(bp, "points_per_second", str(spec["points_per_second"]))
 
     def _configure_gnss_attributes(self, bp, spec):
         """Configure GNSS noise, clean unless the sensor mapping asks otherwise."""
@@ -266,6 +266,19 @@ class SensorWrapper(object):
         for quantity in ["accel_stddev", "gyro_stddev", "gyro_bias"]:
             for axis in ["x", "y", "z"]:
                 self._set_noise_attribute(bp, spec, f"noise_{quantity}_{axis}")
+
+    @staticmethod
+    def _set_attribute_if_supported(bp, name, value):
+        """Set a blueprint attribute only when the blueprint exposes it.
+
+        CARLA sensor blueprints expose different attribute sets across
+        versions (for example 0.9.15 vs 0.10), so guarding with
+        ``has_attribute`` keeps sensor setup working on both instead of
+        raising when an attribute is absent.
+        """
+        if not bp.has_attribute(name):
+            return
+        bp.set_attribute(name, value)
 
     @staticmethod
     def _set_noise_attribute(bp, spec, name):

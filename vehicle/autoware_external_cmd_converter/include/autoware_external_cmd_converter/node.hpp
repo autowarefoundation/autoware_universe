@@ -15,8 +15,9 @@
 #ifndef AUTOWARE_EXTERNAL_CMD_CONVERTER__NODE_HPP_
 #define AUTOWARE_EXTERNAL_CMD_CONVERTER__NODE_HPP_
 
-#include "autoware_utils/ros/polling_subscriber.hpp"
-
+#include <autoware/agnocast_wrapper/diagnostic_updater.hpp>
+#include <autoware/agnocast_wrapper/node.hpp>
+#include <autoware/agnocast_wrapper/polling_subscriber.hpp>
 #include <autoware_raw_vehicle_cmd_converter/accel_map.hpp>
 #include <autoware_raw_vehicle_cmd_converter/brake_map.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
@@ -48,49 +49,59 @@ using autoware_vehicle_msgs::msg::GearCommand;
 using nav_msgs::msg::Odometry;
 using tier4_control_msgs::msg::GateMode;
 
-class ExternalCmdConverterNode : public rclcpp::Node
+class ExternalCmdConverterNode : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit ExternalCmdConverterNode(const rclcpp::NodeOptions & node_options);
 
 private:
   // Publisher
-  rclcpp::Publisher<Control>::SharedPtr cmd_pub_;
+  AUTOWARE_PUBLISHER_PTR(Control) cmd_pub_;
 
   // Subscriber
-  rclcpp::Subscription<PedalsCommand>::SharedPtr pedals_cmd_sub_;
-  rclcpp::Subscription<ManualOperatorHeartbeat>::SharedPtr heartbeat_sub_;
+  AUTOWARE_SUBSCRIPTION_PTR(PedalsCommand) pedals_cmd_sub_;
+  AUTOWARE_SUBSCRIPTION_PTR(ManualOperatorHeartbeat) heartbeat_sub_;
 
   // Polling Subscriber
-  template <typename T>
-  using PollingSubscriber = autoware_utils::InterProcessPollingSubscriber<T>;
-  PollingSubscriber<SteeringCommand> steering_cmd_sub_{this, "in/steering_cmd"};
-  PollingSubscriber<Odometry> velocity_sub_{this, "in/odometry"};
-  PollingSubscriber<GearCommand> gear_cmd_sub_{this, "in/gear_cmd"};
-  PollingSubscriber<GateMode> gate_mode_sub_{this, "in/current_gate_mode"};
+  autoware::agnocast_wrapper::polling::PollingSubscriber<SteeringCommand>::SharedPtr
+    steering_cmd_sub_ =
+      autoware::agnocast_wrapper::polling::create_polling_subscriber<SteeringCommand>(
+        this, "in/steering_cmd");
+  autoware::agnocast_wrapper::polling::PollingSubscriber<Odometry>::SharedPtr velocity_sub_ =
+    autoware::agnocast_wrapper::polling::create_polling_subscriber<Odometry>(this, "in/odometry");
+  autoware::agnocast_wrapper::polling::PollingSubscriber<GearCommand>::SharedPtr gear_cmd_sub_ =
+    autoware::agnocast_wrapper::polling::create_polling_subscriber<GearCommand>(
+      this, "in/gear_cmd");
+  autoware::agnocast_wrapper::polling::PollingSubscriber<GateMode>::SharedPtr gate_mode_sub_ =
+    autoware::agnocast_wrapper::polling::create_polling_subscriber<GateMode>(
+      this, "in/current_gate_mode");
 
-  void on_pedals_cmd(const PedalsCommand::ConstSharedPtr cmd_ptr);
-  void on_heartbeat(const ManualOperatorHeartbeat::ConstSharedPtr msg);
+  void on_pedals_cmd(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(PedalsCommand) & cmd_ptr);
+  void on_heartbeat(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(ManualOperatorHeartbeat) & msg);
 
-  Odometry::ConstSharedPtr current_velocity_ptr_{nullptr};  // [m/s]
-  GearCommand::ConstSharedPtr current_gear_cmd_{nullptr};
-  GateMode::ConstSharedPtr current_gate_mode_{nullptr};
+  Odometry::ConstSharedPtr current_velocity_ptr_;  // [m/s]
+  GearCommand::ConstSharedPtr current_gear_cmd_;
+  GateMode::ConstSharedPtr current_gate_mode_;
 
   std::shared_ptr<rclcpp::Time> latest_heartbeat_received_time_;
   std::shared_ptr<rclcpp::Time> latest_cmd_received_time_;
 
   // Timer
   void on_timer();
-  rclcpp::TimerBase::SharedPtr rate_check_timer_;
+  AUTOWARE_TIMER_PTR rate_check_timer_;
 
   // Parameter
+  // cppcheck-suppress unusedStructMember
   double ref_vel_gain_;  // reference velocity = current velocity + desired acceleration * gain
+  // cppcheck-suppress unusedStructMember
   bool wait_for_first_topic_;
+  // cppcheck-suppress unusedStructMember
   double control_command_timeout_;
+  // cppcheck-suppress unusedStructMember
   double emergency_stop_timeout_;
 
   // Diagnostics
-  diagnostic_updater::Updater updater_{this};
+  autoware::agnocast_wrapper::diagnostic_updater::Updater updater_{this};
 
   void check_topic_status(diagnostic_updater::DiagnosticStatusWrapper & stat);
   void check_emergency_stop(diagnostic_updater::DiagnosticStatusWrapper & stat);
@@ -100,6 +111,7 @@ private:
   // Algorithm
   AccelMap accel_map_;
   BrakeMap brake_map_;
+  // cppcheck-suppress unusedStructMember
   bool acc_map_initialized_;
 
   double calculate_acc(const PedalsCommand & cmd, const double vel);

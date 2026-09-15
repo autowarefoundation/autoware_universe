@@ -21,7 +21,8 @@
 
 using visualization_msgs::msg::Marker;
 
-ControlValidatorDebugMarkerPublisher::ControlValidatorDebugMarkerPublisher(rclcpp::Node * node)
+ControlValidatorDebugMarkerPublisher::ControlValidatorDebugMarkerPublisher(
+  autoware::agnocast_wrapper::Node * node)
 : node_(node)
 {
   debug_viz_pub_ =

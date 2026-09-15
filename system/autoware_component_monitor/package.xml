@@ -13,9 +13,12 @@
   <buildtool_depend>autoware_cmake</buildtool_depend>
 
   <depend>autoware_internal_msgs</depend>
+  <depend>libboost-dev</depend>
   <depend>libboost-filesystem-dev</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
+
+  <exec_depend>procps</exec_depend>
 
   <test_depend>ament_cmake_ros</test_depend>
   <test_depend>ament_lint_auto</test_depend>

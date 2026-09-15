@@ -59,6 +59,7 @@ MrmComfortableStopOperator::MrmComfortableStopOperator(const rclcpp::NodeOptions
 
   // Driving mode interface
   pub_mrm_state_ = create_publisher<DrivingModeMrmState>("~/output/mrm_state", 1);
+  pub_driving_mode_active_ = create_publisher<DrivingModeFlag>("~/output/driving_mode_active", 1);
   sub_driving_mode_request_ = create_subscription<DrivingModeRequest>(
     "~/input/driving_mode_request", 1,
     std::bind(&MrmComfortableStopOperator::onDrivingModeRequest, this, std::placeholders::_1));
@@ -101,6 +102,22 @@ void MrmComfortableStopOperator::onDrivingModeInfo(const DrivingModeInfo & msg)
       break;
     }
   }
+}
+
+void MrmComfortableStopOperator::publishDrivingModeActive() const
+{
+  if (!driving_mode_id_) {
+    return;
+  }
+
+  tier4_system_msgs::msg::DrivingModeFlagItem item;
+  item.mode = driving_mode_id_.value();
+  item.flag = (status_.state == MrmBehaviorStatus::OPERATING);
+
+  DrivingModeFlag msg;
+  msg.stamp = this->now();
+  msg.items = {item};
+  pub_driving_mode_active_->publish(msg);
 }
 
 void MrmComfortableStopOperator::publishMrmState() const
@@ -180,6 +197,7 @@ void MrmComfortableStopOperator::publishVelocityLimitClearCommand() const
 void MrmComfortableStopOperator::onTimer() const
 {
   publishStatus();
+  publishDrivingModeActive();
   publishMrmState();
 }
 
