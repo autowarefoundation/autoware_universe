@@ -17,6 +17,8 @@
 
 #include "topic_state_monitor.hpp"
 
+#include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>
+#include <autoware/agnocast_wrapper/diagnostic_updater.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -43,7 +45,7 @@ struct NodeParam
   bool is_transform;
 };
 
-class TopicStateMonitorNode : public rclcpp::Node
+class TopicStateMonitorNode : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit TopicStateMonitorNode(const rclcpp::NodeOptions & node_options);
@@ -54,7 +56,7 @@ private:
   Param param_;
 
   // Parameter Reconfigure
-  OnSetParametersCallbackHandle::SharedPtr set_param_res_;
+  rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr set_param_res_;
   rcl_interfaces::msg::SetParametersResult onParameter(
     const std::vector<rclcpp::Parameter> & parameters);
 
@@ -62,11 +64,11 @@ private:
   std::unique_ptr<TopicStateMonitor> topic_state_monitor_;
 
   // Subscriber
-  rclcpp::GenericSubscription::SharedPtr sub_topic_;
-  rclcpp::Subscription<tf2_msgs::msg::TFMessage>::SharedPtr sub_transform_;
+  AUTOWARE_GENERIC_SUBSCRIPTION_PTR sub_topic_;
+  AUTOWARE_SUBSCRIPTION_PTR(tf2_msgs::msg::TFMessage) sub_transform_;
 
   // Diagnostic Updater
-  diagnostic_updater::Updater updater_;
+  autoware::agnocast_wrapper::diagnostic_updater::Updater updater_;
 
   void checkTopicStatus(diagnostic_updater::DiagnosticStatusWrapper & stat);
 };
