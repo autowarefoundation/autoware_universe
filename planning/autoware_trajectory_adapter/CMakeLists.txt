@@ -11,6 +11,8 @@ ament_auto_add_library(${trajectory_adapter_lib_target} SHARED
   src/trajectory_adapter_wrapper.cpp
 )
 
+autoware_agnocast_wrapper_setup(${trajectory_adapter_lib_target})
+
 ament_auto_package(
   INSTALL_TO_SHARE
 )
