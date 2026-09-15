@@ -307,9 +307,8 @@ void PTv3TRT::initEncoderTrt(const tensorrt_common::TrtCommonConfig & trt_config
   std::vector<autoware::tensorrt_common::NetworkIO> network_io;
   std::vector<autoware::tensorrt_common::ProfileDims> profile_dims;
 
-  // Everything except the geometry and the point features is optional: an encoder variant that
-  // gates blocks off reads a subset, the exporter drops what the traced graph never consumes, and
-  // TrtCommon::setup drops the optional entries the artifact omits.
+  // Everything except the geometry and the point features is optional: PTv3 variants such
+  // as LitePT only need a subset of per-stage inputs.
   constexpr bool kOptional = true;
   const auto add_io = [&network_io, &profile_dims](
                         const std::string & name, const nvinfer1::Dims & io_dims,
