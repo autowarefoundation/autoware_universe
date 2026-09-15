@@ -14,15 +14,15 @@
 
 #include "diagnostics.hpp"
 
-#include <autoware/qos_utils/qos_compatibility.hpp>
-
 #include <memory>
 #include <unordered_map>
+#include <utility>
 
 namespace autoware::default_adapi
 {
 
-DiagnosticsNode::DiagnosticsNode(const rclcpp::NodeOptions & options) : Node("diagnostics", options)
+DiagnosticsNode::DiagnosticsNode(const rclcpp::NodeOptions & options)
+: autoware::agnocast_wrapper::Node("diagnostics", options)
 {
   using std::placeholders::_1;
   using std::placeholders::_2;
@@ -38,8 +38,8 @@ DiagnosticsNode::DiagnosticsNode(const rclcpp::NodeOptions & options) : Node("di
     "/diagnostics_graph/status", qos_status, std::bind(&DiagnosticsNode::on_status, this, _1));
 
   group_cli_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
-  cli_reset_ = create_client<InternalReset>(
-    "/diagnostics_graph/reset", AUTOWARE_DEFAULT_SERVICES_QOS_PROFILE(), group_cli_);
+  cli_reset_ =
+    create_client<InternalReset>("/diagnostics_graph/reset", rclcpp::ServicesQoS(), group_cli_);
   srv_reset_ = create_service<ExternalReset>(
     "/api/system/diagnostics/reset", std::bind(&DiagnosticsNode::on_reset, this, _1, _2));
 
@@ -70,16 +70,16 @@ void DiagnosticsNode::on_struct(const InternalGraphStruct & internal)
     return external;
   };
 
-  ExternalGraphStruct external;
-  external.nodes.reserve(internal.nodes.size());
-  external.diags.reserve(internal.diags.size());
-  external.links.reserve(internal.links.size());
-  external.stamp = internal.stamp;
-  external.id = internal.id;
-  for (const auto & node : internal.nodes) external.nodes.push_back(convert_node(node));
-  for (const auto & diag : internal.diags) external.diags.push_back(convert_diag(diag));
-  for (const auto & link : internal.links) external.links.push_back(convert_link(link));
-  pub_struct_->publish(external);
+  auto external = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_struct_);
+  external->nodes.reserve(internal.nodes.size());
+  external->diags.reserve(internal.diags.size());
+  external->links.reserve(internal.links.size());
+  external->stamp = internal.stamp;
+  external->id = internal.id;
+  for (const auto & node : internal.nodes) external->nodes.push_back(convert_node(node));
+  for (const auto & diag : internal.diags) external->diags.push_back(convert_diag(diag));
+  for (const auto & link : internal.links) external->links.push_back(convert_link(link));
+  pub_struct_->publish(std::move(external));
 }
 
 void DiagnosticsNode::on_status(const InternalGraphStatus & internal)
@@ -107,14 +107,14 @@ void DiagnosticsNode::on_status(const InternalGraphStatus & internal)
     return external;
   };
 
-  ExternalGraphStatus external;
-  external.nodes.reserve(internal.nodes.size());
-  external.diags.reserve(internal.diags.size());
-  external.stamp = internal.stamp;
-  external.id = internal.id;
-  for (const auto & node : internal.nodes) external.nodes.push_back(convert_node(node));
-  for (const auto & diag : internal.diags) external.diags.push_back(convert_diag(diag));
-  pub_status_->publish(external);
+  auto external = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_status_);
+  external->nodes.reserve(internal.nodes.size());
+  external->diags.reserve(internal.diags.size());
+  external->stamp = internal.stamp;
+  external->id = internal.id;
+  for (const auto & node : internal.nodes) external->nodes.push_back(convert_node(node));
+  for (const auto & diag : internal.diags) external->diags.push_back(convert_diag(diag));
+  pub_status_->publish(std::move(external));
 }
 
 void DiagnosticsNode::on_reset(
@@ -137,8 +137,8 @@ void DiagnosticsNode::on_reset(
     return;
   }
 
-  auto internal_req = std::make_shared<InternalReset::Request>();
-  auto future = cli_reset_->async_send_request(internal_req);
+  auto internal_req = ALLOCATE_OUTPUT_SERVICE_REQUEST(cli_reset_);
+  auto future = cli_reset_->async_send_request(std::move(internal_req));
   if (future.wait_for(std::chrono::seconds(1)) != std::future_status::ready) {
     res->status.success = false;
     res->status.code = ResponseStatus::SERVICE_TIMEOUT;

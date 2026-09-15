@@ -14,7 +14,7 @@
 
 #include "autoware/traffic_light_classifier/traffic_light_classifier.hpp"
 
-#include "classifier/classifier_interface.hpp"
+#include "autoware/traffic_light_classifier/classifier/classifier_interface.hpp"
 #include "traffic_light_classifier_process.hpp"
 
 #include <autoware/traffic_light_utils/traffic_light_utils.hpp>

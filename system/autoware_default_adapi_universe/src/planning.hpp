@@ -16,6 +16,8 @@
 #define PLANNING_HPP_
 
 #include <autoware/adapi_specs/planning.hpp>
+#include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware/component_interface_specs_universe/localization.hpp>
 #include <autoware/component_interface_specs_universe/planning.hpp>
 #include <autoware/motion_utils/vehicle/vehicle_state_checker.hpp>
@@ -42,20 +44,20 @@ using autoware_adapi_v1_msgs::msg::VelocityFactorArray;
 using autoware_internal_planning_msgs::msg::PlanningFactor;
 using autoware_internal_planning_msgs::msg::PlanningFactorArray;
 
-class PlanningNode : public rclcpp::Node
+class PlanningNode : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit PlanningNode(const rclcpp::NodeOptions & options);
 
 private:
-  Pub<autoware::adapi_specs::planning::VelocityFactors> pub_velocity_factors_;
-  Pub<autoware::adapi_specs::planning::SteeringFactors> pub_steering_factors_;
-  Sub<autoware::component_interface_specs_universe::planning::Trajectory> sub_trajectory_;
-  Sub<autoware::component_interface_specs_universe::localization::KinematicState>
+  Pub<autoware::adapi_specs::planning::VelocityFactors, NodeT> pub_velocity_factors_;
+  Pub<autoware::adapi_specs::planning::SteeringFactors, NodeT> pub_steering_factors_;
+  Sub<autoware::component_interface_specs_universe::planning::Trajectory, NodeT> sub_trajectory_;
+  Sub<autoware::component_interface_specs_universe::localization::KinematicState, NodeT>
     sub_kinematic_state_;
-  std::vector<rclcpp::Subscription<PlanningFactorArray>::SharedPtr> sub_factors_;
+  std::vector<AUTOWARE_SUBSCRIPTION_PTR(PlanningFactorArray)> sub_factors_;
   std::vector<PlanningFactorArray::ConstSharedPtr> factors_;
-  rclcpp::TimerBase::SharedPtr timer_;
+  AUTOWARE_TIMER_PTR timer_;
 
   using VehicleStopChecker = autoware::motion_utils::VehicleStopCheckerBase;
   using Trajectory = autoware::component_interface_specs_universe::planning::Trajectory::Message;

@@ -25,6 +25,7 @@
 #include <autoware_internal_planning_msgs/msg/safety_factor_array.hpp>
 #include <autoware_perception_msgs/msg/object_classification.hpp>
 
+#include <array>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -57,14 +58,18 @@ struct TargetCrosswalk
   CrosswalkOnTrajectory crosswalk_info;
   lanelet::BasicPolygon2d crosswalk_polygon;
   lanelet::BasicPolygons2d detection_areas;
+  /// Sidewalk-side entry edges (left↔right at each end of the crosswalk lanelet).
+  std::array<lanelet::BasicSegment2d, 2> entry_edges;
   bool is_crossing{false};
 
   TargetCrosswalk(
     const CrosswalkOnTrajectory & crosswalk_info, const lanelet::BasicPolygon2d & crosswalk_polygon,
-    const lanelet::BasicPolygons2d & detection_areas, const bool is_crossing)
+    const lanelet::BasicPolygons2d & detection_areas,
+    const std::array<lanelet::BasicSegment2d, 2> & entry_edges, const bool is_crossing)
   : crosswalk_info(crosswalk_info),
     crosswalk_polygon(crosswalk_polygon),
     detection_areas(detection_areas),
+    entry_edges(entry_edges),
     is_crossing(is_crossing)
   {
   }
@@ -142,6 +147,14 @@ private:
   std::unordered_map<lanelet::Id, TargetObjects> crosswalk_objects_map_;
   std::unordered_set<ObjectClassification::_label_type> object_types_;
 
+  struct StoppingDistance
+  {
+    std::optional<double> nominal;
+    std::optional<double> minimum;
+  } stopping_distance_;
+
+  std::optional<rclcpp::Time> last_frame_time_;
+
   TargetCrosswalks get_target_crosswalks(
     const TrajectoryPoints & traj_points, const FilterContext & context);
 
@@ -151,6 +164,8 @@ private:
   bool is_obstructing_crosswalk(
     const TrajectoryPoints & traj_points, const TargetCrosswalk & target_crosswalk,
     SafetyFactorArray & safety_factors) const;
+
+  RiskLevel::_level_type get_risk_level(const double arc_length_to_stop_line) const;
 
   void update_debug_data(
     const TrajectoryPoints & traj_points, const TargetCrosswalks & target_crosswalks,
