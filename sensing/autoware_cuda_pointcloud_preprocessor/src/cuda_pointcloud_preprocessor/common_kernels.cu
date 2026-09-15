@@ -17,6 +17,10 @@
 #include "autoware/cuda_pointcloud_preprocessor/types.hpp"
 
 #include <autoware/cuda_utils/cuda_check_error.hpp>
+#include <autoware/point_types/types.hpp>
+
+#include <cstdint>
+#include <type_traits>
 
 namespace autoware::cuda_pointcloud_preprocessor
 {
@@ -94,21 +98,24 @@ __global__ void combineMasksKernel(
   }
 }
 
+template <typename OutputPointT>
 __global__ void extractPointsKernel(
   InputPointType * __restrict__ input_points, std::uint32_t * __restrict__ masks,
-  std::uint32_t * __restrict__ indices, int num_points,
-  OutputPointType * __restrict__ output_points)
+  std::uint32_t * __restrict__ indices, int num_points, OutputPointT * __restrict__ output_points)
 {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
   if (idx < num_points && masks[idx] == 1) {
     InputPointType & input_point = input_points[idx];
-    OutputPointType & output_point = output_points[indices[idx] - 1];
+    OutputPointT & output_point = output_points[indices[idx] - 1];
     output_point.x = input_point.x;
     output_point.y = input_point.y;
     output_point.z = input_point.z;
     output_point.intensity = input_point.intensity;
     output_point.return_type = input_point.return_type;
     output_point.channel = input_point.channel;
+    if constexpr (std::is_same_v<OutputPointT, autoware::point_types::PointXYZIRCT>) {
+      output_point.time_stamp = input_point.time_stamp;
+    }
   }
 }
 
@@ -141,14 +148,21 @@ void combineMasksLaunch(
   CHECK_CUDA_ERROR(cudaGetLastError());
 }
 
+template <typename OutputPointT>
 void extractPointsLaunch(
   InputPointType * input_points, std::uint32_t * masks, std::uint32_t * indices, int num_points,
-  OutputPointType * output_points, int threads_per_block, int blocks_per_grid,
-  cudaStream_t & stream)
+  OutputPointT * output_points, int threads_per_block, int blocks_per_grid, cudaStream_t & stream)
 {
   extractPointsKernel<<<blocks_per_grid, threads_per_block, 0, stream>>>(
     input_points, masks, indices, num_points, output_points);
   CHECK_CUDA_ERROR(cudaGetLastError());
 }
+
+template void extractPointsLaunch<OutputPointType>(
+  InputPointType *, std::uint32_t *, std::uint32_t *, int, OutputPointType *, int, int,
+  cudaStream_t &);
+template void extractPointsLaunch<autoware::point_types::PointXYZIRCT>(
+  InputPointType *, std::uint32_t *, std::uint32_t *, int, autoware::point_types::PointXYZIRCT *,
+  int, int, cudaStream_t &);
 
 }  // namespace autoware::cuda_pointcloud_preprocessor

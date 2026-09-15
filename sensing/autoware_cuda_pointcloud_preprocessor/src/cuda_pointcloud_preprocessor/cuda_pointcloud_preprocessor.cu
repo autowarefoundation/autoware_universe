@@ -24,6 +24,8 @@
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
 #include <autoware/cuda_utils/cuda_check_error.hpp>
+#include <autoware/point_types/memory.hpp>
+#include <autoware/point_types/types.hpp>
 #include <cub/cub.cuh>
 
 #include <sensor_msgs/msg/point_field.hpp>
@@ -119,35 +121,22 @@ PreprocessorCapacity validate_capacity(const PreprocessorCapacity & capacity)
 
 }  // namespace
 
-CudaPointcloudPreprocessor::CudaPointcloudPreprocessor(const PreprocessorCapacity & capacity)
+CudaPointcloudPreprocessor::CudaPointcloudPreprocessor(
+  const PreprocessorCapacity & capacity, OutputPointFormat output_point_format)
 : capacity_(validate_capacity(capacity)),
   num_rings_(capacity_.max_ring_count),
   max_points_per_ring_(capacity_.max_points_per_ring),
   num_organized_points_(static_cast<std::size_t>(num_rings_) * max_points_per_ring_),
+  output_point_format_(output_point_format),
   stream_(initialize_stream())
 {
-  using sensor_msgs::msg::PointField;
-
-  auto make_point_field = [](
-                            const std::string & name, std::size_t offset,
-                            sensor_msgs::msg::PointField::_datatype_type datatype,
-                            std::size_t count) {
-    PointField field;
-    field.name = name;
-    field.offset = offset;
-    field.datatype = datatype;
-    field.count = count;
-    return field;
-  };
-
-  point_fields_ = {
-    make_point_field("x", 0, PointField::FLOAT32, 1),
-    make_point_field("y", 4, PointField::FLOAT32, 1),
-    make_point_field("z", 8, PointField::FLOAT32, 1),
-    make_point_field("intensity", 12, PointField::UINT8, 1),
-    make_point_field("return_type", 13, PointField::UINT8, 1),
-    make_point_field("channel", 14, PointField::UINT16, 1),
-  };
+  if (output_point_format_ == OutputPointFormat::XYZIRCT) {
+    point_fields_ = autoware::point_types::create_fields_point_xyzirct();
+    output_point_step_ = sizeof(autoware::point_types::PointXYZIRCT);
+  } else {
+    point_fields_ = autoware::point_types::create_fields_point_xyzirc();
+    output_point_step_ = sizeof(OutputPointType);
+  }
 
   int num_sm{};
   CHECK_CUDA_ERROR(cudaDeviceGetAttribute(&num_sm, cudaDevAttrMultiProcessorCount, 0));
@@ -255,7 +244,7 @@ void CudaPointcloudPreprocessor::preallocateOutput()
 {
   output_pointcloud_ptr_ = std::make_unique<cuda_blackboard::CudaPointCloud2>();
   output_pointcloud_ptr_->data = cuda_blackboard::make_unique<std::uint8_t[]>(
-    num_rings_ * max_points_per_ring_ * sizeof(OutputPointType));
+    num_rings_ * max_points_per_ring_ * output_point_step_);
 }
 
 void CudaPointcloudPreprocessor::organizePointcloud()
@@ -330,7 +319,7 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::pr
     output_pointcloud_ptr_->fields = point_fields_;
     output_pointcloud_ptr_->is_dense = true;
     output_pointcloud_ptr_->is_bigendian = input_pointcloud_msg.is_bigendian;
-    output_pointcloud_ptr_->point_step = sizeof(OutputPointType);
+    output_pointcloud_ptr_->point_step = output_point_step_;
     output_pointcloud_ptr_->header.stamp = input_pointcloud_msg.header.stamp;
 
     return std::move(output_pointcloud_ptr_);
@@ -523,23 +512,30 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::pr
   stats_.mismatch_count = static_cast<int>(processing_stats[mismatch_stat_index]);
 
   if (num_output_points > 0) {
-    extractPointsLaunch(
-      device_transformed_points, device_ring_outlier_mask, device_indices, num_organized_points_,
-      reinterpret_cast<OutputPointType *>(output_pointcloud_ptr_->data.get()), threads_per_block_,
-      blocks_per_grid, stream_);
+    if (output_point_format_ == OutputPointFormat::XYZIRCT) {
+      extractPointsLaunch(
+        device_transformed_points, device_ring_outlier_mask, device_indices, num_organized_points_,
+        reinterpret_cast<autoware::point_types::PointXYZIRCT *>(output_pointcloud_ptr_->data.get()),
+        threads_per_block_, blocks_per_grid, stream_);
+    } else {
+      extractPointsLaunch(
+        device_transformed_points, device_ring_outlier_mask, device_indices, num_organized_points_,
+        reinterpret_cast<OutputPointType *>(output_pointcloud_ptr_->data.get()), threads_per_block_,
+        blocks_per_grid, stream_);
+    }
   }
 
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 
   // Copy the transformed points back
-  output_pointcloud_ptr_->row_step = num_output_points * sizeof(OutputPointType);
+  output_pointcloud_ptr_->row_step = num_output_points * output_point_step_;
   output_pointcloud_ptr_->width = num_output_points;
   output_pointcloud_ptr_->height = 1;
 
   output_pointcloud_ptr_->fields = point_fields_;
   output_pointcloud_ptr_->is_dense = true;
   output_pointcloud_ptr_->is_bigendian = input_pointcloud_msg.is_bigendian;
-  output_pointcloud_ptr_->point_step = sizeof(OutputPointType);
+  output_pointcloud_ptr_->point_step = output_point_step_;
   output_pointcloud_ptr_->header.stamp = input_pointcloud_msg.header.stamp;
 
   return std::move(output_pointcloud_ptr_);

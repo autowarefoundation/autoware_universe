@@ -41,6 +41,7 @@
 #include <cmath>
 #include <deque>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
@@ -142,6 +143,7 @@ CudaPointcloudPreprocessorNode::CudaPointcloudPreprocessorNode(
   use_3d_undistortion_ = declare_parameter<bool>("use_3d_distortion_correction");
   use_imu_ = declare_parameter<bool>("use_imu");
   bool enable_ring_outlier_filter = declare_parameter<bool>("enable_ring_outlier_filter");
+  const auto output_point_type = declare_parameter<std::string>("output_point_type");
   input_bounds_params_.max_input_point_count =
     static_cast<std::size_t>(declare_parameter<int64_t>("max_input_point_count"));
   input_bounds_params_.max_ring_count =
@@ -252,12 +254,22 @@ CudaPointcloudPreprocessorNode::CudaPointcloudPreprocessorNode(
     use_3d_undistortion_ ? CudaPointcloudPreprocessor::UndistortionType::Undistortion3D
                          : CudaPointcloudPreprocessor::UndistortionType::Undistortion2D;
 
+  CudaPointcloudPreprocessor::OutputPointFormat output_point_format;
+  if (output_point_type == "XYZIRC") {
+    output_point_format = CudaPointcloudPreprocessor::OutputPointFormat::XYZIRC;
+  } else if (output_point_type == "XYZIRCT") {
+    output_point_format = CudaPointcloudPreprocessor::OutputPointFormat::XYZIRCT;
+  } else {
+    throw std::runtime_error(
+      "output_point_type must be 'XYZIRC' or 'XYZIRCT', got '" + output_point_type + "'");
+  }
+
   const PreprocessorCapacity preprocessor_capacity{
     input_bounds_params_.max_input_point_count, input_bounds_params_.max_ring_count,
     input_bounds_params_.max_points_per_ring,
     input_bounds_params_.max_twist_queue_size + input_bounds_params_.max_imu_queue_size};
   cuda_pointcloud_preprocessor_ =
-    std::make_unique<CudaPointcloudPreprocessor>(preprocessor_capacity);
+    std::make_unique<CudaPointcloudPreprocessor>(preprocessor_capacity, output_point_format);
   cuda_pointcloud_preprocessor_->setRingOutlierFilterParameters(ring_outlier_filter_parameters);
   cuda_pointcloud_preprocessor_->setRingOutlierFilterActive(enable_ring_outlier_filter);
   cuda_pointcloud_preprocessor_->setCropBoxParameters(crop_box_parameters);
