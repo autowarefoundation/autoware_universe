@@ -16,6 +16,7 @@
 #define TOPIC_RELAY_CONTROLLER_NODE_HPP_
 
 // ROS 2 core
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <tf2_msgs/msg/tf_message.hpp>
@@ -41,36 +42,45 @@ struct NodeParam
   std::string srv_name;
   bool enable_keep_publishing;
   int update_rate;
+  bool enable_throttle;
+  double msgs_per_sec;
 };
 
-class TopicRelayController : public rclcpp::Node
+class TopicRelayController : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit TopicRelayController(const rclcpp::NodeOptions & options);
 
 private:
+  void on_topic(std::shared_ptr<const rclcpp::SerializedMessage> msg);
+
+  /// Rate gate for the throttle mode: true once the throttle period has elapsed since the last
+  /// relayed message, and unconditionally true when enable_throttle is false.
+  bool is_throttle_period_elapsed();
+
   // Parameter
   NodeParam node_param_;
 
   // Subscriber
-  rclcpp::GenericSubscription::SharedPtr sub_topic_;
-  rclcpp::Subscription<tf2_msgs::msg::TFMessage>::SharedPtr sub_transform_;
+  AUTOWARE_GENERIC_SUBSCRIPTION_PTR sub_topic_;
+  AUTOWARE_SUBSCRIPTION_PTR(tf2_msgs::msg::TFMessage) sub_transform_;
 
   // Publisher
-  rclcpp::GenericPublisher::SharedPtr pub_topic_;
-  rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr pub_transform_;
+  AUTOWARE_GENERIC_PUBLISHER_PTR pub_topic_;
+  AUTOWARE_PUBLISHER_PTR(tf2_msgs::msg::TFMessage) pub_transform_;
 
   // Service
-  rclcpp::Service<tier4_system_msgs::srv::ChangeTopicRelayControl>::SharedPtr
-    srv_change_relay_control_;
+  AUTOWARE_SERVICE_PTR(tier4_system_msgs::srv::ChangeTopicRelayControl) srv_change_relay_control_;
 
   // Timer
-  rclcpp::TimerBase::SharedPtr timer_;
+  AUTOWARE_TIMER_PTR timer_;
 
   // State
   bool is_relaying_;
-  tf2_msgs::msg::TFMessage::SharedPtr last_tf_topic_;
-  std::shared_ptr<rclcpp::SerializedMessage> last_topic_;
+  rclcpp::Duration throttle_period_;
+  rclcpp::Time last_relayed_time_;
+  tf2_msgs::msg::TFMessage::ConstSharedPtr last_tf_topic_;
+  std::shared_ptr<const rclcpp::SerializedMessage> last_topic_;
 };
 }  // namespace autoware::topic_relay_controller
 
