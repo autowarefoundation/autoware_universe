@@ -13,6 +13,10 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   "src/emergency_stop.cpp"
   "src/comfortable_stop.cpp"
   "src/pull_over.cpp"
+  "src/main_ecu_in_lane_emergency_stop.cpp"
+  "src/main_ecu_in_lane_moderate_stop.cpp"
+  "src/sub_ecu_in_lane_moderate_stop.cpp"
+  "src/sub_ecu_standby.cpp"
 )
 
 if(BUILD_TESTING)
