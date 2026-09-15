@@ -96,6 +96,8 @@ constexpr size_t num_points = 3;
 const std::vector<std::string> sensor_frames = {
   "char_left_lidar", "char_right_lidar", "char_top_lidar"};
 
+const std::vector<std::string> sensor_names = {"left", "right", "top"};
+
 // base_link -> sensor translations, integral and distinct so expected points are obvious.
 const std::vector<std::array<double, 3>> sensor_translations = {
   {0.0, 1.0, 0.0}, {0.0, -2.0, 0.0}, {0.0, 0.0, 3.0}};
@@ -447,18 +449,18 @@ protected:
   }
 
   // Brings the node up with `params` and connects every publisher and subscriber this test
-  // could need. Each test gets a private namespace, so nothing leaks between tests.
+  // could need. Each test gets a private namespace named after itself, so nothing leaks
+  // between tests and every topic in a failure message says which test owns it.
   void start(const NodeParams & params)
   {
-    namespace_ = "/char_" + std::to_string(++instance_counter_);
     node_name_ = "concat_under_test";
     params_ = params;
 
-    for (const auto & name : {"left", "right", "top"}) {
-      input_topics_.push_back(namespace_ + "/lidar/" + name + "/pointcloud");
+    for (size_t i = 0; i < num_sensors; ++i) {
+      input_topics_.push_back(in_namespace(get_input_topic_for(i)));
     }
 
-    test_node_ = std::make_shared<rclcpp::Node>("characterization_driver", namespace_);
+    test_node_ = std::make_shared<rclcpp::Node>("characterization_driver", test_namespace());
     executor_ = std::make_shared<rclcpp::executors::SingleThreadedExecutor>();
     executor_->add_node(test_node_);
 
@@ -638,28 +640,63 @@ protected:
   ExpectedTopic expected_input_topic(size_t sensor_index) const
   {
     return make_point_cloud_topic(
-      input_topics_.at(sensor_index), static_cast<size_t>(params_.maximum_queue_size));
+      get_input_topic_for(sensor_index), static_cast<size_t>(params_.maximum_queue_size));
   }
 
   std::vector<rclcpp::TopicEndpointInfo> get_publishers_on(const std::string & topic)
   {
-    return get_endpoints_of_node_under_test(test_node_->get_publishers_info_by_topic(topic));
+    return get_endpoints_of_node_under_test(
+      test_node_->get_publishers_info_by_topic(in_namespace(topic)));
   }
 
   std::vector<rclcpp::TopicEndpointInfo> get_subscriptions_on(const std::string & topic)
   {
-    return get_endpoints_of_node_under_test(test_node_->get_subscriptions_info_by_topic(topic));
+    return get_endpoints_of_node_under_test(
+      test_node_->get_subscriptions_info_by_topic(in_namespace(topic)));
   }
 
-  std::string get_concatenated_cloud_topic() const { return namespace_ + "/output"; }
-  std::string get_concatenation_info_topic() const { return namespace_ + "/output_info"; }
-  std::string get_twist_topic() const { return namespace_ + "/" + node_name_ + "/input/twist"; }
-  std::string get_odometry_topic() const { return namespace_ + "/" + node_name_ + "/input/odom"; }
+  // -- topic names ------------------------------------------------------------------------
+  //
+  // Topics are spelled relative to the test's private namespace, so a test can say "/output"
+  // and stay readable. in_namespace() is the single place that expands one into the absolute
+  // name the ROS graph reports, and the assertions above apply it for you.
+
+  // The test's private namespace, named after the test itself: unique without a counter, and
+  // it puts the owning test's name into every topic path a failure message prints.
+  std::string test_namespace() const
+  {
+    return "/" + std::string(::testing::UnitTest::GetInstance()->current_test_info()->name());
+  }
+
+  std::string in_namespace(const std::string & relative_topic) const
+  {
+    return test_namespace() + relative_topic;
+  }
+
+  std::string get_input_topic_for(size_t sensor_index) const
+  {
+    return "/lidar/" + sensor_names.at(sensor_index) + "/pointcloud";
+  }
+
+  // Mirrors what the node does to build a synchronized topic name, so the fixture can
+  // subscribe. The naming rule itself is asserted separately by the topic interface tests.
+  std::string get_synchronized_topic_for(size_t sensor_index) const
+  {
+    const auto topic = get_input_topic_for(sensor_index);
+    const auto slash = topic.find_last_of('/');
+    const auto replaced = topic.substr(0, slash) + "/" + params_.synchronized_pointcloud_postfix;
+    return replaced == topic ? topic + "_synchronized" : replaced;
+  }
+
+  std::string get_twist_topic() const { return "/" + node_name_ + "/input/twist"; }
+  std::string get_odometry_topic() const { return "/" + node_name_ + "/input/odom"; }
   std::string get_debug_topic(const std::string & leaf) const
   {
-    return namespace_ + "/concatenate_data_synchronizer/debug/" + leaf;
+    return "/concatenate_data_synchronizer/debug/" + leaf;
   }
 
+  // Absolute, because these are what the node is configured with and what it reports back
+  // in its output_info and diagnostics.
   std::vector<std::string> input_topics_;
   std::vector<std::string> synchronized_topics_;
   std::vector<PointCloud2> concatenated_clouds_;
@@ -670,7 +707,6 @@ protected:
   std::vector<autoware_internal_debug_msgs::msg::Float64Stamped> cyclic_times_;
   std::array<std::vector<autoware_internal_debug_msgs::msg::Float64Stamped>, num_sensors>
     pipeline_latencies_;
-  std::string namespace_;
   std::string node_name_;
   NodeParams params_;
 
@@ -720,9 +756,9 @@ private:
       input_publishers_.push_back(test_node_->create_publisher<PointCloud2>(topic, sensor_qos));
     }
     twist_publisher_ = test_node_->create_publisher<geometry_msgs::msg::TwistWithCovarianceStamped>(
-      get_twist_topic(), 10);
+      in_namespace(get_twist_topic()), 10);
     odometry_publisher_ =
-      test_node_->create_publisher<nav_msgs::msg::Odometry>(get_odometry_topic(), 10);
+      test_node_->create_publisher<nav_msgs::msg::Odometry>(in_namespace(get_odometry_topic()), 10);
   }
 
   void create_output_subscriptions()
@@ -730,17 +766,17 @@ private:
     const auto sensor_qos = rclcpp::SensorDataQoS().keep_last(10);
 
     concatenated_subscription_ = test_node_->create_subscription<PointCloud2>(
-      get_concatenated_cloud_topic(), sensor_qos,
+      in_namespace("/output"), sensor_qos,
       [this](PointCloud2::ConstSharedPtr msg) { concatenated_clouds_.push_back(*msg); });
 
     info_subscription_ = test_node_->create_subscription<ConcatenatedPointCloudInfo>(
-      get_concatenation_info_topic(), sensor_qos,
+      in_namespace("/output_info"), sensor_qos,
       [this](ConcatenatedPointCloudInfo::ConstSharedPtr msg) {
         concatenation_infos_.push_back(*msg);
       });
 
     for (size_t i = 0; i < num_sensors; ++i) {
-      synchronized_topics_.push_back(get_synchronized_topic_for(i));
+      synchronized_topics_.push_back(in_namespace(get_synchronized_topic_for(i)));
       synchronized_subscriptions_.push_back(test_node_->create_subscription<PointCloud2>(
         synchronized_topics_.back(), sensor_qos, [this, i](PointCloud2::ConstSharedPtr msg) {
           synchronized_clouds_.at(i).push_back(*msg);
@@ -756,10 +792,10 @@ private:
 
     using autoware_internal_debug_msgs::msg::Float64Stamped;
     processing_time_subscription_ = test_node_->create_subscription<Float64Stamped>(
-      get_debug_topic("processing_time_ms"), rclcpp::QoS(10),
+      in_namespace(get_debug_topic("processing_time_ms")), rclcpp::QoS(10),
       [this](Float64Stamped::ConstSharedPtr msg) { processing_times_.push_back(*msg); });
     cyclic_time_subscription_ = test_node_->create_subscription<Float64Stamped>(
-      get_debug_topic("cyclic_time_ms"), rclcpp::QoS(10),
+      in_namespace(get_debug_topic("cyclic_time_ms")), rclcpp::QoS(10),
       [this](Float64Stamped::ConstSharedPtr msg) { cyclic_times_.push_back(*msg); });
 
     for (size_t i = 0; i < num_sensors; ++i) {
@@ -767,22 +803,12 @@ private:
       // and input topics are absolute, so the whole input topic path is spliced into the
       // debug namespace.
       latency_subscriptions_.push_back(test_node_->create_subscription<Float64Stamped>(
-        namespace_ + "/concatenate_data_synchronizer/debug" + input_topics_.at(i) +
-          "/pipeline_latency_ms",
+        in_namespace(
+          "/concatenate_data_synchronizer/debug" + input_topics_.at(i) + "/pipeline_latency_ms"),
         rclcpp::QoS(10), [this, i](Float64Stamped::ConstSharedPtr msg) {
           pipeline_latencies_.at(i).push_back(*msg);
         }));
     }
-  }
-
-  // Mirrors what the node does to build a synchronized topic name, so the fixture can
-  // subscribe. The naming rule itself is asserted separately by the topic interface tests.
-  std::string get_synchronized_topic_for(size_t sensor_index) const
-  {
-    const auto & topic = input_topics_.at(sensor_index);
-    const auto slash = topic.find_last_of('/');
-    const auto replaced = topic.substr(0, slash) + "/" + params_.synchronized_pointcloud_postfix;
-    return replaced == topic ? topic + "_synchronized" : replaced;
   }
 
   void load_node_under_test()
@@ -792,7 +818,8 @@ private:
                                 << package_name;
 
     rclcpp::NodeOptions options;
-    options.arguments({"--ros-args", "-r", "__ns:=" + namespace_, "-r", "__node:=" + node_name_});
+    options.arguments(
+      {"--ros-args", "-r", "__ns:=" + test_namespace(), "-r", "__node:=" + node_name_});
     options.parameter_overrides(make_parameter_overrides());
 
     node_wrapper_ = factory->create_node_instance(options);
@@ -828,8 +855,6 @@ private:
 
   static PointCloud2 make_cloud(size_t sensor_index, double stamp_sec, Layout layout, bool empty);
 
-  static int instance_counter_;
-
   std::shared_ptr<rclcpp::Node> test_node_;
   std::shared_ptr<rclcpp::executors::SingleThreadedExecutor> executor_;
   rclcpp_components::NodeInstanceWrapper node_wrapper_;
@@ -850,8 +875,6 @@ private:
   std::vector<rclcpp::Subscription<autoware_internal_debug_msgs::msg::Float64Stamped>::SharedPtr>
     latency_subscriptions_;
 };
-
-int ConcatenateNodeTest::instance_counter_ = 0;
 
 PointCloud2 ConcatenateNodeTest::make_cloud(
   size_t sensor_index, double stamp_sec, Layout layout, bool empty)
@@ -956,7 +979,7 @@ TEST_F(ConcatenateNodeTest, AdvertisesConcatenatedCloudTopic)
   start(make_advanced_with_twist_params());
 
   // Assert
-  expect_node_has_publisher_for(make_point_cloud_topic(get_concatenated_cloud_topic(), 5));
+  expect_node_has_publisher_for(make_point_cloud_topic("/output", 5));
 }
 
 TEST_F(ConcatenateNodeTest, AdvertisesConcatenationInfoTopic)
@@ -967,7 +990,7 @@ TEST_F(ConcatenateNodeTest, AdvertisesConcatenationInfoTopic)
   // Assert
   expect_node_has_publisher_for(
     ExpectedTopic{
-      get_concatenation_info_topic(), "autoware_sensing_msgs/msg/ConcatenatedPointCloudInfo",
+      "/output_info", "autoware_sensing_msgs/msg/ConcatenatedPointCloudInfo",
       rclcpp::ReliabilityPolicy::BestEffort, rclcpp::DurabilityPolicy::Volatile, 5});
 }
 
@@ -978,8 +1001,7 @@ TEST_F(ConcatenateNodeTest, AdvertisesOneSynchronizedCloudTopicPerInput)
 
   // Assert
   const std::vector<std::string> expected_names = {
-    namespace_ + "/lidar/left/pointcloud_sync", namespace_ + "/lidar/right/pointcloud_sync",
-    namespace_ + "/lidar/top/pointcloud_sync"};
+    "/lidar/left/pointcloud_sync", "/lidar/right/pointcloud_sync", "/lidar/top/pointcloud_sync"};
   for (const auto & name : expected_names) {
     expect_node_has_publisher_for(make_point_cloud_topic(name, 5));
   }
@@ -993,8 +1015,8 @@ TEST_F(ConcatenateNodeTest, AdvertisesNoSynchronizedCloudTopicWhenDisabled)
   start(params);
 
   // Assert
-  for (const auto & topic : synchronized_topics_) {
-    expect_node_has_no_publisher_for(topic);
+  for (size_t i = 0; i < num_sensors; ++i) {
+    expect_node_has_no_publisher_for(get_synchronized_topic_for(i));
   }
 }
 
@@ -1009,8 +1031,9 @@ TEST_F(ConcatenateNodeTest, SynchronizedTopicNameFallsBackWhenPostfixMatchesInpu
   start(params);
 
   // Assert
-  for (const auto & input_topic : input_topics_) {
-    expect_node_has_publisher_for(make_point_cloud_topic(input_topic + "_synchronized", 5));
+  for (size_t i = 0; i < num_sensors; ++i) {
+    expect_node_has_publisher_for(
+      make_point_cloud_topic(get_input_topic_for(i) + "_synchronized", 5));
   }
 }
 
@@ -1022,7 +1045,7 @@ TEST_F(ConcatenateNodeTest, PublisherQueueDepthFollowsMaximumQueueSize)
   start(params);
 
   // Assert
-  expect_node_has_publisher_for(make_point_cloud_topic(get_concatenated_cloud_topic(), 3));
+  expect_node_has_publisher_for(make_point_cloud_topic("/output", 3));
   expect_node_has_subscription_for(expected_input_topic(0));
 }
 
@@ -1652,7 +1675,7 @@ TEST_F(ConcatenateNodeTest, DiagnosticsIsNamedAfterTheNode)
 
   // Assert
   EXPECT_EQ(status.hardware_id, node_name_);
-  EXPECT_EQ(status.name, node_name_ + ": " + namespace_ + "/" + node_name_);
+  EXPECT_EQ(status.name, node_name_ + ": " + in_namespace("/" + node_name_));
 }
 
 TEST_F(ConcatenateNodeTest, DiagnosticsReportsOkWhenEverySourceArrives)
