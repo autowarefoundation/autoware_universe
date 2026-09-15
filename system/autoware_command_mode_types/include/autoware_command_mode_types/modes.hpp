@@ -32,6 +32,12 @@ constexpr uint16_t emergency_stop = 2001;
 constexpr uint16_t comfortable_stop = 2002;
 constexpr uint16_t pull_over = 2003;
 
+// Redundanct architecture specific modes
+constexpr uint16_t main_ecu_in_lane_moderate_stop = 3001;
+constexpr uint16_t main_ecu_in_lane_emergency_stop = 3002;
+constexpr uint16_t sub_ecu_standby = 4001;
+constexpr uint16_t sub_ecu_in_lane_moderate_stop = 4002;
+
 }  // namespace autoware::command_mode_types::modes
 
 #endif  // AUTOWARE_COMMAND_MODE_TYPES__MODES_HPP_
