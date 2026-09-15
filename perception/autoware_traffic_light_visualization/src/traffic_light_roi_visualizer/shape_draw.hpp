@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #pragma once
-#include <ament_index_cpp/get_package_share_directory.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/opencv.hpp>
 
@@ -42,6 +41,8 @@ struct ShapeImgParam
 /**
  * @brief Draw traffic light shapes on the camera view image.
  * @param image Camera view image.
+ * @param image_dir Directory holding the shape images, passed in so that this file needs no
+ * package lookup of its own.
  * @param params Shape parameters to load shape image.
  * @param size Shape image size to resize.
  * @param position Top-left position of a ROI.
@@ -49,11 +50,12 @@ struct ShapeImgParam
  * @param probability Classification probability.
  */
 void draw_shape(
-  cv::Mat & image, const std::vector<ShapeImgParam> & params, int size, const cv::Point & position,
-  const cv::Scalar & color, float probability);
+  cv::Mat & image, const std::string & image_dir, const std::vector<ShapeImgParam> & params,
+  int size, const cv::Point & position, const cv::Scalar & color, float probability);
 
 /**
  * @brief Load shape images and concatenate them.
+ * @param image_dir Directory holding the shape images.
  * @param params Parameters for each shape image.
  * @param size Image size to resize.
  * @param scale_factor Scale factor to resize.
@@ -61,7 +63,8 @@ void draw_shape(
  * concatenated image.
  */
 cv::Mat load_shape_image(
-  const std::vector<ShapeImgParam> & params, int size, double scale_factor = 0.3);
+  const std::string & image_dir, const std::vector<ShapeImgParam> & params, int size,
+  double scale_factor = 0.3);
 
 /**
  * @brief Load parameter of circle.
@@ -177,6 +180,7 @@ inline ShapeImgParam unknown_img_param()
 /**
  * @brief Draw traffic light shapes on the camera view image.
  * @param image Camera view image.
+ * @param image_dir Directory holding the shape images.
  * @param shapes Shape names.
  * @param size Shape image size to resize.
  * @param position Top-left position of a ROI.
@@ -184,7 +188,7 @@ inline ShapeImgParam unknown_img_param()
  * @param probability Classification probability.
  */
 void draw_traffic_light_shape(
-  cv::Mat & image, const std::vector<std::string> & shapes, int size, const cv::Point & position,
-  const cv::Scalar & color, float probability);
+  cv::Mat & image, const std::string & image_dir, const std::vector<std::string> & shapes, int size,
+  const cv::Point & position, const cv::Scalar & color, float probability);
 
 }  // namespace autoware::traffic_light::visualization
