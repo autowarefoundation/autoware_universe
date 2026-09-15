@@ -27,15 +27,15 @@
 namespace autoware::traffic_light::visualization
 {
 void draw_shape(
-  cv::Mat & image, const std::vector<ShapeImgParam> & params, int size, const cv::Point & position,
-  const cv::Scalar & color, float probability)
+  cv::Mat & image, const std::string & image_dir, const std::vector<ShapeImgParam> & params,
+  int size, const cv::Point & position, const cv::Scalar & color, float probability)
 {
   // skip if the roi position is set as (0,0), which means it is undetected
   if (position.x == 0 && position.y == 0) {
     return;
   }
   // load concatenated shape image
-  const auto shape_img = load_shape_image(params, size);
+  const auto shape_img = load_shape_image(image_dir, params, size);
 
   // Calculate the width of the text
   std::string prob_str = std::to_string(static_cast<int>(round(probability * 100))) + "%";
@@ -85,19 +85,17 @@ void draw_shape(
   }
 }
 
-cv::Mat load_shape_image(const std::vector<ShapeImgParam> & params, int size, double scale_factor)
+cv::Mat load_shape_image(
+  const std::string & image_dir, const std::vector<ShapeImgParam> & params, int size,
+  double scale_factor)
 {
   if (params.empty()) {
     return {};
   }
 
-  static const auto img_dir =
-    ament_index_cpp::get_package_share_directory("autoware_traffic_light_visualization") +
-    "/images/";
-
   std::vector<cv::Mat> src_img;
   for (const auto & param : params) {
-    auto filepath = img_dir + param.filename;
+    auto filepath = image_dir + param.filename;
     auto img = cv::imread(filepath, cv::IMREAD_UNCHANGED);
 
     cv::resize(img, img, cv::Size(size, size), scale_factor, scale_factor, cv::INTER_AREA);
@@ -118,8 +116,8 @@ cv::Mat load_shape_image(const std::vector<ShapeImgParam> & params, int size, do
 }
 
 void draw_traffic_light_shape(
-  cv::Mat & image, const std::vector<std::string> & shapes, int size, const cv::Point & position,
-  const cv::Scalar & color, float probability)
+  cv::Mat & image, const std::string & image_dir, const std::vector<std::string> & shapes, int size,
+  const cv::Point & position, const cv::Scalar & color, float probability)
 {
   using ShapeImgParamFunction = std::function<ShapeImgParam()>;
 
@@ -144,6 +142,6 @@ void draw_traffic_light_shape(
     }
   }
 
-  draw_shape(image, params, size, position, color, probability);
+  draw_shape(image, image_dir, params, size, position, color, probability);
 }
 }  // namespace autoware::traffic_light::visualization

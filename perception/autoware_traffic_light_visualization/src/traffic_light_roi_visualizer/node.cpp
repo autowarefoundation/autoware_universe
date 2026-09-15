@@ -32,6 +32,9 @@ TrafficLightRoiVisualizerNode::TrafficLightRoiVisualizerNode(const rclcpp::NodeO
   using std::placeholders::_4;
   use_high_accuracy_detection_ = this->declare_parameter<bool>("use_high_accuracy_detection");
   use_image_transport_ = this->declare_parameter<bool>("use_image_transport");
+  shape_image_dir_ =
+    ament_index_cpp::get_package_share_directory("autoware_traffic_light_visualization") +
+    "/images/";
 
   if (use_high_accuracy_detection_) {
     sync_with_rough_roi_.reset(new SyncWithRoughRoi(
@@ -113,7 +116,7 @@ bool TrafficLightRoiVisualizerNode::draw_roi_with_label(
   const auto position = cv::Point(tl_roi.roi.x_offset, tl_roi.roi.y_offset);
 
   visualization::draw_traffic_light_shape(
-    image, info.shapes, shape_img_size, position, info.color, result.prob);
+    image, shape_image_dir_, info.shapes, shape_img_size, position, info.color, result.prob);
 
   return true;
 }

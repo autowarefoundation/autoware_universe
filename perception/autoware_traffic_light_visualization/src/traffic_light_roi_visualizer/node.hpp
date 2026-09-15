@@ -14,6 +14,7 @@
 #ifndef TRAFFIC_LIGHT_ROI_VISUALIZER__NODE_HPP_
 #define TRAFFIC_LIGHT_ROI_VISUALIZER__NODE_HPP_
 
+#include <ament_index_cpp/get_package_share_directory.hpp>
 #include <image_transport/image_transport.hpp>
 #include <image_transport/subscriber_filter.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -184,6 +185,8 @@ private:
 
   bool use_high_accuracy_detection_;
   bool use_image_transport_;
+  /// Where the shape icons live. Resolved once, so that the drawing code needs no package lookup.
+  std::string shape_image_dir_;
 };
 
 }  // namespace autoware::traffic_light
