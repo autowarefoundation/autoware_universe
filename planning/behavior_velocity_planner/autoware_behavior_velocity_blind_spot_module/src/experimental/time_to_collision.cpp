@@ -69,16 +69,16 @@ std::vector<FuturePose> calculate_future_profile(
     return {};
   }
 
-  const auto intervals_on_objective_lane = autoware::experimental::trajectory::find_intervals(
+  const auto intervals_on_objective_lane = autoware::experimental::trajectory::find_first_interval(
     path, [lane_id](const PathPointWithLaneId & p) {
       return std::find(p.lane_ids.begin(), p.lane_ids.end(), lane_id) != p.lane_ids.end();
     });
-  if (intervals_on_objective_lane.empty()) {
+  if (!intervals_on_objective_lane.has_value()) {
     return {};
   }
 
   auto reference_path =
-    autoware::experimental::trajectory::crop(path, 0, intervals_on_objective_lane.front().end);
+    autoware::experimental::trajectory::crop(path, 0, intervals_on_objective_lane.value().end);
   reference_path.longitudinal_velocity_mps().range(0, *current_s).set(current_velocity);
 
   PathWithLaneId reference_path_msg;
