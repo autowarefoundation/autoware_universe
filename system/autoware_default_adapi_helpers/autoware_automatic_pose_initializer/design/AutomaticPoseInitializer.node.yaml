@@ -18,14 +18,14 @@ launch:
 subscribers:
   - name: initialization_state
     message_type: autoware_adapi_v1_msgs/msg/LocalizationInitializationState
-    global: /localization/initialization_state
+    remap_target: /localization/initialization_state
 
 publishers: []
 
 clients:
   - name: initialize
     message_type: autoware_localization_msgs/srv/InitializeLocalization
-    global: /localization/initialize
+    remap_target: /localization/initialize
 
 # parameters
 param_files: []
