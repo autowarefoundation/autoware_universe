@@ -173,6 +173,11 @@
           "type": "boolean",
           "description": "Whether to use intensity feature in point cloud processing.",
           "default": true
+        },
+        "sparse_remove_trainstation": {
+          "type": "boolean",
+          "description": "Enable only with a sparse engine exported with the 4 down-sample GetIndicePairsImplicitGemm nodes removed (trainStation/DDS removal). The runtime precomputes those rulebooks from the voxel coordinates and binds them as graph inputs.",
+          "default": false
         }
       },
       "required": [
