@@ -75,8 +75,8 @@ public:
 
   PredictedPath generatePathForOnLaneVehicle(
     const TrackedObject & object, const PosePath & ref_path, const double duration,
-    const double lateral_duration, const double path_width = 0.0,
-    const double speed_limit = 0.0) const;
+    const double lateral_duration, const double path_width = 0.0, const double speed_limit = 0.0,
+    const double rear_lever_arm = 0.0) const;
 
   [[nodiscard]] PredictedPathWithArrivalIndex generatePathForCrosswalkUser(
     const TrackedObject & object, const CrosswalkEdgePoints & reachable_crosswalk,
@@ -110,7 +110,7 @@ private:
   PredictedPath generatePolynomialPath(
     const TrackedObject & object, const PosePath & ref_path, const double duration,
     const double lateral_duration, const double path_width, const double backlash_width,
-    const double speed_limit = 0.0) const;
+    const double speed_limit = 0.0, const double rear_lever_arm = 0.0) const;
 };
 }  // namespace autoware::map_based_prediction
 
