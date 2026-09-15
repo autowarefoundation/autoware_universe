@@ -101,19 +101,42 @@
           "description": "TensorRT builder memory-pool limit in bytes for this engine.",
           "default": 8589934592
         },
-        "voxels_num": {
+        "voxels_num_min": {
           "type": "array",
           "items": {
             "type": "integer",
             "minimum": 1
           },
-          "description": "Voxel ranges used during inference [min, opt, max].",
-          "default": [16000, 128000, 192000],
-          "minItems": 3,
-          "maxItems": 3
+          "description": "TensorRT profile minimum voxel count per encoder stage (input level first, then one entry per pooling stride). 1 everywhere is safe: the node rejects empty frames itself.",
+          "default": [1, 1, 1, 1, 1]
+        },
+        "voxels_num_opt": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "description": "TensorRT profile optimum voxel count per encoder stage, the shape kernels are tuned for; between the stage's min and max. Set it to the typical or realistic worst-case count seen on representative data.",
+          "default": [178000, 77000, 29000, 11000, 4000]
+        },
+        "voxels_num_max": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "description": "TensorRT profile maximum voxel count per encoder stage, non-increasing across stages. Sizes each stage's profiles and buffers, so it sets the GPU memory; a frame whose level would exceed it is truncated (the voxels with the largest serialization codes are dropped) until every level fits. Set it from measured per-stage peaks with a margin.",
+          "default": [354000, 214000, 100000, 40000, 17000]
         }
       },
-      "required": ["onnx_path", "engine_path", "workspace_size", "voxels_num"],
+      "required": [
+        "onnx_path",
+        "engine_path",
+        "workspace_size",
+        "voxels_num_min",
+        "voxels_num_opt",
+        "voxels_num_max"
+      ],
       "additionalProperties": false
     },
     "segmentation3d": {
@@ -291,6 +314,15 @@
           "description": "Point cloud buffer capacity. Must be at least the maximum expected number of points per frame.",
           "minimum": 1
         },
+        "densification_world_frame_id": {
+          "type": "string",
+          "description": "World frame used to compensate the ego motion of cached sweeps."
+        },
+        "densification_num_past_frames": {
+          "type": "integer",
+          "description": "Number of past lidar frames concatenated with the current frame as network input.",
+          "minimum": 0
+        },
         "encoder": {
           "$ref": "#/definitions/encoder"
         },
@@ -305,6 +337,8 @@
         "plugins_path",
         "trt_precision",
         "cloud_capacity",
+        "densification_world_frame_id",
+        "densification_num_past_frames",
         "encoder",
         "segmentation3d",
         "detection3d"

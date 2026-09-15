@@ -18,6 +18,7 @@
 
 #include <gtest/gtest.h>
 
+#include <array>
 #include <cstdint>
 #include <stdexcept>
 #include <string>
@@ -36,13 +37,16 @@ PTv3Config makeDetectionConfig(
   const std::vector<float> & detection_score_thresholds = {0.1F, 0.2F, 0.3F, 0.4F},
   const std::vector<float> & yaw_norm_thresholds = {0.1F, 0.2F},
   const std::vector<float> & voxel_size = {1.0F, 1.0F, 1.0F},
-  const std::vector<std::int64_t> & voxels_num = {1, 4, 8})
+  const std::vector<std::int64_t> & voxels_num_min = {1, 1, 1, 1, 1},
+  const std::vector<std::int64_t> & voxels_num_opt = {4, 4, 4, 4, 4},
+  const std::vector<std::int64_t> & voxels_num_max = {8, 8, 8, 8, 8})
 {
   return PTv3Config(
-    false, true, "", 8, voxels_num, point_cloud_range, voxel_size, {}, {}, {"z", "z-trans"},
-    {2, 2, 2, 2}, {8, 16, 32, 64, 128}, {}, {}, "", false, "", {}, {"CAR", "PEDESTRIAN"},
-    bbox_voxel_size, distance_bin_upper_limits, detection_score_thresholds, yaw_norm_thresholds,
-    true, 8, {-2.0F, -2.0F, -2.0F, 4.0F, 4.0F, 4.0F});
+    false, true, "", 8, "map", 1, voxels_num_min, voxels_num_opt, voxels_num_max, point_cloud_range,
+    voxel_size, 2, {}, {}, {"z", "z-trans"}, {2, 2, 2, 2}, {8, 16, 32, 64, 128}, {}, {}, "", false,
+    "", {}, {"CAR", "PEDESTRIAN"}, bbox_voxel_size, distance_bin_upper_limits,
+    detection_score_thresholds, yaw_norm_thresholds, true, 8,
+    {-2.0F, -2.0F, -2.0F, 4.0F, 4.0F, 4.0F});
 }
 
 // Segmentation-only config exercising segmentation3d.class_mapping resolution.
@@ -52,9 +56,10 @@ PTv3Config makeSegmentationConfig(
 {
   std::vector<std::int64_t> palette(segmentation_class_names.size() * 3, 0);
   return PTv3Config(
-    true, false, "", 8, {1, 4, 8}, {-1.0F, -1.0F, -1.0F, 3.0F, 3.0F, 3.0F}, {1.0F, 1.0F, 1.0F},
-    segmentation_class_names, segmentation_class_mapping, {"z", "z-trans"}, {2, 2}, {8, 16, 32},
-    palette, {}, "xyzi", false, "partial", {0, 0});
+    true, false, "", 8, "map", 1, {1, 1, 1}, {4, 4, 4}, {8, 8, 8},
+    {-1.0F, -1.0F, -1.0F, 3.0F, 3.0F, 3.0F}, {1.0F, 1.0F, 1.0F}, 2, segmentation_class_names,
+    segmentation_class_mapping, {"z", "z-trans"}, {2, 2}, {8, 16, 32}, palette, {}, "xyzi", false,
+    "partial", {0, 0});
 }
 
 TEST(PTv3ConfigTest, AcceptsCompatibleDetectionGrid)
@@ -185,10 +190,97 @@ TEST(PTv3ConfigTest, StageVoxelCapacityCoversUnalignedRangeBoundary)
 {
   const auto config = makeDetectionConfig(
     {0.5F, 0.5F, 0.5F, 16.5F, 16.5F, 4.5F}, {8.0F, 8.0F, 4.0F}, {10.0F, 20.0F},
-    {0.1F, 0.2F, 0.3F, 0.4F}, {0.1F, 0.2F}, {1.0F, 1.0F, 1.0F}, {1, 1024, 4096});
+    {0.1F, 0.2F, 0.3F, 0.4F}, {0.1F, 0.2F}, {1.0F, 1.0F, 1.0F}, {1, 1, 1, 1, 1},
+    {1024, 1024, 1024, 1024, 1024}, {4096, 4096, 4096, 4096, 4096});
   EXPECT_EQ(config.stage_voxel_capacity(0), 17 * 17 * 5);
   EXPECT_EQ(config.stage_voxel_capacity(1), 9 * 9 * 3);
   EXPECT_EQ(config.stage_voxel_capacity(4), 2 * 2 * 1);
+}
+
+// Each stage's profile is its own voxels_num_{min,opt,max} entry when the grid does not bind
+// (16 x 16 x 4 cells: capacities 1024, 128, 16, 4, 1).
+TEST(PTv3ConfigTest, StageProfileCountsComeFromThePerStageArrays)
+{
+  using Counts = std::array<std::int64_t, 3>;
+  const auto config = makeDetectionConfig(
+    {0.0F, 0.0F, 0.0F, 16.0F, 16.0F, 4.0F}, {8.0F, 8.0F, 4.0F}, {10.0F, 20.0F},
+    {0.1F, 0.2F, 0.3F, 0.4F}, {0.1F, 0.2F}, {1.0F, 1.0F, 1.0F}, {16, 1, 1, 1, 1},
+    {256, 32, 4, 1, 1}, {1024, 128, 16, 4, 1});
+  EXPECT_EQ(config.stage_profile_counts(0), (Counts{16, 256, 1024}));
+  EXPECT_EQ(config.stage_profile_counts(1), (Counts{1, 32, 128}));
+  EXPECT_EQ(config.stage_profile_counts(2), (Counts{1, 4, 16}));
+  EXPECT_EQ(config.stage_profile_counts(3), (Counts{1, 1, 4}));
+  EXPECT_EQ(config.stage_profile_counts(4), (Counts{1, 1, 1}));
+}
+
+// voxels_num_max lowers a stage's capacity below its grid bound (stages 1 and 2 here; stages 3
+// and 4 keep the tighter grid bound), and min and opt are kept within the resulting capacity.
+TEST(PTv3ConfigTest, VoxelsNumMaxCapsStageCapacityBelowTheGrid)
+{
+  using Counts = std::array<std::int64_t, 3>;
+  const auto config = makeDetectionConfig(
+    {0.0F, 0.0F, 0.0F, 16.0F, 16.0F, 4.0F}, {8.0F, 8.0F, 4.0F}, {10.0F, 20.0F},
+    {0.1F, 0.2F, 0.3F, 0.4F}, {0.1F, 0.2F}, {1.0F, 1.0F, 1.0F}, {1, 1, 1, 1, 1}, {256, 16, 2, 4, 4},
+    {1024, 64, 8, 4, 4});
+  EXPECT_EQ(config.stage_voxel_capacity(0), 1024);
+  EXPECT_EQ(config.stage_voxel_capacity(1), 64);
+  EXPECT_EQ(config.stage_voxel_capacity(2), 8);
+  EXPECT_EQ(config.stage_voxel_capacity(3), 4);
+  EXPECT_EQ(config.stage_voxel_capacity(4), 1);
+  EXPECT_EQ(config.stage_profile_counts(0), (Counts{1, 256, 1024}));
+  EXPECT_EQ(config.stage_profile_counts(1), (Counts{1, 16, 64}));
+  EXPECT_EQ(config.stage_profile_counts(2), (Counts{1, 2, 8}));
+  EXPECT_EQ(config.stage_profile_counts(3), (Counts{1, 4, 4}));
+  EXPECT_EQ(config.stage_profile_counts(4), (Counts{1, 1, 1}));
+}
+
+// The grid capacity also bounds a configured min and opt, so the profile stays valid.
+TEST(PTv3ConfigTest, StageProfileCountsClampToTheGridCapacity)
+{
+  using Counts = std::array<std::int64_t, 3>;
+  const auto config = makeDetectionConfig(
+    {0.0F, 0.0F, 0.0F, 16.0F, 16.0F, 4.0F}, {8.0F, 8.0F, 4.0F}, {10.0F, 20.0F},
+    {0.1F, 0.2F, 0.3F, 0.4F}, {0.1F, 0.2F}, {1.0F, 1.0F, 1.0F}, {2048, 1, 1, 1, 1},
+    {3072, 1, 1, 1, 1}, {4096, 1, 1, 1, 1});
+  EXPECT_EQ(config.stage_profile_counts(0), (Counts{1024, 1024, 1024}));
+}
+
+TEST(PTv3ConfigTest, RejectsMalformedVoxelsNum)
+{
+  const std::vector<float> range = {0.0F, 0.0F, 0.0F, 16.0F, 16.0F, 4.0F};
+  const std::vector<float> bbox = {8.0F, 8.0F, 4.0F};
+  const std::vector<float> bins = {10.0F, 20.0F};
+  const std::vector<float> scores = {0.1F, 0.2F, 0.3F, 0.4F};
+  const std::vector<float> yaw = {0.1F, 0.2F};
+  const std::vector<float> voxel = {1.0F, 1.0F, 1.0F};
+  const std::vector<std::int64_t> ones = {1, 1, 1, 1, 1};
+  const std::vector<std::int64_t> opt = {256, 32, 4, 1, 1};
+  const std::vector<std::int64_t> max = {1024, 128, 16, 4, 1};
+  // One entry per encoder stage (five here) in every array.
+  EXPECT_THROW(
+    makeDetectionConfig(range, bbox, bins, scores, yaw, voxel, {1, 1, 1, 1}, opt, max),
+    std::runtime_error);
+  EXPECT_THROW(
+    makeDetectionConfig(range, bbox, bins, scores, yaw, voxel, ones, {256, 32, 4, 1}, max),
+    std::runtime_error);
+  EXPECT_THROW(
+    makeDetectionConfig(range, bbox, bins, scores, yaw, voxel, ones, opt, {1024, 128, 16, 4, 1, 1}),
+    std::runtime_error);
+  // min is at least 1: a profile cannot admit an empty tensor.
+  EXPECT_THROW(
+    makeDetectionConfig(range, bbox, bins, scores, yaw, voxel, {0, 1, 1, 1, 1}, opt, max),
+    std::runtime_error);
+  // min <= opt <= max per stage.
+  EXPECT_THROW(
+    makeDetectionConfig(range, bbox, bins, scores, yaw, voxel, {512, 1, 1, 1, 1}, opt, max),
+    std::runtime_error);
+  EXPECT_THROW(
+    makeDetectionConfig(range, bbox, bins, scores, yaw, voxel, ones, {256, 256, 4, 1, 1}, max),
+    std::runtime_error);
+  // A pooled level can never hold more voxels than the level before it.
+  EXPECT_THROW(
+    makeDetectionConfig(range, bbox, bins, scores, yaw, voxel, ones, opt, {1024, 2048, 16, 4, 1}),
+    std::runtime_error);
 }
 
 // Borders that are voxel-aligned in decimal but not exactly representable in binary (neither 102.4

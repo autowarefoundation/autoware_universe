@@ -80,6 +80,7 @@ if(TRT_AVAIL AND CUDA_AVAIL)
     lib/postprocess/postprocess_kernel.cu
     lib/postprocess/detection3d_postprocess.cu
     lib/preprocess/preprocess_kernel.cu
+    lib/preprocess/sweep_kernel.cu
   )
 
   target_include_directories(${PROJECT_NAME}_cuda_lib
@@ -97,6 +98,8 @@ if(TRT_AVAIL AND CUDA_AVAIL)
   )
 
   ament_auto_add_library(${PROJECT_NAME}_lib SHARED
+    lib/preprocess/pointcloud_densification.cpp
+    lib/preprocess/sweep_aggregator.cpp
     lib/ptv3_trt.cpp
     lib/ros_utils.cpp
   )
@@ -166,6 +169,15 @@ if(TRT_AVAIL AND CUDA_AVAIL)
     )
 
     target_link_libraries(test_preprocess_kernel
+      CUDA::cudart
+      ${PROJECT_NAME}_cuda_lib
+    )
+
+    ament_add_gtest(test_sweep_kernel
+      test/test_sweep_kernel.cpp
+    )
+
+    target_link_libraries(test_sweep_kernel
       CUDA::cudart
       ${PROJECT_NAME}_cuda_lib
     )

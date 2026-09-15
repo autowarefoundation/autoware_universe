@@ -42,9 +42,15 @@ struct PTv3ConfigParams
   bool use_det3d_head = false;
   std::string plugins_path = "";
   std::int64_t cloud_capacity = 8;
-  std::vector<std::int64_t> voxels_num = {1, 4, 8};
+  std::string densification_world_frame_id = "map";
+  std::int64_t densification_num_past_frames = 1;
+  // Per-stage TensorRT profiles, one entry per encoder stage (pooling_strides size + 1).
+  std::vector<std::int64_t> voxels_num_min = {1, 1, 1};
+  std::vector<std::int64_t> voxels_num_opt = {4, 4, 4};
+  std::vector<std::int64_t> voxels_num_max = {8, 8, 8};
   std::vector<float> point_cloud_range = {-1.0F, -1.0F, -1.0F, 3.0F, 3.0F, 3.0F};
   std::vector<float> voxel_size = {1.0F, 1.0F, 1.0F};
+  std::int64_t max_points_per_voxel = 2;
   std::vector<std::string> segmentation_class_names = {"noise", "car"};
   std::unordered_map<std::string, std::string> segmentation_class_mapping = {
     {"noise", "NOISE"}, {"car", "CAR"}};
@@ -87,7 +93,9 @@ inline PTv3Config makeConfig(const PTv3ConfigParams & params = {})
 {
   return PTv3Config(
     params.use_seg3d_head, params.use_det3d_head, params.plugins_path, params.cloud_capacity,
-    params.voxels_num, params.point_cloud_range, params.voxel_size, params.segmentation_class_names,
+    params.densification_world_frame_id, params.densification_num_past_frames,
+    params.voxels_num_min, params.voxels_num_opt, params.voxels_num_max, params.point_cloud_range,
+    params.voxel_size, params.max_points_per_voxel, params.segmentation_class_names,
     params.segmentation_class_mapping, params.serialization_orders, params.pooling_strides,
     params.enc_channels, params.palette, params.filter_classes, params.filter_output_format,
     params.filter_apply_to_segmentation, params.source_reconstruction, params.dec_depths,
