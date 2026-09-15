@@ -55,6 +55,11 @@ bool is_non_scsi_device(const std::string & device_name)
   // clang-format on
 }
 
+bool is_mapper_device(const std::string & device_name)
+{
+  return (boost::starts_with(device_name, "/dev/dm-"));  // device mapper
+}
+
 }  // namespace
 
 namespace bp = boost::process;
@@ -621,7 +626,7 @@ std::string HddMonitor::getDeviceFromMountPoint(const std::string & mount_point)
   bp::ipstream is_err{std::move(err_pipe)};
 
   bp::child c(
-    "/bin/sh", "-c", fmt::format("findmnt -n -o SOURCE {}", mount_point.c_str()),
+    "/bin/sh", "-c", fmt::format("readlink -e $(findmnt -n -o SOURCE {})", mount_point.c_str()),
     bp::std_out > is_out, bp::std_err > is_err);
   c.wait();
 
@@ -874,6 +879,8 @@ void HddMonitor::updateHddConnections()
           const std::regex pattern("p\\d+$");
           hdd_param.second.disk_device_ =
             std::regex_replace(hdd_param.second.part_device_, pattern, "");
+        } else if (is_mapper_device(hdd_param.second.part_device_)) {
+          hdd_param.second.disk_device_ = hdd_param.second.part_device_;
         }
 
         const std::regex raw_pattern(".*/");
