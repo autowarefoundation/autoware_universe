@@ -116,12 +116,17 @@ TrafficLightRecognitionNode::TrafficLightRecognitionNode(const rclcpp::NodeOptio
   }
 
   // Subscribers -------------------------------------------------------------------------------
+  // transient_local is rejected by intra-process communication, which a composable node enables.
+  rclcpp::SubscriptionOptions transient_local_options;
+  transient_local_options.use_intra_process_comm = rclcpp::IntraProcessSetting::Disable;
   vector_map_sub_ = create_subscription<autoware_map_msgs::msg::LaneletMapBin>(
     "~/input/vector_map", rclcpp::QoS{1}.transient_local(),
-    std::bind(&TrafficLightRecognitionNode::vector_map_callback, this, std::placeholders::_1));
+    std::bind(&TrafficLightRecognitionNode::vector_map_callback, this, std::placeholders::_1),
+    transient_local_options);
   route_sub_ = create_subscription<autoware_planning_msgs::msg::LaneletRoute>(
     "~/input/route", rclcpp::QoS{1}.transient_local(),
-    std::bind(&TrafficLightRecognitionNode::route_callback, this, std::placeholders::_1));
+    std::bind(&TrafficLightRecognitionNode::route_callback, this, std::placeholders::_1),
+    transient_local_options);
   image_sub_.subscribe(this, "~/input/image", rclcpp::SensorDataQoS().get_rmw_qos_profile());
   camera_info_sub_.subscribe(
     this, "~/input/camera_info", rclcpp::SensorDataQoS().get_rmw_qos_profile());
