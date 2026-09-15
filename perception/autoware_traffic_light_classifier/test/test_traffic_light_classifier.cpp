@@ -31,7 +31,7 @@
 //     test_traffic_light_classifier_integration.
 //
 
-#include "../src/classifier/classifier_interface.hpp"
+#include "autoware/traffic_light_classifier/classifier/classifier_interface.hpp"
 #include "autoware/traffic_light_classifier/traffic_light_classifier.hpp"
 
 #include <opencv2/core/core.hpp>

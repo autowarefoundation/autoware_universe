@@ -31,7 +31,7 @@
 // Tests follow Arrange-Act-Assert.
 //
 
-#include "../src/classifier/cnn_classifier.hpp"
+#include "autoware/traffic_light_classifier/classifier/cnn_classifier.hpp"
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
 #include <autoware/cuda_utils/cuda_gtest_utils.hpp>

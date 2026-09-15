@@ -16,6 +16,7 @@
 #include "autoware/planning_validator_trajectory_checker/utils.hpp"
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware/planning_validator/types.hpp>
 #include <autoware/planning_validator_test_utils/planning_validator_test_utils.hpp>
 #include <autoware/planning_validator_test_utils/test_parameters.hpp>
@@ -58,7 +59,7 @@ protected:
          "/config/test_vehicle_info.param.yaml"});
     options.append_parameter_override("trajectory_checker.interval.threshold", THRESHOLD_INTERVAL);
     options.append_parameter_override("default_handling_type", DEFAULT_HANDLING_TYPE);
-    node_ = std::make_shared<rclcpp::Node>("test_node", options);
+    node_ = std::make_shared<autoware::agnocast_wrapper::Node>("test_node", options);
     context_ = std::make_shared<PlanningValidatorContext>(node_.get());
     trajectory_checker_ = std::make_shared<TrajectoryChecker>();
     trajectory_checker_->init(*node_, "trajectory_checker", context_);
@@ -71,7 +72,7 @@ protected:
     context_.reset();
   }
 
-  rclcpp::Node::SharedPtr node_;
+  std::shared_ptr<autoware::agnocast_wrapper::Node> node_;
   std::shared_ptr<TrajectoryChecker> trajectory_checker_;
   std::shared_ptr<PlanningValidatorContext> context_;
 
