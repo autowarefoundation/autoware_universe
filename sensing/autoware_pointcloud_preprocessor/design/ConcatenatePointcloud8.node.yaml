@@ -9,7 +9,7 @@ package:
 
 launch:
   plugin: autoware::pointcloud_preprocessor::PointCloudConcatenationComponent
-  executable: concatenate_pointcloud_node
+  executable: concatenate_pointclouds_node
   node_output: screen
 
 # interfaces
