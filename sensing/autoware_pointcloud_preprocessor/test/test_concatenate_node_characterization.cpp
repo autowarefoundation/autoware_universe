@@ -18,28 +18,6 @@
 // the node should do; it records what the node currently does, as seen from outside. While
 // every assertion here keeps passing, an arbitrary rewrite of the internals is invisible to
 // any other node in the system.
-//
-// It is deliberately black box. The node is loaded by its registered component plugin name,
-// exactly the way a component container loads it, so this file includes no production header
-// and touches no private member. It survives header moves, class renames and template
-// restructuring; it breaks only if the plugin name or the topic behavior changes.
-//
-// Where the assertions land. One input cloud travels through these functions, in order:
-//
-//   cloud_callback()            concatenate_and_time_sync_node.ipp - checks the point layout,
-//                               then picks the collector this cloud belongs to
-//   match_cloud_to_collector()  collector_matcher.ipp - naive or advanced matching
-//   process_pointcloud()        cloud_collector.ipp - calls concatenate_callback() once every
-//                               input has arrived, or when timeout_sec expires
-//   combine_pointclouds()       combine_cloud_handler.cpp - converts to XYZIRC, transforms into
-//                               output_frame, motion compensates, concatenates
-//   publish_clouds()            concatenate_and_time_sync_node.ipp - publishes output,
-//                               output_info and the synchronized clouds, then calls
-//                               check_concat_status() and publish_debug_message()
-//
-// Assertions marked CHARACTERIZED QUIRK record behavior that is surprising but real. If a
-// refactor changes one, that is a behavior change: decide whether it was intended rather than
-// simply updating the expectation.
 
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp_components/component_manager.hpp>
@@ -449,8 +427,7 @@ protected:
   }
 
   // Brings the node up with `params` and connects every publisher and subscriber this test
-  // could need. Each test gets a private namespace named after itself, so nothing leaks
-  // between tests and every topic in a failure message says which test owns it.
+  // could need.
   void start(const NodeParams & params)
   {
     node_name_ = "concat_under_test";
@@ -460,6 +437,8 @@ protected:
       input_topics_.push_back(in_namespace(get_input_topic_for(i)));
     }
 
+    // Each test gets a private namespace named after itself, so nothing leaks
+    // between tests and every topic in a failure message says which test owns it.
     test_node_ = std::make_shared<rclcpp::Node>("characterization_driver", test_namespace());
     executor_ = std::make_shared<rclcpp::executors::SingleThreadedExecutor>();
     executor_->add_node(test_node_);
@@ -600,9 +579,7 @@ protected:
         std::chrono::duration<double>(timeout_sec * 4)));
   }
 
-  // The slice of the concatenated cloud that `info` attributes to `sensor_index`. Going
-  // through output_info rather than assuming an order keeps these tests independent of the
-  // unordered_map iteration order inside combine_pointclouds().
+  // The slice of the concatenated cloud that `info` attributes to `sensor_index`.
   std::vector<Point> get_segment_of(
     const ConcatenatedPointCloudInfo & info, const PointCloud2 & cloud, size_t sensor_index)
   {
@@ -657,12 +634,9 @@ protected:
 
   // -- topic names ------------------------------------------------------------------------
   //
-  // Topics are spelled relative to the test's private namespace, so a test can say "/output"
-  // and stay readable. in_namespace() is the single place that expands one into the absolute
-  // name the ROS graph reports, and the assertions above apply it for you.
-
-  // The test's private namespace, named after the test itself: unique without a counter, and
-  // it puts the owning test's name into every topic path a failure message prints.
+  // Topics are relative to the test's private namespace ("/output"); in_namespace() expands
+  // them, and the assertions above apply it for you. Naming the namespace after the test is
+  // what keeps a finished test's lingering endpoints out of the node-under-test lookups.
   std::string test_namespace() const
   {
     return "/" + std::string(::testing::UnitTest::GetInstance()->current_test_info()->name());
@@ -695,8 +669,6 @@ protected:
     return "/concatenate_data_synchronizer/debug/" + leaf;
   }
 
-  // Absolute, because these are what the node is configured with and what it reports back
-  // in its output_info and diagnostics.
   std::vector<std::string> input_topics_;
   std::vector<std::string> synchronized_topics_;
   std::vector<PointCloud2> concatenated_clouds_;
@@ -799,9 +771,6 @@ private:
       [this](Float64Stamped::ConstSharedPtr msg) { cyclic_times_.push_back(*msg); });
 
     for (size_t i = 0; i < num_sensors; ++i) {
-      // CHARACTERIZED QUIRK: the per-topic latency topic is built as "debug" + <input topic>,
-      // and input topics are absolute, so the whole input topic path is spliced into the
-      // debug namespace.
       latency_subscriptions_.push_back(test_node_->create_subscription<Float64Stamped>(
         in_namespace(
           "/concatenate_data_synchronizer/debug" + input_topics_.at(i) + "/pipeline_latency_ms"),
@@ -1022,9 +991,6 @@ TEST_F(ConcatenateNodeTest, AdvertisesNoSynchronizedCloudTopicWhenDisabled)
 
 TEST_F(ConcatenateNodeTest, SynchronizedTopicNameFallsBackWhenPostfixMatchesInputName)
 {
-  // CHARACTERIZED QUIRK: the postfix "pointcloud" would rewrite ".../lidar/left/pointcloud"
-  // to itself, so replace_sync_topic_name_postfix() appends the hard-coded "_synchronized".
-
   // Arrange
   auto params = make_advanced_with_twist_params();
   params.synchronized_pointcloud_postfix = "pointcloud";
@@ -1337,9 +1303,6 @@ TEST_F(ConcatenateNodeTest, InfoSourceHeaderKeepsOriginalStampButOutputFrame)
   const auto info = await_concatenation_info();
 
   // Assert
-  // CHARACTERIZED QUIRK: the per-source header is snapshotted from the transformed cloud, so
-  // its stamp is still the original per-sensor stamp while its frame_id has already become
-  // the output frame.
   for (size_t i = 0; i < num_sensors; ++i) {
     const auto & source = info.source_info.at(i);
     EXPECT_EQ(rclcpp::Time(source.header.stamp), to_time(stamps.at(i)));
@@ -1536,7 +1499,7 @@ TEST_F(ConcatenateNodeTest, InfoReportsSuccessWhenEverySourceIsEmpty)
   const auto info = await_concatenation_info();
 
   // Assert
-  // CHARACTERIZED QUIRK: an all-empty concatenation still counts as successful, because
+  // An all-empty concatenation still counts as successful, because
   // every source reported STATUS_OK, with length 0.
   EXPECT_TRUE(info.concatenation_success);
   for (const auto & source : info.source_info) {
@@ -1609,8 +1572,6 @@ TEST_F(ConcatenateNodeTest, PublishesInfoEvenForACloudItDrops)
   const auto info = await_concatenation_info();
 
   // Assert
-  // CHARACTERIZED QUIRK: output_info is published unconditionally, so a consumer sees
-  // metadata for a concatenated cloud that never appeared on the output topic.
   EXPECT_EQ(rclcpp::Time(info.header.stamp), to_time(late));
   EXPECT_TRUE(info.concatenation_success);
   EXPECT_TRUE(concatenated_clouds_.empty());
@@ -1690,9 +1651,6 @@ TEST_F(ConcatenateNodeTest, DiagnosticsReportsOkWhenEverySourceArrives)
 
   // Assert
   EXPECT_EQ(status.level, DiagnosticStatus::OK);
-  // CHARACTERIZED QUIRK: check_concat_status() passes "Concatenated pointcloud is published
-  // and includes all topics", but DiagnosticsInterface replaces the message of any OK status
-  // with the literal "OK", so that sentence never reaches a subscriber.
   EXPECT_EQ(status.message, "OK");
   EXPECT_EQ(get_diagnostic_value(status, "Pointcloud concatenation succeeded"), "True");
 }
@@ -1838,8 +1796,6 @@ TEST_F(ConcatenateNodeTest, PublishesPipelineLatencyPerInputTopic)
   await_concatenated_cloud();
 
   // Assert
-  // The topic names themselves are the interesting part here; see the subscription setup in
-  // the fixture for the quirk in how they are built.
   for (size_t i = 0; i < num_sensors; ++i) {
     EXPECT_FALSE(pipeline_latencies_.at(i).empty()) << "no latency for sensor " << i;
   }
