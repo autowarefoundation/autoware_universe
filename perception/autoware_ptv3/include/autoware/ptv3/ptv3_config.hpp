@@ -535,7 +535,7 @@ public:
   std::int64_t densified_cloud_capacity_{};  // capacity of the multi-frame network input
   std::int64_t min_num_voxels_{};            // voxels_num_min_[0]
   std::int64_t max_num_voxels_{};            // voxels_num_max_[0]
-  std::int64_t max_points_per_voxel_{};  // padded voxel slots, matches the training voxelizer
+  std::int64_t max_points_per_voxel_{};      // padded voxel slots, matches the training voxelizer
   const std::int64_t num_point_feature_size_{5};  // x, y, z, intensity, time_lag
 
   // Densification parameters
