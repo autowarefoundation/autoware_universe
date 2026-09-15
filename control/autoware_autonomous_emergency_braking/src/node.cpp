@@ -180,6 +180,7 @@ AEB::AEB(const rclcpp::NodeOptions & node_options)
   voxel_grid_z_ = declare_parameter<double>("voxel_grid_z");
   min_generated_imu_path_length_ = declare_parameter<double>("min_generated_imu_path_length");
   max_generated_imu_path_length_ = declare_parameter<double>("max_generated_imu_path_length");
+  kinematic_state_timeout_sec_ = declare_parameter<double>("kinematic_state_timeout_sec");
   expand_width_ = declare_parameter<double>("expand_width");
   longitudinal_offset_margin_ = declare_parameter<double>("longitudinal_offset_margin");
   t_response_ = declare_parameter<double>("t_response");
@@ -245,6 +246,7 @@ rcl_interfaces::msg::SetParametersResult AEB::onParameter(
   update_param<double>(parameters, "voxel_grid_z", voxel_grid_z_);
   update_param<double>(parameters, "min_generated_imu_path_length", min_generated_imu_path_length_);
   update_param<double>(parameters, "max_generated_imu_path_length", max_generated_imu_path_length_);
+  update_param<double>(parameters, "kinematic_state_timeout_sec", kinematic_state_timeout_sec_);
   update_param<double>(parameters, "expand_width", expand_width_);
   update_param<double>(parameters, "longitudinal_offset_margin", longitudinal_offset_margin_);
   update_param<double>(parameters, "t_response", t_response_);
@@ -277,18 +279,6 @@ rcl_interfaces::msg::SetParametersResult AEB::onParameter(
 void AEB::onTimer()
 {
   updater_.force_update();
-}
-
-void AEB::onImu(const std::shared_ptr<const Imu> & input_msg)
-{
-  // transform imu
-  const auto logger = get_logger();
-  const auto transform_stamped =
-    utils::getTransform("base_link", input_msg->header.frame_id, tf_buffer_, logger);
-  if (!transform_stamped.has_value()) return;
-
-  angular_velocity_ptr_ = std::make_shared<Vector3>();
-  tf2::doTransform(input_msg->angular_velocity, *angular_velocity_ptr_, transform_stamped.value());
 }
 
 void AEB::onPointCloud(const std::shared_ptr<const PointCloud2> & input_msg)
@@ -387,13 +377,49 @@ bool AEB::fetchLatestData()
 
   const bool has_imu_path = std::invoke([&]() {
     if (!use_imu_path_) return false;
-    const auto imu_ptr = sub_imu_->take_data();
-    if (!imu_ptr) {
-      return missing("imu message");
+    // The yaw rate is read from the localization-fused twist of /localization/kinematic_state,
+    // which is already expressed in base_link, so no TF transform is applied here.
+    const auto kinematic_state_ptr = sub_kinematic_state_->take_data();
+    if (!kinematic_state_ptr) {
+      // Clear the cached yaw rate here rather than relying on this subscriber's Latest re-delivery
+      // policy to keep this branch unreachable after the first sample. Both consumers of the yaw
+      // rate key off (!angular_velocity_ptr_) and never off this function's return value, so if the
+      // subscriber were ever switched to polling_policy::Newest, every sample-less cycle would land
+      // here and a retained pointer would keep feeding the last good yaw rate to generateEgoPath
+      // indefinitely, with the age check below never running.
+      angular_velocity_ptr_.reset();
+      return missing("kinematic state");
     }
-    // imu_ptr is valid
-    onImu(imu_ptr);
-    return (!angular_velocity_ptr_) ? missing("imu") : true;
+    // Staleness watchdog: the polling subscriber returns the last received Odometry forever, so a
+    // frozen or diverged localization would otherwise feed a stale yaw rate into the integrated
+    // ego-path prediction indefinitely -- the "wrong odometry" failure mode this cross-check is
+    // meant to guard against. An unusable twist must read as "yaw source unavailable": reset
+    // angular_velocity_ptr_ so the downstream (!angular_velocity_ptr_) guards skip the IMU path
+    // this cycle. Never fall back to a usable or zero-yaw (straight-line) estimate, which would be
+    // anti-conservative.
+    //
+    // The age is signed, so the stamp must lie within +/- kinematic_state_timeout_sec_ of the node
+    // clock rather than merely being not-too-old. A one-sided (age > timeout) test would let a
+    // stamp AHEAD of the node clock -- ECU clock skew, or a faulty producer -- yield a negative age
+    // that passes trivially, so a frozen future-stamped twist would be accepted forever: the same
+    // fail-open hole this watchdog exists to close. The symmetric tolerance also absorbs ordinary
+    // publisher/subscriber clock jitter, and an unstamped (zero) header reads as implausibly old
+    // and is therefore rejected.
+    const double kinematic_state_age_sec =
+      (this->now() - rclcpp::Time(kinematic_state_ptr->header.stamp)).seconds();
+    if (std::abs(kinematic_state_age_sec) > kinematic_state_timeout_sec_) {
+      RCLCPP_ERROR_THROTTLE(
+        get_logger(), *get_clock(), 5000,
+        "[AEB]: kinematic state stamp is unusable (%.2f s %s the clock, tolerance %.2f s); "
+        "skipping the IMU-path collision check this cycle",
+        std::abs(kinematic_state_age_sec), (kinematic_state_age_sec < 0.0) ? "ahead of" : "behind",
+        kinematic_state_timeout_sec_);
+      angular_velocity_ptr_.reset();
+      return false;
+    }
+    angular_velocity_ptr_ = std::make_shared<Vector3>();
+    angular_velocity_ptr_->z = kinematic_state_ptr->twist.twist.angular.z;
+    return true;
   });
 
   const bool has_predicted_path = std::invoke([&]() {
