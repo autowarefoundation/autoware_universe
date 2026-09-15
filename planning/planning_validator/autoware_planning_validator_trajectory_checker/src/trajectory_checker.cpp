@@ -452,7 +452,7 @@ bool TrajectoryChecker::check_valid_velocity_deviation()
   auto & status = context_->validation_status;
 
   if (!data->nearest_point_index) return false;
-  const auto idx = *data->nearest_point_index;
+  const auto idx = data->nearest_point_index.value_or(0);
 
   const auto & trajectory = *data->current_trajectory;
   const auto ego_speed = data->current_kinematics->twist.twist.linear.x;
@@ -477,8 +477,8 @@ bool TrajectoryChecker::check_valid_distance_deviation()
   const auto & data = context_->data;
   auto & status = context_->validation_status;
 
-  if (!data->nearest_point_index) return false;
-  const auto idx = *data->nearest_segment_index;
+  if (!data->nearest_segment_index) return false;
+  const auto idx = data->nearest_segment_index.value_or(0);
 
   const auto & trajectory = data->current_trajectory->points;
   const auto & ego_position = data->current_kinematics->pose.pose.position;
@@ -509,7 +509,7 @@ bool TrajectoryChecker::check_valid_longitudinal_distance_deviation()
   }
 
   if (!data->nearest_point_index) return false;
-  const auto idx = *data->nearest_point_index;
+  const auto idx = data->nearest_point_index.value_or(0);
 
   const auto & ego_pose = data->current_kinematics->pose.pose;
 
