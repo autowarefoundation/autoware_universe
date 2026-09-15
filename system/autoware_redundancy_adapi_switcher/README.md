@@ -36,13 +36,13 @@ An instance becomes the output master when its own ECU ID is present in `active_
 
 ## Gating Logic
 
-| `active_control_unit.ids` content | Behavior                                                             |
-| --------------------------------- | -------------------------------------------------------------------- |
-| Main ECU ID only                  | Main ECU instance publishes. Sub is silenced.                        |
-| Sub ECU ID only                   | Sub ECU instance publishes. Main is silenced.                        |
-| Both ECU IDs                      | Current master is kept (treated as a transitional state).            |
-| Empty list                        | All instances block their output (`output_blocked`).                 |
-| Neither ECU ID                    | This ECU is assumed faulty; the other ECU becomes the output master. |
+| `active_control_unit.ids` content | Behavior                                                                                                                              |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Main ECU ID only                  | Main ECU instance publishes. Sub is silenced.                                                                                         |
+| Sub ECU ID only                   | Sub ECU instance publishes. Main is silenced.                                                                                         |
+| Both ECU IDs                      | Current master is kept (treated as a transitional state).                                                                             |
+| Empty list                        | All instances block their output (`output_blocked`).                                                                                  |
+| Neither ECU ID                    | This ECU is assumed faulty and blocks its own output. Whether the other ECU becomes the output master is not guaranteed by this node. |
 
 ### DiagGraphStruct handling
 
