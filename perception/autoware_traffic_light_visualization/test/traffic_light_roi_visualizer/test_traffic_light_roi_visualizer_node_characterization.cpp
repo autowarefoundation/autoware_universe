@@ -37,6 +37,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace
@@ -87,6 +88,8 @@ constexpr Box rough_box{190, 140, 60, 110};
 // Golden colors, recorded from this node on 2026-09-10 (ROS 2 Jazzy, Ubuntu 24.04, OpenCV 4.6).
 // The published image is RGB8, so the components are red, green, blue in that order.
 constexpr Pixel background_rgb{background_level, background_level, background_level};
+constexpr Pixel red_signal_rgb{254, 149, 149};    // strToColor("red")
+constexpr Pixel amber_signal_rgb{254, 250, 149};  // strToColor("yellow")
 constexpr Pixel green_signal_rgb{149, 254, 161};  // strToColor("green")
 // The frame color comes from the circle element of the label only. Without a circle the color
 // stays at extractShapeInfo()'s initial value, which is also what createRect() is handed for a ROI
@@ -646,16 +649,28 @@ TEST_F(TrafficLightRoiVisualizerCharacterization, Visualization_NoSignal_FrameWh
   EXPECT_EQ(pixel_at(*output_, fine_box.x, fine_box.y), no_circle_rgb);
 }
 
-// A circle whose color is known: the frame takes that color.
+// A circle whose color is known: the frame takes that color. strToColor() knows three of them, and
+// all three are pinned here because they are the mapping the README documents.
 TEST_F(TrafficLightRoiVisualizerCharacterization, Visualization_CircleSignal_FrameInSignalColor)
 {
   start_node(/*use_high_accuracy_detection=*/false, /*use_image_transport=*/false);
   subscribe_output();
   ASSERT_TRUE(wait_until_node_subscribes_inputs());
 
-  ASSERT_TRUE(send_inputs_and_wait_for_output(background_image, fine_rois, green_signal));
+  const std::vector<std::pair<uint8_t, Pixel>> colors{
+    {TrafficLightElement::RED, red_signal_rgb},
+    {TrafficLightElement::AMBER, amber_signal_rgb},
+    {TrafficLightElement::GREEN, green_signal_rgb}};
 
-  EXPECT_EQ(pixel_at(*output_, fine_box.x, fine_box.y), green_signal_rgb);
+  for (const auto & [color, expected] : colors) {
+    SCOPED_TRACE("signal color " + std::to_string(color));
+    output_.reset();
+    ASSERT_TRUE(send_inputs_and_wait_for_output(
+      background_image, fine_rois,
+      make_signal_array(signal_id, color, TrafficLightElement::CIRCLE)));
+
+    EXPECT_EQ(pixel_at(*output_, fine_box.x, fine_box.y), expected);
+  }
 }
 
 // A circle whose color is UNKNOWN: the frame takes strToColor()'s fallback, an off-white that is
@@ -727,4 +742,19 @@ TEST_F(TrafficLightRoiVisualizerCharacterization, Interface_ImageTransportEnable
 
   EXPECT_EQ(output_->encoding, "rgb8");
   EXPECT_EQ(pixel_at(*output_, fine_box.x, fine_box.y), green_signal_rgb);
+}
+
+// Each callback carries its own copy of that branch, so the one that walks the rough ROIs needs a
+// case of its own - the test above only exercises the other one.
+TEST_F(TrafficLightRoiVisualizerCharacterization, Interface_ImageTransportHighAccuracy_SameOutput)
+{
+  start_node(/*use_high_accuracy_detection=*/true, /*use_image_transport=*/true);
+  subscribe_output();
+  ASSERT_TRUE(wait_until_node_subscribes_inputs());
+
+  ASSERT_TRUE(
+    send_inputs_and_wait_for_output(background_image, fine_rois, green_signal, rough_rois));
+
+  EXPECT_EQ(output_->encoding, "rgb8");
+  EXPECT_EQ(pixel_at(*output_, rough_box.x, rough_box.y), green_signal_rgb);
 }
