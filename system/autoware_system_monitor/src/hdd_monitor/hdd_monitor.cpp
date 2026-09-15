@@ -36,6 +36,10 @@
 #include <algorithm>
 #include <cstdio>
 #include <filesystem>
+#include <fstream>
+#include <map>
+#include <regex>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -43,7 +47,181 @@
 namespace
 {
 
+using DiagStatus = diagnostic_msgs::msg::DiagnosticStatus;
+
 constexpr const char * DEFAULT_SOCKET_PATH = "/tmp/hdd_reader.sock";
+
+struct SmartInfoResult
+{
+  int level{DiagStatus::OK};
+  std::string key_str;
+  std::string val_str;
+};
+
+struct TemperatureCheckContext
+{
+  const HddParam & hdd_param;
+  const HddInfo & hdd_info;
+  int index;
+};
+
+struct PowerOnHoursCheckContext
+{
+  const HddParam & hdd_param;
+  const HddInfo & hdd_info;
+  int index;
+};
+
+struct TotalDataWrittenCheckContext
+{
+  const HddParam & hdd_param;
+  const HddInfo & hdd_info;
+  int index;
+};
+
+struct RecoveredErrorCheckContext
+{
+  const HddParam & hdd_param;
+  const HddInfo & hdd_info;
+  int index;
+  std::string disk_name;
+  std::map<std::string, uint32_t> & initial_recovered_errors;
+};
+
+void update_temperature_smart_info(
+  const TemperatureCheckContext & context, SmartInfoResult & smart_info)
+{
+  const float temp = static_cast<float>(context.hdd_info.temp_);
+
+  if (temp >= context.hdd_param.temp_error_) {
+    smart_info.level = DiagStatus::ERROR;
+  } else if (temp >= context.hdd_param.temp_warn_) {
+    smart_info.level = DiagStatus::WARN;
+  }
+
+  smart_info.key_str = fmt::format("HDD {}: temperature", context.index);
+  if (context.hdd_info.is_valid_temp_) {
+    smart_info.val_str = fmt::format("{:.1f} DegC", temp);
+  } else {
+    smart_info.val_str = "not available";
+  }
+}
+
+void update_power_on_hours_smart_info(
+  const PowerOnHoursCheckContext & context, SmartInfoResult & smart_info)
+{
+  const int64_t power_on_hours = static_cast<int64_t>(context.hdd_info.power_on_hours_);
+
+  if (power_on_hours >= context.hdd_param.power_on_hours_warn_) {
+    smart_info.level = DiagStatus::WARN;
+  }
+
+  smart_info.key_str = fmt::format("HDD {}: power on hours", context.index);
+  if (context.hdd_info.is_valid_power_on_hours_) {
+    smart_info.val_str = fmt::format("{} Hours", context.hdd_info.power_on_hours_);
+  } else {
+    smart_info.val_str = "not available";
+  }
+}
+
+void update_total_data_written_smart_info(
+  const TotalDataWrittenCheckContext & context, SmartInfoResult & smart_info)
+{
+  const uint64_t total_data_written = static_cast<uint64_t>(context.hdd_info.total_data_written_);
+
+  if (total_data_written >= context.hdd_param.total_data_written_warn_) {
+    smart_info.level = DiagStatus::WARN;
+  }
+
+  smart_info.key_str = fmt::format("HDD {}: total data written", context.index);
+  if (context.hdd_info.is_valid_total_data_written_) {
+    smart_info.val_str = fmt::format("{}", context.hdd_info.total_data_written_);
+  } else {
+    smart_info.val_str = "not available";
+  }
+}
+
+void update_recovered_error_smart_info(
+  const RecoveredErrorCheckContext & context, SmartInfoResult & smart_info)
+{
+  int32_t recovered_error = static_cast<int32_t>(context.hdd_info.recovered_error_);
+  context.initial_recovered_errors.try_emplace(context.disk_name, recovered_error);
+
+  recovered_error -= static_cast<int32_t>(context.initial_recovered_errors[context.disk_name]);
+
+  if (recovered_error >= context.hdd_param.recovered_error_warn_) {
+    smart_info.level = DiagStatus::WARN;
+  }
+
+  smart_info.key_str = fmt::format("HDD {}: recovered error", context.index);
+  if (context.hdd_info.is_valid_recovered_error_) {
+    smart_info.val_str = fmt::format("{}", context.hdd_info.recovered_error_);
+  } else {
+    smart_info.val_str = "not available";
+  }
+}
+
+struct StatItemResult
+{
+  int level{DiagStatus::OK};
+  std::string key_str;
+  std::string val_str;
+};
+
+struct StatItemCheckContext
+{
+  const HddStat & hdd_stat;
+  const HddParam & hdd_param;
+  int index;
+};
+
+void update_read_data_rate_stat(const StatItemCheckContext & context, StatItemResult & stat_info)
+{
+  const float read_data_rate = context.hdd_stat.read_data_rate_MBs_;
+
+  if (read_data_rate >= context.hdd_param.read_data_rate_warn_) {
+    stat_info.level = DiagStatus::WARN;
+  }
+
+  stat_info.key_str = fmt::format("HDD {}: data rate of read", context.index);
+  stat_info.val_str = fmt::format("{:.2f} MB/s", read_data_rate);
+}
+
+void update_write_data_rate_stat(const StatItemCheckContext & context, StatItemResult & stat_info)
+{
+  const float write_data_rate = context.hdd_stat.write_data_rate_MBs_;
+
+  if (write_data_rate >= context.hdd_param.write_data_rate_warn_) {
+    stat_info.level = DiagStatus::WARN;
+  }
+
+  stat_info.key_str = fmt::format("HDD {}: data rate of write", context.index);
+  stat_info.val_str = fmt::format("{:.2f} MB/s", write_data_rate);
+}
+
+void update_read_iops_stat(const StatItemCheckContext & context, StatItemResult & stat_info)
+{
+  const float read_iops = context.hdd_stat.read_iops_;
+
+  if (read_iops >= context.hdd_param.read_iops_warn_) {
+    stat_info.level = DiagStatus::WARN;
+  }
+
+  stat_info.key_str = fmt::format("HDD {}: IOPS of read", context.index);
+  stat_info.val_str = fmt::format("{:.2f} IOPS", read_iops);
+}
+
+void update_write_iops_stat(const StatItemCheckContext & context, StatItemResult & stat_info)
+{
+  const float write_iops = context.hdd_stat.write_iops_;
+
+  if (write_iops >= context.hdd_param.write_iops_warn_) {
+    stat_info.level = DiagStatus::WARN;
+  }
+
+  stat_info.key_str = fmt::format("HDD {}: IOPS of write", context.index);
+  stat_info.val_str = fmt::format("{:.2f} IOPS", write_iops);
+}
 
 bool is_non_scsi_device(const std::string & device_name)
 {
@@ -53,6 +231,141 @@ bool is_non_scsi_device(const std::string & device_name)
           boost::starts_with(device_name, "/dev/mmcblk"));  // SD card, eMMC
   // cspell:enable
   // clang-format on
+}
+
+// cspell:disable
+// clang-format off
+/**
+ * @brief resolve a mounted source path to the underlying physical block device
+ * @param [in] device device path taken from the mount point, e.g. "/dev/mapper/crypt-root"
+ * @return path of the underlying block device, e.g. "/dev/nvme0n1p3"
+ * @note Symbolic links are resolved first. When the result is a device mapper device,
+ * e.g. a LUKS encrypted volume, the first entry of its "slaves" directory in sysfs
+ * gives the block device the mapping is built on.
+ */
+// cspell:enable
+// clang-format on
+std::string resolve_block_device_path(const std::string & device)
+{
+  if (device.empty()) {
+    return {};
+  }
+
+  std::error_code ec;
+  const auto canonical = std::filesystem::weakly_canonical(device, ec);
+  if (ec || canonical.empty()) {
+    return device;
+  }
+
+  const auto resolved = canonical.string();
+  if (resolved.rfind("/dev/dm-", 0) != 0) {
+    return resolved;
+  }
+
+  const auto block_name = std::filesystem::path(resolved).filename().string();
+  const auto slaves_dir = std::filesystem::path("/sys/class/block") / block_name / "slaves";
+  std::error_code slaves_ec;
+  if (
+    !std::filesystem::exists(slaves_dir, slaves_ec) ||
+    !std::filesystem::is_directory(slaves_dir, slaves_ec)) {
+    return resolved;
+  }
+
+  for (const auto & entry : std::filesystem::directory_iterator(slaves_dir, slaves_ec)) {
+    if (slaves_ec) {
+      break;
+    }
+
+    const auto name = entry.path().filename().string();
+    if (!name.empty()) {
+      return "/dev/" + name;
+    }
+  }
+
+  return resolved;
+}
+
+inline bool is_octal_digit(char c)
+{
+  return c >= '0' && c <= '7';
+}
+
+inline bool is_octal_coded(const std::string & s, size_t i)
+{
+  if (s[i] != '\\' || (i + 3) >= s.size()) {
+    return false;
+  }
+  return is_octal_digit(s[i + 1]) && is_octal_digit(s[i + 2]) && is_octal_digit(s[i + 3]);
+}
+
+std::string unescape_mount_field(const std::string & escaped)
+{
+  std::string unescaped;
+  unescaped.reserve(escaped.size());
+
+  for (size_t i = 0; i < escaped.size(); ++i) {
+    if (is_octal_coded(escaped, i)) {
+      const char ch = static_cast<char>(
+        (escaped[i + 1] - '0') * 64 + (escaped[i + 2] - '0') * 8 + (escaped[i + 3] - '0'));
+      unescaped.push_back(ch);
+      i += 3;
+      continue;
+    }
+    unescaped.push_back(escaped[i]);
+  }
+  return unescaped;
+}
+
+std::string extract_device_from_mount_entry(
+  const std::string & line, const std::string & mount_point)
+{
+  std::istringstream iss(line);
+  std::string source;
+  std::string mounted_on;
+  if (!(iss >> source >> mounted_on)) {
+    return {};
+  }
+
+  source = unescape_mount_field(source);
+  mounted_on = unescape_mount_field(mounted_on);
+  if (mounted_on != mount_point) {
+    return {};
+  }
+
+  return source;
+}
+
+std::string find_device_from_mounts_file(
+  const std::string & mounts_file_path, const std::string & mount_point)
+{
+  std::ifstream mounts_file(mounts_file_path);
+  if (!mounts_file.is_open()) {
+    return {};
+  }
+
+  std::string line;
+  while (std::getline(mounts_file, line)) {
+    const auto device = extract_device_from_mount_entry(line, mount_point);
+    if (!device.empty()) {
+      return device;
+    }
+  }
+
+  return {};
+}
+
+std::string find_device_from_mount_points(const std::string & mount_point)
+{
+  const std::array<std::string, 2> mounts_files = {"/proc/self/mounts", "/proc/mounts"};
+
+  for (const auto & mounts_file : mounts_files) {
+    const auto device = find_device_from_mounts_file(mounts_file, mount_point);
+    if (!device.empty()) {
+      return device;
+    }
+  }
+
+  return {};
 }
 
 }  // namespace
@@ -142,12 +455,9 @@ void HddMonitor::checkSmart(
     return;
   }
 
-  int level = DiagStatus::OK;
   int whole_level = DiagStatus::OK;
-  int index = 0;
   std::string error_str = "";
-  std::string key_str = "";
-  std::string val_str = "";
+  int index = 0;
 
   for (auto itr = hdd_params_.begin(); itr != hdd_params_.end(); ++itr, ++index) {
     if (!hdd_connected_flags_[itr->first]) {
@@ -172,81 +482,37 @@ void HddMonitor::checkSmart(
       continue;
     }
 
+    SmartInfoResult smart_info;
+
     switch (item) {
-      case HddSmartInfoItem::TEMPERATURE: {
-        float temp = static_cast<float>(hdd_itr->second.temp_);
-
-        level = DiagStatus::OK;
-        if (temp >= itr->second.temp_error_) {
-          level = DiagStatus::ERROR;
-        } else if (temp >= itr->second.temp_warn_) {
-          level = DiagStatus::WARN;
-        }
-        key_str = fmt::format("HDD {}: temperature", index);
-        if (hdd_itr->second.is_valid_temp_) {
-          val_str = fmt::format("{:.1f} DegC", temp);
-        } else {
-          val_str = "not available";
-        }
-      } break;
-      case HddSmartInfoItem::POWER_ON_HOURS: {
-        int64_t power_on_hours = static_cast<int64_t>(hdd_itr->second.power_on_hours_);
-
-        level = DiagStatus::OK;
-        if (power_on_hours >= itr->second.power_on_hours_warn_) {
-          level = DiagStatus::WARN;
-        }
-        key_str = fmt::format("HDD {}: power on hours", index);
-        if (hdd_itr->second.is_valid_power_on_hours_) {
-          val_str = fmt::format("{} Hours", hdd_itr->second.power_on_hours_);
-        } else {
-          val_str = "not available";
-        }
-      } break;
-      case HddSmartInfoItem::TOTAL_DATA_WRITTEN: {
-        uint64_t total_data_written = static_cast<uint64_t>(hdd_itr->second.total_data_written_);
-
-        level = DiagStatus::OK;
-        if (total_data_written >= itr->second.total_data_written_warn_) {
-          level = DiagStatus::WARN;
-        }
-        key_str = fmt::format("HDD {}: total data written", index);
-        if (hdd_itr->second.is_valid_total_data_written_) {
-          val_str = fmt::format("{}", hdd_itr->second.total_data_written_);
-        } else {
-          val_str = "not available";
-        }
-      } break;
-      case HddSmartInfoItem::RECOVERED_ERROR: {
-        int32_t recovered_error = static_cast<int32_t>(hdd_itr->second.recovered_error_);
-        if (initial_recovered_errors_.find(itr->first) == initial_recovered_errors_.end()) {
-          initial_recovered_errors_[itr->first] = recovered_error;
-        }
-        recovered_error -= initial_recovered_errors_[itr->first];
-
-        level = DiagStatus::OK;
-        if (recovered_error >= itr->second.recovered_error_warn_) {
-          level = DiagStatus::WARN;
-        }
-        key_str = fmt::format("HDD {}: recovered error", index);
-        if (hdd_itr->second.is_valid_recovered_error_) {
-          val_str = fmt::format("{}", hdd_itr->second.recovered_error_);
-        } else {
-          val_str = "not available";
-        }
-      } break;
-      default:
+      case HddSmartInfoItem::TEMPERATURE:
+        update_temperature_smart_info({itr->second, hdd_itr->second, index}, smart_info);
         break;
+      case HddSmartInfoItem::POWER_ON_HOURS:
+        update_power_on_hours_smart_info({itr->second, hdd_itr->second, index}, smart_info);
+        break;
+      case HddSmartInfoItem::TOTAL_DATA_WRITTEN:
+        update_total_data_written_smart_info({itr->second, hdd_itr->second, index}, smart_info);
+        break;
+      case HddSmartInfoItem::RECOVERED_ERROR:
+        update_recovered_error_smart_info(
+          {itr->second, hdd_itr->second, index, itr->first, initial_recovered_errors_}, smart_info);
+        break;
+      default:
+        whole_level = DiagStatus::ERROR;
+        error_str = "Unsupported SMART information item";
+        continue;  // Unexpected item, skip to the next HDD
     }
 
     stat.add(
-      fmt::format("HDD {}: status", index), smart_dicts_[static_cast<uint32_t>(item)].at(level));
+      fmt::format("HDD {}: status", index),
+      smart_dicts_[static_cast<uint32_t>(item)].at(smart_info.level));
     stat.add(fmt::format("HDD {}: name", index), itr->second.disk_device_.c_str());
     stat.add(fmt::format("HDD {}: model", index), hdd_itr->second.model_.c_str());
     stat.add(fmt::format("HDD {}: serial", index), hdd_itr->second.serial_.c_str());
-    stat.addf(key_str, val_str.c_str());
+    stat.addf(smart_info.key_str, smart_info.val_str.c_str());
 
-    whole_level = std::max(whole_level, level);
+    whole_level = std::max(whole_level, smart_info.level);
   }
 
   if (!error_str.empty()) {
@@ -449,55 +715,32 @@ void HddMonitor::checkStatistics(
   int hdd_index = 0;
   int whole_level = DiagStatus::OK;
   std::string error_str = "";
-  std::string key_str = "";
-  std::string val_str = "";
 
   for (auto itr = hdd_params_.begin(); itr != hdd_params_.end(); ++itr, ++hdd_index) {
     if (!hdd_connected_flags_[itr->first]) {
       continue;
     }
 
-    int level = DiagStatus::OK;
+    StatItemResult stat_info;
+    const StatItemCheckContext context{hdd_stats_[itr->first], itr->second, hdd_index};
 
     switch (item) {
-      case HddStatItem::READ_DATA_RATE: {
-        float read_data_rate = hdd_stats_[itr->first].read_data_rate_MBs_;
-
-        if (read_data_rate >= itr->second.read_data_rate_warn_) {
-          level = DiagStatus::WARN;
-        }
-        key_str = fmt::format("HDD {}: data rate of read", hdd_index);
-        val_str = fmt::format("{:.2f} MB/s", read_data_rate);
-      } break;
-      case HddStatItem::WRITE_DATA_RATE: {
-        float write_data_rate = hdd_stats_[itr->first].write_data_rate_MBs_;
-
-        if (write_data_rate >= itr->second.write_data_rate_warn_) {
-          level = DiagStatus::WARN;
-        }
-        key_str = fmt::format("HDD {}: data rate of write", hdd_index);
-        val_str = fmt::format("{:.2f} MB/s", write_data_rate);
-      } break;
-      case HddStatItem::READ_IOPS: {
-        float read_iops = hdd_stats_[itr->first].read_iops_;
-
-        if (read_iops >= itr->second.read_iops_warn_) {
-          level = DiagStatus::WARN;
-        }
-        key_str = fmt::format("HDD {}: IOPS of read", hdd_index);
-        val_str = fmt::format("{:.2f} IOPS", read_iops);
-      } break;
-      case HddStatItem::WRITE_IOPS: {
-        float write_iops = hdd_stats_[itr->first].write_iops_;
-
-        if (write_iops >= itr->second.write_iops_warn_) {
-          level = DiagStatus::WARN;
-        }
-        key_str = fmt::format("HDD {}: IOPS of write", hdd_index);
-        val_str = fmt::format("{:.2f} IOPS", write_iops);
-      } break;
-      default:
+      case HddStatItem::READ_DATA_RATE:
+        update_read_data_rate_stat(context, stat_info);
         break;
+      case HddStatItem::WRITE_DATA_RATE:
+        update_write_data_rate_stat(context, stat_info);
+        break;
+      case HddStatItem::READ_IOPS:
+        update_read_iops_stat(context, stat_info);
+        break;
+      case HddStatItem::WRITE_IOPS:
+        update_write_iops_stat(context, stat_info);
+        break;
+      default:
+        whole_level = DiagStatus::ERROR;
+        error_str = "Unsupported HDD statistics item";
+        continue;  // Unexpected item, skip to the next HDD
     }
 
     if (!hdd_stats_[itr->first].error_str_.empty()) {
@@ -507,12 +750,12 @@ void HddMonitor::checkStatistics(
     } else {
       stat.add(
         fmt::format("HDD {}: status", hdd_index),
-        stat_dicts_[static_cast<uint32_t>(item)].at(level));
+        stat_dicts_[static_cast<uint32_t>(item)].at(stat_info.level));
       stat.add(fmt::format("HDD {}: name", hdd_index), itr->second.disk_device_.c_str());
-      stat.add(key_str, val_str.c_str());
+      stat.add(stat_info.key_str, stat_info.val_str.c_str());
     }
 
-    whole_level = std::max(whole_level, level);
+    whole_level = std::max(whole_level, stat_info.level);
   }
 
   if (!error_str.empty()) {
@@ -600,42 +843,13 @@ void HddMonitor::getHddParams()
 
 std::string HddMonitor::getDeviceFromMountPoint(const std::string & mount_point)
 {
-  std::string ret;
-
-  // boost::process create file descriptor without O_CLOEXEC required for multithreading.
-  // So create file descriptor with O_CLOEXEC and pass it to boost::process.
-  int out_fd[2];
-  if (pipe2(out_fd, O_CLOEXEC) != 0) {
-    RCLCPP_ERROR(get_logger(), "Failed to execute pipe2. %s", strerror(errno));
-    return "";
-  }
-  bp::pipe out_pipe{out_fd[0], out_fd[1]};
-  bp::ipstream is_out{std::move(out_pipe)};
-
-  int err_fd[2];
-  if (pipe2(err_fd, O_CLOEXEC) != 0) {
-    RCLCPP_ERROR(get_logger(), "Failed to execute pipe2. %s", strerror(errno));
-    return "";
-  }
-  bp::pipe err_pipe{err_fd[0], err_fd[1]};
-  bp::ipstream is_err{std::move(err_pipe)};
-
-  bp::child c(
-    "/bin/sh", "-c", fmt::format("findmnt -n -o SOURCE {}", mount_point.c_str()),
-    bp::std_out > is_out, bp::std_err > is_err);
-  c.wait();
-
-  if (c.exit_code() != 0) {
-    RCLCPP_ERROR(get_logger(), "Failed to execute findmnt. %s", mount_point.c_str());
-    return "";
+  const auto device = find_device_from_mount_points(mount_point);
+  if (!device.empty()) {
+    return device;
   }
 
-  if (!std::getline(is_out, ret)) {
-    RCLCPP_ERROR(get_logger(), "Failed to find device name. %s", mount_point.c_str());
-    return "";
-  }
-
-  return ret;
+  RCLCPP_ERROR(get_logger(), "Failed to find device name. %s", mount_point.c_str());
+  return {};
 }
 
 void HddMonitor::onTimer()
@@ -865,15 +1079,26 @@ void HddMonitor::updateHddConnections()
       if (std::filesystem::exists(hdd_param.second.part_device_, ec)) {
         hdd_connected_flags_[hdd_param.first] = true;
 
-        // Remove index number of partition for passing device name to hdd-reader
-        if (boost::starts_with(hdd_param.second.part_device_, "/dev/sd")) {
+        // cspell:disable
+        // clang-format off
+        // Resolve the mounted source to the physical block device it is backed by,
+        // e.g. "/dev/mapper/crypt-root" of a LUKS encrypted volume to "/dev/nvme0n1p3".
+        // The monitor needs the physical device name itself because readSysfsDeviceStat()
+        // reads /sys/block/<device>/stat, and hdd_reader needs it to access S.M.A.R.T.
+        // information.
+        // cspell:enable
+        // clang-format on
+        const std::string block_device = resolve_block_device_path(hdd_param.second.part_device_);
+
+        // Remove index number of partition for passing device name to hdd_reader
+        if (boost::starts_with(block_device, "/dev/sd")) {
           const std::regex pattern("\\d+$");
-          hdd_param.second.disk_device_ =
-            std::regex_replace(hdd_param.second.part_device_, pattern, "");
-        } else if (is_non_scsi_device(hdd_param.second.part_device_)) {
+          hdd_param.second.disk_device_ = std::regex_replace(block_device, pattern, "");
+        } else if (is_non_scsi_device(block_device)) {
           const std::regex pattern("p\\d+$");
-          hdd_param.second.disk_device_ =
-            std::regex_replace(hdd_param.second.part_device_, pattern, "");
+          hdd_param.second.disk_device_ = std::regex_replace(block_device, pattern, "");
+        } else {
+          hdd_param.second.disk_device_ = block_device;
         }
 
         const std::regex raw_pattern(".*/");
