@@ -25,8 +25,7 @@ namespace autoware::trajectory_ranker::metrics
 {
 
 void LateralAcceleration::evaluate(
-  const std::shared_ptr<autoware::trajectory_ranker::DataInterface> & result,
-  const float max_value) const
+  const std::shared_ptr<autoware::trajectory_ranker::DataInterface> & result) const
 {
   if (!result->points() || result->points()->size() < 2) return;
 
@@ -34,7 +33,7 @@ void LateralAcceleration::evaluate(
   constexpr float epsilon = 1.0e-3f;
   const float time_resolution = resolution() > epsilon ? resolution() : epsilon;
 
-  if (max_value < epsilon) {
+  if (params_.maximum < epsilon) {
     result->set_metric(index(), lateral_accelerations);
     return;
   }
@@ -45,11 +44,17 @@ void LateralAcceleration::evaluate(
                               result->points()->at(i).lateral_velocity_mps) /
                              time_resolution;
     lateral_accelerations.at(i) =
-      std::min(1.0f, static_cast<float>(std::abs(lateral_acc)) / max_value);
+      std::min(1.0f, static_cast<float>(std::abs(lateral_acc) / params_.maximum));
   }
   lateral_accelerations.back() = lateral_accelerations.at(lateral_accelerations.size() - 2);
 
   result->set_metric(index(), lateral_accelerations);
+}
+
+void LateralAcceleration::setup_parameters(
+  const trajectory_ranker_params::Params::Evaluation & params)
+{
+  params_ = params.lateral_acceleration;
 }
 
 }  // namespace autoware::trajectory_ranker::metrics

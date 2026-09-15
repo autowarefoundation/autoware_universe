@@ -12,7 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "traffic_light_map_based_detector.hpp"
+#include "autoware/traffic_light_map_based_detector/traffic_light_map_based_detector.hpp"
+
+#include "traffic_light_map_based_detector_process.hpp"
 
 #include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware/traffic_light_utils/traffic_light_utils.hpp>

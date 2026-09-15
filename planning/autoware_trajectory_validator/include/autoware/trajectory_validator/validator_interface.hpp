@@ -23,6 +23,7 @@
 #include <tl_expected/expected.hpp>
 
 #include <autoware_internal_planning_msgs/msg/candidate_trajectory.hpp>
+#include <autoware_internal_planning_msgs/msg/planning_factor_array.hpp>
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 
@@ -37,6 +38,7 @@ using autoware_planning_msgs::msg::TrajectoryPoint;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
 using VehicleInfo = autoware::vehicle_info_utils::VehicleInfo;
 using autoware_internal_planning_msgs::msg::CandidateTrajectory;
+using autoware_internal_planning_msgs::msg::PlanningFactorArray;
 using autoware_trajectory_validator::msg::MetricReport;
 using autoware_trajectory_validator::msg::RiskLevel;
 
@@ -45,6 +47,7 @@ struct ValidationResult
 {
   bool is_feasible{true};
   std::vector<MetricReport> metrics{};
+  PlanningFactorArray planning_factors{};
 };
 
 /** @brief Base class for trajectory validator plugins. */

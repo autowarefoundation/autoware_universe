@@ -308,85 +308,25 @@
             "pointcloud": {
               "type": "object",
               "properties": {
+                "target_types": {
+                  "type": "array",
+                  "description": "Pointcloud types to consider for obstacle stop",
+                  "default": ["structure", "vegetation"],
+                  "items": {
+                    "type": "string"
+                  }
+                },
                 "height_buffer": {
                   "type": "number",
-                  "description": "Height buffer [m]",
+                  "description": "Height buffer to add above ego height [m]",
                   "default": 0.5,
                   "minimum": 0.0
                 },
                 "min_height": {
                   "type": "number",
-                  "description": "Min height [m]",
+                  "description": "Minimum height of pointcloud [m]",
                   "default": 0.2,
                   "minimum": 0.0
-                },
-                "detection_range": {
-                  "type": "number",
-                  "description": "Detection range [m]",
-                  "default": 100.0,
-                  "minimum": 0.0
-                },
-                "voxel_grid_filter": {
-                  "type": "object",
-                  "properties": {
-                    "x": {
-                      "type": "number",
-                      "description": "X [m]",
-                      "default": 0.2,
-                      "minimum": 0.0
-                    },
-                    "y": {
-                      "type": "number",
-                      "description": "Y [m]",
-                      "default": 0.2,
-                      "minimum": 0.0
-                    },
-                    "z": {
-                      "type": "number",
-                      "description": "Z [m]",
-                      "default": 0.2,
-                      "minimum": 0.0
-                    },
-                    "min_size": {
-                      "type": "number",
-                      "description": "Min size",
-                      "default": 3,
-                      "minimum": 0.0
-                    }
-                  },
-                  "required": [],
-                  "additionalProperties": false
-                },
-                "clustering": {
-                  "type": "object",
-                  "properties": {
-                    "tolerance": {
-                      "type": "number",
-                      "description": "Tolerance [m]",
-                      "default": 0.5,
-                      "minimum": 0.0
-                    },
-                    "min_height": {
-                      "type": "number",
-                      "description": "Min height [m]",
-                      "default": 0.5,
-                      "minimum": 0.0
-                    },
-                    "min_size": {
-                      "type": "number",
-                      "description": "Min size",
-                      "default": 10,
-                      "minimum": 0.0
-                    },
-                    "max_size": {
-                      "type": "number",
-                      "description": "Max size",
-                      "default": 10000,
-                      "minimum": 0.0
-                    }
-                  },
-                  "required": [],
-                  "additionalProperties": false
                 }
               },
               "required": [],
@@ -534,6 +474,14 @@
                     "animal",
                     "unknown"
                   ],
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "pointcloud": {
+                  "type": "array",
+                  "description": "Pointcloud types to consider for surround obstacle stop",
+                  "default": ["structure", "vegetation"],
                   "items": {
                     "type": "string"
                   }
