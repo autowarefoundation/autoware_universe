@@ -420,15 +420,6 @@ void ConfigLoader::validate()
   for (const auto & node : raws(nodes_)) units.insert(node);
   for (const auto & diag : raws(diags_)) units.insert(diag);
 
-  int dead_links = 0;
-  for (const auto & port : ports_) {
-    for (const auto & unit : port->iterate()) {
-      if (!units.count(unit)) {
-        ++dead_links;
-      }
-    }
-  }
-
   std::unordered_map<BaseUnit *, int> unit_used;
   for (const auto & port : ports_) {
     for (const auto & unit : port->iterate()) {
@@ -443,25 +434,64 @@ void ConfigLoader::validate()
     }
   }
 
+  int dead_links = 0;
+  for (const auto & port : ports_) {
+    for (const auto & unit : port->iterate()) {
+      if (!units.count(unit)) {
+        ++dead_links;
+      }
+    }
+  }
+
+  std::vector<LinkPort *> dead_ports;
+  for (const auto & port : raws(ports_)) {
+    if (port_used.count(port) == 0) {
+      dead_ports.push_back(port);
+    }
+  }
+
+  std::vector<DiagUnit *> dead_diags;
+  for (const auto & diag : raws(diags_)) {
+    if (unit_used.count(diag) == 0) {
+      dead_diags.push_back(diag);
+    }
+  }
+
+  std::vector<NodeUnit *> root_nodes;
+  for (const auto & node : raws(nodes_)) {
+    if (unit_used.count(node) == 0) {
+      root_nodes.push_back(node);
+    }
+  }
+
   std::ostringstream ss;
   ss << "==================== validate ====================" << std::endl;
   ss << "temps.size: " << temps_.size() << std::endl;
   ss << "links.size: " << links_.size() << std::endl;
   ss << "Dead links: " << dead_links << std::endl;
-  ss << "Unused diags: " << std::endl;
-  for (const auto & diag : raws(diags_)) {
-    if (unit_used.count(diag) == 0) {
-      ss << " - " << diag->name() << std::endl;
-    }
+
+  ss << "Dead ports: " << std::endl;
+  for (const auto & port : dead_ports) {
+    ss << " - " << port << std::endl;
   }
-  ss << "Unused ports: " << std::endl;
-  for (const auto & port : raws(ports_)) {
-    if (port_used.count(port) == 0) {
-      ss << " - " << port << std::endl;
-    }
+
+  ss << "Dead diags: " << std::endl;
+  for (const auto & diag : dead_diags) {
+    ss << " - " << diag->name() << std::endl;
+  }
+
+  ss << "Root nodes: " << std::endl;
+  for (const auto & node : root_nodes) {
+    ss << " - " << node->path() << std::endl;
   }
   ss << "===================================================" << std::endl;
   logger_->debug(ss.str());
+
+  if (temps_.size() != 0) throw ValidationError("temp units are not empty");
+  if (links_.size() != 0) throw ValidationError("link units are not empty");
+  if (dead_links != 0) throw ValidationError("dead links are found");
+  if (dead_ports.size() != 0) throw ValidationError("dead ports are found");
+  if (dead_diags.size() != 0) throw ValidationError("dead diags are found");
 }
 
 }  // namespace autoware::diagnostic_graph_aggregator
