@@ -21,6 +21,7 @@ ament_auto_add_library(${trajectory_ranker_lib_target} SHARED
   src/evaluation.cpp
   src/utils.cpp
 )
+autoware_agnocast_wrapper_setup(${trajectory_ranker_lib_target})
 
 target_link_libraries(${trajectory_ranker_lib_target}
   ${PROJECT_NAME}_param
