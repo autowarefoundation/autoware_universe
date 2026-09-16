@@ -37,7 +37,6 @@
 #include <memory>
 #include <optional>
 #include <string>
-#include <utility>
 #include <vector>
 
 namespace
@@ -178,11 +177,17 @@ const TrafficLightArray signals_for_both_lights = merge(green_signal, signal_for
 
 Pixel pixel_at(const Image & image, int x, int y);
 
-// The shape icon inside the label box drawn above `box`. Its offset from the ROI corner was
-// measured on 2026-09-15; what matters is that the icon is the only black area the node produces -
-// the frames and the id text are drawn in the signal color - so a black pixel here means the label
-// box was drawn, and nothing else can fake it.
+// Two points in the strip above a ROI, where a label box is drawn. Offsets measured on 2026-09-15.
 constexpr Pixel label_icon_rgb{0, 0, 0};
+
+// The fill of the box, right of where the id text reaches: background unless a box was drawn.
+Pixel label_box_pixel(const Image & image, const Box & box)
+{
+  return pixel_at(image, box.x + 80, box.y - 13);
+}
+
+// The shape icon inside the box. Black gives it away: the frames and the id text use the signal
+// color, so nothing else in the output is black.
 Pixel label_icon_pixel(const Image & image, const Box & box)
 {
   return pixel_at(image, box.x + 13, box.y - 13);
@@ -474,10 +479,13 @@ TEST_F(TrafficLightRoiVisualizerCharacterization, Visualization_FineNoSignal_NoL
 
   ASSERT_TRUE(send_inputs_and_wait_for_output(background_image, fine_rois, signal_for_other_light));
 
-  EXPECT_NE(pixel_at(*output_, fine_box.x, fine_box.y), background_rgb);
-  // Inside where the label box would sit if there were a signal, and far enough to the right that
-  // the id text drawn by this overload cannot reach it.
-  EXPECT_EQ(pixel_at(*output_, fine_box.x + 80, fine_box.y - 13), background_rgb);
+  // The frame is drawn
+  const auto frame_corner = pixel_at(*output_, fine_box.x, fine_box.y);
+  EXPECT_NE(frame_corner, background_rgb);
+
+  // The label box is not drawn
+  const auto above_the_roi = label_box_pixel(*output_, fine_box);
+  EXPECT_EQ(above_the_roi, background_rgb);
 }
 
 // A ROI whose id matches a classified traffic signal is drawn in the color of that signal's
@@ -498,17 +506,22 @@ TEST_F(TrafficLightRoiVisualizerCharacterization, Visualization_FineWithSignal_F
   EXPECT_EQ(output_->height, static_cast<uint32_t>(image_height));
   EXPECT_EQ(output_->encoding, "rgb8");
 
-  // The rectangle around the ROI.
-  EXPECT_EQ(pixel_at(*output_, fine_box.x, fine_box.y), green_signal_rgb);
-  EXPECT_EQ(pixel_at(*output_, fine_box.x, fine_box.y + fine_box.height), green_signal_rgb);
-  EXPECT_EQ(pixel_at(*output_, fine_box.x + fine_box.width, fine_box.y), green_signal_rgb);
+  // The rectangle around the ROI should be painted.
+  const auto frame_corner = pixel_at(*output_, fine_box.x, fine_box.y);
+  const auto frame_bottom_left = pixel_at(*output_, fine_box.x, fine_box.y + fine_box.height);
+  const auto frame_top_right = pixel_at(*output_, fine_box.x + fine_box.width, fine_box.y);
+  EXPECT_EQ(frame_corner, green_signal_rgb);
+  EXPECT_EQ(frame_bottom_left, green_signal_rgb);
+  EXPECT_EQ(frame_top_right, green_signal_rgb);
   // The inside of the ROI is left untouched.
-  EXPECT_EQ(
-    pixel_at(*output_, fine_box.x + fine_box.width / 2, fine_box.y + fine_box.height / 2),
-    background_rgb);
+  const auto roi_interior =
+    pixel_at(*output_, fine_box.x + fine_box.width / 2, fine_box.y + fine_box.height / 2);
+  EXPECT_EQ(roi_interior, background_rgb);
   // The label box sits above the ROI, filled with the signal color and carrying the shape icon.
-  EXPECT_EQ(pixel_at(*output_, fine_box.x + 1, fine_box.y - 25), green_signal_rgb);
-  EXPECT_EQ(label_icon_pixel(*output_, fine_box), label_icon_rgb);
+  const auto above_the_roi = label_box_pixel(*output_, fine_box);
+  const auto label_icon = label_icon_pixel(*output_, fine_box);
+  EXPECT_EQ(above_the_roi, green_signal_rgb);
+  EXPECT_EQ(label_icon, label_icon_rgb);
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -545,9 +558,12 @@ TEST_F(TrafficLightRoiVisualizerCharacterization, Visualization_RoughAndFineNoSi
   ASSERT_TRUE(send_inputs_and_wait_for_output(
     background_image, fine_rois, signal_for_other_light, rough_rois));
 
-  // extractShapeInfo() of an empty label falls back to white, so the rough box is white too.
-  EXPECT_EQ(pixel_at(*output_, rough_box.x, rough_box.y), no_circle_rgb);
-  EXPECT_EQ(pixel_at(*output_, fine_box.x, fine_box.y), no_circle_rgb);
+  // Both frames are drawn, and both in white: extractShapeInfo() of an empty label falls back to
+  // it, so even the rough frame carries no signal color.
+  const auto rough_frame_corner = pixel_at(*output_, rough_box.x, rough_box.y);
+  const auto fine_frame_corner = pixel_at(*output_, fine_box.x, fine_box.y);
+  EXPECT_EQ(rough_frame_corner, no_circle_rgb);
+  EXPECT_EQ(fine_frame_corner, no_circle_rgb);
 }
 
 // With neither a fine ROI nor a signal, only the white rough box is left: the node still shows
@@ -561,9 +577,13 @@ TEST_F(TrafficLightRoiVisualizerCharacterization, Visualization_RoughOnlyNoSigna
   ASSERT_TRUE(
     send_inputs_and_wait_for_output(background_image, no_rois, signal_for_other_light, rough_rois));
 
-  EXPECT_EQ(pixel_at(*output_, rough_box.x, rough_box.y), no_circle_rgb);
-  // No label box above it, because no shape is known.
-  EXPECT_EQ(pixel_at(*output_, rough_box.x + 1, rough_box.y - 25), background_rgb);
+  // The rough frame is drawn, in white
+  const auto rough_frame_corner = pixel_at(*output_, rough_box.x, rough_box.y);
+  EXPECT_EQ(rough_frame_corner, no_circle_rgb);
+
+  // No label box above it, because no shape is known
+  const auto above_the_rough_roi = label_box_pixel(*output_, rough_box);
+  EXPECT_EQ(above_the_rough_roi, background_rgb);
 }
 
 // With high accuracy detection both rectangles are drawn: the rough ROI from the map based
@@ -581,12 +601,15 @@ TEST_F(TrafficLightRoiVisualizerCharacterization, Visualization_RoughAndFineWith
   ASSERT_TRUE(
     send_inputs_and_wait_for_output(background_image, fine_rois, green_signal, rough_rois));
 
-  // Top-left corner of the rough ROI only.
-  EXPECT_EQ(pixel_at(*output_, rough_box.x, rough_box.y), green_signal_rgb);
-  // Bottom-left corner of the fine ROI only.
-  EXPECT_EQ(pixel_at(*output_, fine_box.x, fine_box.y + fine_box.height), green_signal_rgb);
-  // The label box is drawn at the fine ROI, not at the rough one.
-  EXPECT_EQ(label_icon_pixel(*output_, fine_box), label_icon_rgb);
+  // Both frames are drawn. Each of these corners lies on one rectangle only.
+  const auto rough_frame_corner = pixel_at(*output_, rough_box.x, rough_box.y);
+  const auto fine_frame_bottom_left = pixel_at(*output_, fine_box.x, fine_box.y + fine_box.height);
+  EXPECT_EQ(rough_frame_corner, green_signal_rgb);
+  EXPECT_EQ(fine_frame_bottom_left, green_signal_rgb);
+
+  // The label box goes above the fine ROI, not the rough one
+  const auto icon_above_the_fine_roi = label_icon_pixel(*output_, fine_box);
+  EXPECT_EQ(icon_above_the_fine_roi, label_icon_rgb);
 }
 
 // Without a fine ROI the signal is drawn on the rough box instead, label box included, so a
@@ -599,11 +622,18 @@ TEST_F(TrafficLightRoiVisualizerCharacterization, Visualization_RoughOnlyWithSig
 
   ASSERT_TRUE(send_inputs_and_wait_for_output(background_image, no_rois, green_signal, rough_rois));
 
-  EXPECT_EQ(pixel_at(*output_, rough_box.x, rough_box.y), green_signal_rgb);
-  // The label box sits above the rough box, where it would sit above the fine box otherwise. The
-  // icon is checked rather than the fill, because the id text is drawn there in the same color.
-  EXPECT_EQ(label_icon_pixel(*output_, rough_box), label_icon_rgb);
-  EXPECT_EQ(pixel_at(*output_, fine_box.x, fine_box.y), background_rgb);
+  // The rough frame is drawn in the signal color
+  const auto rough_frame_corner = pixel_at(*output_, rough_box.x, rough_box.y);
+  EXPECT_EQ(rough_frame_corner, green_signal_rgb);
+
+  // The label box goes above the rough ROI. The icon rather than the fill of the box, because the
+  // id text is drawn over the fill in the same color.
+  const auto icon_above_the_rough_roi = label_icon_pixel(*output_, rough_box);
+  EXPECT_EQ(icon_above_the_rough_roi, label_icon_rgb);
+
+  // Nothing is drawn where a fine ROI would have been
+  const auto where_the_fine_roi_would_be = pixel_at(*output_, fine_box.x, fine_box.y);
+  EXPECT_EQ(where_the_fine_roi_would_be, background_rgb);
 }
 
 // The loop runs over the rough ROIs only, so a traffic light that the rough ROIs do not mention is
@@ -624,9 +654,13 @@ TEST_F(TrafficLightRoiVisualizerCharacterization, Visualization_FineWithoutRough
   ASSERT_TRUE(send_inputs_and_wait_for_output(
     background_image, fine_rois_for_other_light, signals_for_both_lights, rough_rois));
 
-  // The rough ROI is drawn, the fine ROI of the other traffic light is not.
-  EXPECT_EQ(pixel_at(*output_, rough_box.x, rough_box.y), green_signal_rgb);
-  EXPECT_EQ(pixel_at(*output_, fine_box.x, fine_box.y), background_rgb);
+  // The rough ROI that was mentioned is drawn
+  const auto rough_frame_corner = pixel_at(*output_, rough_box.x, rough_box.y);
+  EXPECT_EQ(rough_frame_corner, green_signal_rgb);
+
+  // The fine ROI of the other traffic light is not, although its signal was there too
+  const auto where_the_other_fine_roi_is = pixel_at(*output_, fine_box.x, fine_box.y);
+  EXPECT_EQ(where_the_other_fine_roi_is, background_rgb);
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -646,31 +680,53 @@ TEST_F(TrafficLightRoiVisualizerCharacterization, Visualization_NoSignal_FrameWh
 
   ASSERT_TRUE(send_inputs_and_wait_for_output(background_image, fine_rois, signal_for_other_light));
 
-  EXPECT_EQ(pixel_at(*output_, fine_box.x, fine_box.y), no_circle_rgb);
+  // The frame falls back to plain white
+  const auto frame_corner = pixel_at(*output_, fine_box.x, fine_box.y);
+  EXPECT_EQ(frame_corner, no_circle_rgb);
 }
 
 // A circle whose color is known: the frame takes that color. strToColor() knows three of them, and
-// all three are pinned here because they are the mapping the README documents.
-TEST_F(TrafficLightRoiVisualizerCharacterization, Visualization_CircleSignal_FrameInSignalColor)
+// all three are pinned because they are the mapping the README documents - one case each, so that
+// a failure names the color that broke.
+TEST_F(TrafficLightRoiVisualizerCharacterization, Visualization_RedCircleSignal_FrameRed)
 {
   start_node(/*use_high_accuracy_detection=*/false, /*use_image_transport=*/false);
   subscribe_output();
   ASSERT_TRUE(wait_until_node_subscribes_inputs());
 
-  const std::vector<std::pair<uint8_t, Pixel>> colors{
-    {TrafficLightElement::RED, red_signal_rgb},
-    {TrafficLightElement::AMBER, amber_signal_rgb},
-    {TrafficLightElement::GREEN, green_signal_rgb}};
+  ASSERT_TRUE(send_inputs_and_wait_for_output(
+    background_image, fine_rois,
+    make_signal_array(signal_id, TrafficLightElement::RED, TrafficLightElement::CIRCLE)));
 
-  for (const auto & [color, expected] : colors) {
-    SCOPED_TRACE("signal color " + std::to_string(color));
-    output_.reset();
-    ASSERT_TRUE(send_inputs_and_wait_for_output(
-      background_image, fine_rois,
-      make_signal_array(signal_id, color, TrafficLightElement::CIRCLE)));
+  // The frame takes the color of the circle
+  const auto frame_corner = pixel_at(*output_, fine_box.x, fine_box.y);
+  EXPECT_EQ(frame_corner, red_signal_rgb);
+}
 
-    EXPECT_EQ(pixel_at(*output_, fine_box.x, fine_box.y), expected);
-  }
+TEST_F(TrafficLightRoiVisualizerCharacterization, Visualization_AmberCircleSignal_FrameAmber)
+{
+  start_node(/*use_high_accuracy_detection=*/false, /*use_image_transport=*/false);
+  subscribe_output();
+  ASSERT_TRUE(wait_until_node_subscribes_inputs());
+
+  ASSERT_TRUE(send_inputs_and_wait_for_output(
+    background_image, fine_rois,
+    make_signal_array(signal_id, TrafficLightElement::AMBER, TrafficLightElement::CIRCLE)));
+
+  const auto frame_corner = pixel_at(*output_, fine_box.x, fine_box.y);
+  EXPECT_EQ(frame_corner, amber_signal_rgb);
+}
+
+TEST_F(TrafficLightRoiVisualizerCharacterization, Visualization_GreenCircleSignal_FrameGreen)
+{
+  start_node(/*use_high_accuracy_detection=*/false, /*use_image_transport=*/false);
+  subscribe_output();
+  ASSERT_TRUE(wait_until_node_subscribes_inputs());
+
+  ASSERT_TRUE(send_inputs_and_wait_for_output(background_image, fine_rois, green_signal));
+
+  const auto frame_corner = pixel_at(*output_, fine_box.x, fine_box.y);
+  EXPECT_EQ(frame_corner, green_signal_rgb);
 }
 
 // A circle whose color is UNKNOWN: the frame takes strToColor()'s fallback, an off-white that is
@@ -685,7 +741,9 @@ TEST_F(TrafficLightRoiVisualizerCharacterization, Visualization_UnknownCircleSig
 
   ASSERT_TRUE(send_inputs_and_wait_for_output(background_image, fine_rois, unknown_signal));
 
-  EXPECT_EQ(pixel_at(*output_, fine_box.x, fine_box.y), unknown_circle_rgb);
+  // The frame takes strToColor()'s fallback, not the plain white above
+  const auto frame_corner = pixel_at(*output_, fine_box.x, fine_box.y);
+  EXPECT_EQ(frame_corner, unknown_circle_rgb);
 }
 
 // A signal with no circle element at all - a lit arrow, which is a normal state for a Japanese
@@ -701,7 +759,9 @@ TEST_F(TrafficLightRoiVisualizerCharacterization, Visualization_NonCircleSignal_
 
   ASSERT_TRUE(send_inputs_and_wait_for_output(background_image, fine_rois, arrow_signal));
 
-  EXPECT_EQ(pixel_at(*output_, fine_box.x, fine_box.y), no_circle_rgb);
+  // The frame stays at the initial color, the same white as no signal at all
+  const auto frame_corner = pixel_at(*output_, fine_box.x, fine_box.y);
+  EXPECT_EQ(frame_corner, no_circle_rgb);
 }
 
 // The image is converted to RGB8 whatever its input encoding is, so a BGR8 image comes out with
@@ -720,7 +780,10 @@ TEST_F(TrafficLightRoiVisualizerCharacterization, Visualization_Bgr8Image_Republ
     make_uniform_image("bgr8", bgr_channels), no_rois, green_signal));
 
   EXPECT_EQ(output_->encoding, "rgb8");
-  EXPECT_EQ(pixel_at(*output_, 0, 0), expected_rgb);
+
+  // Any pixel will do: the image is uniform and no ROI is drawn on it
+  const auto any_pixel = pixel_at(*output_, 0, 0);
+  EXPECT_EQ(any_pixel, expected_rgb);
 }
 
 // use_image_transport selects an image_transport publisher instead of a plain rclcpp one. Both
@@ -741,7 +804,10 @@ TEST_F(TrafficLightRoiVisualizerCharacterization, Interface_ImageTransportEnable
   ASSERT_TRUE(send_inputs_and_wait_for_output(background_image, fine_rois, green_signal));
 
   EXPECT_EQ(output_->encoding, "rgb8");
-  EXPECT_EQ(pixel_at(*output_, fine_box.x, fine_box.y), green_signal_rgb);
+
+  // One drawn pixel is enough: this case is about the publisher, not the drawing
+  const auto frame_corner = pixel_at(*output_, fine_box.x, fine_box.y);
+  EXPECT_EQ(frame_corner, green_signal_rgb);
 }
 
 // Each callback carries its own copy of that branch, so the one that walks the rough ROIs needs a
@@ -756,5 +822,7 @@ TEST_F(TrafficLightRoiVisualizerCharacterization, Interface_ImageTransportHighAc
     send_inputs_and_wait_for_output(background_image, fine_rois, green_signal, rough_rois));
 
   EXPECT_EQ(output_->encoding, "rgb8");
-  EXPECT_EQ(pixel_at(*output_, rough_box.x, rough_box.y), green_signal_rgb);
+
+  const auto rough_frame_corner = pixel_at(*output_, rough_box.x, rough_box.y);
+  EXPECT_EQ(rough_frame_corner, green_signal_rgb);
 }
