@@ -64,6 +64,14 @@ constexpr unsigned long long kClockEventReasonDisplayClockSetting =  // NOLINT(r
   nvmlClocksThrottleReasonDisplayClockSetting;
 #endif
 
+// Hardware slowdown reasons retain their NVML names in both API versions.
+constexpr unsigned long long kClockEventReasonHwSlowdown =  // NOLINT(runtime/int)
+  nvmlClocksThrottleReasonHwSlowdown;
+constexpr unsigned long long kClockEventReasonHwThermalSlowdown =  // NOLINT(runtime/int)
+  nvmlClocksThrottleReasonHwThermalSlowdown;
+constexpr unsigned long long kClockEventReasonHwPowerBrakeSlowdown =  // NOLINT(runtime/int)
+  nvmlClocksThrottleReasonHwPowerBrakeSlowdown;
+
 struct ClockEventReasonName
 {
   unsigned long long reason;  // NOLINT
@@ -74,11 +82,11 @@ constexpr ClockEventReasonName kClockEventReasonNames[] = {
   {kClockEventReasonGpuIdle, "GpuIdle"},
   {kClockEventReasonApplicationsClocksSetting, "ApplicationsClocksSetting"},
   {kClockEventReasonSwPowerCap, "SwPowerCap"},
-  {nvmlClocksThrottleReasonHwSlowdown, "HwSlowdown"},
+  {kClockEventReasonHwSlowdown, "HwSlowdown"},
   {kClockEventReasonSyncBoost, "SyncBoost"},
   {kClockEventReasonSwThermalSlowdown, "SwThermalSlowdown"},
-  {nvmlClocksThrottleReasonHwThermalSlowdown, "HwThermalSlowdown"},
-  {nvmlClocksThrottleReasonHwPowerBrakeSlowdown, "HwPowerBrakeSlowdown"},
+  {kClockEventReasonHwThermalSlowdown, "HwThermalSlowdown"},
+  {kClockEventReasonHwPowerBrakeSlowdown, "HwPowerBrakeSlowdown"},
   {kClockEventReasonDisplayClockSetting, "DisplayClockSetting"}};
 
 const char * clockEventReasonToString(unsigned long long reason)  // NOLINT
