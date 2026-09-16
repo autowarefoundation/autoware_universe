@@ -187,7 +187,9 @@ void FasterVoxelGridDownsampleFilter::copy_centroids_to_output(
   for (const auto & pair : voxel_centroid_map) {
     Eigen::Vector4f centroid = pair.second.calc_centroid();
     if (transform_info.need_transform) {
-      centroid = transform_info.eigen_transform * centroid;
+      // centroid[3] carries the intensity, not the homogeneous coordinate
+      centroid.head<3>() =
+        (transform_info.eigen_transform * centroid.head<3>().homogeneous()).head<3>();
     }
     *reinterpret_cast<float *>(&output.data[output_data_size + x_offset_]) = centroid[0];
     *reinterpret_cast<float *>(&output.data[output_data_size + y_offset_]) = centroid[1];
