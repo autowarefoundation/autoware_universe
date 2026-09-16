@@ -245,9 +245,10 @@ void ServiceDividerPluginBase::forward_request(
 void ServiceDividerPluginBase::try_finalize_response(std::shared_ptr<PendingDivision> pending)
 {
   std::lock_guard<std::mutex> lock(pending->mutex);
-  if (pending->awaiting_count > 0) {
+  if (pending->awaiting_count > 0 || pending->finalized) {
     return;
   }
+  pending->finalized = true;
 
   for (auto & timer : pending->timeout_timers) {
     timer->cancel();

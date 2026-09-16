@@ -90,13 +90,14 @@ GenericClient::SharedRequest GenericClient::create_request()
 GenericClient::SharedFuture GenericClient::async_send_request(
   SharedRequest request, ResponseCallback callback)
 {
+  std::lock_guard<std::mutex> lock(pending_requests_mutex_);
+
   int64_t sequence_number;
   rcl_ret_t ret = rcl_send_request(get_client_handle().get(), request.get(), &sequence_number);
   if (ret != RCL_RET_OK) {
     rclcpp::exceptions::throw_from_rcl_error(ret, "Failed to send request");
   }
 
-  std::lock_guard<std::mutex> lock(pending_requests_mutex_);
   PendingRequest pr;
   pr.callback = std::move(callback);
   pr.future = pr.promise.get_future().share();

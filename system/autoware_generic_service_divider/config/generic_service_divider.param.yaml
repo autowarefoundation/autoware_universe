@@ -96,7 +96,7 @@
           - 200
           - 500
 
-    trigger_node:
+    ekf_trigger_node:
       input_service: /localization/pose_twist_fusion_filter/trigger_node
       output_services:
         names:

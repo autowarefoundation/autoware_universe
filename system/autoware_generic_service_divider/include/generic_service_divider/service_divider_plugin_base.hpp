@@ -106,6 +106,7 @@ private:
     std::map<std::string, bool> completed;
     std::map<std::string, bool> timed_out;
     int awaiting_count{0};
+    bool finalized{false};
     std::mutex mutex;
     std::vector<rclcpp::TimerBase::SharedPtr> timeout_timers;
   };

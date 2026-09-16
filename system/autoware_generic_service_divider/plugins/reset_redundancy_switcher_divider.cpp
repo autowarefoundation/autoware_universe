@@ -31,7 +31,7 @@ public:
   {
     node_ = node;
     input_name_ = node_->declare_parameter<std::string>(
-      "reset_redundancy_switcher.input_service", "/system/election/reset");
+      "reset_redundancy_switcher.input_service", "/system/redundancy_switcher/reset");
 
     const auto output_names = node_->declare_parameter<std::vector<std::string>>(
       "reset_redundancy_switcher.output_services.names", std::vector<std::string>{});
