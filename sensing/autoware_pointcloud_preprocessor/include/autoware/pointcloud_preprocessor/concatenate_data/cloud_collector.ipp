@@ -30,8 +30,9 @@ template <typename MsgTraits>
 CloudCollector<MsgTraits>::CloudCollector(
   std::shared_ptr<PointCloudConcatenateDataSynchronizerComponentTemplated<MsgTraits>> &&
     ros2_parent_node,
-  std::shared_ptr<CombineCloudHandler<MsgTraits>> & combine_cloud_handler, int num_of_clouds,
-  double timeout_sec, bool debug_mode)
+  std::shared_ptr<CombineCloudHandler<typename MsgTraits::PointCloudMessage>> &
+    combine_cloud_handler,
+  int num_of_clouds, double timeout_sec, bool debug_mode)
 : ros2_parent_node_(std::move(ros2_parent_node)),
   combine_cloud_handler_(combine_cloud_handler),
   num_of_clouds_(num_of_clouds),
@@ -124,7 +125,8 @@ void CloudCollector<MsgTraits>::concatenate_callback()
 }
 
 template <typename MsgTraits>
-ConcatenatedCloudResult<MsgTraits> CloudCollector<MsgTraits>::concatenate_pointclouds(
+ConcatenatedCloudResult<typename MsgTraits::PointCloudMessage>
+CloudCollector<MsgTraits>::concatenate_pointclouds(
   std::unordered_map<std::string, typename MsgTraits::PointCloudMessage::ConstSharedPtr>
     topic_to_cloud_map)
 {
