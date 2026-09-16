@@ -22,10 +22,11 @@
 namespace autoware::pointcloud_preprocessor
 {
 
-class DistortionCorrectorDiagnostics : public DiagnosticsBase
+template <typename NodeT = rclcpp::Node>
+class BasicDistortionCorrectorDiagnostics : public BasicDiagnosticsBase<NodeT>
 {
 public:
-  DistortionCorrectorDiagnostics(
+  BasicDistortionCorrectorDiagnostics(
     int timestamp_mismatch_count, float timestamp_mismatch_fraction,
     bool use_3d_distortion_correction, bool update_azimuth_and_distance,
     float timestamp_mismatch_fraction_threshold)
@@ -37,7 +38,8 @@ public:
   {
   }
 
-  void add_to_interface(autoware_utils::DiagnosticsInterface & interface) const override
+  void add_to_interface(
+    typename BasicDiagnosticsBase<NodeT>::DiagnosticsInterfaceT & interface) const override
   {
     interface.add_key_value("Timestamp mismatch count", timestamp_mismatch_count_);
     interface.add_key_value(
@@ -64,5 +66,7 @@ private:
   bool use_3d_distortion_correction_;
   bool update_azimuth_and_distance_;
 };
+
+using DistortionCorrectorDiagnostics = BasicDistortionCorrectorDiagnostics<rclcpp::Node>;
 
 }  // namespace autoware::pointcloud_preprocessor
