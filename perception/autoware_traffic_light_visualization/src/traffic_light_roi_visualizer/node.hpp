@@ -34,7 +34,6 @@
 #include <message_filters/synchronizer.h>
 #include <opencv2/imgproc/imgproc_c.h>
 
-#include <map>
 #include <memory>
 #include <mutex>
 #include <sstream>
@@ -78,27 +77,6 @@ public:
       input_traffic_signals_msg);
 
 private:
-  std::map<int, std::string> state2label_{
-    // color
-    {tier4_perception_msgs::msg::TrafficLightElement::RED, "red"},
-    {tier4_perception_msgs::msg::TrafficLightElement::AMBER, "yellow"},
-    {tier4_perception_msgs::msg::TrafficLightElement::GREEN, "green"},
-    {tier4_perception_msgs::msg::TrafficLightElement::WHITE, "white"},
-    // shape
-    {tier4_perception_msgs::msg::TrafficLightElement::CIRCLE, "circle"},
-    {tier4_perception_msgs::msg::TrafficLightElement::LEFT_ARROW, "left"},
-    {tier4_perception_msgs::msg::TrafficLightElement::RIGHT_ARROW, "right"},
-    {tier4_perception_msgs::msg::TrafficLightElement::UP_ARROW, "straight"},
-    {tier4_perception_msgs::msg::TrafficLightElement::DOWN_ARROW, "down"},
-    {tier4_perception_msgs::msg::TrafficLightElement::UP_LEFT_ARROW, "straight_left"},
-    {tier4_perception_msgs::msg::TrafficLightElement::UP_RIGHT_ARROW, "straight_right"},
-    {tier4_perception_msgs::msg::TrafficLightElement::DOWN_LEFT_ARROW, "down_left"},
-    {tier4_perception_msgs::msg::TrafficLightElement::DOWN_RIGHT_ARROW, "down_right"},
-    {tier4_perception_msgs::msg::TrafficLightElement::CROSS, "cross"},
-    // other
-    {tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN, "unknown"},
-  };
-
   /**
    * @brief Return RGB color from color string associated with "circle".
    * @param color Color string.

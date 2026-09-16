@@ -18,11 +18,46 @@
 
 #include <rclcpp/rclcpp.hpp>
 
+#include <map>
 #include <memory>
 #include <string>
 
 namespace autoware::traffic_light
 {
+namespace
+{
+// The word a TrafficLightElement code contributes to a label. A code that is not listed yields an
+// empty string, as the std::map this replaces did through operator[] - except that operator[] also
+// inserted the empty entry into the map, which made the lookup mutate the node's state.
+std::string state_to_label(int state)
+{
+  using tier4_perception_msgs::msg::TrafficLightElement;
+  static const std::map<int, std::string> table{
+    // color
+    {TrafficLightElement::RED, "red"},
+    {TrafficLightElement::AMBER, "yellow"},
+    {TrafficLightElement::GREEN, "green"},
+    {TrafficLightElement::WHITE, "white"},
+    // shape
+    {TrafficLightElement::CIRCLE, "circle"},
+    {TrafficLightElement::LEFT_ARROW, "left"},
+    {TrafficLightElement::RIGHT_ARROW, "right"},
+    {TrafficLightElement::UP_ARROW, "straight"},
+    {TrafficLightElement::DOWN_ARROW, "down"},
+    {TrafficLightElement::UP_LEFT_ARROW, "straight_left"},
+    {TrafficLightElement::UP_RIGHT_ARROW, "straight_right"},
+    {TrafficLightElement::DOWN_LEFT_ARROW, "down_left"},
+    {TrafficLightElement::DOWN_RIGHT_ARROW, "down_right"},
+    {TrafficLightElement::CROSS, "cross"},
+    // other
+    {TrafficLightElement::UNKNOWN, "unknown"},
+  };
+
+  const auto found = table.find(state);
+  return found == table.end() ? std::string{} : found->second;
+}
+}  // namespace
+
 TrafficLightRoiVisualizerNode::TrafficLightRoiVisualizerNode(const rclcpp::NodeOptions & options)
 : Node("traffic_light_roi_visualizer_node", options)
 {
@@ -170,7 +205,7 @@ bool TrafficLightRoiVisualizerNode::get_classification_result(
       auto element = traffic_signal.elements.at(i);
       // all lamp confidence are the same
       result.prob = element.confidence;
-      result.label += (state2label_[element.color] + "-" + state2label_[element.shape]);
+      result.label += (state_to_label(element.color) + "-" + state_to_label(element.shape));
       if (i < traffic_signal.elements.size() - 1) {
         result.label += ",";
       }
