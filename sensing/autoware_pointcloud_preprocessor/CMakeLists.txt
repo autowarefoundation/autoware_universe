@@ -402,4 +402,13 @@ if(BUILD_TESTING)
     TIMEOUT "50"
   )
 
+  # Black-box characterization test used as a refactoring safety net for the
+  # concatenate_data module. See the comment at the top of the test for details.
+  ament_add_gtest(test_concatenate_node_characterization
+    test/test_concatenate_node_characterization.cpp
+    TIMEOUT 180
+  )
+  target_link_libraries(test_concatenate_node_characterization pointcloud_preprocessor_filter)
+  ament_target_dependencies(test_concatenate_node_characterization rclcpp_components tf2_ros)
+
 endif()
