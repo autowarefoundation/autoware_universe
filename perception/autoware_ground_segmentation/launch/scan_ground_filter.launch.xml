@@ -6,7 +6,10 @@
   <arg name="vehicle_info_param_file" default="$(find-pkg-share autoware_vehicle_info_utils)/config/vehicle_info.param.yaml"/>
   <arg name="input/pointcloud" default="/sensing/lidar/concatenated/pointcloud"/>
   <arg name="output/pointcloud" default="/perception/obstacle_segmentation/pointcloud"/>
+  <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
+
   <node pkg="autoware_ground_segmentation" exec="scan_ground_filter_node" name="scan_ground_filter_node" output="screen">
+    <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
     <remap from="input" to="$(var input/pointcloud)"/>
     <remap from="output" to="$(var output/pointcloud)"/>
     <param from="$(var ground_segmentation_param_file)"/>
