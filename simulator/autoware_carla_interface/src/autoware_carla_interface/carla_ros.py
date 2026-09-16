@@ -476,6 +476,10 @@ class carla_ros2_interface(object):
         self.current_control = carla.VehicleControl()
         self.current_turn_indicator = TurnIndicatorsCommand.DISABLE
         self.current_hazard_lights = HazardLightsCommand.DISABLE
+        # Vehicle light state is unavailable in renderer-less CARLA modes (e.g. -nullrhi), where
+        # get_light_state()/set_light_state() raise. Track that so we warn once and degrade
+        # gracefully instead of crashing the bridge on every tick.
+        self._light_state_unsupported = False
 
         # Thread synchronization (protects: current_control, ego_actor, timestamp, physics_control)
         self._state_lock = threading.Lock()
@@ -1200,24 +1204,41 @@ class carla_ros2_interface(object):
 
         """
         with self._state_lock:
-            if not self.ego_actor:
+            if not self.ego_actor or self._light_state_unsupported:
                 return
             turn_cmd = self.current_turn_indicator
             hazard_cmd = self.current_hazard_lights
-            current_state = int(self.ego_actor.get_light_state())
+            try:
+                current_state = int(self.ego_actor.get_light_state())
 
-            left_bit = int(carla.VehicleLightState.LeftBlinker)
-            right_bit = int(carla.VehicleLightState.RightBlinker)
+                left_bit = int(carla.VehicleLightState.LeftBlinker)
+                right_bit = int(carla.VehicleLightState.RightBlinker)
 
-            new_state = current_state & ~left_bit & ~right_bit
-            if hazard_cmd == HazardLightsCommand.ENABLE:
-                new_state |= left_bit | right_bit
-            elif turn_cmd == TurnIndicatorsCommand.ENABLE_LEFT:
-                new_state |= left_bit
-            elif turn_cmd == TurnIndicatorsCommand.ENABLE_RIGHT:
-                new_state |= right_bit
+                new_state = current_state & ~left_bit & ~right_bit
+                if hazard_cmd == HazardLightsCommand.ENABLE:
+                    new_state |= left_bit | right_bit
+                elif turn_cmd == TurnIndicatorsCommand.ENABLE_LEFT:
+                    new_state |= left_bit
+                elif turn_cmd == TurnIndicatorsCommand.ENABLE_RIGHT:
+                    new_state |= right_bit
 
-            self.ego_actor.set_light_state(carla.VehicleLightState(new_state))
+                self.ego_actor.set_light_state(carla.VehicleLightState(new_state))
+            except RuntimeError as exc:
+                self._mark_light_state_unsupported(exc)
+
+    def _mark_light_state_unsupported(self, exc):
+        """Disable vehicle light handling after CARLA rejects a light-state call.
+
+        Renderer-less CARLA servers (e.g. launched with -nullrhi) raise on
+        get_light_state()/set_light_state(). Vehicle light state is cosmetic and unused by
+        the control loop, so warn once and stop touching it instead of crashing the bridge.
+        """
+        if not self._light_state_unsupported:
+            self._light_state_unsupported = True
+            self.logger.warning(
+                f"CARLA vehicle light state is unavailable ({exc}); disabling turn/hazard "
+                "light output (the server is likely running without a renderer)."
+            )
 
     def _read_ego_state(self):
         """Read one consistent ego snapshot under the state lock, or None if no ego actor."""
@@ -1232,8 +1253,23 @@ class carla_ros2_interface(object):
                     carla.VehicleWheelLocation.FL_Wheel
                 ),
                 control=self.ego_actor.get_control(),
-                light_state=int(self.ego_actor.get_light_state()),
+                light_state=self._read_ego_light_state(),
             )
+
+    def _read_ego_light_state(self):
+        """Ego vehicle light bitmask, or 0 when CARLA cannot provide it.
+
+        Renderer-less CARLA servers (e.g. -nullrhi) raise on get_light_state(); light state is
+        cosmetic, so degrade to 0 and warn once (see _mark_light_state_unsupported) instead of
+        crashing the bridge. Must be called with self._state_lock held (ego_actor access).
+        """
+        if self._light_state_unsupported:
+            return 0
+        try:
+            return int(self.ego_actor.get_light_state())
+        except RuntimeError as exc:
+            self._mark_light_state_unsupported(exc)
+            return 0
 
     @staticmethod
     def _velocity_in_ego_frame(ego_transform, ego_velocity_carla):
