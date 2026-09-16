@@ -1,0 +1,40 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: TrafficLightMapVisualizer.node
+
+package:
+  name: autoware_traffic_light_visualization
+  provider: autoware
+
+launch:
+  plugin: autoware::traffic_light::TrafficLightMapVisualizerNode
+  executable: traffic_light_map_visualizer_node
+  node_output: screen
+
+# interfaces
+subscribers:
+  - name: tl_state
+    message_type: autoware_perception_msgs/msg/TrafficLightGroupArray
+    remap_target: ~/input/tl_state
+  - name: vector_map
+    message_type: autoware_map_msgs/msg/LaneletMapBin
+    remap_target: ~/input/vector_map
+
+publishers:
+  - name: traffic_light
+    message_type: visualization_msgs/msg/MarkerArray
+    remap_target: ~/output/traffic_light
+
+# parameters
+param_files: []
+
+param_values: []
+
+# processes
+processes:
+  - name: visualize
+    trigger_conditions:
+      - on_input: tl_state
+    outcomes:
+      - to_output: traffic_light

@@ -249,11 +249,12 @@ cudaError_t unique(
   if (const auto status = cudaPeekAtLastError(); status != cudaSuccess) {
     return status;
   }
-  if (const auto status = cub::DeviceRadixSort::SortPairs(
-        layout.cub_temp_storage, layout.cub_temp_storage_size, input_in, layout.sorted_input,
-        layout.input_positions, layout.sorted_input_positions, num_input_elements_in, 0, 64,
-        stream_in);
-      status != cudaSuccess) {
+  if (
+    const auto status = cub::DeviceRadixSort::SortPairs(
+      layout.cub_temp_storage, layout.cub_temp_storage_size, input_in, layout.sorted_input,
+      layout.input_positions, layout.sorted_input_positions, num_input_elements_in, 0, 64,
+      stream_in);
+    status != cudaSuccess) {
     return status;
   }
 
@@ -263,10 +264,11 @@ cudaError_t unique(
   if (const auto status = cudaPeekAtLastError(); status != cudaSuccess) {
     return status;
   }
-  if (const auto status = cub::DeviceScan::InclusiveSum(
-        layout.cub_temp_storage, layout.cub_temp_storage_size, layout.run_ids, layout.run_ids,
-        num_input_elements_in, stream_in);
-      status != cudaSuccess) {
+  if (
+    const auto status = cub::DeviceScan::InclusiveSum(
+      layout.cub_temp_storage, layout.cub_temp_storage_size, layout.run_ids, layout.run_ids,
+      num_input_elements_in, stream_in);
+    status != cudaSuccess) {
     return status;
   }
 
@@ -278,11 +280,11 @@ cudaError_t unique(
   }
 
   // 4. Compact sorted runs into unique values and occurrence counts.
-  if (const auto status = cub::DeviceRunLengthEncode::Encode(
-        layout.cub_temp_storage, layout.cub_temp_storage_size, layout.sorted_input,
-        unique_values_out, unique_counts_out, layout.num_unique,
-        static_cast<int>(num_input_elements_in), stream_in);
-      status != cudaSuccess) {
+  if (
+    const auto status = cub::DeviceRunLengthEncode::Encode(
+      layout.cub_temp_storage, layout.cub_temp_storage_size, layout.sorted_input, unique_values_out,
+      unique_counts_out, layout.num_unique, static_cast<int>(num_input_elements_in), stream_in);
+    status != cudaSuccess) {
     return status;
   }
 

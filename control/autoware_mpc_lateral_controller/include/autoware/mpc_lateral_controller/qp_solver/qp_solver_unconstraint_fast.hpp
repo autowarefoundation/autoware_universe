@@ -49,7 +49,7 @@ public:
    * @param [out] u optimal variable vector
    * @return true if the problem was solved
    */
-  bool solve(
+  QPSolverResult solve(
     const Eigen::MatrixXd & h_mat, const Eigen::MatrixXd & f_vec, const Eigen::MatrixXd & a,
     const Eigen::VectorXd & lb, const Eigen::VectorXd & ub, const Eigen::VectorXd & lb_a,
     const Eigen::VectorXd & ub_a, Eigen::VectorXd & u) override;

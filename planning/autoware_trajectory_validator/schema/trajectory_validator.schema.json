@@ -55,6 +55,99 @@
           "required": [],
           "additionalProperties": false
         },
+        "crosswalk": {
+          "type": "object",
+          "properties": {
+            "object_types": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "List of object types to consider as target object (e.g., 'pedestrian', 'bicycle').",
+              "default": ["pedestrian", "bicycle"]
+            },
+            "lon_detection_margin": {
+              "type": "number",
+              "description": "Longitudinal extrusion length of sidewalk-side from crosswalk edge [m].",
+              "default": 2.0,
+              "minimum": 0.0
+            },
+            "lat_detection_margin": {
+              "type": "number",
+              "description": "Lateral extrusion length of sidewalk-side from crosswalk edge [m].",
+              "default": 1.0,
+              "minimum": 0.0
+            },
+            "object_clear_time_th": {
+              "type": "number",
+              "description": "Duration threshold to clear target object when no longer seen [s].",
+              "default": 0.3,
+              "minimum": 0.0
+            },
+            "distance_hysteresis_th": {
+              "type": "number",
+              "description": "Hysteresis threshold to consider the object as the same object [m].",
+              "default": 0.3,
+              "minimum": 0.0
+            },
+            "overshoot_tolerance": {
+              "type": "number",
+              "description": "Maximum overshoot distance allowed to consider the trajectory feasible [m].",
+              "default": 0.1,
+              "minimum": 0.0
+            },
+            "stop_duration": {
+              "type": "number",
+              "description": "Minimum duration of the stop to consider the trajectory feasible [s].",
+              "default": 3.0,
+              "minimum": 0.0
+            },
+            "arrived_distance_threshold": {
+              "type": "number",
+              "description": "Threshold to check if the ego vehicle has arrived at crosswalk stop line [m].",
+              "default": 5.0,
+              "minimum": 0.0
+            },
+            "use_trajectory_time": {
+              "type": "boolean",
+              "description": "Whether to use the embedded trajectory time to evaluate the stop duration.",
+              "default": false
+            },
+            "stopping_params": {
+              "type": "object",
+              "properties": {
+                "nominal_decel": {
+                  "type": "number",
+                  "description": "Nominal deceleration to calculate the stop distance used as trajectory length limit [m/s²].",
+                  "default": 1.0
+                },
+                "nominal_jerk": {
+                  "type": "number",
+                  "description": "Nominal jerk to calculate the stop distance used as trajectory length limit [m/s³].",
+                  "default": 1.0
+                },
+                "decel_limit": {
+                  "type": "number",
+                  "description": "Deceleration limit to calculate the stop distance used as trajectory length limit [m/s²].",
+                  "default": 2.0
+                },
+                "jerk_limit": {
+                  "type": "number",
+                  "description": "Jerk limit to calculate the stop distance used as trajectory length limit [m/s³].",
+                  "default": 2.0
+                },
+                "delay_response_time": {
+                  "type": "number",
+                  "description": "Delay response time used to estimate the minimum ego stopping distance [s].",
+                  "default": 0.5,
+                  "minimum": 0.0
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        },
         "traffic_light": {
           "type": "object",
           "properties": {
@@ -90,6 +183,11 @@
               "description": "When true, UNKNOWN lights are treated identically to red lights.",
               "default": false
             },
+            "enable_arrow_aware_amber_passing": {
+              "type": "boolean",
+              "description": "Allow passing on amber after Green Circle when on a turn lane with a mapped static arrow (protected turn phase).",
+              "default": true
+            },
             "stop_overshoot_margin": {
               "type": "number",
               "description": "Maximum allowed distance between the trajectory's stop point and the stop line for the trajectory to be considered as stopping correctly [m].",
@@ -100,6 +198,12 @@
               "type": "number",
               "description": "allow crossing a stop line within this distance if ego cannot stop before the line plus its margin [m].",
               "default": 0.0,
+              "minimum": 0.0
+            },
+            "min_lookahead_distance": {
+              "type": "number",
+              "description": "Minimum forward trajectory length to scan for traffic light stop lines even at low ego speed [m].",
+              "default": 20.0,
               "minimum": 0.0
             },
             "stable_duration_threshold_red": {
@@ -117,12 +221,6 @@
             "stable_duration_threshold_unknown": {
               "type": "number",
               "description": "Minimum duration an UNKNOWN light must be seen before it is considered active (only when ego is moving) [s].",
-              "default": 0.0,
-              "minimum": 0.0
-            },
-            "amber_rejection_hysteresis_duration": {
-              "type": "number",
-              "description": "Duration to persist an AMBER rejection state to prevent flipping [s].",
               "default": 0.0,
               "minimum": 0.0
             },
@@ -148,6 +246,24 @@
               },
               "required": [],
               "additionalProperties": false
+            },
+            "amber_rejection": {
+              "type": "object",
+              "properties": {
+                "hysteresis_duration": {
+                  "type": "number",
+                  "description": "Hysteresis duration to persist an AMBER rejection [s].",
+                  "default": 0.0,
+                  "minimum": 0.0
+                },
+                "reject_if_stop_detected": {
+                  "type": "boolean",
+                  "description": "Reject if we detect a previous stop attempt from input trajectory.",
+                  "default": false
+                }
+              },
+              "required": [],
+              "additionalProperties": false
             }
           },
           "required": [],
@@ -160,6 +276,12 @@
               "type": "number",
               "description": "Lateral clearance margin from an uncrossable boundary [m]. Trajectories whose footprint comes within this margin are rejected.",
               "default": 0.01
+            },
+            "near_boundary_lateral_th_m": {
+              "type": "number",
+              "description": "Lateral distance below which the trajectory is reported as near an uncrossable boundary [m]. Reported as a low caution risk level; it does not reject the trajectory.",
+              "default": 0.2,
+              "minimum": 0.0
             },
             "longitudinal_margin_m": {
               "type": "number",

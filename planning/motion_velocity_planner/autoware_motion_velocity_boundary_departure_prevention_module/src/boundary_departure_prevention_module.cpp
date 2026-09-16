@@ -208,8 +208,9 @@ void BoundaryDeparturePreventionModule::update_parameters(
   const std::string ns_slow_down{module_name + "slow_down_behavior.enable."};
 
   bool enable_slow_down_near_bound = pp.slow_down_types.count(DepartureType::NEAR_BOUNDARY);
-  if (update_param(
-        parameters, ns_slow_down + "slow_down_near_boundary", enable_slow_down_near_bound)) {
+  if (
+    update_param(
+      parameters, ns_slow_down + "slow_down_near_boundary", enable_slow_down_near_bound)) {
     if (enable_slow_down_near_bound)
       pp.slow_down_types.insert(DepartureType::NEAR_BOUNDARY);
     else
@@ -217,8 +218,8 @@ void BoundaryDeparturePreventionModule::update_parameters(
   }
 
   bool enable_approaching_dpt = pp.slow_down_types.count(DepartureType::APPROACHING_DEPARTURE);
-  if (update_param(
-        parameters, ns_slow_down + "slow_down_before_departure", enable_approaching_dpt)) {
+  if (
+    update_param(parameters, ns_slow_down + "slow_down_before_departure", enable_approaching_dpt)) {
     if (enable_approaching_dpt)
       pp.slow_down_types.insert(DepartureType::APPROACHING_DEPARTURE);
     else

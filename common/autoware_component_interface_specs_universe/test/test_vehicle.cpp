@@ -12,8 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "autoware/component_interface_specs/vehicle.hpp"
 #include "autoware/component_interface_specs_universe/vehicle.hpp"
 #include "gtest/gtest.h"
+
+#include <type_traits>
+
+// Proves the universe symbols are re-exports of the canonical core types, not
+// redefinitions: consumers see one definition, one version authority.
+TEST(vehicle_universe, reexports_core)
+{
+  namespace core = autoware::component_interface_specs::vehicle;
+  namespace universe = autoware::component_interface_specs_universe::vehicle;
+  static_assert(std::is_same_v<universe::VelocityStatus, core::VelocityStatus>);
+  static_assert(std::is_same_v<universe::SteeringStatus, core::SteeringStatus>);
+  SUCCEED();
+}
 
 TEST(vehicle, interface)
 {

@@ -711,8 +711,8 @@ auto get_obstacle_points(const lanelet::BasicPolygons3d & polygons, const PointC
       if (squared_dist > circle.second) {
         continue;
       }
-      if (boost::geometry::within(
-            autoware_utils::Point2d{p.x, p.y}, lanelet::utils::to2D(polygon))) {
+      if (
+        boost::geometry::within(autoware_utils::Point2d{p.x, p.y}, lanelet::utils::to2D(polygon))) {
         ret.push_back(p);
       }
     }

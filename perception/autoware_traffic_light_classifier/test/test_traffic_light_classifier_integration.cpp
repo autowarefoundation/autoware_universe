@@ -13,12 +13,12 @@
 // limitations under the License.
 
 //
-// Integration tests for TrafficLightClassifierNodelet.
+// Integration tests for TrafficLightClassifierNode.
 //
 // These stand up the real node and drive it over its ROS interface: an Image and
-// a TrafficLightRoiArray are published on the input topics, the node's own
-// lazy-subscription (connectCb) and message_filters ExactTime sync wire them
-// through imageRoiCallback, and the test observes the published traffic_signals
+// a TrafficLightRoiArray are published on the input topics, the node's always-on
+// subscription and message_filters ExactTime sync wire them through
+// image_roi_callback, and the test observes the published traffic_signals
 // and /diagnostics topics. This exercises the full pub/sub + sync + diagnostics
 // path that a unit-level callback invocation would bypass.
 //
@@ -191,26 +191,26 @@ public:
 class IntegrationTest : public ::testing::Test
 {
 protected:
-  std::shared_ptr<tl::TrafficLightClassifierNodelet> make_node_under_test()
+  std::shared_ptr<tl::TrafficLightClassifierNode> make_node_under_test()
   {
     rclcpp::NodeOptions options;
     options.append_parameter_override(
       "classifier_type",
-      static_cast<int>(tl::TrafficLightClassifierNodelet::ClassifierType::HSVFilter));
+      static_cast<int>(tl::TrafficLightClassifierNode::ClassifierType::HSVFilter));
     options.append_parameter_override("traffic_light_type", static_cast<int>(car_type));
     options.append_parameter_override("approximate_sync", false);
     options.append_parameter_override("over_exposure_threshold", no_over_threshold);
     options.append_parameter_override("under_exposure_threshold", no_under_threshold);
     options.append_parameter_override("build_only", false);
-    node_ = std::make_shared<tl::TrafficLightClassifierNodelet>(options);
+    node_ = std::make_shared<tl::TrafficLightClassifierNode>(options);
     return node_;
   }
 
   // Publish (image, rois) on the input topics and capture the node's output. The
-  // inputs are re-published in a wait loop so the test is robust against the
-  // lazy connectCb subscription and pub/sub discovery latency; identical stamps
-  // make every pair an ExactTime match. A missing signal publish is a setup
-  // failure, surfaced by throwing (helpers stay free of gtest assertions).
+  // inputs are re-published in a wait loop so the test is robust against pub/sub
+  // discovery latency; identical stamps make every pair an ExactTime match. A
+  // missing signal publish is a setup failure, surfaced by throwing (helpers stay
+  // free of gtest assertions).
   Captured run(const Image & image, const TrafficLightRoiArray & rois)
   {
     OutputCapture capture;
@@ -248,7 +248,7 @@ protected:
     return capture.cap;
   }
 
-  std::shared_ptr<tl::TrafficLightClassifierNodelet> node_;
+  std::shared_ptr<tl::TrafficLightClassifierNode> node_;
 };
 
 // --------------------------------------------------------------------------

@@ -15,6 +15,7 @@
 #include "autoware/lidar_centerpoint/node.hpp"
 
 #include "autoware/lidar_centerpoint/centerpoint_config.hpp"
+#include "autoware/lidar_centerpoint/ml_package_version.hpp"
 #include "autoware/lidar_centerpoint/preprocess/pointcloud_densification.hpp"
 #include "autoware/lidar_centerpoint/ros_utils.hpp"
 #include "autoware/lidar_centerpoint/utils.hpp"
@@ -22,9 +23,11 @@
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
 #include <pcl_ros/transforms.hpp>
+#include <rclcpp/parameter_map.hpp>
 
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
+#include <filesystem>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -35,21 +38,31 @@ namespace autoware::lidar_centerpoint
 LidarCenterPointNode::LidarCenterPointNode(const rclcpp::NodeOptions & node_options)
 : Node("lidar_center_point", node_options), tf_buffer_(this->get_clock())
 {
+  // weight file entries are file names relative to model_path; absolute paths pass through
+  const std::filesystem::path model_path(this->declare_parameter<std::string>("model_path", ""));
+  check_ml_package_version(
+    this->declare_parameter<std::string>("version", ""), model_path.string());
+
   const float circle_nms_dist_threshold = static_cast<float>(
     this->declare_parameter<double>("post_process_params.circle_nms_dist_threshold"));
-  const auto yaw_norm_thresholds =
-    this->declare_parameter<std::vector<double>>("post_process_params.yaw_norm_thresholds");
   const std::string densification_world_frame_id =
     this->declare_parameter<std::string>("densification_params.world_frame_id");
   const int densification_num_past_frames =
     this->declare_parameter<int>("densification_params.num_past_frames");
   const std::string trt_precision = this->declare_parameter<std::string>("trt_precision");
   const std::size_t cloud_capacity = this->declare_parameter<std::int64_t>("cloud_capacity");
-  const std::string encoder_onnx_path = this->declare_parameter<std::string>("encoder_onnx_path");
+  const auto resolve_path = [&model_path](const std::string & file) {
+    const std::filesystem::path path(file);
+    return path.is_absolute() ? path.string() : (model_path / path).string();
+  };
+  const std::string encoder_onnx_path =
+    resolve_path(this->declare_parameter<std::string>("encoder_onnx_path"));
   const std::string encoder_engine_path =
-    this->declare_parameter<std::string>("encoder_engine_path");
-  const std::string head_onnx_path = this->declare_parameter<std::string>("head_onnx_path");
-  const std::string head_engine_path = this->declare_parameter<std::string>("head_engine_path");
+    resolve_path(this->declare_parameter<std::string>("encoder_engine_path"));
+  const std::string head_onnx_path =
+    resolve_path(this->declare_parameter<std::string>("head_onnx_path"));
+  const std::string head_engine_path =
+    resolve_path(this->declare_parameter<std::string>("head_engine_path"));
   class_names_ = this->declare_parameter<std::vector<std::string>>("model_params.class_names");
   has_twist_ = this->declare_parameter<bool>("model_params.has_twist");
   const std::size_t point_feature_size = static_cast<std::size_t>(
@@ -64,10 +77,43 @@ LidarCenterPointNode::LidarCenterPointNode(const rclcpp::NodeOptions & node_opti
     this->declare_parameter<std::int64_t>("model_params.downsample_factor"));
   const std::size_t encoder_in_feature_size = static_cast<std::size_t>(
     this->declare_parameter<std::int64_t>("model_params.encoder_in_feature_size"));
-  const auto allow_remapping_by_area_matrix =
-    this->declare_parameter<std::vector<int64_t>>("allow_remapping_by_area_matrix");
-  const auto min_area_matrix = this->declare_parameter<std::vector<double>>("min_area_matrix");
-  const auto max_area_matrix = this->declare_parameter<std::vector<double>>("max_area_matrix");
+  const auto yaw_norm_thresholds =
+    this->declare_parameter<std::vector<double>>("model_params.yaw_norm_thresholds");
+  if (yaw_norm_thresholds.size() != class_names_.size()) {
+    throw std::invalid_argument(
+      "The number of yaw_norm_thresholds is not equal to the number of classes");
+  }
+  // class remapper matrices are loaded from the file referenced in the model manifest
+  const std::string class_remapper_param_path =
+    resolve_path(this->declare_parameter<std::string>("class_remapper_param_path"));
+  std::vector<int64_t> allow_remapping_by_area_matrix;
+  std::vector<double> min_area_matrix;
+  std::vector<double> max_area_matrix;
+  if (!std::filesystem::exists(class_remapper_param_path)) {
+    throw std::invalid_argument("Class remapper file not found: " + class_remapper_param_path);
+  }
+  try {
+    for (const auto & entry : rclcpp::parameter_map_from_yaml_file(class_remapper_param_path)) {
+      for (const auto & param : entry.second) {
+        if (param.get_name() == "allow_remapping_by_area_matrix") {
+          allow_remapping_by_area_matrix = param.as_integer_array();
+        } else if (param.get_name() == "min_area_matrix") {
+          min_area_matrix = param.as_double_array();
+        } else if (param.get_name() == "max_area_matrix") {
+          max_area_matrix = param.as_double_array();
+        }
+      }
+    }
+  } catch (const std::exception & e) {
+    throw std::invalid_argument(
+      "Failed to parse class remapper file: " + class_remapper_param_path + " (" + e.what() + ")");
+  }
+  // matrices are indexed by ObjectClassification label on both axes
+  if (
+    allow_remapping_by_area_matrix.empty() || min_area_matrix.empty() || max_area_matrix.empty()) {
+    throw std::invalid_argument(
+      "Class remapper matrices must be non-empty: " + class_remapper_param_path);
+  }
 
   // Distance-based score thresholds
   const std::vector<double> distance_bin_upper_limits_double =
@@ -127,10 +173,10 @@ LidarCenterPointNode::LidarCenterPointNode(const rclcpp::NodeOptions & node_opti
     allow_remapping_by_area_matrix, min_area_matrix, max_area_matrix);
 
   {
-    NMSParams p;
-    p.search_distance_2d_ =
+    perception_utils::IouBevNmsParams p;
+    p.search_distance_2d =
       this->declare_parameter<double>("post_process_params.iou_nms_search_distance_2d");
-    p.iou_threshold_ = this->declare_parameter<double>("post_process_params.iou_nms_threshold");
+    p.iou_threshold = this->declare_parameter<double>("post_process_params.iou_nms_threshold");
     iou_bev_nms_.setParameters(p);
   }
 

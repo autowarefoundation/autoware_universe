@@ -65,18 +65,19 @@ void concat(std::vector<T> & v1, const std::vector<T> & v2)
   v1.insert(v1.end(), v2.begin(), v2.end());
 }
 
-template <class T>
-std::vector<typename rclcpp::Subscription<T>::SharedPtr> init_factors(
-  rclcpp::Node * node, std::vector<typename T::ConstSharedPtr> & factors,
+template <class T, class NodeT>
+auto init_factors(
+  NodeT * node, std::vector<typename T::ConstSharedPtr> & factors,
   const std::vector<std::string> & topics)
 {
   const auto callback = [&factors](const int index) {
     return [&factors, index](const typename T::ConstSharedPtr msg) { factors[index] = msg; };
   };
 
-  std::vector<typename rclcpp::Subscription<T>::SharedPtr> subs;
+  std::vector<AUTOWARE_SUBSCRIPTION_PTR(T)> subs;
   for (size_t index = 0; index < topics.size(); ++index) {
-    subs.push_back(node->create_subscription<T>(topics[index], rclcpp::QoS(1), callback(index)));
+    subs.push_back(
+      node->template create_subscription<T>(topics[index], rclcpp::QoS(1), callback(index)));
   }
   factors.resize(topics.size());
   return subs;
@@ -203,7 +204,8 @@ SteeringFactorArray merge_factors(
   return message;
 }
 
-PlanningNode::PlanningNode(const rclcpp::NodeOptions & options) : Node("planning", options)
+PlanningNode::PlanningNode(const rclcpp::NodeOptions & options)
+: autoware::agnocast_wrapper::Node("planning", options)
 {
   // TODO(Takagi, Isamu): remove default value
   stop_distance_ = declare_parameter<double>("stop_distance", 1.0);
@@ -243,14 +245,15 @@ PlanningNode::PlanningNode(const rclcpp::NodeOptions & options) : Node("planning
 
   sub_factors_ = init_factors<PlanningFactorArray>(this, factors_, factor_topics);
 
-  const auto adaptor = autoware::component_interface_utils::NodeAdaptor(this);
+  const auto adaptor = autoware::component_interface_utils::NodeAdaptor<NodeT>(this);
   adaptor.init_pub(pub_velocity_factors_);
   adaptor.init_pub(pub_steering_factors_);
   adaptor.init_sub(sub_kinematic_state_, this, &PlanningNode::on_kinematic_state);
   adaptor.init_sub(sub_trajectory_, nullptr);
 
   const auto rate = rclcpp::Rate(5);
-  timer_ = rclcpp::create_timer(this, get_clock(), rate.period(), [this]() { on_timer(); });
+  timer_ = autoware::agnocast_wrapper::create_timer(
+    this, get_clock(), rate.period(), [this]() { on_timer(); });
 }
 
 void PlanningNode::on_kinematic_state(const KinematicState::ConstSharedPtr msg)

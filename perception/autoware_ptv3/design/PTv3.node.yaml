@@ -1,0 +1,87 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: PTv3.node
+
+package:
+  name: autoware_ptv3
+  provider: autoware
+
+launch:
+  plugin: autoware::ptv3::PTv3Node
+  executable: autoware_ptv3_node
+  node_output: screen
+
+# interfaces
+# pointcloud transported over cuda_blackboard (CudaPointCloud2), shown as PointCloud2.
+# each output has a cuda_blackboard companion (.../cuda) of the same negotiated type.
+subscribers:
+  - name: pointcloud
+    message_type: sensor_msgs/msg/PointCloud2
+    remap_target: ~/input/pointcloud
+  - name: pointcloud_cuda
+    message_type: sensor_msgs/msg/PointCloud2
+    remap_target: ~/input/pointcloud/cuda
+
+publishers:
+  - name: objects
+    message_type: autoware_perception_msgs/msg/DetectedObjects
+    remap_target: ~/output/objects
+  - name: pointcloud_filtered
+    message_type: sensor_msgs/msg/PointCloud2
+    remap_target: ~/output/pointcloud/filtered
+  - name: pointcloud_segmentation
+    message_type: sensor_msgs/msg/PointCloud2
+    remap_target: ~/output/pointcloud/segmentation
+  - name: pointcloud_visualization
+    message_type: sensor_msgs/msg/PointCloud2
+    remap_target: ~/output/pointcloud/visualization
+
+# parameters
+param_files:
+  - name: model_param_path
+    schema: schema/ptv3.schema.json
+    default: config/ptv3.param.yaml
+    allow_substs: true
+  - name: encoder_ml_package_param_path
+    schema: schema/ml_package_ptv3.schema.json
+    default: config/ml_package_ptv3_encoder.param.yaml
+  - name: seg3d_head_ml_package_param_path
+    schema: schema/ml_package_ptv3.schema.json
+    default: config/ml_package_ptv3_seg3d_head.param.yaml
+  - name: det3d_head_ml_package_param_path
+    schema: schema/ml_package_ptv3.schema.json
+    default: config/ml_package_ptv3_det3d_head.param.yaml
+
+# launch-arg scope: the model param file resolves its artifact paths and head switches against these
+param_values:
+  - name: build_only
+    type: bool
+    default: false
+    description: If true, the node will only build the model and exit.
+  - name: model_path
+    type: str
+    default: $(var data_path)/ptv3
+    description: The directory containing the model artifacts.
+  - name: model_variant
+    type: str
+    default: ptv3
+    description: The model variant selecting the artifact file names.
+  - name: use_seg3d_head
+    type: bool
+    default: true
+    description: Enable the segmentation 3D head.
+  - name: use_det3d_head
+    type: bool
+    default: true
+    description: Enable the detection 3D head.
+
+# processes
+processes:
+  - name: segment
+    trigger_conditions:
+      - on_input: pointcloud
+    outcomes:
+      - to_output: objects
+      - to_output: pointcloud_segmentation
+      - to_output: pointcloud_filtered

@@ -5,7 +5,8 @@ find_package(autoware_cmake REQUIRED)
 autoware_package()
 
 ament_auto_add_library(${PROJECT_NAME} SHARED
-  src/path_distance_calculator.cpp
+  src/ros_interface.cpp
+  src/main.cpp
 )
 
 rclcpp_components_register_node(${PROJECT_NAME}

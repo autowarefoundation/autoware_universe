@@ -33,28 +33,6 @@ constexpr float min_known_prob = 0.2f;
 constexpr double cov_det_relative_tol = 0.05;
 constexpr double cov_det_absolute_tol = 1e-9;
 
-// True when lhs significantly outperforms rhs on at least one input channel.
-// A channel missing from rhs counts as near-zero probability.
-bool dominatesOnAnyChannel(
-  const std::vector<types::ExistenceProbability> & lhs,
-  const std::vector<types::ExistenceProbability> & rhs)
-{
-  constexpr float prob_buffer = 0.4f;
-  for (const auto & lhs_prob : lhs) {
-    float rhs_prob_val = 0.001f;
-    for (const auto & rhs_prob : rhs) {
-      if (rhs_prob.channel_index == lhs_prob.channel_index) {
-        rhs_prob_val = rhs_prob.existence_probability;
-        break;
-      }
-    }
-    if (rhs_prob_val + prob_buffer < lhs_prob.existence_probability) {
-      return true;
-    }
-  }
-  return false;
-}
-
 // Each tier returns +1 (a survives), -1 (b survives), or 0 (indistinguishable, defer to next tier).
 
 int compareByPriority(const TrackerSnapshot & a, const TrackerSnapshot & b)
@@ -77,12 +55,12 @@ int compareByKnownProbability(const TrackerSnapshot & a, const TrackerSnapshot &
   return a_known ? 1 : -1;
 }
 
-int compareByChannelDominance(const TrackerSnapshot & a, const TrackerSnapshot & b)
+int compareByChannelSupport(const TrackerSnapshot & a, const TrackerSnapshot & b)
 {
-  const bool a_dominates = dominatesOnAnyChannel(a.existence_probs, b.existence_probs);
-  const bool b_dominates = dominatesOnAnyChannel(b.existence_probs, a.existence_probs);
-  if (a_dominates == b_dominates) return 0;  // mutual or no dominance → next tier
-  return a_dominates ? 1 : -1;
+  constexpr float support_buffer = 0.4f;
+  if (a.channel_support > b.channel_support + support_buffer) return 1;
+  if (b.channel_support > a.channel_support + support_buffer) return -1;
+  return 0;  // comparable support → next tier
 }
 
 int compareByPositionCovariance(const TrackerSnapshot & a, const TrackerSnapshot & b)
@@ -112,6 +90,15 @@ bool ensureConfident(TrackerSnapshot & snap, const DecisionContext & ctx)
   return *snap.confident;
 }
 
+bool ensurePublishConfident(TrackerSnapshot & snap, const DecisionContext & ctx)
+{
+  if (!snap.publish_confident) {
+    snap.publish_confident =
+      snap.tracker->isConfident(ctx.threshold_cache, ctx.ego_pose, std::nullopt);
+  }
+  return *snap.publish_confident;
+}
+
 const types::DynamicObject * ensureObject(TrackerSnapshot & snap, const rclcpp::Time & time)
 {
   if (!snap.object_valid) {
@@ -130,7 +117,7 @@ int compareForSurvival(TrackerSnapshot & a, TrackerSnapshot & b, const DecisionC
     if (a_confident != b_confident) return a_confident ? 1 : -1;
   }
   if (const int r = compareByKnownProbability(a, b)) return r;
-  if (const int r = compareByChannelDominance(a, b)) return r;
+  if (const int r = compareByChannelSupport(a, b)) return r;
   if (const int r = compareByPositionCovariance(a, b)) return r;
   if (const int r = compareByMeasurementCount(a, b)) return r;
   return compareByUuid(a, b);

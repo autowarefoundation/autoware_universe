@@ -19,24 +19,39 @@
 #include "autoware_utils/geometry/geometry.hpp"
 #include "autoware_utils/ros/update_param.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
+
 #include <memory>
 #include <vector>
 
 namespace autoware::path_smoother
 {
+template <typename NodeT>
+void ReplanChecker::declareParams(NodeT * node)
+{
+  enable_ = node->template declare_parameter<bool>("replan.enable");
+  max_path_shape_around_ego_lat_dist_ =
+    node->template declare_parameter<double>("replan.max_path_shape_around_ego_lat_dist");
+  max_path_shape_forward_lat_dist_ =
+    node->template declare_parameter<double>("replan.max_path_shape_forward_lat_dist");
+  max_path_shape_forward_lon_dist_ =
+    node->template declare_parameter<double>("replan.max_path_shape_forward_lon_dist");
+  max_ego_moving_dist_ = node->template declare_parameter<double>("replan.max_ego_moving_dist");
+  max_goal_moving_dist_ = node->template declare_parameter<double>("replan.max_goal_moving_dist");
+  max_delta_time_sec_ = node->template declare_parameter<double>("replan.max_delta_time_sec");
+}
+
 ReplanChecker::ReplanChecker(rclcpp::Node * node, const EgoNearestParam & ego_nearest_param)
 : ego_nearest_param_(ego_nearest_param), logger_(node->get_logger().get_child("replan_checker"))
 {
-  enable_ = node->declare_parameter<bool>("replan.enable");
-  max_path_shape_around_ego_lat_dist_ =
-    node->declare_parameter<double>("replan.max_path_shape_around_ego_lat_dist");
-  max_path_shape_forward_lat_dist_ =
-    node->declare_parameter<double>("replan.max_path_shape_forward_lat_dist");
-  max_path_shape_forward_lon_dist_ =
-    node->declare_parameter<double>("replan.max_path_shape_forward_lon_dist");
-  max_ego_moving_dist_ = node->declare_parameter<double>("replan.max_ego_moving_dist");
-  max_goal_moving_dist_ = node->declare_parameter<double>("replan.max_goal_moving_dist");
-  max_delta_time_sec_ = node->declare_parameter<double>("replan.max_delta_time_sec");
+  declareParams(node);
+}
+
+ReplanChecker::ReplanChecker(
+  autoware::agnocast_wrapper::Node * node, const EgoNearestParam & ego_nearest_param)
+: ego_nearest_param_(ego_nearest_param), logger_(node->get_logger().get_child("replan_checker"))
+{
+  declareParams(node);
 }
 
 void ReplanChecker::onParam(const std::vector<rclcpp::Parameter> & parameters)

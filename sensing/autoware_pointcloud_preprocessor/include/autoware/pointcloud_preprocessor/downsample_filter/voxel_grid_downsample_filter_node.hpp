@@ -61,8 +61,7 @@
 
 namespace autoware::pointcloud_preprocessor
 {
-class VoxelGridDownsampleFilterComponent
-: public autoware::pointcloud_preprocessor::FilterBase<autoware::agnocast_wrapper::Node>
+class VoxelGridDownsampleFilterComponent : public autoware::pointcloud_preprocessor::AgnocastFilter
 {
 protected:
   void filter(
@@ -93,4 +92,3 @@ public:
 
 // clang-format off
 #endif  // AUTOWARE__POINTCLOUD_PREPROCESSOR__DOWNSAMPLE_FILTER__VOXEL_GRID_DOWNSAMPLE_FILTER_NODE_HPP_  // NOLINT
-// clang-format on

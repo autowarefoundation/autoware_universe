@@ -12,8 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "autoware/component_interface_specs/planning.hpp"
 #include "autoware/component_interface_specs_universe/planning.hpp"
 #include "gtest/gtest.h"
+
+#include <type_traits>
+
+// Proves the universe symbols are re-exports of the canonical core types, not
+// redefinitions: consumers see one definition, one version authority.
+TEST(planning_universe, reexports_core)
+{
+  namespace core = autoware::component_interface_specs::planning;
+  namespace universe = autoware::component_interface_specs_universe::planning;
+  static_assert(std::is_same_v<universe::Trajectory, core::Trajectory>);
+  static_assert(std::is_same_v<universe::SetLaneletRoute, core::SetLaneletRoute>);
+  SUCCEED();
+}
 
 TEST(planning, interface)
 {

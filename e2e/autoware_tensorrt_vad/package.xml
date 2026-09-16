@@ -21,16 +21,20 @@
   <depend>autoware_utils</depend>
   <depend>autoware_utils_uuid</depend>
   <depend>cv_bridge</depend>
+  <depend>eigen</depend>
   <depend>eigen3_cmake_module</depend>
   <depend>geometry_msgs</depend>
   <depend>image_transport</depend>
+  <depend>libopencv-dev</depend>
   <depend>nav_msgs</depend>
   <depend>nlohmann-json-dev</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
   <depend>rosbag2_cpp</depend>
   <depend>sensor_msgs</depend>
+  <depend>tf2</depend>
   <depend>tf2_eigen</depend>
+  <depend>tf2_msgs</depend>
   <depend>tf2_ros</depend>
   <depend>visualization_msgs</depend>
 

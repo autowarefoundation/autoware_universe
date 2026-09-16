@@ -1,5 +1,13 @@
 /**:
   ros__parameters:
+    cloud_capacity: 2000000
+    post_process_params:
+      circle_nms_dist_threshold: 0.5
+      iou_nms_search_distance_2d: 10.0
+      iou_nms_threshold: 0.1
+    densification_params:
+      world_frame_id: map
+      num_past_frames: 1
     # When the processing time exceeds the max_allowed_processing_time,
     # a warning will be triggered.
     diagnostics:

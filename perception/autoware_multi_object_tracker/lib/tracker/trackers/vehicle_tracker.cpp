@@ -63,7 +63,8 @@ VehicleTracker::VehicleTracker(
   logger_(rclcpp::get_logger("VehicleTracker")),
   object_model_(object_model),
   shape_model_(object_model),
-  shape_update_anchor_(BicycleMotionModel::LengthUpdateAnchor::CENTER)
+  shape_update_anchor_(BicycleMotionModel::LengthUpdateAnchor::CENTER),
+  sign_belief_(object.kinematics.orientation_availability, time)
 {
   // set tracker type based on object model
   switch (object_model.type) {
@@ -200,16 +201,7 @@ bool VehicleTracker::updateKinematics(
     } else {
       is_updated = motion_model_.updateStatePose(x, y, object.pose_covariance, length);
     }
-    const double pre_limit_yaw = motion_model_.getYawState();
     motion_model_.limitStates();
-    // Flip stored footprint when yaw-limit correction reverses heading by 180°
-    if (shape_model_.isFootprintValid()) {
-      const double yaw_diff =
-        autoware_utils_math::normalize_radian(motion_model_.getYawState() - pre_limit_yaw);
-      if (std::abs(yaw_diff) > M_PI_2) {
-        shape_model_.flipFootprintXY();
-      }
-    }
   }
 
   // Low-pass filter on z position (2D motion model does not track z).
@@ -260,7 +252,19 @@ bool VehicleTracker::measure(
       dt);
   }
 
-  const types::DynamicObject corrected = normalizeYaw(in_object, motion_model_.getYawState());
+  // The raw yaw sign votes on the heading-sign belief before normalization discards it.
+  const double tracker_yaw = motion_model_.getYawState();
+  if (
+    in_object.kinematics.orientation_availability != types::OrientationAvailability::UNAVAILABLE &&
+    channel_info.trust_orientation) {
+    const double raw_yaw_diff =
+      autoware_utils_math::normalize_radian(tf2::getYaw(in_object.pose.orientation) - tracker_yaw);
+    sign_belief_.vote(
+      time, raw_yaw_diff,
+      in_object.kinematics.orientation_availability == types::OrientationAvailability::AVAILABLE);
+  }
+
+  const types::DynamicObject corrected = normalizeYaw(in_object, tracker_yaw);
 
   const bool is_bbox = (corrected.shape.type == autoware_perception_msgs::msg::Shape::BOUNDING_BOX);
   updateKinematics(corrected, channel_info);
@@ -277,9 +281,31 @@ bool VehicleTracker::measure(
   shape_model_.updateFootprint(
     corrected, time, has_pose ? std::make_optional(tracker_pose) : std::nullopt);
 
+  evaluateSignFlip(time);
+
   shape_update_anchor_ = BicycleMotionModel::LengthUpdateAnchor::CENTER;
   removeCache();
   return true;
+}
+
+void VehicleTracker::evaluateSignFlip(const rclcpp::Time & time)
+{
+  const double vel_long = motion_model_.getStateElement(IDX::U);
+  const double vel_var = motion_model_.getCovarianceElement(IDX::U, IDX::U);
+  if (sign_belief_.shouldFlip(time, vel_long, vel_var)) {
+    flipOrientationSign();
+  }
+}
+
+// 180° heading flip of the full tracker state: motion model, stored footprint, and sign belief.
+void VehicleTracker::flipOrientationSign()
+{
+  motion_model_.flipOrientation();
+  if (shape_model_.isFootprintValid()) {
+    shape_model_.flipFootprintXY();
+  }
+  sign_belief_.onFlipped();
+  removeCache();
 }
 
 bool VehicleTracker::getMotionState(
@@ -349,6 +375,8 @@ bool VehicleTracker::conditionedUpdate(
     shape_model_.updateFootprint(
       measurement, measurement_time, has_pose ? std::make_optional(tracker_pose) : std::nullopt);
 
+    evaluateSignFlip(measurement_time);
+
     shape_update_anchor_ = BicycleMotionModel::LengthUpdateAnchor::CENTER;
     removeCache();
     return true;
@@ -365,6 +393,8 @@ bool VehicleTracker::conditionedUpdate(
     measurement_time, tracker_pose, dummy_cov, dummy_twist, dummy_cov);
   shape_model_.updateFootprint(
     measurement, measurement_time, has_pose ? std::make_optional(tracker_pose) : std::nullopt);
+
+  evaluateSignFlip(measurement_time);
 
   shape_update_anchor_ = BicycleMotionModel::LengthUpdateAnchor::CENTER;
   removeCache();

@@ -12,8 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "autoware/component_interface_specs/localization.hpp"
 #include "autoware/component_interface_specs_universe/localization.hpp"
 #include "gtest/gtest.h"
+
+#include <type_traits>
+
+// Proves the universe symbols are re-exports of the canonical core types, not
+// redefinitions: consumers see one definition, one version authority.
+TEST(localization_universe, reexports_core)
+{
+  namespace core = autoware::component_interface_specs::localization;
+  namespace universe = autoware::component_interface_specs_universe::localization;
+  static_assert(std::is_same_v<universe::KinematicState, core::KinematicState>);
+  static_assert(std::is_same_v<universe::Initialize, core::Initialize>);
+  SUCCEED();
+}
 
 TEST(localization, interface)
 {

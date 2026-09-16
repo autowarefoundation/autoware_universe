@@ -234,8 +234,9 @@ void DynamicObstacleAvoidanceModuleManager::updateModuleParams(
   {  // drivable_area_generation
     const std::string ns = "dynamic_avoidance.drivable_area_generation.";
     std::string polygon_generation_method_str;
-    if (update_param<std::string>(
-          parameters, ns + "polygon_generation_method", polygon_generation_method_str)) {
+    if (
+      update_param<std::string>(
+        parameters, ns + "polygon_generation_method", polygon_generation_method_str)) {
       p->polygon_generation_method =
         convertToPolygonGenerationMethod(polygon_generation_method_str);
     }
