@@ -371,13 +371,24 @@ void ConfigLoader::apply_remove_edits()
     }
   }
 
-  // Mark target nodes to be removed.
+  // List target nodes to be removed.
   std::unordered_set<BaseUnit *> remove_nodes;
   for (auto & node : raws(nodes_)) {
     const auto path = node->path();
     if (!path.empty() && remove_paths.at(path)) {
       remove_nodes.insert(node);
     }
+  }
+
+  // Remove diags used by the target nodes.
+  {
+    std::unordered_set<BaseUnit *> child_units;
+    for (const auto & node : remove_nodes) {
+      for (const auto & child : node->child_units()) {
+        child_units.insert(child);
+      }
+    }
+    diags_ = filter(std::move(diags_), child_units);
   }
 
   // Remove ports used by the target nodes.
