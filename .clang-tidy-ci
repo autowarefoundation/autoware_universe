@@ -16,8 +16,7 @@ Checks: "
   -bugprone-signed-char-misuse,
   -bugprone-switch-missing-default-case,
   -bugprone-unchecked-optional-access,
-  -bugprone-unused-local-non-trivial-variable,
-  -bugprone-unused-return-value"
+  -bugprone-unused-local-non-trivial-variable"
 
 WarningsAsErrors: "*"
 
