@@ -23,6 +23,7 @@
     "libacados",
     "libtensorrt",
     "lichtblick",
+    "nullrhi",
     "Psidot",
     "psidot",
     "Psi̇",
