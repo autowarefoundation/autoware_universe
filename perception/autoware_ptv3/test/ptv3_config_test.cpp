@@ -18,6 +18,7 @@
 
 #include <gtest/gtest.h>
 
+#include <array>
 #include <cstdint>
 #include <stdexcept>
 #include <string>
@@ -39,10 +40,10 @@ PTv3Config makeDetectionConfig(
   const std::vector<std::int64_t> & voxels_num = {1, 4, 8})
 {
   return PTv3Config(
-    false, true, "", 8, voxels_num, point_cloud_range, voxel_size, {}, {}, {"z", "z-trans"},
-    {2, 2, 2, 2}, {8, 16, 32, 64, 128}, {}, {}, "", false, "", {}, {"CAR", "PEDESTRIAN"},
-    bbox_voxel_size, distance_bin_upper_limits, detection_score_thresholds, yaw_norm_thresholds,
-    true, 8, {-2.0F, -2.0F, -2.0F, 4.0F, 4.0F, 4.0F});
+    false, true, "", 8, "map", 1, voxels_num, point_cloud_range, voxel_size, 2, {}, {},
+    {"z", "z-trans"}, {2, 2, 2, 2}, {8, 16, 32, 64, 128}, {}, {}, "", false, "", {},
+    {"CAR", "PEDESTRIAN"}, bbox_voxel_size, distance_bin_upper_limits, detection_score_thresholds,
+    yaw_norm_thresholds, true, 8, {-2.0F, -2.0F, -2.0F, 4.0F, 4.0F, 4.0F});
 }
 
 // Segmentation-only config exercising segmentation3d.class_mapping resolution.
@@ -52,9 +53,9 @@ PTv3Config makeSegmentationConfig(
 {
   std::vector<std::int64_t> palette(segmentation_class_names.size() * 3, 0);
   return PTv3Config(
-    true, false, "", 8, {1, 4, 8}, {-1.0F, -1.0F, -1.0F, 3.0F, 3.0F, 3.0F}, {1.0F, 1.0F, 1.0F},
-    segmentation_class_names, segmentation_class_mapping, {"z", "z-trans"}, {2, 2}, {8, 16, 32},
-    palette, {}, "xyzi", false, "partial", {0, 0});
+    true, false, "", 8, "map", 1, {1, 4, 8}, {-1.0F, -1.0F, -1.0F, 3.0F, 3.0F, 3.0F},
+    {1.0F, 1.0F, 1.0F}, 2, segmentation_class_names, segmentation_class_mapping, {"z", "z-trans"},
+    {2, 2}, {8, 16, 32}, palette, {}, "xyzi", false, "partial", {0, 0});
 }
 
 TEST(PTv3ConfigTest, AcceptsCompatibleDetectionGrid)
@@ -189,6 +190,30 @@ TEST(PTv3ConfigTest, StageVoxelCapacityCoversUnalignedRangeBoundary)
   EXPECT_EQ(config.stage_voxel_capacity(0), 17 * 17 * 5);
   EXPECT_EQ(config.stage_voxel_capacity(1), 9 * 9 * 3);
   EXPECT_EQ(config.stage_voxel_capacity(4), 2 * 2 * 1);
+}
+
+// Each stage is bounded by its own voxel capacity; opt scales with max and min stays within it.
+TEST(PTv3ConfigTest, StageProfileCountsScaleWithStageCapacity)
+{
+  using Counts = std::array<std::int64_t, 3>;
+  const auto config = makeDetectionConfig(
+    {0.0F, 0.0F, 0.0F, 16.0F, 16.0F, 4.0F}, {8.0F, 8.0F, 4.0F}, {10.0F, 20.0F},
+    {0.1F, 0.2F, 0.3F, 0.4F}, {0.1F, 0.2F}, {1.0F, 1.0F, 1.0F}, {16, 256, 1024});
+  EXPECT_EQ(config.stage_profile_counts(0), (Counts{16, 256, 1024}));
+  EXPECT_EQ(config.stage_profile_counts(1), (Counts{1, 32, 128}));
+  EXPECT_EQ(config.stage_profile_counts(2), (Counts{1, 4, 16}));
+  EXPECT_EQ(config.stage_profile_counts(3), (Counts{1, 1, 4}));
+  EXPECT_EQ(config.stage_profile_counts(4), (Counts{1, 1, 1}));
+}
+
+// A configured minimum above the stage capacity is capped so the profile stays valid.
+TEST(PTv3ConfigTest, StageProfileCountsCapTheConfiguredMinimum)
+{
+  using Counts = std::array<std::int64_t, 3>;
+  const auto config = makeDetectionConfig(
+    {0.0F, 0.0F, 0.0F, 16.0F, 16.0F, 4.0F}, {8.0F, 8.0F, 4.0F}, {10.0F, 20.0F},
+    {0.1F, 0.2F, 0.3F, 0.4F}, {0.1F, 0.2F}, {1.0F, 1.0F, 1.0F}, {2048, 3072, 4096});
+  EXPECT_EQ(config.stage_profile_counts(0), (Counts{1024, 1024, 1024}));
 }
 
 // Borders that are voxel-aligned in decimal but not exactly representable in binary (neither 102.4

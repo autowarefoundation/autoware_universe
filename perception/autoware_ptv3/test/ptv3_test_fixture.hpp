@@ -42,9 +42,12 @@ struct PTv3ConfigParams
   bool use_det3d_head = false;
   std::string plugins_path = "";
   std::int64_t cloud_capacity = 8;
+  std::string densification_world_frame_id = "map";
+  std::int64_t densification_num_past_frames = 1;
   std::vector<std::int64_t> voxels_num = {1, 4, 8};
   std::vector<float> point_cloud_range = {-1.0F, -1.0F, -1.0F, 3.0F, 3.0F, 3.0F};
   std::vector<float> voxel_size = {1.0F, 1.0F, 1.0F};
+  std::int64_t max_points_per_voxel = 2;
   std::vector<std::string> segmentation_class_names = {"noise", "car"};
   std::unordered_map<std::string, std::string> segmentation_class_mapping = {
     {"noise", "NOISE"}, {"car", "CAR"}};
@@ -87,13 +90,14 @@ inline PTv3Config makeConfig(const PTv3ConfigParams & params = {})
 {
   return PTv3Config(
     params.use_seg3d_head, params.use_det3d_head, params.plugins_path, params.cloud_capacity,
-    params.voxels_num, params.point_cloud_range, params.voxel_size, params.segmentation_class_names,
-    params.segmentation_class_mapping, params.serialization_orders, params.pooling_strides,
-    params.enc_channels, params.palette, params.filter_classes, params.filter_output_format,
-    params.filter_apply_to_segmentation, params.source_reconstruction, params.dec_depths,
-    params.detection_class_names, params.bbox_voxel_size, params.distance_bin_upper_limits,
-    params.detection_score_thresholds, params.yaw_norm_thresholds, params.has_twist,
-    params.num_proposals, params.post_center_range);
+    params.densification_world_frame_id, params.densification_num_past_frames, params.voxels_num,
+    params.point_cloud_range, params.voxel_size, params.max_points_per_voxel,
+    params.segmentation_class_names, params.segmentation_class_mapping, params.serialization_orders,
+    params.pooling_strides, params.enc_channels, params.palette, params.filter_classes,
+    params.filter_output_format, params.filter_apply_to_segmentation, params.source_reconstruction,
+    params.dec_depths, params.detection_class_names, params.bbox_voxel_size,
+    params.distance_bin_upper_limits, params.detection_score_thresholds, params.yaw_norm_thresholds,
+    params.has_twist, params.num_proposals, params.post_center_range);
 }
 
 // Base fixture for all autoware_ptv3 CUDA unit tests: owns a CUDA stream and the
