@@ -17,6 +17,8 @@
 // NOLINTNEXTLINE
 #define PLANNING__AUTOWARE_MINIMUM_RULE_BASED_PLANNER__PLUGINS__PLUGIN_INTERFACE_HPP_
 
+#include <autoware/agnocast_wrapper/node.hpp>
+#include <autoware/agnocast_wrapper/tf2.hpp>
 #include <autoware/planning_factor_interface/planning_factor_interface.hpp>
 #include <autoware/vehicle_info_utils/vehicle_info.hpp>
 #include <autoware/vehicle_info_utils/vehicle_info_utils.hpp>
@@ -30,9 +32,6 @@
 #include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
-
-#include <tf2_ros/buffer.h>
-#include <tf2_ros/transform_listener.h>
 
 #include <iostream>
 #include <memory>
@@ -62,7 +61,7 @@ struct ModifierData
 
 struct ModifierContext
 {
-  explicit ModifierContext(rclcpp::Node * node)
+  explicit ModifierContext(autoware::agnocast_wrapper::Node * node)
   : vehicle_info(autoware::vehicle_info_utils::VehicleInfoUtils(*node).getVehicleInfo()),
     tf_buffer{node->get_clock()},
     tf_listener{tf_buffer}
@@ -70,8 +69,8 @@ struct ModifierContext
   }
 
   VehicleInfo vehicle_info;
-  tf2_ros::Buffer tf_buffer;
-  tf2_ros::TransformListener tf_listener;
+  autoware::agnocast_wrapper::Buffer tf_buffer;
+  autoware::agnocast_wrapper::TransformListener tf_listener;
 };
 
 class PluginInterface
@@ -80,7 +79,7 @@ public:
   PluginInterface() = default;
 
   void initialize(
-    std::string name, rclcpp::Node * node_ptr,
+    std::string name, autoware::agnocast_wrapper::Node * node_ptr,
     const std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper,
     const std::shared_ptr<ModifierContext> & context, const MinimumRuleBasedPlannerParams & params)
   {
@@ -95,7 +94,7 @@ public:
   virtual ~PluginInterface() = default;
   virtual void run(TrajectoryPoints & traj_points, const ModifierData & modifier_data) = 0;
   std::string get_name() const { return name_; }
-  rclcpp::Node * get_node_ptr() const { return node_ptr_; }
+  autoware::agnocast_wrapper::Node * get_node_ptr() const { return node_ptr_; }
   std::shared_ptr<autoware_utils_debug::TimeKeeper> get_time_keeper() const { return time_keeper_; }
   virtual void update_params(const MinimumRuleBasedPlannerParams & params) = 0;
 
@@ -115,7 +114,8 @@ public:
 
 protected:
   virtual void on_initialize(const MinimumRuleBasedPlannerParams & params) = 0;
-  std::unique_ptr<autoware::planning_factor_interface::PlanningFactorInterface>
+  std::unique_ptr<
+    autoware::planning_factor_interface::PlanningFactorInterfaceT<autoware::agnocast_wrapper::Node>>
     planning_factor_interface_;
   std::shared_ptr<ModifierContext> context_;
 
@@ -123,7 +123,7 @@ protected:
 
 private:
   std::string name_;
-  rclcpp::Node * node_ptr_{nullptr};
+  autoware::agnocast_wrapper::Node * node_ptr_{nullptr};
   mutable std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_{nullptr};
 };
 }  // namespace autoware::minimum_rule_based_planner::plugin

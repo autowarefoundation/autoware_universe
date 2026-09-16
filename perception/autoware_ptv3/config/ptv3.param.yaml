@@ -16,6 +16,23 @@
       engine_path: "$(var model_path)/$(var model_variant)_seg3d_head.engine"
       workspace_size: 8589934592  # 8 GiB
       source_reconstruction: "full"
+      # Mapping from segmentation3d.class_names to autoware::point_types::PointCloudClassification.
+      class_mapping:
+        car: CAR
+        truck: TRUCK
+        bus: BUS
+        bicycle: BICYCLE
+        pedestrian: PEDESTRIAN
+        traffic_cone: HAZARD
+        debris: HAZARD
+        vertical_thin: HAZARD
+        barrier: STRUCTURE
+        building: STRUCTURE
+        static_clutter: STRUCTURE
+        drivable_flat: FLAT_SURFACE
+        non_drivable_flat: FLAT_SURFACE
+        vegetation: VEGETATION
+        noise: NOISE
       filter:
         classes: ["drivable_flat", "non_drivable_flat", "noise"]
         output_format: ""

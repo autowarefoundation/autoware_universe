@@ -76,7 +76,7 @@ class PostprocessCuda
 public:
   explicit PostprocessCuda(const PostProcessingConfig & config, cudaStream_t & stream);
 
-  cudaError_t generateDetectedBoxes3D_launch(
+  cudaError_t generate_detected_boxes3d_launch(
     const float * cls_output, const float * box_output, std::vector<Box3D> & det_boxes3d,
     cudaStream_t stream);
 

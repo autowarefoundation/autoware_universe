@@ -15,7 +15,7 @@
 #ifndef CLASSIFIER__CNN_LAMP_RECOGNIZER_HPP_
 #define CLASSIFIER__CNN_LAMP_RECOGNIZER_HPP_
 
-#include "classifier_interface.hpp"
+#include "autoware/traffic_light_classifier/classifier/classifier_interface.hpp"
 
 #include <autoware/cuda_utils/cuda_unique_ptr.hpp>
 #include <autoware/cuda_utils/stream_unique_ptr.hpp>

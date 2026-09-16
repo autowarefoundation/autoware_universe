@@ -12,6 +12,7 @@
 
   <exec_depend>autoware_adapi_v1_msgs</exec_depend>
   <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>python3-numpy</exec_depend>
   <exec_depend>rclpy</exec_depend>
   <exec_depend>tf_transformations</exec_depend>
   <exec_depend>visualization_msgs</exec_depend>

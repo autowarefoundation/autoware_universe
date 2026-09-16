@@ -19,6 +19,7 @@
 #include <rclcpp/logger.hpp>
 #include <rclcpp/logging.hpp>
 
+#include <filesystem>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -27,6 +28,7 @@
 struct SemanticSegmentation::Impl
 {
   cv::dnn::Net net;
+  bool nhwc_input;
 };
 
 SemanticSegmentation::SemanticSegmentation(const std::string & model_path)
@@ -35,6 +37,9 @@ SemanticSegmentation::SemanticSegmentation(const std::string & model_path)
   impl_->net = cv::dnn::readNet(model_path);
   impl_->net.setPreferableBackend(cv::dnn::DNN_BACKEND_OPENCV);
   impl_->net.setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
+  // The ONNX export of the model declares an NHWC input, [1, 512, 896, 3]. The frozen
+  // TensorFlow graph takes the NCHW blob that make_blob() builds.
+  impl_->nhwc_input = std::filesystem::path(model_path).extension() == ".onnx";
 }
 
 cv::Mat SemanticSegmentation::make_blob(const cv::Mat & image)
@@ -45,6 +50,16 @@ cv::Mat SemanticSegmentation::make_blob(const cv::Mat & image)
   bool swap = true;
   bool crop = false;
   return cv::dnn::blobFromImage(image, scale, size, mean, swap, crop, CV_32F);
+}
+
+cv::Mat SemanticSegmentation::make_nhwc_blob(const cv::Mat & image)
+{
+  // The same preprocessing as make_blob(), laid out as NHWC instead of NCHW.
+  cv::Mat resized;
+  cv::resize(image, resized, cv::Size(896, 512));
+  cv::cvtColor(resized, resized, cv::COLOR_BGR2RGB);
+  resized.convertTo(resized, CV_32F);
+  return resized.reshape(1, std::vector<int>{1, 512, 896, 3});
 }
 
 cv::Mat SemanticSegmentation::convert_blob_to_image(const cv::Mat & blob)
@@ -70,16 +85,25 @@ cv::Mat SemanticSegmentation::convert_blob_to_image(const cv::Mat & blob)
   return image;
 }
 
+cv::Mat SemanticSegmentation::convert_nhwc_blob_to_image(const cv::Mat & blob)
+{
+  if (blob.size.dims() != 4 || blob.size[3] != 4) {
+    throw std::runtime_error("blob has invalid size");
+  }
+  return blob.reshape(4, std::vector<int>{blob.size[1], blob.size[2]}).clone();
+}
+
 cv::Mat SemanticSegmentation::inference(const cv::Mat & image, double score_threshold)
 {
-  cv::Mat blob = make_blob(image);
+  cv::Mat blob = impl_->nhwc_input ? make_nhwc_blob(image) : make_blob(image);
   impl_->net.setInput(blob);
   std::vector<std::string> output_layers = impl_->net.getUnconnectedOutLayersNames();
   std::vector<cv::Mat> masks;
   impl_->net.forward(masks, output_layers);
 
   cv::Mat mask = masks[0];
-  cv::Mat output = convert_blob_to_image(mask);
+  cv::Mat output =
+    impl_->nhwc_input ? convert_nhwc_blob_to_image(mask) : convert_blob_to_image(mask);
 
   cv::resize(output, output, cv::Size(image.cols, image.rows), 0, 0, cv::INTER_LINEAR);
 
