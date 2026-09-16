@@ -19,6 +19,7 @@
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
 
+  <depend>autoware_agnocast_wrapper</depend>
   <depend>autoware_cmake</depend>
   <depend>autoware_control_msgs</depend>
   <depend>autoware_internal_debug_msgs</depend>

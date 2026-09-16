@@ -9,9 +9,13 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   src/topic_state_monitor_core.cpp
 )
 
-rclcpp_components_register_node(${PROJECT_NAME}
+autoware_agnocast_wrapper_setup(${PROJECT_NAME})
+
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   PLUGIN "autoware::topic_state_monitor::TopicStateMonitorNode"
   EXECUTABLE ${PROJECT_NAME}_node
+  ROS2_EXECUTOR SingleThreadedExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
 )
 
 ament_auto_package(INSTALL_TO_SHARE
