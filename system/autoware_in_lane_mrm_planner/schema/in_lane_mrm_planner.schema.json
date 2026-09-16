@@ -1,0 +1,606 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parameters for In Lane MRM Planner",
+  "type": "object",
+  "actual_parameters": {
+    "type": "object",
+    "properties": {
+      "planning_frequency_hz": {
+        "type": "number",
+        "description": "Planning timer frequency [Hz]",
+        "default": 10.0,
+        "minimum": 0.0
+      },
+      "path_planning": {
+        "type": "object",
+        "properties": {
+          "path_length": {
+            "type": "object",
+            "properties": {
+              "backward": {
+                "type": "number",
+                "description": "Path length behind ego [m]",
+                "default": 5.0,
+                "minimum": 0.0
+              },
+              "forward": {
+                "type": "number",
+                "description": "Path length ahead of ego [m]",
+                "default": 300.0,
+                "minimum": 0.0
+              }
+            },
+            "required": [],
+            "additionalProperties": false
+          },
+          "smooth_goal_connection": {
+            "type": "object",
+            "properties": {
+              "search_radius_range": {
+                "type": "number",
+                "description": "Search radius for goal connection [m]",
+                "default": 7.5,
+                "minimum": 0.0
+              },
+              "pre_goal_offset": {
+                "type": "number",
+                "description": "Offset before goal for smooth connection [m]",
+                "default": 1.0,
+                "minimum": 0.0
+              }
+            },
+            "required": [],
+            "additionalProperties": false
+          },
+          "ego_nearest_lanelet": {
+            "type": "object",
+            "properties": {
+              "dist_threshold": {
+                "type": "number",
+                "description": "Distance threshold for ego nearest lanelet [m]",
+                "default": 3.0,
+                "minimum": 0.0
+              },
+              "yaw_threshold": {
+                "type": "number",
+                "description": "Yaw threshold for ego nearest lanelet [rad]",
+                "default": 1.046,
+                "minimum": 0.0
+              }
+            },
+            "required": [],
+            "additionalProperties": false
+          },
+          "path_shift": {
+            "type": "object",
+            "properties": {
+              "enable": {
+                "type": "boolean",
+                "description": "Enable path shifting to ego pose",
+                "default": true
+              },
+              "minimum_shift_length": {
+                "type": "number",
+                "description": "Lateral offset threshold to trigger shift [m]",
+                "default": 0.5,
+                "minimum": 0.0
+              },
+              "minimum_shift_yaw": {
+                "type": "number",
+                "description": "Yaw deviation threshold to trigger shift [rad]",
+                "default": 0.349,
+                "minimum": 0.0
+              },
+              "minimum_shift_distance": {
+                "type": "number",
+                "description": "Floor for shift distance [m]",
+                "default": 5.0,
+                "minimum": 0.0
+              },
+              "min_speed_for_curvature": {
+                "type": "number",
+                "description": "Lower bound on speed for curvature computation [m/s]",
+                "default": 2.77,
+                "minimum": 0.0
+              },
+              "lateral_accel_limit": {
+                "type": "number",
+                "description": "Lateral acceleration limit for shift [m/s^2]",
+                "default": 1.0,
+                "minimum": 0.0
+              }
+            },
+            "required": [],
+            "additionalProperties": false
+          },
+          "waypoint_group": {
+            "type": "object",
+            "properties": {
+              "separation_threshold": {
+                "type": "number",
+                "description": "Max distance between waypoints in same group [m]",
+                "default": 1.0,
+                "minimum": 0.0
+              },
+              "interval_margin_ratio": {
+                "type": "number",
+                "description": "Ratio to expand group interval by lateral distance",
+                "default": 10.0,
+                "minimum": 0.0
+              }
+            },
+            "required": [],
+            "additionalProperties": false
+          },
+          "output": {
+            "type": "object",
+            "properties": {
+              "delta_arc_length": {
+                "type": "number",
+                "description": "Resampling interval for path-to-trajectory conversion [m]",
+                "default": 0.5,
+                "minimum": 0.0
+              }
+            },
+            "required": [],
+            "additionalProperties": false
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "obstacle_stop": {
+        "type": "object",
+        "properties": {
+          "enable": {
+            "type": "boolean",
+            "description": "Enable obstacle stop",
+            "default": true
+          },
+          "use_objects": {
+            "type": "boolean",
+            "description": "Use objects for obstacle stop",
+            "default": true
+          },
+          "use_pointcloud": {
+            "type": "boolean",
+            "description": "Use pointcloud for obstacle stop (Phase1 objects-only)",
+            "default": false
+          },
+          "stop_margin": {
+            "type": "number",
+            "description": "Stop margin [m]",
+            "default": 6.0,
+            "minimum": 0.0
+          },
+          "nominal_stopping_decel": {
+            "type": "number",
+            "description": "Nominal stopping deceleration [m/s^2]",
+            "default": 1.0,
+            "minimum": 0.0
+          },
+          "maximum_stopping_decel": {
+            "type": "number",
+            "description": "Maximum stopping deceleration [m/s^2]",
+            "default": 4.0,
+            "minimum": 0.0
+          },
+          "stopping_jerk": {
+            "type": "number",
+            "description": "Stopping jerk [m/s^3]",
+            "default": 3.0,
+            "minimum": 0.0
+          },
+          "on_time_buffer": {
+            "type": "number",
+            "description": "On time buffer [s]",
+            "default": 0.5,
+            "minimum": 0.0
+          },
+          "off_time_buffer": {
+            "type": "number",
+            "description": "Off time buffer [s]",
+            "default": 1.0,
+            "minimum": 0.0
+          },
+          "lateral_margin": {
+            "type": "number",
+            "description": "Lateral margin [m]",
+            "default": 0.5,
+            "minimum": 0.0
+          },
+          "longitudinal_margin": {
+            "type": "number",
+            "description": "Longitudinal margin applied to each trajectory-point footprint; also acts as a floor on the detection corridor length to prevent chatter as ego decelerates [m]",
+            "default": 10.0,
+            "minimum": 0.0
+          },
+          "objects": {
+            "type": "object",
+            "properties": {
+              "object_types": {
+                "type": "array",
+                "description": "Object types to consider for obstacle stop",
+                "default": [
+                  "car",
+                  "truck",
+                  "bus",
+                  "trailer",
+                  "motorcycle",
+                  "bicycle",
+                  "pedestrian",
+                  "unknown"
+                ],
+                "items": {
+                  "type": "string"
+                }
+              },
+              "max_velocity_th": {
+                "type": "number",
+                "description": "Max velocity threshold [m/s]",
+                "default": 1.0,
+                "minimum": 0.0
+              },
+              "stopped_velocity_th": {
+                "type": "number",
+                "description": "Velocity threshold for target object to be considered as stopped [m/s]",
+                "default": 0.25,
+                "minimum": 0.0
+              }
+            },
+            "required": [],
+            "additionalProperties": false
+          },
+          "rss_params": {
+            "type": "object",
+            "properties": {
+              "enable": {
+                "type": "boolean",
+                "description": "Enable RSS-based stop logic",
+                "default": true
+              },
+              "object_decel": {
+                "type": "object",
+                "properties": {
+                  "car": {
+                    "type": "number",
+                    "description": "Deceleration for car type objects [m/s^2]",
+                    "default": 1.5,
+                    "minimum": 0.0
+                  },
+                  "truck": {
+                    "type": "number",
+                    "description": "Deceleration for truck type objects [m/s^2]",
+                    "default": 1.5,
+                    "minimum": 0.0
+                  },
+                  "bus": {
+                    "type": "number",
+                    "description": "Deceleration for bus type objects [m/s^2]",
+                    "default": 1.5,
+                    "minimum": 0.0
+                  },
+                  "trailer": {
+                    "type": "number",
+                    "description": "Deceleration for trailer type objects [m/s^2]",
+                    "default": 1.5,
+                    "minimum": 0.0
+                  },
+                  "motorcycle": {
+                    "type": "number",
+                    "description": "Deceleration for motorcycle type objects [m/s^2]",
+                    "default": 3.0,
+                    "minimum": 0.0
+                  },
+                  "bicycle": {
+                    "type": "number",
+                    "description": "Deceleration for bicycle type objects [m/s^2]",
+                    "default": 5.0,
+                    "minimum": 0.0
+                  },
+                  "pedestrian": {
+                    "type": "number",
+                    "description": "Deceleration for pedestrian type objects [m/s^2]",
+                    "default": 5.0,
+                    "minimum": 0.0
+                  }
+                },
+                "required": [],
+                "additionalProperties": false
+              },
+              "ego_decel": {
+                "type": "number",
+                "description": "Deceleration for ego vehicle used in RSS calculation [m/s^2]",
+                "default": 4.0,
+                "minimum": 0.0
+              },
+              "reaction_time": {
+                "type": "number",
+                "description": "Reaction time used in RSS calculation [s]",
+                "default": 0.2,
+                "minimum": 0.0
+              },
+              "safety_margin": {
+                "type": "number",
+                "description": "Safety margin used in RSS calculation [m]",
+                "default": 2.0,
+                "minimum": 0.0
+              },
+              "lookahead_horizon": {
+                "type": "number",
+                "description": "Lookahead horizon used in RSS calculation [s]",
+                "default": 1.5,
+                "minimum": 0.0
+              }
+            },
+            "required": [],
+            "additionalProperties": false
+          },
+          "pointcloud": {
+            "type": "object",
+            "properties": {
+              "height_buffer": {
+                "type": "number",
+                "description": "Height buffer [m]",
+                "default": 0.5,
+                "minimum": 0.0
+              },
+              "min_height": {
+                "type": "number",
+                "description": "Min height [m]",
+                "default": 0.2,
+                "minimum": 0.0
+              },
+              "detection_range": {
+                "type": "number",
+                "description": "Detection range [m]",
+                "default": 100.0,
+                "minimum": 0.0
+              },
+              "voxel_grid_filter": {
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "description": "X [m]",
+                    "default": 0.2,
+                    "minimum": 0.0
+                  },
+                  "y": {
+                    "type": "number",
+                    "description": "Y [m]",
+                    "default": 0.2,
+                    "minimum": 0.0
+                  },
+                  "z": {
+                    "type": "number",
+                    "description": "Z [m]",
+                    "default": 0.2,
+                    "minimum": 0.0
+                  },
+                  "min_size": {
+                    "type": "number",
+                    "description": "Min size",
+                    "default": 3,
+                    "minimum": 0.0
+                  }
+                },
+                "required": [],
+                "additionalProperties": false
+              },
+              "clustering": {
+                "type": "object",
+                "properties": {
+                  "tolerance": {
+                    "type": "number",
+                    "description": "Tolerance [m]",
+                    "default": 0.5,
+                    "minimum": 0.0
+                  },
+                  "min_height": {
+                    "type": "number",
+                    "description": "Min height [m]",
+                    "default": 0.5,
+                    "minimum": 0.0
+                  },
+                  "min_size": {
+                    "type": "number",
+                    "description": "Min size",
+                    "default": 10,
+                    "minimum": 0.0
+                  },
+                  "max_size": {
+                    "type": "number",
+                    "description": "Max size",
+                    "default": 10000,
+                    "minimum": 0.0
+                  }
+                },
+                "required": [],
+                "additionalProperties": false
+              }
+            },
+            "required": [],
+            "additionalProperties": false
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "debug": {
+        "type": "object",
+        "properties": {
+          "enable_path": {
+            "type": "boolean",
+            "description": "Publish debug path_with_lane_id",
+            "default": true
+          },
+          "enable_shifted_trajectory": {
+            "type": "boolean",
+            "description": "Publish debug shifted trajectory",
+            "default": true
+          },
+          "enable_optimizer_trajectory": {
+            "type": "boolean",
+            "description": "Publish debug optimizer module trajectories",
+            "default": true
+          },
+          "enable_modifier_trajectory": {
+            "type": "boolean",
+            "description": "Publish debug modifier module trajectories",
+            "default": true
+          },
+          "enable_output_trajectory": {
+            "type": "boolean",
+            "description": "Publish debug final output trajectory",
+            "default": true
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "post_resample": {
+        "type": "object",
+        "properties": {
+          "max_trajectory_length": {
+            "type": "number",
+            "description": "Max trajectory length for post-optimization resampling [m]",
+            "default": 300.0,
+            "minimum": 0.0
+          },
+          "min_trajectory_length": {
+            "type": "number",
+            "description": "Minimum trajectory length for post-optimization resampling [m]",
+            "default": 30.0,
+            "minimum": 0.0
+          },
+          "resample_time": {
+            "type": "number",
+            "description": "Resample total time [s]",
+            "default": 10.0,
+            "minimum": 0.0
+          },
+          "dense_resample_dt": {
+            "type": "number",
+            "description": "Dense sampling time interval [s]",
+            "default": 0.1,
+            "minimum": 0.0
+          },
+          "dense_min_interval_distance": {
+            "type": "number",
+            "description": "Dense sampling min interval [m]",
+            "default": 0.1,
+            "minimum": 0.0
+          },
+          "sparse_resample_dt": {
+            "type": "number",
+            "description": "Sparse sampling time interval [s]",
+            "default": 0.1,
+            "minimum": 0.0
+          },
+          "sparse_min_interval_distance": {
+            "type": "number",
+            "description": "Sparse sampling min interval [m]",
+            "default": 1.0,
+            "minimum": 0.0
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "mrm_velocity": {
+        "type": "object",
+        "properties": {
+          "target_deceleration": {
+            "type": "number",
+            "description": "Target longitudinal deceleration for MRM stop velocity planning [m/s^2]",
+            "default": -3.0
+          },
+          "target_jerk": {
+            "type": "number",
+            "description": "Target longitudinal jerk for MRM stop velocity planning [m/s^3]",
+            "default": -5.0
+          },
+          "max_jerk_relaxation": {
+            "type": "number",
+            "description": "Vehicle jerk limit used when relaxing MRM stop profile [m/s^3]",
+            "default": -20.0
+          },
+          "max_deceleration_relaxation": {
+            "type": "number",
+            "description": "Vehicle deceleration limit used when relaxing MRM stop profile [m/s^2]",
+            "default": -6.0
+          },
+          "step_jerk_relaxation": {
+            "type": "number",
+            "description": "Jerk relaxation step per iteration (more negative is harsher) [m/s^3]",
+            "default": -5.0
+          },
+          "step_deceleration_relaxation": {
+            "type": "number",
+            "description": "Deceleration relaxation step per iteration (more negative is harsher) [m/s^2]",
+            "default": -1.0
+          },
+          "decel_resample_range": {
+            "type": "number",
+            "description": "Arc-length range around constraint stop to densify trajectory [m]",
+            "default": 2.0
+          },
+          "decel_resample_interval": {
+            "type": "number",
+            "description": "Point interval inside decel_resample_range [m]",
+            "default": 0.1
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "trajectory_validator": {
+        "type": "object",
+        "properties": {
+          "enable": {
+            "type": "boolean",
+            "description": "Enable read-only output trajectory validation before publish (non-latched only)",
+            "default": true
+          },
+          "min_point_count": {
+            "type": "integer",
+            "description": "Minimum number of trajectory points",
+            "default": 3,
+            "minimum": 2
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "latch": {
+        "type": "object",
+        "properties": {
+          "use_latched_objects": {
+            "type": "boolean",
+            "description": "Latch predicted objects on MRM trigger to stabilize obstacle stop during deceleration",
+            "default": true
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      }
+    },
+    "required": [],
+    "additionalProperties": false
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/actual_parameters"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}
