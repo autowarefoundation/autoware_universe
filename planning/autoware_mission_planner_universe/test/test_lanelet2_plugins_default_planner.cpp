@@ -365,10 +365,10 @@ TEST(DefaultPlannerTest, plan)
 }
 
 // Regression test: planning a route whose lanelet path ends up empty must fail gracefully instead
-// of segfaulting. An empty path (e.g. fewer than two checkpoints, or planPathLaneletsBetweenCheckpoints
-// reporting success while yielding no lanelets) used to reach route_handler's createMapSegments ->
-// getMainLanelets and refine_goal_height, both of which call back() on the path and dereference an
-// invalid lanelet.
+// of segfaulting. An empty path (e.g. fewer than two checkpoints, or
+// planPathLaneletsBetweenCheckpoints reporting success while yielding no lanelets) used to reach
+// route_handler's createMapSegments -> getMainLanelets and refine_goal_height, both of which call
+// back() on the path and dereference an invalid lanelet.
 TEST(DefaultPlannerTest, planWithEmptyPathDoesNotCrash)
 {
   DefaultPlanner planner(create_default_planner_parameters(), create_default_vehicle_info());
