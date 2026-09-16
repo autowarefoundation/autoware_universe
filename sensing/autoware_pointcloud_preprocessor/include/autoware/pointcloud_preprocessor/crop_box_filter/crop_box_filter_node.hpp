@@ -69,8 +69,10 @@
 
 namespace autoware::pointcloud_preprocessor
 {
-class CropBoxFilterComponent : public autoware::pointcloud_preprocessor::Filter
+class CropBoxFilterComponent : public autoware::pointcloud_preprocessor::AgnocastFilter
 {
+  using NodeType = autoware::agnocast_wrapper::Node;
+
 protected:
   void filter(
     const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output) override;
@@ -96,14 +98,15 @@ private:
     double processing_time_threshold_sec{0.0};
   } param_;
 
-  rclcpp::Publisher<geometry_msgs::msg::PolygonStamped>::SharedPtr crop_box_polygon_pub_;
+  AUTOWARE_PUBLISHER_PTR(geometry_msgs::msg::PolygonStamped) crop_box_polygon_pub_;
 
   /** \brief Parameter service callback result : needed to be hold */
-  OnSetParametersCallbackHandle::SharedPtr set_param_res_;
+  rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr set_param_res_;
 
   /** \brief Parameter service callback */
   rcl_interfaces::msg::SetParametersResult param_callback(const std::vector<rclcpp::Parameter> & p);
-  void publish_diagnostics(const std::vector<std::shared_ptr<const DiagnosticsBase>> & diagnostics);
+  void publish_diagnostics(
+    const std::vector<std::shared_ptr<const BasicDiagnosticsBase<NodeType>>> & diagnostics);
 
 public:
   PCL_MAKE_ALIGNED_OPERATOR_NEW
