@@ -23330,6 +23330,12 @@ This ros package enables communication between Autoware and CARLA for autonomous
 <td>Path to sensor mapping YAML configuration file. When <code>use_light_weight_sensor_mapping</code> is True, this defaults to <code>config/sensor_mapping_light_weight.yaml</code>.</td>
 </tr>
 <tr>
+<td><code>publish_ground_truth_objects</code></td>
+<td>bool</td>
+<td>False</td>
+<td>If True, publishes every CARLA vehicle except the ego to <code>/perception/object_recognition/detection/objects</code> as ground truth detections, so tracking and prediction run on simulator truth instead of sensor based detection. Pedestrians are not covered.</td>
+</tr>
+<tr>
 <td><code>config_file</code></td>
 <td>string</td>
 <td>"$(find-pkg-share autoware_carla_interface)/raw_vehicle_cmd_converter.param.yaml"</td>
