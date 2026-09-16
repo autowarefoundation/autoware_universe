@@ -515,6 +515,14 @@ public:
   using FilterBase::FilterBase;
 };
 
+/// The `autoware::agnocast_wrapper::Node` instantiation migrated filter nodes derive from. A class
+/// rather than an alias for the same reason as `Filter`.
+class AgnocastFilter : public FilterBase<autoware::agnocast_wrapper::Node>
+{
+public:
+  using FilterBase::FilterBase;
+};
+
 }  // namespace autoware::pointcloud_preprocessor
 
 #endif  // AUTOWARE__POINTCLOUD_PREPROCESSOR__FILTER_HPP_
