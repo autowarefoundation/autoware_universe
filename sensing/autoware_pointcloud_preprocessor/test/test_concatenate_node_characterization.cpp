@@ -270,6 +270,28 @@ std::vector<std::pair<uint32_t, uint32_t>> get_sorted_source_segments(
   return segments;
 }
 
+// One point's position in the output frame, for pinning values that no simple formula
+// describes: once the twist queue holds several entries the compensation integrates both
+// position and yaw, so points are rotated as well as shifted.
+struct Position
+{
+  float x;
+  float y;
+  float z;
+};
+
+std::vector<Point> as_expected_points(const std::vector<Position> & positions, size_t sensor_index)
+{
+  std::vector<Point> points;
+  points.reserve(positions.size());
+  for (const auto & position : positions) {
+    points.push_back(Point{
+      position.x, position.y, position.z, sensor_intensities.at(sensor_index),
+      sensor_return_types.at(sensor_index), sensor_channels.at(sensor_index)});
+  }
+  return points;
+}
+
 // The keys check_concat_status() emits, in the order it emits them, for the advanced strategy.
 std::vector<std::string> expected_diagnostic_keys(const std::vector<std::string> & input_topics)
 {
@@ -421,12 +443,13 @@ protected:
 
   // -- driving ------------------------------------------------------------------------
 
-  void publish_twist(double stamp_sec)
+  void publish_twist(double stamp_sec, double linear_x = velocity_mps, double angular_z = 0.0)
   {
     geometry_msgs::msg::TwistWithCovarianceStamped msg;
     msg.header.stamp = to_time(stamp_sec);
     msg.header.frame_id = output_frame;
-    msg.twist.twist.linear.x = velocity_mps;
+    msg.twist.twist.linear.x = linear_x;
+    msg.twist.twist.angular.z = angular_z;
     twist_publisher_->publish(msg);
     spin_for(std::chrono::milliseconds(100));
   }
@@ -1124,26 +1147,6 @@ TEST_F(ConcatenateNodeTest, EachSourceIsTransformedIntoTheOutputFrame)
   EXPECT_EQ(rclcpp::Time(cloud.header.stamp), to_time(stamps.front()));
 }
 
-TEST_F(ConcatenateNodeTest, MotionCompensationShiftsEachSourceByItsTimestampOffset)
-{
-  // Arrange
-  start(NodeParams{});
-  publish_twist(base_stamp_sec);
-
-  // Act
-  publish_all_clouds(base_stamp_sec);
-  const auto cloud = await_concatenated_cloud();
-  const auto info = await_concatenation_info();
-
-  // Assert
-  for (size_t i = 0; i < num_sensors; ++i) {
-    EXPECT_TRUE(positions_match(
-      get_segment_of(info, cloud, i),
-      expected_points_in_output_frame(i, calculate_motion_shift_x(i))))
-      << "sensor " << i;
-  }
-}
-
 TEST_F(ConcatenateNodeTest, ConcatenatedCloudPreservesIntensityReturnTypeAndChannel)
 {
   // Arrange
@@ -1198,6 +1201,140 @@ TEST_F(ConcatenateNodeTest, RejectsCloudWhoseLayoutIsNotXyzircCompatible)
   EXPECT_TRUE(concatenated_clouds_.empty());
   EXPECT_TRUE(concatenation_infos_.empty());
   EXPECT_TRUE(diagnostics_.empty());
+}
+
+// ---------------------------------------------------------------------------------------
+// Motion compensation. Covers correct_pointcloud_motion(),
+// compute_transform_to_adjust_for_old_timestamp() and the twist queue in process_twist().
+// ---------------------------------------------------------------------------------------
+
+TEST_F(ConcatenateNodeTest, MotionCompensationShiftsEachSourceByItsTimestampOffset)
+{
+  // Arrange
+  start(NodeParams{});
+  // A single twist, constant velocity, no rotation: the simplest case.
+  publish_twist(base_stamp_sec);
+
+  // Act
+  publish_all_clouds(base_stamp_sec);
+  const auto cloud = await_concatenated_cloud();
+  const auto info = await_concatenation_info();
+
+  // Assert
+  for (size_t i = 0; i < num_sensors; ++i) {
+    EXPECT_TRUE(positions_match(
+      get_segment_of(info, cloud, i),
+      expected_points_in_output_frame(i, calculate_motion_shift_x(i))))
+      << "sensor " << i;
+  }
+}
+
+TEST_F(ConcatenateNodeTest, MotionCompensationIntegratesEveryTwistInTheWindow)
+{
+  // Arrange
+  start(NodeParams{});
+  // Four twists across the 80 ms the clouds span, so several land between one pair of cloud
+  // stamps: dt has to be chained from one entry to the next, and yaw integrated.
+  publish_twist(base_stamp_sec + 0.00, 1.0, 0.0);
+  publish_twist(base_stamp_sec + 0.02, 2.0, 0.5);
+  publish_twist(base_stamp_sec + 0.05, 3.0, -0.25);
+  publish_twist(base_stamp_sec + 0.08, 4.0, 1.0);
+
+  // Act
+  publish_all_clouds(base_stamp_sec);
+  const auto cloud = await_concatenated_cloud();
+  const auto info = await_concatenation_info();
+
+  // Assert
+  // Recorded from a run, not derived. y moves although every twist is longitudinal, and the
+  // x shift varies between points of one sensor: both are the integrated yaw rotating them.
+  const std::vector<std::vector<Position>> golden_positions = {
+    {{1.000000F, 1.000000F, 0.000000F},
+     {0.000000F, 2.000000F, 0.000000F},
+     {0.000000F, 1.000000F, 1.000000F}},
+    {{1.109985F, -1.994275F, 0.000000F},
+     {0.104997F, -0.999287F, 0.000000F},
+     {0.109997F, -1.999275F, 1.000000F}},
+    {{1.249406F, 0.037169F, 3.000000F},
+     {0.217440F, 1.004146F, 3.000000F},
+     {0.249934F, 0.004674F, 4.000000F}}};
+  for (size_t i = 0; i < num_sensors; ++i) {
+    EXPECT_TRUE(positions_match(
+      get_segment_of(info, cloud, i), as_expected_points(golden_positions.at(i), i)))
+      << "sensor " << i;
+  }
+}
+
+TEST_F(ConcatenateNodeTest, MotionCompensationStopsAtATwistGapLongerThanTheLimit)
+{
+  // Arrange
+  // Naive matching lets cloud stamps sit far apart. One hop is under the 0.1 s limit and one
+  // is over it, so a twist that never arrived cannot make this test pass.
+  NodeParams params;
+  params.matching_strategy = "naive";
+  start(params);
+  publish_twist(base_stamp_sec, 10.0, 0.0);
+
+  // Act
+  const std::vector<double> stamps = {base_stamp_sec, base_stamp_sec + 0.05, base_stamp_sec + 0.60};
+  for (size_t i = 0; i < num_sensors; ++i) {
+    publish_cloud(i, stamps.at(i));
+  }
+  const auto cloud = await_concatenated_cloud();
+  const auto info = await_concatenation_info();
+
+  // Assert
+  // The 0.05 s hop integrates to 0.5 m; the 0.55 s hop is refused, so the last cloud stays
+  // at 0.5 m rather than gaining another 5.5 m.
+  const std::vector<double> expected_shifts = {0.0, 0.5, 0.5};
+  for (size_t i = 0; i < num_sensors; ++i) {
+    EXPECT_TRUE(positions_match(
+      get_segment_of(info, cloud, i), expected_points_in_output_frame(i, expected_shifts.at(i))))
+      << "sensor " << i;
+  }
+}
+
+TEST_F(ConcatenateNodeTest, MotionCompensationIsSkippedWhenNoTwistHasArrived)
+{
+  // Arrange
+  // Motion compensation is enabled, but nothing is ever published on ~/input/twist.
+  start(NodeParams{});
+
+  // Act
+  publish_all_clouds(base_stamp_sec);
+  const auto cloud = await_concatenated_cloud();
+  const auto info = await_concatenation_info();
+
+  // Assert
+  for (size_t i = 0; i < num_sensors; ++i) {
+    EXPECT_TRUE(
+      positions_match(get_segment_of(info, cloud, i), expected_points_in_output_frame(i, 0.0)))
+      << "sensor " << i;
+  }
+}
+
+TEST_F(ConcatenateNodeTest, TwistQueueIsClearedWhenTwistTimeJumpsBackwards)
+{
+  // Arrange
+  start(NodeParams{});
+  // A twist after the cloud window, then one inside it: process_twist() sees time go back.
+  publish_twist(base_stamp_sec + 0.5, 10.0, 0.0);
+  publish_twist(base_stamp_sec, velocity_mps, 0.0);
+
+  // Act
+  publish_all_clouds(base_stamp_sec);
+  const auto cloud = await_concatenated_cloud();
+  const auto info = await_concatenation_info();
+
+  // Assert
+  // Only the surviving 1 m/s twist is integrated. Keeping the 10 m/s entry would have
+  // selected it instead, making every shift ten times larger.
+  for (size_t i = 0; i < num_sensors; ++i) {
+    EXPECT_TRUE(positions_match(
+      get_segment_of(info, cloud, i),
+      expected_points_in_output_frame(i, calculate_motion_shift_x(i))))
+      << "sensor " << i;
+  }
 }
 
 // ---------------------------------------------------------------------------------------
