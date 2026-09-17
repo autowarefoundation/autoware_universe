@@ -8,7 +8,7 @@ package:
   provider: autoware
 
 launch:
-  plugin: autoware::control_command_gate::ControlCommandGateNode
+  plugin: autoware::control_command_gate::ControlCmdGate
   executable: control_command_gate_node
   node_output: screen
 
