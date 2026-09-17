@@ -105,8 +105,7 @@ constexpr double base_stamp_sec = 100.0;
 enum class Layout { xyzircaedt, xyzirc, xyzi };
 
 // ---------------------------------------------------------------------------------------
-// Node parameters. Defaults describe the advanced, motion compensated configuration; each
-// test overrides only the fields it is about.
+// Default Node parameters.
 // ---------------------------------------------------------------------------------------
 
 struct NodeParams
@@ -121,38 +120,6 @@ struct NodeParams
   int maximum_queue_size{5};
   double rosbag_length{0.0};
 };
-
-NodeParams make_advanced_with_twist_params()
-{
-  return NodeParams{};
-}
-
-NodeParams make_advanced_with_odometry_params()
-{
-  NodeParams params;
-  params.input_twist_topic_type = "odom";
-  params.publish_synchronized_pointcloud = false;
-  return params;
-}
-
-NodeParams make_naive_without_motion_compensation_params()
-{
-  NodeParams params;
-  params.matching_strategy = "naive";
-  params.is_motion_compensated = false;
-  params.keep_input_frame_in_synchronized_pointcloud = false;
-  return params;
-}
-
-NodeParams make_drop_late_clouds_params()
-{
-  NodeParams params;
-  params.is_motion_compensated = false;
-  params.publish_synchronized_pointcloud = false;
-  params.publish_previous_but_late_pointcloud = false;
-  params.rosbag_length = 10.0;
-  return params;
-}
 
 // ---------------------------------------------------------------------------------------
 // Small value helpers
@@ -945,7 +912,7 @@ PointCloud2 ConcatenateNodeTest::make_cloud(
 TEST_F(ConcatenateNodeTest, AdvertisesConcatenatedCloudTopic)
 {
   // Arrange
-  start(make_advanced_with_twist_params());
+  start(NodeParams{});
 
   // Assert
   expect_node_has_publisher_for(make_point_cloud_topic("/output", 5));
@@ -954,19 +921,20 @@ TEST_F(ConcatenateNodeTest, AdvertisesConcatenatedCloudTopic)
 TEST_F(ConcatenateNodeTest, AdvertisesConcatenationInfoTopic)
 {
   // Arrange
-  start(make_advanced_with_twist_params());
+  start(NodeParams{});
 
   // Assert
-  expect_node_has_publisher_for(
-    ExpectedTopic{
-      "/output_info", "autoware_sensing_msgs/msg/ConcatenatedPointCloudInfo",
-      rclcpp::ReliabilityPolicy::BestEffort, rclcpp::DurabilityPolicy::Volatile, 5});
+  expect_node_has_publisher_for(ExpectedTopic{
+    "/output_info", "autoware_sensing_msgs/msg/ConcatenatedPointCloudInfo",
+    rclcpp::ReliabilityPolicy::BestEffort, rclcpp::DurabilityPolicy::Volatile, 5});
 }
 
 TEST_F(ConcatenateNodeTest, AdvertisesOneSynchronizedCloudTopicPerInput)
 {
   // Arrange
-  start(make_advanced_with_twist_params());
+  NodeParams params;
+  params.publish_synchronized_pointcloud = true;
+  start(params);
 
   // Assert
   const std::vector<std::string> expected_names = {
@@ -979,7 +947,7 @@ TEST_F(ConcatenateNodeTest, AdvertisesOneSynchronizedCloudTopicPerInput)
 TEST_F(ConcatenateNodeTest, AdvertisesNoSynchronizedCloudTopicWhenDisabled)
 {
   // Arrange
-  auto params = make_advanced_with_twist_params();
+  NodeParams params;
   params.publish_synchronized_pointcloud = false;
   start(params);
 
@@ -992,7 +960,7 @@ TEST_F(ConcatenateNodeTest, AdvertisesNoSynchronizedCloudTopicWhenDisabled)
 TEST_F(ConcatenateNodeTest, SynchronizedTopicNameFallsBackWhenPostfixMatchesInputName)
 {
   // Arrange
-  auto params = make_advanced_with_twist_params();
+  NodeParams params;
   params.synchronized_pointcloud_postfix = "pointcloud";
   start(params);
 
@@ -1006,7 +974,7 @@ TEST_F(ConcatenateNodeTest, SynchronizedTopicNameFallsBackWhenPostfixMatchesInpu
 TEST_F(ConcatenateNodeTest, PublisherQueueDepthFollowsMaximumQueueSize)
 {
   // Arrange
-  auto params = make_advanced_with_twist_params();
+  NodeParams params;
   params.maximum_queue_size = 3;
   start(params);
 
@@ -1023,7 +991,7 @@ TEST_F(ConcatenateNodeTest, PublisherQueueDepthFollowsMaximumQueueSize)
 TEST_F(ConcatenateNodeTest, SubscribesToEveryConfiguredInputTopic)
 {
   // Arrange
-  start(make_advanced_with_twist_params());
+  start(NodeParams{});
 
   // Assert
   for (size_t i = 0; i < num_sensors; ++i) {
@@ -1034,7 +1002,10 @@ TEST_F(ConcatenateNodeTest, SubscribesToEveryConfiguredInputTopic)
 TEST_F(ConcatenateNodeTest, SubscribesToTwistWhenTwistTopicTypeSelected)
 {
   // Arrange
-  start(make_advanced_with_twist_params());
+  NodeParams params;
+  params.is_motion_compensated = true;
+  params.input_twist_topic_type = "twist";
+  start(params);
 
   // Assert
   expect_node_has_subscription_for(
@@ -1045,7 +1016,10 @@ TEST_F(ConcatenateNodeTest, SubscribesToTwistWhenTwistTopicTypeSelected)
 TEST_F(ConcatenateNodeTest, SubscribesToOdometryWhenOdomTopicTypeSelected)
 {
   // Arrange
-  start(make_advanced_with_odometry_params());
+  NodeParams params;
+  params.is_motion_compensated = true;
+  params.input_twist_topic_type = "odom";
+  start(params);
 
   // Assert
   expect_node_has_subscription_for(
@@ -1056,7 +1030,9 @@ TEST_F(ConcatenateNodeTest, SubscribesToOdometryWhenOdomTopicTypeSelected)
 TEST_F(ConcatenateNodeTest, SubscribesToNoVelocityTopicWhenMotionCompensationDisabled)
 {
   // Arrange
-  start(make_naive_without_motion_compensation_params());
+  NodeParams params;
+  params.is_motion_compensated = false;
+  start(params);
 
   // Assert
   expect_node_has_no_subscription_for(get_twist_topic());
@@ -1070,7 +1046,7 @@ TEST_F(ConcatenateNodeTest, SubscribesToNoVelocityTopicWhenMotionCompensationDis
 TEST_F(ConcatenateNodeTest, ConcatenatedCloudCarriesOldestInputStamp)
 {
   // Arrange
-  start(make_advanced_with_twist_params());
+  start(NodeParams{});
   publish_twist(base_stamp_sec);
 
   // Act
@@ -1085,7 +1061,7 @@ TEST_F(ConcatenateNodeTest, ConcatenatedCloudCarriesOldestInputStamp)
 TEST_F(ConcatenateNodeTest, ConcatenatedCloudIsExpressedInOutputFrame)
 {
   // Arrange
-  start(make_advanced_with_twist_params());
+  start(NodeParams{});
   publish_twist(base_stamp_sec);
 
   // Act
@@ -1098,7 +1074,7 @@ TEST_F(ConcatenateNodeTest, ConcatenatedCloudIsExpressedInOutputFrame)
 TEST_F(ConcatenateNodeTest, ConcatenatedCloudUsesUnorganizedXyzircLayout)
 {
   // Arrange
-  start(make_advanced_with_twist_params());
+  start(NodeParams{});
   publish_twist(base_stamp_sec);
 
   // Act
@@ -1118,7 +1094,7 @@ TEST_F(ConcatenateNodeTest, ConcatenatedCloudUsesUnorganizedXyzircLayout)
 TEST_F(ConcatenateNodeTest, PublishesConcatenatedCloudOnlyOnceWhenAllInputsArrive)
 {
   // Arrange
-  start(make_advanced_with_twist_params());
+  start(NodeParams{});
   publish_twist(base_stamp_sec);
 
   // Act
@@ -1133,7 +1109,9 @@ TEST_F(ConcatenateNodeTest, PublishesConcatenatedCloudOnlyOnceWhenAllInputsArriv
 TEST_F(ConcatenateNodeTest, EachSourceIsTransformedIntoTheOutputFrame)
 {
   // Arrange
-  start(make_naive_without_motion_compensation_params());
+  NodeParams params;
+  params.is_motion_compensated = false;
+  start(params);
 
   // Act
   const auto stamps = publish_all_clouds(base_stamp_sec);
@@ -1152,7 +1130,7 @@ TEST_F(ConcatenateNodeTest, EachSourceIsTransformedIntoTheOutputFrame)
 TEST_F(ConcatenateNodeTest, MotionCompensationShiftsEachSourceByItsTimestampOffset)
 {
   // Arrange
-  start(make_advanced_with_twist_params());
+  start(NodeParams{});
   publish_twist(base_stamp_sec);
 
   // Act
@@ -1172,7 +1150,7 @@ TEST_F(ConcatenateNodeTest, MotionCompensationShiftsEachSourceByItsTimestampOffs
 TEST_F(ConcatenateNodeTest, ConcatenatedCloudPreservesIntensityReturnTypeAndChannel)
 {
   // Arrange
-  start(make_advanced_with_twist_params());
+  start(NodeParams{});
   publish_twist(base_stamp_sec);
 
   // Act
@@ -1189,7 +1167,7 @@ TEST_F(ConcatenateNodeTest, ConcatenatedCloudPreservesIntensityReturnTypeAndChan
 TEST_F(ConcatenateNodeTest, AcceptsPlainXyzircInputAsWellAsXyzircaedt)
 {
   // Arrange
-  start(make_advanced_with_twist_params());
+  start(NodeParams{});
   publish_twist(base_stamp_sec);
 
   // Act
@@ -1210,7 +1188,7 @@ TEST_F(ConcatenateNodeTest, AcceptsPlainXyzircInputAsWellAsXyzircaedt)
 TEST_F(ConcatenateNodeTest, RejectsCloudWhoseLayoutIsNotXyzircCompatible)
 {
   // Arrange
-  start(make_advanced_with_twist_params());
+  start(NodeParams{});
   publish_twist(base_stamp_sec);
 
   // Act
@@ -1232,7 +1210,7 @@ TEST_F(ConcatenateNodeTest, RejectsCloudWhoseLayoutIsNotXyzircCompatible)
 TEST_F(ConcatenateNodeTest, InfoHeaderMirrorsConcatenatedCloudHeader)
 {
   // Arrange
-  start(make_advanced_with_twist_params());
+  start(NodeParams{});
   publish_twist(base_stamp_sec);
 
   // Act
@@ -1248,7 +1226,7 @@ TEST_F(ConcatenateNodeTest, InfoHeaderMirrorsConcatenatedCloudHeader)
 TEST_F(ConcatenateNodeTest, InfoReportsSuccessWhenEverySourceArrives)
 {
   // Arrange
-  start(make_advanced_with_twist_params());
+  start(NodeParams{});
   publish_twist(base_stamp_sec);
 
   // Act
@@ -1261,7 +1239,7 @@ TEST_F(ConcatenateNodeTest, InfoReportsSuccessWhenEverySourceArrives)
 TEST_F(ConcatenateNodeTest, InfoListsSourcesInInputTopicsOrder)
 {
   // Arrange
-  start(make_advanced_with_twist_params());
+  start(NodeParams{});
   publish_twist(base_stamp_sec);
 
   // Act
@@ -1279,7 +1257,7 @@ TEST_F(ConcatenateNodeTest, InfoListsSourcesInInputTopicsOrder)
 TEST_F(ConcatenateNodeTest, InfoSegmentsPartitionTheConcatenatedCloud)
 {
   // Arrange
-  start(make_advanced_with_twist_params());
+  start(NodeParams{});
   publish_twist(base_stamp_sec);
 
   // Act
@@ -1295,7 +1273,7 @@ TEST_F(ConcatenateNodeTest, InfoSegmentsPartitionTheConcatenatedCloud)
 TEST_F(ConcatenateNodeTest, InfoSourceHeaderKeepsOriginalStampButOutputFrame)
 {
   // Arrange
-  start(make_advanced_with_twist_params());
+  start(NodeParams{});
   publish_twist(base_stamp_sec);
 
   // Act
@@ -1313,7 +1291,9 @@ TEST_F(ConcatenateNodeTest, InfoSourceHeaderKeepsOriginalStampButOutputFrame)
 TEST_F(ConcatenateNodeTest, InfoReportsAdvancedStrategyWithItsReferenceWindow)
 {
   // Arrange
-  start(make_advanced_with_twist_params());
+  NodeParams params;
+  params.matching_strategy = "advanced";
+  start(params);
   publish_twist(base_stamp_sec);
 
   // Act
@@ -1340,7 +1320,10 @@ TEST_F(ConcatenateNodeTest, InfoReportsAdvancedStrategyWithItsReferenceWindow)
 TEST_F(ConcatenateNodeTest, InfoReportsNaiveStrategyWithoutAnyConfig)
 {
   // Arrange
-  start(make_naive_without_motion_compensation_params());
+  NodeParams params;
+  params.matching_strategy = "naive";
+  params.is_motion_compensated = false;
+  start(params);
 
   // Act
   publish_all_clouds(base_stamp_sec);
@@ -1360,7 +1343,9 @@ TEST_F(ConcatenateNodeTest, InfoReportsNaiveStrategyWithoutAnyConfig)
 TEST_F(ConcatenateNodeTest, SynchronizedCloudKeepsSensorFrameWhenConfiguredTo)
 {
   // Arrange
-  start(make_advanced_with_twist_params());
+  NodeParams params;
+  params.keep_input_frame_in_synchronized_pointcloud = true;
+  start(params);
   publish_twist(base_stamp_sec);
 
   // Act
@@ -1382,7 +1367,10 @@ TEST_F(ConcatenateNodeTest, SynchronizedCloudKeepsSensorFrameWhenConfiguredTo)
 TEST_F(ConcatenateNodeTest, SynchronizedCloudUsesOutputFrameWhenConfiguredTo)
 {
   // Arrange
-  start(make_naive_without_motion_compensation_params());
+  NodeParams params;
+  params.is_motion_compensated = false;
+  params.keep_input_frame_in_synchronized_pointcloud = false;
+  start(params);
 
   // Act
   publish_all_clouds(base_stamp_sec);
@@ -1400,7 +1388,7 @@ TEST_F(ConcatenateNodeTest, SynchronizedCloudUsesOutputFrameWhenConfiguredTo)
 TEST_F(ConcatenateNodeTest, SynchronizedCloudIsStampedWithTheConcatenatedStamp)
 {
   // Arrange
-  start(make_advanced_with_twist_params());
+  start(NodeParams{});
   publish_twist(base_stamp_sec);
 
   // Act
@@ -1423,7 +1411,7 @@ TEST_F(ConcatenateNodeTest, SynchronizedCloudIsStampedWithTheConcatenatedStamp)
 TEST_F(ConcatenateNodeTest, PublishesRemainingSourcesAfterTimeout)
 {
   // Arrange
-  start(make_advanced_with_twist_params());
+  start(NodeParams{});
   publish_twist(base_stamp_sec);
 
   // Act
@@ -1445,7 +1433,7 @@ TEST_F(ConcatenateNodeTest, PublishesRemainingSourcesAfterTimeout)
 TEST_F(ConcatenateNodeTest, InfoMarksAMissingSourceAsTimedOut)
 {
   // Arrange
-  start(make_advanced_with_twist_params());
+  start(NodeParams{});
   publish_twist(base_stamp_sec);
 
   // Act
@@ -1470,7 +1458,7 @@ TEST_F(ConcatenateNodeTest, InfoMarksAMissingSourceAsTimedOut)
 TEST_F(ConcatenateNodeTest, PublishesAnEmptyCloudWhenEverySourceIsEmpty)
 {
   // Arrange
-  start(make_advanced_with_twist_params());
+  start(NodeParams{});
   publish_twist(base_stamp_sec);
 
   // Act
@@ -1491,7 +1479,7 @@ TEST_F(ConcatenateNodeTest, PublishesAnEmptyCloudWhenEverySourceIsEmpty)
 TEST_F(ConcatenateNodeTest, InfoReportsSuccessWhenEverySourceIsEmpty)
 {
   // Arrange
-  start(make_advanced_with_twist_params());
+  start(NodeParams{});
   publish_twist(base_stamp_sec);
 
   // Act
@@ -1515,7 +1503,10 @@ TEST_F(ConcatenateNodeTest, InfoReportsSuccessWhenEverySourceIsEmpty)
 TEST_F(ConcatenateNodeTest, NaiveStrategyGroupsCloudsByArrivalTimeIgnoringTheirStamps)
 {
   // Arrange
-  start(make_naive_without_motion_compensation_params());
+  NodeParams params;
+  params.matching_strategy = "naive";
+  params.is_motion_compensated = false;
+  start(params);
   // Stamps far outside any advanced noise window: the advanced strategy would put each of
   // these in a collector of its own.
   const std::vector<double> stamps = {base_stamp_sec, base_stamp_sec + 5.0, base_stamp_sec + 11.0};
@@ -1540,7 +1531,11 @@ TEST_F(ConcatenateNodeTest, NaiveStrategyGroupsCloudsByArrivalTimeIgnoringTheirS
 TEST_F(ConcatenateNodeTest, DropsCloudOlderThanTheLastPublishedOne)
 {
   // Arrange
-  start(make_drop_late_clouds_params());
+  NodeParams params;
+  params.is_motion_compensated = false;
+  params.publish_previous_but_late_pointcloud = false;
+  params.rosbag_length = 10.0;
+  start(params);
   publish_all_clouds(base_stamp_sec);
   await_concatenated_cloud();
   ASSERT_EQ(concatenated_clouds_.size(), 1u);
@@ -1560,7 +1555,11 @@ TEST_F(ConcatenateNodeTest, DropsCloudOlderThanTheLastPublishedOne)
 TEST_F(ConcatenateNodeTest, PublishesInfoEvenForACloudItDrops)
 {
   // Arrange
-  start(make_drop_late_clouds_params());
+  NodeParams params;
+  params.is_motion_compensated = false;
+  params.publish_previous_but_late_pointcloud = false;
+  params.rosbag_length = 10.0;
+  start(params);
   publish_all_clouds(base_stamp_sec);
   await_concatenated_cloud();
   concatenated_clouds_.clear();
@@ -1580,7 +1579,11 @@ TEST_F(ConcatenateNodeTest, PublishesInfoEvenForACloudItDrops)
 TEST_F(ConcatenateNodeTest, PublishesCloudWhenTimeJumpsBackFurtherThanRosbagLength)
 {
   // Arrange
-  start(make_drop_late_clouds_params());
+  NodeParams params;
+  params.is_motion_compensated = false;
+  params.publish_previous_but_late_pointcloud = false;
+  params.rosbag_length = 10.0;
+  start(params);
   publish_all_clouds(base_stamp_sec);
   await_concatenated_cloud();
   concatenated_clouds_.clear();
@@ -1603,7 +1606,9 @@ TEST_F(ConcatenateNodeTest, PublishesCloudWhenTimeJumpsBackFurtherThanRosbagLeng
 TEST_F(ConcatenateNodeTest, OdometryDrivesMotionCompensationLikeTwistDoes)
 {
   // Arrange
-  start(make_advanced_with_odometry_params());
+  NodeParams params;
+  params.input_twist_topic_type = "odom";
+  start(params);
   publish_odometry(base_stamp_sec);
 
   // Act
@@ -1627,7 +1632,7 @@ TEST_F(ConcatenateNodeTest, OdometryDrivesMotionCompensationLikeTwistDoes)
 TEST_F(ConcatenateNodeTest, DiagnosticsIsNamedAfterTheNode)
 {
   // Arrange
-  start(make_advanced_with_twist_params());
+  start(NodeParams{});
   publish_twist(base_stamp_sec);
 
   // Act
@@ -1642,7 +1647,7 @@ TEST_F(ConcatenateNodeTest, DiagnosticsIsNamedAfterTheNode)
 TEST_F(ConcatenateNodeTest, DiagnosticsReportsOkWhenEverySourceArrives)
 {
   // Arrange
-  start(make_advanced_with_twist_params());
+  start(NodeParams{});
   publish_twist(base_stamp_sec);
 
   // Act
@@ -1658,7 +1663,9 @@ TEST_F(ConcatenateNodeTest, DiagnosticsReportsOkWhenEverySourceArrives)
 TEST_F(ConcatenateNodeTest, DiagnosticsListsItsKeysInAFixedOrder)
 {
   // Arrange
-  start(make_advanced_with_twist_params());
+  NodeParams params;
+  params.matching_strategy = "advanced";
+  start(params);
   publish_twist(base_stamp_sec);
 
   // Act
@@ -1671,7 +1678,9 @@ TEST_F(ConcatenateNodeTest, DiagnosticsListsItsKeysInAFixedOrder)
 TEST_F(ConcatenateNodeTest, DiagnosticsReportsTheAdvancedReferenceWindow)
 {
   // Arrange
-  start(make_advanced_with_twist_params());
+  NodeParams params;
+  params.matching_strategy = "advanced";
+  start(params);
   publish_twist(base_stamp_sec);
 
   // Act
@@ -1693,7 +1702,10 @@ TEST_F(ConcatenateNodeTest, DiagnosticsReportsTheAdvancedReferenceWindow)
 TEST_F(ConcatenateNodeTest, DiagnosticsReportsAnArrivalTimestampForTheNaiveStrategy)
 {
   // Arrange
-  start(make_naive_without_motion_compensation_params());
+  NodeParams params;
+  params.matching_strategy = "naive";
+  params.is_motion_compensated = false;
+  start(params);
 
   // Act
   publish_all_clouds(base_stamp_sec);
@@ -1708,7 +1720,7 @@ TEST_F(ConcatenateNodeTest, DiagnosticsReportsAnArrivalTimestampForTheNaiveStrat
 TEST_F(ConcatenateNodeTest, DiagnosticsReportsErrorWhenASourceIsMissing)
 {
   // Arrange
-  start(make_advanced_with_twist_params());
+  start(NodeParams{});
   publish_twist(base_stamp_sec);
 
   // Act
@@ -1728,7 +1740,7 @@ TEST_F(ConcatenateNodeTest, DiagnosticsReportsErrorWhenASourceIsMissing)
 TEST_F(ConcatenateNodeTest, DiagnosticsReportsErrorWhenTheConcatenatedCloudIsEmpty)
 {
   // Arrange
-  start(make_advanced_with_twist_params());
+  start(NodeParams{});
   publish_twist(base_stamp_sec);
 
   // Act
@@ -1743,7 +1755,11 @@ TEST_F(ConcatenateNodeTest, DiagnosticsReportsErrorWhenTheConcatenatedCloudIsEmp
 TEST_F(ConcatenateNodeTest, DiagnosticsReportsErrorWhenACloudIsDroppedAsLate)
 {
   // Arrange
-  start(make_drop_late_clouds_params());
+  NodeParams params;
+  params.is_motion_compensated = false;
+  params.publish_previous_but_late_pointcloud = false;
+  params.rosbag_length = 10.0;
+  start(params);
   publish_all_clouds(base_stamp_sec);
   await_concatenated_cloud();
   diagnostics_.clear();
@@ -1771,7 +1787,7 @@ TEST_F(ConcatenateNodeTest, DiagnosticsReportsErrorWhenACloudIsDroppedAsLate)
 TEST_F(ConcatenateNodeTest, PublishesProcessingAndCyclicTimeOnDebugTopics)
 {
   // Arrange
-  start(make_advanced_with_twist_params());
+  start(NodeParams{});
   publish_twist(base_stamp_sec);
 
   // Act
@@ -1788,7 +1804,7 @@ TEST_F(ConcatenateNodeTest, PublishesProcessingAndCyclicTimeOnDebugTopics)
 TEST_F(ConcatenateNodeTest, PublishesPipelineLatencyPerInputTopic)
 {
   // Arrange
-  start(make_advanced_with_twist_params());
+  start(NodeParams{});
   publish_twist(base_stamp_sec);
 
   // Act
