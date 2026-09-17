@@ -5,6 +5,8 @@
   <version>0.52.0</version>
   <description>Single-node traffic light recognition pipeline composed of the extracted core logics</description>
   <maintainer email="takahisa.ishikawa@tier4.jp">Takahisa Ishikawa</maintainer>
+  <maintainer email="masaki.baba.2@tier4.jp">Masaki Baba</maintainer>
+  <maintainer email="yoshi.ri@tier4.jp">Yoshi Ri</maintainer>
   <license>Apache License 2.0</license>
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
