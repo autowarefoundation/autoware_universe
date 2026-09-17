@@ -1,0 +1,43 @@
+autoware_system_design_format: 0.4.0
+
+# node information
+name: OperationModeAvailabilityConverter.node
+
+description: Converts the command mode availability of the diagnostic graph into the operation mode availability flags.
+
+package:
+  name: autoware_diagnostic_graph_aggregator
+  provider: autoware
+
+launch:
+  plugin: autoware::diagnostic_graph_aggregator::ConverterNode
+  executable: converter_node
+  node_output: screen
+
+# interfaces
+subscribers:
+  - name: command_mode_availability
+    message_type: tier4_system_msgs/msg/CommandModeAvailability
+    description: Availability of each command mode id.
+    remap_target: ~/command_mode/availability
+
+publishers:
+  - name: operation_mode_availability
+    message_type: tier4_system_msgs/msg/OperationModeAvailability
+    description: Availability flags per operation mode, mapped by the command mode id parameters.
+    remap_target: ~/operation_mode/availability
+
+# parameters
+param_files:
+  - name: param_file
+    default: config/converter.param.yaml
+
+param_values: []
+
+# processes
+processes:
+  - name: convert
+    trigger_conditions:
+      - on_input: command_mode_availability
+    outcomes:
+      - to_output: operation_mode_availability

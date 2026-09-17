@@ -56,13 +56,11 @@ RadarObjectsAdapter::RadarObjectsAdapter(const rclcpp::NodeOptions & options)
     "~/input/radar_info", rclcpp::SensorDataQoS(),
     std::bind(&RadarObjectsAdapter::radar_info_callback, this, std::placeholders::_1));
 
-  detections_pub_ = AUTOWARE_CREATE_PUBLISHER2(
-    autoware_perception_msgs::msg::DetectedObjects, "~/output/detections",
-    rclcpp::QoS(10).reliable().transient_local());
+  detections_pub_ = this->create_publisher<autoware_perception_msgs::msg::DetectedObjects>(
+    "~/output/detections", rclcpp::QoS(10).reliable().transient_local());
 
-  tracks_pub_ = AUTOWARE_CREATE_PUBLISHER2(
-    autoware_perception_msgs::msg::TrackedObjects, "~/output/tracks",
-    rclcpp::QoS(10).reliable().transient_local());
+  tracks_pub_ = this->create_publisher<autoware_perception_msgs::msg::TrackedObjects>(
+    "~/output/tracks", rclcpp::QoS(10).reliable().transient_local());
 
   default_position_z_ = this->declare_parameter<float>("default_position_z");
   default_velocity_z_ = this->declare_parameter<float>("default_velocity_z");

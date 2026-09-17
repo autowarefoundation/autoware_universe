@@ -263,7 +263,7 @@ CombineCloudHandler<CudaPointCloud2Traits>::combine_pointclouds(
         output_cloud->header.frame_id = output_frame_;
       }
 
-      output_cloud->header.stamp = cloud->header.stamp;
+      output_cloud->header.stamp = oldest_stamp;
       output_cloud->width = cloud->width;
       output_cloud->height = cloud->height;
       output_cloud->point_step = sizeof(PointTypeStruct);

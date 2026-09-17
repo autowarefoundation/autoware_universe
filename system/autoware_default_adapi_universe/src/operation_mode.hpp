@@ -16,6 +16,8 @@
 #define OPERATION_MODE_HPP_
 
 #include <autoware/adapi_specs/operation_mode.hpp>
+#include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware/component_interface_specs_universe/system.hpp>
 #include <autoware/component_interface_utils/status.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -32,7 +34,7 @@
 
 namespace autoware::default_adapi
 {
-class OperationModeNode : public rclcpp::Node
+class OperationModeNode : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit OperationModeNode(const rclcpp::NodeOptions & options);
@@ -56,18 +58,19 @@ private:
   std::unordered_map<OperationModeState::Message::_mode_type, bool> mode_available_;
 
   rclcpp::CallbackGroup::SharedPtr group_cli_;
-  rclcpp::TimerBase::SharedPtr timer_;
-  Pub<autoware::adapi_specs::operation_mode::OperationModeState> pub_state_;
-  Srv<autoware::adapi_specs::operation_mode::ChangeToStop> srv_stop_mode_;
-  Srv<autoware::adapi_specs::operation_mode::ChangeToAutonomous> srv_autonomous_mode_;
-  Srv<autoware::adapi_specs::operation_mode::ChangeToLocal> srv_local_mode_;
-  Srv<autoware::adapi_specs::operation_mode::ChangeToRemote> srv_remote_mode_;
-  Srv<autoware::adapi_specs::operation_mode::EnableAutowareControl> srv_enable_control_;
-  Srv<autoware::adapi_specs::operation_mode::DisableAutowareControl> srv_disable_control_;
-  Sub<autoware::component_interface_specs_universe::system::OperationModeState> sub_state_;
-  Cli<autoware::component_interface_specs_universe::system::ChangeOperationMode> cli_mode_;
-  Cli<autoware::component_interface_specs_universe::system::ChangeAutowareControl> cli_control_;
-  rclcpp::Subscription<OperationModeAvailability>::SharedPtr sub_availability_;
+  AUTOWARE_TIMER_PTR timer_;
+  Pub<autoware::adapi_specs::operation_mode::OperationModeState, NodeT> pub_state_;
+  Srv<autoware::adapi_specs::operation_mode::ChangeToStop, NodeT> srv_stop_mode_;
+  Srv<autoware::adapi_specs::operation_mode::ChangeToAutonomous, NodeT> srv_autonomous_mode_;
+  Srv<autoware::adapi_specs::operation_mode::ChangeToLocal, NodeT> srv_local_mode_;
+  Srv<autoware::adapi_specs::operation_mode::ChangeToRemote, NodeT> srv_remote_mode_;
+  Srv<autoware::adapi_specs::operation_mode::EnableAutowareControl, NodeT> srv_enable_control_;
+  Srv<autoware::adapi_specs::operation_mode::DisableAutowareControl, NodeT> srv_disable_control_;
+  Sub<autoware::component_interface_specs_universe::system::OperationModeState, NodeT> sub_state_;
+  Cli<autoware::component_interface_specs_universe::system::ChangeOperationMode, NodeT> cli_mode_;
+  Cli<autoware::component_interface_specs_universe::system::ChangeAutowareControl, NodeT>
+    cli_control_;
+  AUTOWARE_SUBSCRIPTION_PTR(OperationModeAvailability) sub_availability_;
 
   void on_change_to_stop(
     const ChangeToStop::Service::Request::SharedPtr req,
