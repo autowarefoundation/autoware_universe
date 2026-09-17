@@ -22999,7 +22999,7 @@
 
 <div><h1 id="topic_relay_controller">topic_relay_controller<a class="headerlink" href="#topic_relay_controller" title="Permanent link">#</a></h1>
 <h2 id="purpose">Purpose<a class="headerlink" href="#purpose" title="Permanent link">#</a></h2>
-<p>The node subscribes to a specified topic, remaps it, and republishes it. Additionally, it has the capability to continue publishing the last received value if the subscription stops.</p>
+<p>The node subscribes to a specified topic, remaps it, and republishes it. Additionally, it has the capability to continue publishing the last received value if the subscription stops, or to limit the output rate by dropping the messages that arrive too soon.</p>
 <h2 id="inputs-outputs">Inputs / Outputs<a class="headerlink" href="#inputs-outputs" title="Permanent link">#</a></h2>
 <h3 id="input">Input<a class="headerlink" href="#input" title="Permanent link">#</a></h3>
 <table>
@@ -23115,12 +23115,24 @@
 <td>string</td>
 <td>Child frame ID for transform messages when subscribing to <code>/tf</code> or <code>/tf_static</code> (optional)</td>
 </tr>
+<tr>
+<td>enable_throttle</td>
+<td>boolean</td>
+<td>Drops relayed messages so the output rate does not exceed <code>msgs_per_sec</code> (default: <code>false</code>)</td>
+</tr>
+<tr>
+<td>msgs_per_sec</td>
+<td>double</td>
+<td>The upper bound (Hz) on the output rate when <code>enable_throttle</code> is <code>true</code>; must be greater than 0</td>
+</tr>
 </tbody>
 </table>
 <h2 id="assumptions-known-limits">Assumptions / Known limits<a class="headerlink" href="#assumptions-known-limits" title="Permanent link">#</a></h2>
 <ul>
 <li>The node assumes that the specified <code>topic</code> and <code>remap_topic</code> are valid and accessible within the ROS 2 environment.</li>
 <li>If <code>enable_keep_publishing</code> is <code>true</code>, the node continuously republishes the last received value even if no new messages are being received.</li>
+<li><code>enable_throttle</code> and <code>enable_keep_publishing</code> both set the output rate and cannot be combined; enabling both logs an error and disables the throttle.</li>
+<li>Throttling only drops messages, so the output rate is at most <code>msgs_per_sec</code> and follows the input timing. Use <code>enable_keep_publishing</code> instead to emit at a fixed rate regardless of when messages arrive.</li>
 <li>For <code>/tf</code> and <code>/tf_static</code>, additional parameters like <code>frame_id</code> and <code>child_frame_id</code> are required for selective transformation relays.</li>
 <li>QoS settings must be carefully chosen to match the requirements of the subscribed and published topics.</li>
 </ul></div>
