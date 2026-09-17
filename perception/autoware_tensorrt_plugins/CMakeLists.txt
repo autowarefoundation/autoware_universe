@@ -168,6 +168,25 @@ if(TRT_AVAIL AND CUDA_AVAIL AND SPCONV_AVAIL)
       )
       target_compile_definitions(reference_kernels_test PRIVATE _GLIBCXX_USE_CXX11_ABI=1)
     endif()
+
+    ament_add_gtest(get_indices_pairs_plugin_test
+      test/get_indices_pairs_plugin_test.cpp
+    )
+    if(TARGET get_indices_pairs_plugin_test)
+      target_link_libraries(get_indices_pairs_plugin_test
+        ${PROJECT_NAME}
+        ${NVINFER}
+        CUDA::cudart
+      )
+      target_include_directories(get_indices_pairs_plugin_test PRIVATE
+        include
+        test
+        ${autoware_cuda_utils_INCLUDE_DIRS}
+        ${CUDA_INCLUDE_DIRS}
+        ${TENSORRT_INCLUDE_DIRS}
+      )
+      target_compile_definitions(get_indices_pairs_plugin_test PRIVATE _GLIBCXX_USE_CXX11_ABI=1)
+    endif()
   endif()
 
   install(
