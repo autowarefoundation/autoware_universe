@@ -37,7 +37,7 @@ The node subscribes to a specified topic, remaps it, and republishes it. Additio
 | frame_id               | string  | Frame ID for transform messages when subscribing to `/tf` or `/tf_static` (optional)                 |
 | child_frame_id         | string  | Child frame ID for transform messages when subscribing to `/tf` or `/tf_static` (optional)           |
 | enable_throttle        | boolean | Drops relayed messages so the output rate does not exceed `msgs_per_sec` (default: `false`)          |
-| msgs_per_sec           | double  | The upper bound (Hz) on the output rate when `enable_throttle` is `true`                             |
+| msgs_per_sec           | double  | The upper bound (Hz) on the output rate when `enable_throttle` is `true`; must be greater than 0     |
 
 ## Assumptions / Known limits
 

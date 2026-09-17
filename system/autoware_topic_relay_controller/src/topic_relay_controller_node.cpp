@@ -14,6 +14,7 @@
 #include "topic_relay_controller_node.hpp"
 
 #include <memory>
+#include <stdexcept>
 #include <string>
 
 namespace autoware::topic_relay_controller
@@ -37,6 +38,9 @@ TopicRelayController::TopicRelayController(const rclcpp::NodeOptions & options)
   node_param_.enable_throttle = declare_parameter<bool>("enable_throttle", false);
   if (node_param_.enable_throttle) {
     node_param_.msgs_per_sec = declare_parameter<double>("msgs_per_sec");
+    if (node_param_.msgs_per_sec <= 0.0) {
+      throw std::invalid_argument("msgs_per_sec must be greater than 0");
+    }
     throttle_period_ = rclcpp::Duration(rclcpp::Rate(node_param_.msgs_per_sec).period());
     last_relayed_time_ = now();
   }
