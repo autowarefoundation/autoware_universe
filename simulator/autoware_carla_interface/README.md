@@ -241,7 +241,7 @@ Maps Autoware sensors to CARLA sensor types and parameters. Key sections:
 - `default_sensor_kit_name`: Default sensor kit to use (e.g., `carla_sensor_kit_description`)
 - `sensor_mappings`: Maps each sensor to CARLA type and ROS topics
 - `enabled_sensors`: List of sensors to spawn in CARLA
-- `vehicle_config` (optional): Vehicle parameters like wheelbase
+- `vehicle_config` (optional): Vehicle parameters like wheelbase. `wheelbase` (default 2.85 m) also sets where the bridge puts `base_link`: `wheelbase / 2` behind the CARLA actor origin (vehicle center), for the sensors as well as for the GNSS pose, the ground truth localization and the RViz initial pose. `spawn_point` places the actor origin.
 
 Example sensor mapping:
 

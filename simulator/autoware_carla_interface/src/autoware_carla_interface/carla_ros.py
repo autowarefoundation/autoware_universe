@@ -698,6 +698,7 @@ class carla_ros2_interface(object):
             origin_x=origin_x,
             origin_y=origin_y,
         )
+        # The clicked pose is base_link; the actor origin sits wheelbase/2 ahead of it.
         location = carla.Location(x=self.sensor_loader.wheelbase / 2.0)
         carla_pose_transform.transform(location)
         carla_pose_transform.location = location
@@ -728,7 +729,7 @@ class carla_ros2_interface(object):
                 self.logger.warning("Cannot set initial pose: ego vehicle not available")
 
     def _ego_base_link_transform(self):
-        """Return the ego transform at base_link (rear axle), wheelbase/2 behind the actor origin."""
+        """Return the ego transform at base_link (rear axle), wheelbase/2 behind the origin."""
         transform = self.ego_actor.get_transform()
         location = carla.Location(x=-self.sensor_loader.wheelbase / 2.0)
         transform.transform(location)
