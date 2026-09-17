@@ -41,6 +41,33 @@ publishers:
   - name: path_with_lane_id
     message_type: autoware_internal_planning_msgs/msg/PathWithLaneId
     remap_target: ~/output/path
+  - name: planning_factors/behavior_path_planner
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+    remap_target: /planning/planning_factors/behavior_path_planner
+  - name: planning_factors/avoidance_by_lane_change
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+    remap_target: /planning/planning_factors/avoidance_by_lane_change
+  - name: planning_factors/bidirectional_traffic
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+    remap_target: /planning/planning_factors/bidirectional_traffic
+  - name: planning_factors/goal_planner
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+    remap_target: /planning/planning_factors/goal_planner
+  - name: planning_factors/lane_change_left
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+    remap_target: /planning/planning_factors/lane_change_left
+  - name: planning_factors/lane_change_right
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+    remap_target: /planning/planning_factors/lane_change_right
+  - name: planning_factors/side_shift
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+    remap_target: /planning/planning_factors/side_shift
+  - name: planning_factors/start_planner
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+    remap_target: /planning/planning_factors/start_planner
+  - name: planning_factors/static_obstacle_avoidance
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+    remap_target: /planning/planning_factors/static_obstacle_avoidance
   - name: turn_indicators_cmd
     message_type: autoware_vehicle_msgs/msg/TurnIndicatorsCommand
   - name: hazard_lights_cmd

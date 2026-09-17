@@ -9,7 +9,7 @@ package:
 
 launch:
   plugin: autoware::lidar_transfusion::LidarTransfusionNode
-  executable: lidar_transfusion_node
+  executable: autoware_lidar_transfusion_node
   node_output: screen
 
 # interfaces
