@@ -288,9 +288,10 @@ std::vector<Point> as_expected_points(const std::vector<Position> & positions, s
   std::vector<Point> points;
   points.reserve(positions.size());
   for (const auto & position : positions) {
-    points.push_back(Point{
-      position.x, position.y, position.z, sensor_intensities.at(sensor_index),
-      sensor_return_types.at(sensor_index), sensor_channels.at(sensor_index)});
+    points.push_back(
+      Point{
+        position.x, position.y, position.z, sensor_intensities.at(sensor_index),
+        sensor_return_types.at(sensor_index), sensor_channels.at(sensor_index)});
   }
   return points;
 }
