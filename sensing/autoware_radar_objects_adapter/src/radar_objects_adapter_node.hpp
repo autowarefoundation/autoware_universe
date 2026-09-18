@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef RADAR_OBJECTS_ADAPTER_HPP_
-#define RADAR_OBJECTS_ADAPTER_HPP_
+#ifndef RADAR_OBJECTS_ADAPTER_NODE_HPP_
+#define RADAR_OBJECTS_ADAPTER_NODE_HPP_
 
 #include <autoware/agnocast_wrapper/node.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -101,4 +101,4 @@ private:
 };
 }  // namespace autoware::radar_objects_adapter
 
-#endif  // RADAR_OBJECTS_ADAPTER_HPP_
+#endif  // RADAR_OBJECTS_ADAPTER_NODE_HPP_

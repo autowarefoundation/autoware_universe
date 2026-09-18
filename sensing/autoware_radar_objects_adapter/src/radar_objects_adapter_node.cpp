@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "radar_objects_adapter.hpp"
+#include "radar_objects_adapter_node.hpp"
 
 #include <autoware_utils_geometry/geometry.hpp>
 

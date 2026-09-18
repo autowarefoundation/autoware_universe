@@ -22,7 +22,7 @@
 // specify every corner of the node's behavior. Once the logic is covered by unit tests, this file
 // is replaced by a small integration test.
 
-#include "radar_objects_adapter.hpp"
+#include "radar_objects_adapter_node.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 

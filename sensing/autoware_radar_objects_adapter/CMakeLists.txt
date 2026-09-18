@@ -5,7 +5,7 @@ find_package(autoware_cmake REQUIRED)
 autoware_package()
 
 ament_auto_add_library(${PROJECT_NAME} SHARED
-  src/radar_objects_adapter.cpp
+  src/radar_objects_adapter_node.cpp
 )
 
 autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
