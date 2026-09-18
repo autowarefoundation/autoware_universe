@@ -235,16 +235,20 @@ PTv3Node::PTv3Node(const rclcpp::NodeOptions & options) : Node("ptv3", options)
     visualization_pointcloud_pub_ =
       std::make_unique<cuda_blackboard::CudaBlackboardPublisher<cuda_blackboard::CudaPointCloud2>>(
         *this, "~/output/pointcloud/visualization");
-    filtered_pointcloud_pub_ =
-      std::make_unique<cuda_blackboard::CudaBlackboardPublisher<cuda_blackboard::CudaPointCloud2>>(
+    // The filtered cloud only removes the configured classes, so without them the topic would
+    // repeat the input; it is advertised only when filtering is configured.
+    if (!filter_classes.empty()) {
+      filtered_pointcloud_pub_ = std::make_unique<
+        cuda_blackboard::CudaBlackboardPublisher<cuda_blackboard::CudaPointCloud2>>(
         *this, "~/output/pointcloud/filtered");
+      model_ptr_->setPublishFilteredPointcloud(
+        std::bind(&PTv3Node::publishFilteredPointcloud, this, std::placeholders::_1));
+    }
 
     model_ptr_->setPublishSegmentedPointcloud(
       std::bind(&PTv3Node::publishSegmentedPointcloud, this, std::placeholders::_1));
     model_ptr_->setPublishVisualizationPointcloud(
       std::bind(&PTv3Node::publishVisualizationPointcloud, this, std::placeholders::_1));
-    model_ptr_->setPublishFilteredPointcloud(
-      std::bind(&PTv3Node::publishFilteredPointcloud, this, std::placeholders::_1));
   }
 
   if (use_det3d_head) {
