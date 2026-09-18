@@ -147,7 +147,7 @@ public:
   }
 
 private:
-  PTv3Config config_;
+  const PTv3Config & config_;
   cudaStream_t stream_;
 
   // Derives every level from the first `num_voxels` input voxels; codes are read at `code_stride`.

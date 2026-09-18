@@ -49,6 +49,8 @@ class SweepAggregator
 {
 public:
   SweepAggregator(const PTv3Config & config, cudaStream_t stream);
+  /// The configuration is held by reference and must outlive the aggregator.
+  SweepAggregator(PTv3Config && config, cudaStream_t stream) = delete;
 
   /// Cache the incoming frame together with the world-to-lidar transform at its stamp.
   ///
@@ -62,7 +64,7 @@ public:
   DensifiedCloud aggregate();
 
 private:
-  PTv3Config config_;
+  const PTv3Config & config_;
   cudaStream_t stream_;
 
   std::unique_ptr<PointCloudDensification> densification_ptr_;

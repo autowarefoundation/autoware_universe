@@ -149,7 +149,6 @@ protected:
   // tail (sweep points) feeds the network but is never published.
   DensifiedCloud densified_cloud_;
   std::int64_t num_voxels_{0};
-  std::int64_t num_current_points_{0};
   std::int64_t num_cropped_current_points_{0};  // only for partial
 
   CudaUniquePtr<std::uint8_t[]> cropped_source_points_d_{nullptr};  // only for partial

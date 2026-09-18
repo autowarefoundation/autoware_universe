@@ -77,14 +77,7 @@ public:
   {
     return iter == pointcloud_cache_.end();
   }
-  std::size_t getIdx(std::list<PointCloudWithTransform>::iterator iter)
-  {
-    return std::distance(pointcloud_cache_.begin(), iter);
-  }
-  std::size_t getCacheSize()
-  {
-    return std::distance(pointcloud_cache_.begin(), pointcloud_cache_.end());
-  }
+  std::size_t getCacheSize() const { return pointcloud_cache_.size(); }
   unsigned int getPointcloudCacheSize() const { return param_.getPointcloudCacheSize(); }
 
 private:

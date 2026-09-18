@@ -791,7 +791,6 @@ bool PTv3TRT::preProcess(
     return false;
   }
   densified_cloud_ = aggregator_ptr_->aggregate();
-  num_current_points_ = static_cast<std::int64_t>(densified_cloud_.num_current_points);
 
   if (densified_cloud_.num_current_points == 0) {
     RCLCPP_ERROR(rclcpp::get_logger("ptv3"), "Empty pointcloud. Skipping inference.");
@@ -1049,6 +1048,8 @@ bool PTv3TRT::postProcess(
   const std_msgs::msg::Header & header, bool should_publish_segmented_pointcloud,
   bool should_publish_visualization_pointcloud, bool should_publish_filtered_pointcloud)
 {
+  const auto num_current_points = static_cast<std::int64_t>(densified_cloud_.num_current_points);
+
   // Segmentation outputs describe the current frame only. Current-frame points form the
   // leading block of the densified cloud and of every crop-derived array, so bounding the
   // reconstruction counts to the current frame publishes exactly the input frame's points.
@@ -1062,7 +1063,7 @@ bool PTv3TRT::postProcess(
     post_ptr_->reconstructFull(
       pre_ptr_->cropMask(), pre_ptr_->cropIndices(), inverse_map_d_.get(), pred_labels_d_.get(),
       pred_probs_d_.get(), reconstructed_labels_d_.get(), reconstructed_probs_d_.get(),
-      config_.segmentation_class_names_.size(), num_current_points_, num_voxels_);
+      config_.segmentation_class_names_.size(), num_current_points, num_voxels_);
   }
 
   // Without reconstruction the outputs sit at voxel level, positioned at each voxel's first
@@ -1082,13 +1083,13 @@ bool PTv3TRT::postProcess(
                               ? reconstructed_probs_d_.get()
                               : pred_probs_d_.get();
   const auto voxel_mapping = config_.source_reconstruction_ == SourceReconstruction::NONE
-                               ? pre_ptr_->voxelPointMapping(num_current_points_)
+                               ? pre_ptr_->voxelPointMapping(num_current_points)
                                : VoxelPointMapping{};
   const void * source_points = config_.source_reconstruction_ == SourceReconstruction::PARTIAL
                                  ? cropped_source_points_d_.get()
                                  : densified_cloud_.current_msg->data.get();
   const auto num_source_output_points =
-    config_.source_reconstruction_ == SourceReconstruction::FULL      ? num_current_points_
+    config_.source_reconstruction_ == SourceReconstruction::FULL      ? num_current_points
     : config_.source_reconstruction_ == SourceReconstruction::PARTIAL ? num_cropped_current_points_
                                                                       : num_voxels_;
 

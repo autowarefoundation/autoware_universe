@@ -97,12 +97,13 @@ DensifiedCloud SweepAggregator::aggregate()
   densified.points = points_d_.get();
 
   std::size_t point_counter{0};
+  std::size_t frame_index{0};
 
   for (auto cache_iter = densification_ptr_->getPointCloudCacheIter();
-       !densification_ptr_->isCacheEnd(cache_iter); cache_iter++) {
+       !densification_ptr_->isCacheEnd(cache_iter); cache_iter++, frame_index++) {
     const auto & msg_ptr = cache_iter->input_pointcloud_msg_ptr;
     const auto frame_num_points = static_cast<std::size_t>(msg_ptr->height * msg_ptr->width);
-    const bool is_current_frame = densification_ptr_->getIdx(cache_iter) == 0;
+    const bool is_current_frame = frame_index == 0;
 
     // Frames are validated against the single-frame capacity when they are cached, so only the
     // accumulated sweeps can run out of room here.
@@ -111,7 +112,7 @@ DensifiedCloud SweepAggregator::aggregate()
       static_cast<std::size_t>(config_.densified_cloud_capacity_)) {
       RCLCPP_WARN_STREAM(
         rclcpp::get_logger("ptv3"), "Exceeding densified cloud capacity. Used "
-                                      << densification_ptr_->getIdx(cache_iter) << " out of "
+                                      << frame_index << " out of "
                                       << densification_ptr_->getCacheSize() << " frame(s)");
       break;
     }
