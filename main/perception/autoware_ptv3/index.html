@@ -23239,6 +23239,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#gpu-memory-and-encoderpooled_voxels_num_max" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GPU memory and encoder.pooled_voxels_num_max
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -23479,6 +23490,13 @@ therefore guard against <code>NaN</code> before using the <code>entropy</code> f
 <td>array</td>
 <td>Voxel ranges used during inference [min, opt, max].</td>
 <td>[16000, 128000, 192000]</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>encoder.<wbr>pooled_<wbr>voxels_<wbr>num_<wbr>max</wbr></wbr></wbr></wbr></td>
+<td>array</td>
+<td>Voxel-count maximum per pooled encoder stage (one per pooling stride), non-increasing. Bounds the stage's TensorRT profile and buffers; the input is truncated to fit it.</td>
+<td>[214000, 100000, 40000, 17000]</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23769,6 +23787,8 @@ empty string, the filtered output preserves the same format as the input cloud.<
 <h3 id="fail-to-create-host-memory"><code>Fail to create host memory</code><a class="headerlink" href="#fail-to-create-host-memory" title="Permanent link">#</a></h3>
 <p>This error may occur when TensorRT cannot satisfy the memory requirements for building an engine. A <code>workspace_size</code> that is too small can prevent TensorRT from using the tactics needed for the configured input profiles. Conversely, a <code>workspace_size</code> that is too large can allow memory usage to exceed the GPU's available VRAM. A large maximum value in <code>encoder.voxels_num</code> also increases the size of TensorRT profiles and intermediate buffers.</p>
 <p>Adjust the <code>workspace_size</code> values and the maximum <code>encoder.voxels_num</code> value in <code>config/ptv3.param.yaml</code> to fit the available GPU memory. Finding a suitable balance between these parameters can resolve the issue.</p>
+<h3 id="gpu-memory-and-encoderpooled_voxels_num_max">GPU memory and <code>encoder.pooled_voxels_num_max</code><a class="headerlink" href="#gpu-memory-and-encoderpooled_voxels_num_max" title="Permanent link">#</a></h3>
+<p><code>encoder.pooled_voxels_num_max</code> bounds each pooled encoder level's TensorRT profile and buffers (one entry per <code>encoder.pooling_strides</code> entry). Set it from measured per-stage peaks with a margin. A frame whose level would exceed its bound is truncated: the voxels with the largest serialization codes are dropped until every level fits, and a warning is logged.</p>
 <h2 id="referencesexternal-links">References/External links<a class="headerlink" href="#referencesexternal-links" title="Permanent link">#</a></h2>
 <p>[1] Xiaoyang Wu, Li Jiang, Peng-Shuai Wang, Zhijian Liu, Xihui Liu, Yu Qiao, Wanli Ouyang, Tong He, and Hengshuang Zhao. "Point Transformer V3: Simpler, Faster, Stronger." 2024 Conference on Computer Vision and Pattern Recognition. <!-- cspell:disable-line --></p></div>
 
