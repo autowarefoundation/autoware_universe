@@ -20,6 +20,7 @@
 #include <autoware/point_types/memory.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <algorithm>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -62,8 +63,6 @@ SweepAggregator::SweepAggregator(const PTv3Config & config, cudaStream_t stream)
 
   points_d_ = autoware::cuda_utils::make_unique<float[]>(
     config_.densified_cloud_capacity_ * config_.num_point_feature_size_);
-  affine_past2current_d_ =
-    autoware::cuda_utils::make_unique<float[]>(Eigen::Affine3f::MatrixType::SizeAtCompileTime);
 }
 
 void SweepAggregator::enqueuePointCloud(
@@ -123,22 +122,25 @@ DensifiedCloud SweepAggregator::aggregate()
       densified.current_format = format;
     }
 
-    Eigen::Affine3f affine_past2current =
+    const Eigen::Affine3f affine_past2current =
       densification_ptr_->getAffineWorldToCurrent() * cache_iter->affine_past2world;
     static_assert(!Eigen::Matrix4f::IsRowMajor, "matrices should be col-major.");
+    SweepTransform transform{};
+    static_assert(
+      Eigen::Affine3f::MatrixType::SizeAtCompileTime ==
+        static_cast<int>(sizeof(transform.matrix) / sizeof(float)),
+      "the sweep transform must hold a 4x4 matrix.");
+    std::copy(
+      affine_past2current.data(),
+      affine_past2current.data() + Eigen::Affine3f::MatrixType::SizeAtCompileTime,
+      transform.matrix);
 
     const auto time_lag = static_cast<float>(
       densification_ptr_->getCurrentTimestamp() - rclcpp::Time(msg_ptr->header.stamp).seconds());
 
-    CHECK_CUDA_ERROR(cudaMemcpyAsync(
-      affine_past2current_d_.get(), affine_past2current.data(),
-      Eigen::Affine3f::MatrixType::SizeAtCompileTime * sizeof(float), cudaMemcpyHostToDevice,
-      stream_));
-    CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
-
     generateSweepFeaturesLaunch(
       msg_ptr->data.get(), format, frame_num_points, is_current_frame ? 0.f : time_lag,
-      config_.sweep_close_radius_, affine_past2current_d_.get(), config_.num_point_feature_size_,
+      config_.sweep_close_radius_, transform, config_.num_point_feature_size_,
       points_d_.get() + point_counter * config_.num_point_feature_size_, config_.threads_per_block_,
       stream_);
     CHECK_CUDA_ERROR(cudaPeekAtLastError());

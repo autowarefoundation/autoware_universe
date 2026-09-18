@@ -19,6 +19,7 @@
 #include <cuda_runtime_api.h>
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <vector>
@@ -46,12 +47,12 @@ protected:
     const void * input_points_d, const CloudFormat format, const std::size_t num_points,
     const float time_lag, const float close_radius = 1.0F)
   {
-    auto transform_d = makeDeviceBuffer<float>(kTranslationTransform.size());
-    copyToDevice(transform_d.get(), kTranslationTransform);
+    SweepTransform transform{};
+    std::copy(kTranslationTransform.begin(), kTranslationTransform.end(), transform.matrix);
     auto output_d = makeDeviceBuffer<float>(num_points * kNumFeatures);
 
     generateSweepFeaturesLaunch(
-      input_points_d, format, num_points, time_lag, close_radius, transform_d.get(), kNumFeatures,
+      input_points_d, format, num_points, time_lag, close_radius, transform, kNumFeatures,
       output_d.get(), kThreadsPerBlock, stream_);
     EXPECT_EQ(cudaStreamSynchronize(stream_), cudaSuccess);
 
@@ -140,8 +141,8 @@ TEST_F(SweepKernelTest, KeepsCurrentFramePointsNearTheOrigin)
 TEST_F(SweepKernelTest, SkipsEmptyFrames)
 {
   generateSweepFeaturesLaunch(
-    nullptr, CloudFormat::XYZI, 0, 0.25F, 1.0F, nullptr, kNumFeatures, nullptr, kThreadsPerBlock,
-    stream_);
+    nullptr, CloudFormat::XYZI, 0, 0.25F, 1.0F, SweepTransform{}, kNumFeatures, nullptr,
+    kThreadsPerBlock, stream_);
 
   EXPECT_EQ(cudaStreamSynchronize(stream_), cudaSuccess);
   EXPECT_EQ(cudaGetLastError(), cudaSuccess);

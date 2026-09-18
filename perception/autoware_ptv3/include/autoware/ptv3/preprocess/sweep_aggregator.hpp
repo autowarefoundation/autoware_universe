@@ -64,7 +64,6 @@ private:
 
   std::unique_ptr<PointCloudDensification> densification_ptr_;
   autoware::cuda_utils::CudaUniquePtr<float[]> points_d_{nullptr};
-  autoware::cuda_utils::CudaUniquePtr<float[]> affine_past2current_d_{nullptr};
 };
 
 }  // namespace autoware::ptv3

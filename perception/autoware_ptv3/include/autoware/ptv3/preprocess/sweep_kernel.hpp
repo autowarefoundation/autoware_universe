@@ -25,18 +25,25 @@
 namespace autoware::ptv3
 {
 
+/// Column-major 4x4 past-lidar-frame to current-lidar-frame transform, passed to the kernel by
+/// value so aggregating a frame needs no device copy and no stream synchronization.
+struct SweepTransform
+{
+  float matrix[16];
+};
+
 /// Ego-motion-compensate one cached lidar frame and write its network features.
 ///
 /// Every input point produces one `(x, y, z, intensity, time_lag)` row of
 /// `num_features` floats in `output_points`. The xyz coordinates are transformed
-/// by the column-major 4x4 `transform_d` (past lidar frame -> current lidar
-/// frame; identity for the current frame). Intensity keeps the format-specific
+/// by `transform` (past lidar frame -> current lidar frame; identity for the
+/// current frame). Intensity keeps the format-specific
 /// normalization used in training (`/255` for the 8-bit intensity formats, raw
 /// for the float intensity formats). `time_lag` is `0` for the current frame and
 /// the age in seconds for sweeps.
 void generateSweepFeaturesLaunch(
   const void * input_data, CloudFormat input_format, std::size_t num_points, float time_lag,
-  float close_radius, const float * transform_d, std::int64_t num_features, float * output_points,
+  float close_radius, SweepTransform transform, std::int64_t num_features, float * output_points,
   std::uint32_t threads_per_block, cudaStream_t stream);
 
 }  // namespace autoware::ptv3
