@@ -14,10 +14,35 @@
 
 #include "autoware/pointcloud_preprocessor/concatenate_data/combine_cloud_handler_base.hpp"
 
+#include "conversion.hpp"
+#include "time_utils.hpp"
+
+#include <algorithm>
+#include <chrono>
+#include <cmath>
 #include <deque>
+#include <optional>
+#include <string>
 
 namespace autoware::pointcloud_preprocessor
 {
+
+void CombineCloudHandlerBase::set_transform(
+  const geometry_msgs::msg::TransformStamped & sensor_to_output_frame)
+{
+  sensor_to_output_transforms_[sensor_to_output_frame.child_frame_id] =
+    to_eigen_matrix(sensor_to_output_frame.transform);
+}
+
+std::optional<Eigen::Matrix4f> CombineCloudHandlerBase::get_transform_to_output_frame(
+  const std::string & frame_id) const
+{
+  if (frame_id == output_frame_) return Eigen::Matrix4f::Identity();
+
+  auto it = sensor_to_output_transforms_.find(frame_id);
+  if (it == sensor_to_output_transforms_.end()) return std::nullopt;
+  return it->second;
+}
 
 void CombineCloudHandlerBase::process_twist(
   const geometry_msgs::msg::TwistWithCovarianceStamped::ConstSharedPtr & twist_msg)
@@ -28,16 +53,16 @@ void CombineCloudHandlerBase::process_twist(
 
   // If time jumps backwards (e.g. when a rosbag restarts), clear buffer
   if (!twist_queue_.empty()) {
-    if (rclcpp::Time(twist_queue_.front().header.stamp) > rclcpp::Time(msg.header.stamp)) {
+    if (is_earlier(msg.header.stamp, twist_queue_.front().header.stamp)) {
       twist_queue_.clear();
     }
   }
 
   // Twist data in the queue that is older than the current twist by 1 second will be cleared.
-  auto cutoff_time = rclcpp::Time(msg.header.stamp) - rclcpp::Duration::from_seconds(1.0);
+  const auto cutoff_time = add(msg.header.stamp, -std::chrono::seconds(1));
 
   while (!twist_queue_.empty()) {
-    if (rclcpp::Time(twist_queue_.front().header.stamp) > cutoff_time) {
+    if (is_earlier(cutoff_time, twist_queue_.front().header.stamp)) {
       break;
     }
     twist_queue_.pop_front();
@@ -55,16 +80,16 @@ void CombineCloudHandlerBase::process_odometry(
 
   // If time jumps backwards (e.g. when a rosbag restarts), clear buffer
   if (!twist_queue_.empty()) {
-    if (rclcpp::Time(twist_queue_.front().header.stamp) > rclcpp::Time(msg.header.stamp)) {
+    if (is_earlier(msg.header.stamp, twist_queue_.front().header.stamp)) {
       twist_queue_.clear();
     }
   }
 
   // Twist data in the queue that is older than the current twist by 1 second will be cleared.
-  auto cutoff_time = rclcpp::Time(msg.header.stamp) - rclcpp::Duration::from_seconds(1.0);
+  const auto cutoff_time = add(msg.header.stamp, -std::chrono::seconds(1));
 
   while (!twist_queue_.empty()) {
-    if (rclcpp::Time(twist_queue_.front().header.stamp) > cutoff_time) {
+    if (is_earlier(cutoff_time, twist_queue_.front().header.stamp)) {
       break;
     }
     twist_queue_.pop_front();
@@ -79,46 +104,39 @@ std::deque<geometry_msgs::msg::TwistStamped> CombineCloudHandlerBase::get_twist_
 }
 
 Eigen::Matrix4f CombineCloudHandlerBase::compute_transform_to_adjust_for_old_timestamp(
-  const rclcpp::Time & old_stamp, const rclcpp::Time & new_stamp)
+  const builtin_interfaces::msg::Time & old_stamp, const builtin_interfaces::msg::Time & new_stamp,
+  MotionCompensationStatus * status)
 {
   // return identity if no twist is available
   if (twist_queue_.empty()) {
-    RCLCPP_WARN_STREAM_THROTTLE(
-      node_.get_logger(), *node_.get_clock(), std::chrono::milliseconds(10000).count(),
-      "No twist is available. Please confirm twist topic and timestamp. Leaving point cloud "
-      "untransformed.");
+    if (status != nullptr) *status = MotionCompensationStatus::kNoTwistAvailable;
     return Eigen::Matrix4f::Identity();
   }
 
   auto old_twist_it = std::lower_bound(
     std::begin(twist_queue_), std::end(twist_queue_), old_stamp,
-    [](const geometry_msgs::msg::TwistStamped & x, const rclcpp::Time & t) {
-      return rclcpp::Time(x.header.stamp) < t;
+    [](const geometry_msgs::msg::TwistStamped & x, const builtin_interfaces::msg::Time & t) {
+      return is_earlier(x.header.stamp, t);
     });
   old_twist_it = old_twist_it == twist_queue_.end() ? (twist_queue_.end() - 1) : old_twist_it;
 
   auto new_twist_it = std::lower_bound(
     std::begin(twist_queue_), std::end(twist_queue_), new_stamp,
-    [](const geometry_msgs::msg::TwistStamped & x, const rclcpp::Time & t) {
-      return rclcpp::Time(x.header.stamp) < t;
+    [](const geometry_msgs::msg::TwistStamped & x, const builtin_interfaces::msg::Time & t) {
+      return is_earlier(x.header.stamp, t);
     });
   new_twist_it = new_twist_it == twist_queue_.end() ? (twist_queue_.end() - 1) : new_twist_it;
 
-  auto prev_time = old_stamp;
+  auto prev_stamp = old_stamp;
   double x = 0.0;
   double y = 0.0;
   double yaw = 0.0;
   for (auto twist_it = old_twist_it; twist_it != new_twist_it + 1; ++twist_it) {
-    const double dt =
-      (twist_it != new_twist_it)
-        ? (rclcpp::Time((*twist_it).header.stamp) - rclcpp::Time(prev_time)).seconds()
-        : (rclcpp::Time(new_stamp) - rclcpp::Time(prev_time)).seconds();
+    const auto & current_stamp = (twist_it != new_twist_it) ? (*twist_it).header.stamp : new_stamp;
+    const auto dt = std::chrono::duration<double>(subtract(current_stamp, prev_stamp)).count();
 
     if (std::fabs(dt) > 0.1) {
-      RCLCPP_WARN_STREAM_THROTTLE(
-        node_.get_logger(), *node_.get_clock(), std::chrono::milliseconds(10000).count(),
-        "Time difference is too large. Cloud not interpolate. Please confirm twist topic and "
-        "timestamp");
+      if (status != nullptr) *status = MotionCompensationStatus::kTwistTimeGapTooLarge;
       break;
     }
 
@@ -126,7 +144,7 @@ Eigen::Matrix4f CombineCloudHandlerBase::compute_transform_to_adjust_for_old_tim
     yaw += (*twist_it).twist.angular.z * dt;
     x += distance * std::cos(yaw);
     y += distance * std::sin(yaw);
-    prev_time = (*twist_it).header.stamp;
+    prev_stamp = (*twist_it).header.stamp;
   }
 
   Eigen::Matrix4f transformation_matrix = Eigen::Matrix4f::Identity();

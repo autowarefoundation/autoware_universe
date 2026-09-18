@@ -1,0 +1,69 @@
+// Copyright 2026 TIER IV, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#pragma once
+
+#include <diagnostic_msgs/msg/diagnostic_status.hpp>
+
+#include <optional>
+#include <string>
+#include <unordered_map>
+#include <vector>
+
+namespace autoware::pointcloud_preprocessor
+{
+
+struct ConcatenationDiagnosticsOptions
+{
+  std::string node_name{"concatenate_data_synchronizer"};
+  // If non-empty, the status name is "<node_name>: <diagnostic_name>".
+  std::string diagnostic_name{};
+  // If set, adds "Processing time (ms)".
+  std::optional<double> processing_time_ms{};
+  // If set (seconds), adds "Pipeline latency (ms)" and per-topic "Latency (ms): <topic>".
+  std::optional<double> now_sec{};
+  // True when the cloud was dropped because it is older than the last published one.
+  bool drop_previous_but_late{false};
+};
+
+struct ReferenceWindow
+{
+  double time{0.0};
+  double noise_window{0.0};
+};
+
+// Values from the concatenated frame that the diagnostics are built from.
+struct ConcatenationDiagnosticsSummary
+{
+  double concatenated_cloud_timestamp_sec{0.0};
+  bool is_concatenated_cloud_empty{false};
+  // Set by the naive strategy.
+  std::optional<double> first_arrival_time{};
+  // Set by the advanced strategy.
+  std::optional<ReferenceWindow> reference_window{};
+  std::unordered_map<std::string, double> topic_to_original_stamp{};
+  // Topics that arrived but whose points are not in the concatenated cloud, because no transform
+  // to the output frame was available. They count as missing, like a topic that never arrived.
+  std::vector<std::string> topics_missing_transform{};
+  // Sensor frames behind the above, reported so the operator knows which TF entries to fix.
+  std::vector<std::string> frames_missing_transform{};
+};
+
+/// Build the DiagnosticStatus for the concatenation. Per-topic entries follow @p input_topics
+/// order. Shared by the node and the offline pipeline.
+diagnostic_msgs::msg::DiagnosticStatus build_diagnostic_status(
+  const ConcatenationDiagnosticsSummary & summary, const std::vector<std::string> & input_topics,
+  const ConcatenationDiagnosticsOptions & options = {});
+
+}  // namespace autoware::pointcloud_preprocessor
