@@ -1659,7 +1659,7 @@ class carla_ros2_interface(object):
             )
             return
 
-        if sensor_type == "sensor.camera.rgb":
+        if sensor_type.startswith("sensor.camera"):
             if not self.checkFrequency(key, timestamp):
                 self.sensor_registry.update_sensor_timestamp(key, timestamp)
                 self._submit_to_publish_worker(key, self.camera, measurement, key, timestamp)
