@@ -494,7 +494,7 @@ class carla_ros2_interface(object):
         self.cv_bridge = CvBridge()
 
     def __call__(self):
-        input_data = self.sensor_interface.get_data()
+        input_data = self.sensor_interface.get_data(GameTime.get_frame())
         timestamp = GameTime.get_time()
         control = self.run_step(input_data, timestamp)
         return control
@@ -502,13 +502,15 @@ class carla_ros2_interface(object):
     def get_param(self):
         return self.param_values
 
-    def checkFrequency(self, sensor):
+    def checkFrequency(self, sensor, timestamp=None):
         """
         Return True when publication should be throttled for the sensor.
 
-        Uses simulation time (self.timestamp) for all sensors to ensure correct throttling in
+        Uses simulation time for all sensors to ensure correct throttling in
         synchronous mode. Wall-clock timing would cause issues when simulation speed differs from
-        real-time.
+        real-time. timestamp defaults to the latest tick time; callers publishing a measurement
+        pass the time of the frame it was captured on, so the throttle measures the interval
+        between captures rather than between the ticks that happened to deliver them.
 
         """
         # Use sensor registry for all sensors (including legacy ones)
@@ -516,10 +518,12 @@ class carla_ros2_interface(object):
         if not config:
             return False
 
-        if self.timestamp is None:
+        if timestamp is None:
+            timestamp = self.timestamp
+        if timestamp is None:
             return False
 
-        should_publish = self.sensor_registry.should_publish(sensor, self.timestamp)
+        should_publish = self.sensor_registry.should_publish(sensor, timestamp)
         return not should_publish
 
     def get_msg_header(self, frame_id, timestamp=None):
@@ -915,9 +919,9 @@ class carla_ros2_interface(object):
             image_array = cv2.cvtColor(image_array, cv2.COLOR_BGRA2GRAY)
         return self.cv_bridge.cv2_to_imgmsg(image_array, encoding=encoding)
 
-    def imu(self, carla_imu_measurement):
+    def imu(self, carla_imu_measurement, timestamp=None):
         """Transform and publish IMU measurement to ROS."""
-        if self.checkFrequency("imu"):
+        if self.checkFrequency("imu", timestamp):
             return
 
         config = self.sensor_registry.get_sensor("imu")
@@ -926,7 +930,9 @@ class carla_ros2_interface(object):
             return
 
         imu_msg = Imu()
-        imu_msg.header = self.get_msg_header(frame_id=config.frame_id or "imu_link")
+        imu_msg.header = self.get_msg_header(
+            frame_id=config.frame_id or "imu_link", timestamp=timestamp
+        )
         imu_msg.angular_velocity.x = -carla_imu_measurement.gyroscope.x
         imu_msg.angular_velocity.y = carla_imu_measurement.gyroscope.y
         imu_msg.angular_velocity.z = -carla_imu_measurement.gyroscope.z
@@ -947,7 +953,9 @@ class carla_ros2_interface(object):
 
         if self.pub_imu:
             self.pub_imu.publish(imu_msg)
-            self.sensor_registry.update_sensor_timestamp("imu", self.timestamp)
+            self.sensor_registry.update_sensor_timestamp(
+                "imu", self.timestamp if timestamp is None else timestamp
+            )
         else:
             self.logger.warning("IMU publisher not initialized")
 
@@ -1617,7 +1625,18 @@ class carla_ros2_interface(object):
             msg.traffic_light_groups.append(group)
         self.pub_traffic_signals.publish(msg)
 
-    def _publish_sensor_data(self, key, data):
+    def _frame_time(self, frame):
+        """Return the simulation time [s] of a CARLA frame.
+
+        A measurement carries the frame it was captured on, which is the frame
+        the loop is processing or, for a callback that arrived late, an earlier
+        one. Both are a whole number of steps away from the current simulation
+        time.
+        """
+        frame_delta = frame - GameTime.get_frame()
+        return self.timestamp + frame_delta * self.param_values["fixed_delta_seconds"]
+
+    def _publish_sensor_data(self, key, measurement, timestamp):
         """Publish one sensor's data, dispatching on its sensor type.
 
         Camera and lidar conversion/publishing run on per-sensor worker
@@ -1636,17 +1655,17 @@ class carla_ros2_interface(object):
             return
 
         if sensor_type == "sensor.camera.rgb":
-            if not self.checkFrequency(key):
-                self.sensor_registry.update_sensor_timestamp(key, self.timestamp)
-                self._submit_to_publish_worker(key, self.camera, data[1], key, self.timestamp)
+            if not self.checkFrequency(key, timestamp):
+                self.sensor_registry.update_sensor_timestamp(key, timestamp)
+                self._submit_to_publish_worker(key, self.camera, measurement, key, timestamp)
         elif sensor_type == "sensor.other.gnss":
             self.pose()
         elif sensor_type == "sensor.lidar.ray_cast":
-            if not self.checkFrequency(key):
-                self.sensor_registry.update_sensor_timestamp(key, self.timestamp)
-                self._submit_to_publish_worker(key, self.lidar, data[1], key, self.timestamp)
+            if not self.checkFrequency(key, timestamp):
+                self.sensor_registry.update_sensor_timestamp(key, timestamp)
+                self._submit_to_publish_worker(key, self.lidar, measurement, key, timestamp)
         elif sensor_type == "sensor.other.imu":
-            self.imu(data[1])
+            self.imu(measurement, timestamp)
         else:
             self.logger.debug(f"No publisher for sensor '{key}' (type={sensor_type})")
 
@@ -1772,7 +1791,7 @@ class carla_ros2_interface(object):
 
         Args
         ----
-            input_data: Dictionary of sensor data from CARLA
+            input_data: (sensor id, frame, measurement) tuples from CARLA
             timestamp: Current simulation timestamp
 
         Returns
@@ -1793,9 +1812,9 @@ class carla_ros2_interface(object):
 
         self._publish_ground_truth_odometry()
 
-        # publish data of all sensors
-        for key, data in input_data.items():
-            self._publish_sensor_data(key, data)
+        # publish data of all sensors, each stamped with the frame it was captured on
+        for key, frame, measurement in input_data:
+            self._publish_sensor_data(key, measurement, self._frame_time(frame))
 
         # Push turn indicator / hazard lights to CARLA before reading status back.
         self.apply_light_state()
