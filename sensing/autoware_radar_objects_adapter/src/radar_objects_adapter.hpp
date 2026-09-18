@@ -30,12 +30,12 @@
 #include <unordered_map>
 #include <vector>
 
-namespace autoware
+namespace autoware::radar_objects_adapter
 {
-class RadarObjectsAdapter : public autoware::agnocast_wrapper::Node
+class RadarObjectsAdapterNode : public autoware::agnocast_wrapper::Node
 {
 public:
-  explicit RadarObjectsAdapter(const rclcpp::NodeOptions & options);
+  explicit RadarObjectsAdapterNode(const rclcpp::NodeOptions & options);
 
 private:
   void radar_cov_to_detection_pose_cov(
@@ -99,6 +99,6 @@ private:
   std::map<std::uint8_t, std::uint8_t> classification_remap_;
   std::map<std::string, std::string> classification_remap_str_;
 };
-}  // namespace autoware
+}  // namespace autoware::radar_objects_adapter
 
 #endif  // RADAR_OBJECTS_ADAPTER_HPP_

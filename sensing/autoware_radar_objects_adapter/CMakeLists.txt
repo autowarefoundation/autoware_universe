@@ -9,7 +9,7 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
 )
 
 autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
-  PLUGIN "autoware::RadarObjectsAdapter"
+  PLUGIN "autoware::radar_objects_adapter::RadarObjectsAdapterNode"
   EXECUTABLE radar_objects_adapter_node
   ROS2_EXECUTOR SingleThreadedExecutor
   AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
@@ -20,7 +20,7 @@ if(BUILD_TESTING)
 
   # ROS-based tests can only run while agnocast is disabled: the node's pub/sub then go through rclcpp.
   if(NOT "$ENV{ENABLE_AGNOCAST}" STREQUAL "1")
-    # Characterization test: drives RadarObjectsAdapter over its real topics. Runs in an isolated
+    # Characterization test: drives RadarObjectsAdapterNode over its real topics. Runs in an isolated
     # ROS domain so that it cannot interfere with other tests.
     ament_add_ros_isolated_gtest(test_radar_objects_adapter_characterization
       test/test_radar_objects_adapter_characterization.cpp

@@ -22,17 +22,17 @@
 #include <string>
 #include <utility>
 #include <vector>
-namespace autoware
+namespace autoware::radar_objects_adapter
 {
 // Maps for classification remapping
 using RadarClassification = autoware_sensing_msgs::msg::RadarClassification;
-const std::map<std::string, std::uint8_t> RadarObjectsAdapter::RADAR_LABEL_TO_UINT_MAP = {
+const std::map<std::string, std::uint8_t> RadarObjectsAdapterNode::RADAR_LABEL_TO_UINT_MAP = {
   {"UNKNOWN", RadarClassification::UNKNOWN}, {"CAR", RadarClassification::CAR},
   {"TRUCK", RadarClassification::TRUCK},     {"MOTORCYCLE", RadarClassification::MOTORCYCLE},
   {"BICYCLE", RadarClassification::BICYCLE}, {"PEDESTRIAN", RadarClassification::PEDESTRIAN},
   {"ANIMAL", RadarClassification::ANIMAL},   {"HAZARD", RadarClassification::HAZARD}};
 using ObjectClassification = autoware_perception_msgs::msg::ObjectClassification;
-const std::map<std::string, std::uint8_t> RadarObjectsAdapter::OBJECT_LABEL_TO_UINT_MAP = {
+const std::map<std::string, std::uint8_t> RadarObjectsAdapterNode::OBJECT_LABEL_TO_UINT_MAP = {
   {"UNKNOWN", ObjectClassification::UNKNOWN}, {"CAR", ObjectClassification::CAR},
   {"TRUCK", ObjectClassification::TRUCK},     {"BUS", ObjectClassification::BUS},
   {"TRAILER", ObjectClassification::TRAILER}, {"MOTORCYCLE", ObjectClassification::MOTORCYCLE},
@@ -45,16 +45,16 @@ float mask_cov_value(double value)
     value == autoware_sensing_msgs::msg::RadarObject::INVALID_COV_VALUE ? 0.0 : value);
 }
 
-RadarObjectsAdapter::RadarObjectsAdapter(const rclcpp::NodeOptions & options)
+RadarObjectsAdapterNode::RadarObjectsAdapterNode(const rclcpp::NodeOptions & options)
 : Node("radar_objects_adapter", options)
 {
   radar_objects_sub_ = this->create_subscription<autoware_sensing_msgs::msg::RadarObjects>(
     "~/input/objects", rclcpp::SensorDataQoS(),
-    std::bind(&RadarObjectsAdapter::objects_callback, this, std::placeholders::_1));
+    std::bind(&RadarObjectsAdapterNode::objects_callback, this, std::placeholders::_1));
 
   radar_info_sub_ = this->create_subscription<autoware_sensing_msgs::msg::RadarInfo>(
     "~/input/radar_info", rclcpp::SensorDataQoS(),
-    std::bind(&RadarObjectsAdapter::radar_info_callback, this, std::placeholders::_1));
+    std::bind(&RadarObjectsAdapterNode::radar_info_callback, this, std::placeholders::_1));
 
   detections_pub_ = this->create_publisher<autoware_perception_msgs::msg::DetectedObjects>(
     "~/output/detections", rclcpp::QoS(10).reliable().transient_local());
@@ -105,7 +105,7 @@ RadarObjectsAdapter::RadarObjectsAdapter(const rclcpp::NodeOptions & options)
     const std::string & perception_label = kv.second;  // e.g. "TRUCK"
 
     // Radar string → uint8
-    uint8_t radar_id = RadarObjectsAdapter::RADAR_LABEL_TO_UINT_MAP.at(radar_label);
+    uint8_t radar_id = RadarObjectsAdapterNode::RADAR_LABEL_TO_UINT_MAP.at(radar_label);
 
     // Perception string → uint8
     uint8_t perception_id = ObjectClassification::UNKNOWN;
@@ -123,7 +123,7 @@ RadarObjectsAdapter::RadarObjectsAdapter(const rclcpp::NodeOptions & options)
   }
 }
 
-void RadarObjectsAdapter::radar_cov_to_detection_pose_cov(
+void RadarObjectsAdapterNode::radar_cov_to_detection_pose_cov(
   const std::array<float, 6> & radar_pose_cov, const double orientation_std,
   std::array<double, 36> & pose_cov)
 {
@@ -140,7 +140,7 @@ void RadarObjectsAdapter::radar_cov_to_detection_pose_cov(
   }
 }
 
-void RadarObjectsAdapter::radar_cov_to_detection_twist_cov(
+void RadarObjectsAdapterNode::radar_cov_to_detection_twist_cov(
   const std::array<float, 6> & radar_twist_cov, const float yaw, const float yaw_rate_std,
   std::array<double, 36> & twist_cov)
 {
@@ -170,7 +170,7 @@ void RadarObjectsAdapter::radar_cov_to_detection_twist_cov(
   }
 }
 
-void RadarObjectsAdapter::radar_cov_to_detection_acceleration_cov(
+void RadarObjectsAdapterNode::radar_cov_to_detection_acceleration_cov(
   const std::array<float, 6> & radar_acceleration_cov, const float yaw,
   std::array<double, 36> & acceleration_cov)
 {
@@ -197,7 +197,7 @@ void RadarObjectsAdapter::radar_cov_to_detection_acceleration_cov(
   acceleration_cov[DETECTION_COV_IDX::Y_Z] = 0.0;
 }
 
-void RadarObjectsAdapter::objects_callback(
+void RadarObjectsAdapterNode::objects_callback(
   const autoware_sensing_msgs::msg::RadarObjects & objects_msg)
 {
   if (!valid_radar_info_) {
@@ -213,7 +213,7 @@ void RadarObjectsAdapter::objects_callback(
 }
 
 template <typename ObjectType>
-void RadarObjectsAdapter::populate_common_fields(
+void RadarObjectsAdapterNode::populate_common_fields(
   const autoware_sensing_msgs::msg::RadarObject & input_object, ObjectType & output_object,
   const float yaw)
 {
@@ -263,7 +263,7 @@ void RadarObjectsAdapter::populate_common_fields(
   }
 }
 
-void RadarObjectsAdapter::populate_classifications(
+void RadarObjectsAdapterNode::populate_classifications(
   const std::vector<autoware_sensing_msgs::msg::RadarClassification> & input_classifications,
   std::vector<autoware_perception_msgs::msg::ObjectClassification> & output_classifications)
 {
@@ -286,7 +286,7 @@ void RadarObjectsAdapter::populate_classifications(
   }
 }
 
-void RadarObjectsAdapter::parse_as_detections(
+void RadarObjectsAdapterNode::parse_as_detections(
   const autoware_sensing_msgs::msg::RadarObjects & input_msg)
 {
   auto output_msg_ptr = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(detections_pub_);
@@ -318,7 +318,7 @@ void RadarObjectsAdapter::parse_as_detections(
   detections_pub_->publish(std::move(output_msg_ptr));
 }
 
-void RadarObjectsAdapter::parse_as_tracks(
+void RadarObjectsAdapterNode::parse_as_tracks(
   const autoware_sensing_msgs::msg::RadarObjects & input_msg)
 {
   auto output_msg_ptr = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(tracks_pub_);
@@ -363,7 +363,7 @@ void RadarObjectsAdapter::parse_as_tracks(
   tracks_pub_->publish(std::move(output_msg_ptr));
 }
 
-void RadarObjectsAdapter::radar_info_callback(
+void RadarObjectsAdapterNode::radar_info_callback(
   const autoware_sensing_msgs::msg::RadarInfo & radar_info_msg)
 {
   for (const auto & field_info : radar_info_msg.object_fields_info) {
@@ -443,7 +443,7 @@ void RadarObjectsAdapter::radar_info_callback(
   }
 }
 
-}  // namespace autoware
+}  // namespace autoware::radar_objects_adapter
 
 #include <rclcpp_components/register_node_macro.hpp>
-RCLCPP_COMPONENTS_REGISTER_NODE(autoware::RadarObjectsAdapter)
+RCLCPP_COMPONENTS_REGISTER_NODE(autoware::radar_objects_adapter::RadarObjectsAdapterNode)
