@@ -158,6 +158,7 @@ All the key parameters can be configured in `autoware_carla_interface.launch.xml
 | `use_traffic_manager`             | bool   | False                                                                             | Boolean flag to set traffic manager in CARLA                                                                                                                                                                                                                                                                                                                                        |
 | `max_real_delta_seconds`          | double | 0.05                                                                              | Parameter to limit the simulation speed below `fixed_delta_seconds`                                                                                                                                                                                                                                                                                                                 |
 | `tick_follower`                   | bool   | False                                                                             | If True, the bridge does not tick the CARLA world and instead follows the frames ticked by another client. See [Multi-client co-simulation](#multi-client-co-simulation).                                                                                                                                                                                                           |
+| `attach_to_existing_ego`          | bool   | False                                                                             | If True, the bridge attaches to the vehicle another client spawned under `ego_vehicle_role_name` instead of loading the episode and spawning one, and leaves the control of that vehicle to the client that owns it. See [Multi-client co-simulation](#multi-client-co-simulation).                                                                                                 |
 | `carla_map`                       | string | ""                                                                                | Explicit CARLA level name. When non-empty it overrides the name derived from `map_path`; useful for CARLA 0.10 levels whose name differs from the Autoware map directory. Empty reproduces the current behavior.                                                                                                                                                                    |
 | `no_rendering_mode`               | bool   | False                                                                             | Disable CARLA scene rendering via world settings for headless/faster simulation. Applied unconditionally on world load, so the default `False` (re-)enables rendering even if the server was started headless; set `True` to keep rendering off.                                                                                                                                    |
 | `force_load_world`                | bool   | False                                                                             | Always reload the world with `client.load_world()` instead of `load_world_if_different()`. Default False reproduces the current call (with a version-tolerant fallback).                                                                                                                                                                                                            |
@@ -223,6 +224,15 @@ server, makes the simulation advance more than once per intended step.
 Setting `tick_follower` to `True` puts the bridge in a passive mode. It no longer ticks the world in
 its main loop, and instead publishes sensor data, the clock and the ego control for the frames that
 the external client ticks. Exactly one client in the whole setup may own the clock.
+
+Clock ownership and ego ownership are separate. `attach_to_existing_ego` covers
+the second: instead of loading the episode and spawning a vehicle, the bridge
+looks for the vehicle another client already spawned under
+`ego_vehicle_role_name`, and leaves both the control and the destruction of it
+to that client. It also skips loading the world, because loading an episode
+destroys every actor in it, the ego included. The two flags together let this
+bridge ride along as a pure sensor and status publisher on a simulation that
+another client owns outright.
 
 Two things to keep in mind when using this mode:
 
