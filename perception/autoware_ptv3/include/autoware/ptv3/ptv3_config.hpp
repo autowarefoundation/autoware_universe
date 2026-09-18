@@ -50,6 +50,7 @@ public:
     const std::vector<std::string> & serialization_orders = {},
     const std::vector<std::int64_t> & pooling_strides = {},
     const std::vector<std::int64_t> & enc_channels = {},
+    const std::vector<std::int64_t> & patch_sizes = {},
     const std::vector<std::int64_t> & palette = {},
     const std::vector<std::string> & filter_classes = {},
     const std::string & filter_output_format = {}, const bool filter_apply_to_segmentation = {},
@@ -117,6 +118,7 @@ public:
     serialization_orders_ = validate_serialization_orders(serialization_orders);
     pooling_strides_ = validate_pooling_strides(pooling_strides);
     enc_channels_ = validate_enc_channels(enc_channels, pooling_strides_.size() + 1);
+    patch_sizes_ = validate_patch_sizes(patch_sizes, pooling_strides_.size() + 1);
 
     if (use_seg3d_head_) {
       segmentation_class_names_ = segmentation_class_names;
@@ -386,6 +388,30 @@ public:
     return enc_channels;
   }
 
+  static std::vector<std::int64_t> validate_patch_sizes(
+    const std::vector<std::int64_t> & patch_sizes, const std::size_t expected_size)
+  {
+    if (patch_sizes.size() != expected_size) {
+      throw std::runtime_error(
+        "patch_sizes must contain one entry per encoder stage (pooling_strides size + 1 = " +
+        std::to_string(expected_size) + "), got " + std::to_string(patch_sizes.size()) + ".");
+    }
+    for (const auto patch_size : patch_sizes) {
+      if (patch_size < 1) {
+        throw std::runtime_error("Each patch_sizes entry must be positive.");
+      }
+    }
+    return patch_sizes;
+  }
+
+  // Extent of a stage's patch_order input for `count` voxels: rounded up to whole windows.
+  [[nodiscard]] std::int64_t padded_voxel_count(
+    const std::int64_t count, const std::size_t stage_index) const
+  {
+    const auto patch_size = patch_sizes_[stage_index];
+    return (count + patch_size - 1) / patch_size * patch_size;
+  }
+
   // Hard voxel-count bound for one encoder stage: a stage cannot hold more voxels than the grid
   // has cells at its cumulative pooling depth, and pooling never grows the voxel count. Sizes the
   // encoder stage buffers and TensorRT profiles.
@@ -425,6 +451,7 @@ public:
   std::vector<std::string> serialization_orders_;
   std::vector<std::int64_t> pooling_strides_;
   std::vector<std::int64_t> enc_channels_;  // per encoder stage, finest to deepest
+  std::vector<std::int64_t> patch_sizes_;   // attention window per encoder stage, finest to deepest
 
   // Segmentation head
   std::vector<std::int64_t> dec_depths_;  // decoder block counts per stage

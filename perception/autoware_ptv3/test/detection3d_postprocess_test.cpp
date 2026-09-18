@@ -38,6 +38,7 @@ PTv3Config makePostprocessConfig()
   params.voxel_size = {1.0F, 1.0F, 1.0F};
   params.pooling_strides = {2, 2, 2, 2};
   params.enc_channels = {8, 16, 32, 64, 128};
+  params.patch_sizes = {4, 4, 4, 4, 4};
   params.bbox_voxel_size = {8.0F, 8.0F, 4.0F};
   params.distance_bin_upper_limits = {100.0F};
   params.detection_score_thresholds = {0.4F, 0.4F};

@@ -105,6 +105,8 @@ PreprocessCuda::PreprocessCuda(const PTv3Config & config, cudaStream_t stream)
     autoware::cuda_utils::make_unique<std::int64_t[]>(num_orders * config_.max_num_voxels_);
   input_level_inverse_d_ =
     autoware::cuda_utils::make_unique<std::int64_t[]>(num_orders * config_.max_num_voxels_);
+  input_level_patch_order_d_ = autoware::cuda_utils::make_unique<std::int64_t[]>(
+    num_orders * config_.padded_voxel_count(config_.max_num_voxels_, 0));
   order_sort_keys_d_ = autoware::cuda_utils::make_unique<std::int64_t[]>(config_.max_num_voxels_);
   order_sort_sorted_keys_d_ =
     autoware::cuda_utils::make_unique<std::int64_t[]>(config_.max_num_voxels_);
@@ -398,6 +400,36 @@ __global__ void scatterInverseKernel(
 }
 
 /**
+ * @brief Pads one level's serialization orders to whole attention windows: the gather order the
+ * level's attention blocks read.
+ *
+ * @param order_in The level's serialization orders, laid out densely [num_orders, count].
+ * @param stage_counts_in Per-level voxel counts; entry `level_index` is this level's count.
+ * @param patch_order_out Output, laid out densely [num_orders, padded_count]; padded_count is
+ * `count` rounded up to a multiple of `patch_size`.
+ * @param level_index Level `order_in` describes (0 = input level).
+ * @param patch_size Attention window of the level's blocks.
+ */
+__global__ void fillPatchOrderKernel(
+  const std::int64_t * __restrict__ order_in, const std::int64_t * __restrict__ stage_counts_in,
+  std::int64_t * __restrict__ patch_order_out, std::int32_t level_index, std::int64_t patch_size)
+{
+  const auto slot = static_cast<std::int64_t>(blockIdx.x) * blockDim.x + threadIdx.x;
+  const auto order_index = static_cast<std::int64_t>(blockIdx.y);
+  const auto count = stage_counts_in[level_index];
+  if (count == 0) {
+    return;
+  }
+  const auto padded_count = (count + patch_size - 1) / patch_size * patch_size;
+  if (slot >= padded_count) {
+    return;
+  }
+  const auto cycle = (patch_size + count - 1) / count * count;
+  const auto source = slot < count ? slot : (slot - patch_size + cycle) % count;
+  patch_order_out[order_index * padded_count + slot] = order_in[order_index * count + source];
+}
+
+/**
  * @brief Stages the key/value pair for one of the input-level order sorts.
  *
  * @param serialized_code_in Input voxels' codes, laid out [num_orders, num_voxels]; only the
@@ -637,6 +669,22 @@ void PreprocessCuda::generateSerializedPoolingMetadata(
   setInitialStageCountKernel<<<1, 1, 0, stream_>>>(stage_counts, clamped_num_voxels);
   CHECK_CUDA_ERROR(cudaPeekAtLastError());
 
+  // Pads one level's orders to whole attention windows, straight into its engine input buffer.
+  const auto fill_patch_order = [this, stage_counts, num_orders](
+                                  const std::int64_t * order, std::int64_t * patch_order,
+                                  const std::size_t level_index) {
+    const auto padded_capacity =
+      config_.padded_voxel_count(config_.stage_voxel_capacity(level_index), level_index);
+    const dim3 grid(
+      static_cast<unsigned int>(
+        divup(static_cast<std::size_t>(padded_capacity), config_.threads_per_block_)),
+      static_cast<unsigned int>(num_orders));
+    fillPatchOrderKernel<<<grid, config_.threads_per_block_, 0, stream_>>>(
+      order, stage_counts, patch_order, static_cast<std::int32_t>(level_index),
+      config_.patch_sizes_[level_index]);
+    CHECK_CUDA_ERROR(cudaPeekAtLastError());
+  };
+
   // The input level is already sorted by order-0 code, so its order-0 order and inverse rows are
   // simply 0..n-1. The remaining orders cannot be derived from it and need one real sort each -
   // the only sorts in this function.
@@ -667,6 +715,7 @@ void PreprocessCuda::generateSerializedPoolingMetadata(
       CHECK_CUDA_ERROR(cudaPeekAtLastError());
     }
   }
+  fill_patch_order(input_level_order_d_.get(), input_level_patch_order_d_.get(), 0);
 
   const std::int32_t * current_grid_coord = grid_coord;
   const std::int64_t * current_serialized_code = serialized_code;
@@ -711,6 +760,8 @@ void PreprocessCuda::generateSerializedPoolingMetadata(
         order_index, capacity);
       CHECK_CUDA_ERROR(cudaPeekAtLastError());
     }
+
+    fill_patch_order(stage.serialized_order, stage.patch_order, stage_index + 1);
 
     current_grid_coord = stage.grid_coord;
     current_serialized_code = stage.serialized_code;

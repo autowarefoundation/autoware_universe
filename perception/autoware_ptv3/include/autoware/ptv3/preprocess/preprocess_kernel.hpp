@@ -38,6 +38,8 @@ struct SerializedPoolingDeviceStageView
   std::int64_t * serialized_code{};
   std::int64_t * serialized_order{};
   std::int64_t * serialized_inverse{};
+  /// serialized_order padded to whole attention windows, [num_orders, padded_count].
+  std::int64_t * patch_order{};
 };
 
 class PreprocessCuda
@@ -76,7 +78,8 @@ public:
     std::int64_t * inverse_map, std::size_t * num_cropped_points);
 
   /**
-   * @brief Builds the per-stage pooling metadata the encoder graph consumes.
+   * @brief Builds the serialization inputs of every level the encoder and head graphs consume,
+   * including each level's `patch_order` (see fillPatchOrderKernel).
    *
    * @param grid_coord Grid coordinates of the input voxels, laid out [num_voxels, 3].
    * @param serialized_code Codes of the input voxels, laid out [num_orders, num_voxels].
@@ -112,6 +115,15 @@ public:
   [[nodiscard]] std::int64_t * inputLevelSerializedInverse() const
   {
     return input_level_inverse_d_.get();
+  }
+  /**
+   * @brief inputLevelSerializedOrder() padded to whole attention windows, matching the encoder's
+   * `patch_order` input: [num_orders, padded_voxel_count(num_voxels, 0)]. Same validity and
+   * binding rules.
+   */
+  [[nodiscard]] std::int64_t * inputLevelPatchOrder() const
+  {
+    return input_level_patch_order_d_.get();
   }
 
   [[nodiscard]] const std::uint32_t * cropMask() const { return crop_mask_d_.get(); }
@@ -150,6 +162,9 @@ private:
   /// Inverse permutation of each input_level_order_d_ row, same layout; published via
   /// inputLevelSerializedInverse().
   autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> input_level_inverse_d_{nullptr};
+  /// Each input_level_order_d_ row padded to whole attention windows; published via
+  /// inputLevelPatchOrder().
+  autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> input_level_patch_order_d_{nullptr};
   /// Keys for one of the input-level order sorts: each input voxel's code under the serialization
   /// order being sorted.
   autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> order_sort_keys_d_{nullptr};

@@ -40,9 +40,35 @@ PTv3Config makeDetectionConfig(
 {
   return PTv3Config(
     false, true, "", 8, voxels_num, point_cloud_range, voxel_size, {}, {}, {"z", "z-trans"},
-    {2, 2, 2, 2}, {8, 16, 32, 64, 128}, {}, {}, "", false, "", {}, {"CAR", "PEDESTRIAN"},
-    bbox_voxel_size, distance_bin_upper_limits, detection_score_thresholds, yaw_norm_thresholds,
-    true, 8, {-2.0F, -2.0F, -2.0F, 4.0F, 4.0F, 4.0F});
+    {2, 2, 2, 2}, {8, 16, 32, 64, 128}, {4, 4, 4, 4, 4}, {}, {}, "", false, "", {},
+    {"CAR", "PEDESTRIAN"}, bbox_voxel_size, distance_bin_upper_limits, detection_score_thresholds,
+    yaw_norm_thresholds, true, 8, {-2.0F, -2.0F, -2.0F, 4.0F, 4.0F, 4.0F});
+}
+
+// Segmentation-only config over three levels (two pooling stages), so the attention window can
+// differ per level.
+PTv3Config makeWindowedSegmentationConfig(const std::vector<std::int64_t> & patch_sizes = {4, 4, 4})
+{
+  return PTv3Config(
+    true, false, "", 8, {1, 4, 8}, {-1.0F, -1.0F, -1.0F, 3.0F, 3.0F, 3.0F}, {1.0F, 1.0F, 1.0F},
+    {"noise"}, {{"noise", "NOISE"}}, {"z", "z-trans"}, {2, 2}, {8, 16, 32}, patch_sizes, {0, 0, 0},
+    {}, "xyzi", false, "partial", {0, 0});
+}
+
+TEST(PTv3ConfigTest, RejectsPatchSizesThatDoNotCoverEveryStage)
+{
+  EXPECT_THROW(makeWindowedSegmentationConfig({4, 4}), std::runtime_error);
+  EXPECT_THROW(makeWindowedSegmentationConfig({4, 0, 4}), std::runtime_error);
+}
+
+TEST(PTv3ConfigTest, PadsVoxelCountsToWholeAttentionWindows)
+{
+  const auto config = makeWindowedSegmentationConfig();
+  EXPECT_EQ(config.padded_voxel_count(0, 0), 0);
+  EXPECT_EQ(config.padded_voxel_count(1, 0), 4);
+  EXPECT_EQ(config.padded_voxel_count(4, 0), 4);
+  EXPECT_EQ(config.padded_voxel_count(5, 1), 8);
+  EXPECT_EQ(config.padded_voxel_count(9, 2), 12);
 }
 
 // Segmentation-only config exercising segmentation3d.class_mapping resolution.
@@ -54,7 +80,7 @@ PTv3Config makeSegmentationConfig(
   return PTv3Config(
     true, false, "", 8, {1, 4, 8}, {-1.0F, -1.0F, -1.0F, 3.0F, 3.0F, 3.0F}, {1.0F, 1.0F, 1.0F},
     segmentation_class_names, segmentation_class_mapping, {"z", "z-trans"}, {2, 2}, {8, 16, 32},
-    palette, {}, "xyzi", false, "partial", {0, 0});
+    {4, 4, 4}, palette, {}, "xyzi", false, "partial", {0, 0});
 }
 
 TEST(PTv3ConfigTest, AcceptsCompatibleDetectionGrid)

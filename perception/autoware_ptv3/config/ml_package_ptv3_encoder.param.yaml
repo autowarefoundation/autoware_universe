@@ -6,3 +6,4 @@
       serialization_orders: ["z", "z-trans"]
       pooling_strides: [2, 2, 2, 2]
       enc_channels: [32, 64, 128, 256, 512]
+      patch_sizes: [512, 512, 512, 512, 512]
