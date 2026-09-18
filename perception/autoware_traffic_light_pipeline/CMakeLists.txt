@@ -29,9 +29,11 @@ rclcpp_components_register_node(autoware_traffic_light_recognition_node
   EXECUTABLE traffic_light_recognition_node)
 
 ament_auto_add_executable(traffic_light_pipeline_bag2bag_runner
-  bag2bag/traffic_light_pipeline_bag2bag_runner.cpp
+  bag2bag/main.cpp
+  bag2bag/config_builder.cpp
+  bag2bag/runner.cpp
 )
-target_include_directories(traffic_light_pipeline_bag2bag_runner PRIVATE src)
+target_include_directories(traffic_light_pipeline_bag2bag_runner PRIVATE src bag2bag)
 target_link_libraries(traffic_light_pipeline_bag2bag_runner
   autoware_traffic_light_recognition yaml-cpp)
 
