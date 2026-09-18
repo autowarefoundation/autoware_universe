@@ -25,10 +25,10 @@ subscribers:
 publishers:
   - name: transition_available
     message_type: tier4_system_msgs/msg/ModeChangeAvailable
-    global: /system/command_mode/transition/available
+    remap_target: /system/command_mode/transition/available
   - name: transition_completed
     message_type: tier4_system_msgs/msg/ModeChangeAvailable
-    global: /system/command_mode/transition/completed
+    remap_target: /system/command_mode/transition/completed
   - name: debug_info
     message_type: autoware_operation_mode_transition_manager/msg/OperationModeTransitionManagerDebug
     remap_target: ~/debug_info
