@@ -67,10 +67,11 @@ protected:
   static constexpr std::size_t kNumClasses = 3;
 
   PTv3Config makeTestConfig(
-    const bool filter_apply_to_segmentation = false,
-    const std::string & reconstruction = "partial") const
+    const bool filter_apply_to_segmentation = false, const std::string & reconstruction = "partial",
+    const std::int64_t cloud_capacity = 8) const
   {
     PTv3ConfigParams params;
+    params.cloud_capacity = cloud_capacity;
     params.segmentation_class_names = {"car", "truck", "drivable_flat"};
     params.segmentation_class_mapping = {
       {"car", "CAR"}, {"truck", "TRUCK"}, {"drivable_flat", "FLAT_SURFACE"}};
@@ -276,6 +277,88 @@ TEST_F(PostprocessKernelTest, FilteredPointcloudFiltersOnlyArgmaxClass)
   std::sort(x_values.begin(), x_values.end());
   EXPECT_EQ(x_values[0], 1.0f);
   EXPECT_EQ(x_values[1], 3.0f);
+}
+
+// The published rows are compacted with a prefix sum, so dropping a row never reorders the rest.
+TEST_F(PostprocessKernelTest, SegmentationPointcloudKeepsInputOrder)
+{
+  constexpr std::size_t num_points = 1024;
+  const auto config = makeTestConfig(true, "partial", num_points);
+  PostprocessCuda postprocess(config, stream_);
+
+  std::vector<float> features(num_points * 4, 0.0F);
+  std::vector<std::int64_t> labels(num_points, 0);
+  std::vector<float> probs(num_points * kNumClasses, 0.0F);
+  std::vector<float> expected_x;
+  for (std::size_t i = 0; i < num_points; ++i) {
+    features[i * 4] = static_cast<float>(i);
+    // Every third row is a truck, which the segmentation filter removes.
+    labels[i] = i % 3 == 1 ? 1 : 0;
+    probs[i * kNumClasses + static_cast<std::size_t>(labels[i])] = 1.0F;
+    if (labels[i] != 1) {
+      expected_x.push_back(static_cast<float>(i));
+    }
+  }
+
+  auto features_d = makeDeviceBuffer<float>(features.size());
+  auto labels_d = makeDeviceBuffer<std::int64_t>(labels.size());
+  auto probs_d = makeDeviceBuffer<float>(probs.size());
+  auto output_points_d = makeDeviceBuffer<PointXYZCPE>(num_points);
+  copyToDevice(features_d.get(), features);
+  copyToDevice(labels_d.get(), labels);
+  copyToDevice(probs_d.get(), probs);
+
+  const auto num_segmented_points = postprocess.createSegmentationPointcloud(
+    features_d.get(), 4, labels_d.get(), probs_d.get(), output_points_d.get(), kNumClasses,
+    num_points);
+
+  ASSERT_EQ(num_segmented_points, expected_x.size());
+  const auto output_points = copyToHost(output_points_d.get(), num_segmented_points);
+  std::vector<float> actual_x;
+  actual_x.reserve(output_points.size());
+  for (const auto & point : output_points) {
+    actual_x.push_back(point.x);
+  }
+  EXPECT_EQ(actual_x, expected_x);
+}
+
+TEST_F(PostprocessKernelTest, FilteredPointcloudKeepsInputOrder)
+{
+  constexpr std::size_t num_points = 1024;
+  const auto config = makeTestConfig(false, "partial", num_points);
+  PostprocessCuda postprocess(config, stream_);
+
+  std::vector<CloudPointTypeXYZI> input_points(num_points);
+  std::vector<float> pred_probs(num_points * kNumClasses, 0.0F);
+  std::vector<float> expected_x;
+  for (std::size_t i = 0; i < num_points; ++i) {
+    input_points[i].x = static_cast<float>(i);
+    // Every third row has a truck argmax, which the filter removes.
+    const std::size_t label = i % 3 == 1 ? 1 : 0;
+    pred_probs[i * kNumClasses + label] = 1.0F;
+    if (label != 1) {
+      expected_x.push_back(static_cast<float>(i));
+    }
+  }
+
+  auto input_points_d = makeDeviceBuffer<CloudPointTypeXYZI>(num_points);
+  auto pred_probs_d = makeDeviceBuffer<float>(pred_probs.size());
+  auto output_points_d = makeDeviceBuffer<CloudPointTypeXYZI>(num_points);
+  copyToDevice(input_points_d.get(), input_points);
+  copyToDevice(pred_probs_d.get(), pred_probs);
+
+  const auto num_filtered_points = postprocess.createFilteredPointcloud(
+    input_points_d.get(), CloudFormat::XYZI, CloudFormat::XYZI, pred_probs_d.get(),
+    output_points_d.get(), kNumClasses, num_points);
+
+  ASSERT_EQ(num_filtered_points, expected_x.size());
+  const auto output_points = copyToHost(output_points_d.get(), num_filtered_points);
+  std::vector<float> actual_x;
+  actual_x.reserve(output_points.size());
+  for (const auto & point : output_points) {
+    actual_x.push_back(point.x);
+  }
+  EXPECT_EQ(actual_x, expected_x);
 }
 
 TEST_F(PostprocessKernelTest, VoxelOutputsExcludePastOnlyVoxels)

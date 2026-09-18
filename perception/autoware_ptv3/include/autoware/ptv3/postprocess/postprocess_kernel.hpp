@@ -34,14 +34,14 @@ class PostprocessCuda
 public:
   explicit PostprocessCuda(const PTv3Config & config, cudaStream_t stream);
 
-  /// Optional voxel mapping excludes past-only voxels.
+  /// Optional voxel mapping excludes past-only voxels. Published rows keep their input order.
   /// `input_features` holds one row of `feature_stride` floats per point, xyz first.
   std::size_t createVisualizationPointcloud(
     const float * input_features, std::int64_t feature_stride, const std::int64_t * pred_labels,
     float * output_points, std::size_t num_classes, std::size_t num_points,
     VoxelPointMapping voxel_mapping = {});
 
-  /// Optional voxel mapping excludes past-only voxels.
+  /// Optional voxel mapping excludes past-only voxels. Published rows keep their input order.
   /// `input_features` holds one row of `feature_stride` floats per point, xyz first.
   std::size_t createSegmentationPointcloud(
     const float * input_features, std::int64_t feature_stride, const std::int64_t * pred_labels,
@@ -60,15 +60,26 @@ public:
     std::size_t num_points, std::size_t num_voxels);
 
   /// Optional voxel mapping selects current-frame representatives from the original input.
+  /// Published rows keep their input order.
   std::size_t createFilteredPointcloud(
     const void * compact_input_points, CloudFormat input_format, CloudFormat output_format,
     const float * pred_probs, void * output_points, std::size_t num_classes, std::size_t num_points,
     VoxelPointMapping voxel_mapping = {});
 
 private:
+  // Stable compaction: mark the rows to publish, prefix-sum the mask, then write each row at its
+  // scanned offset, so every output cloud keeps the input order.
+  void checkOutputCapacity(std::size_t num_points) const;
+  void scanKeepMask(std::size_t num_points);
+  std::size_t readOutputCount(std::size_t num_points);
+
   PTv3Config config_;
 
-  CudaUniquePtr<std::uint32_t[]> filtered_mask_d_{nullptr};
+  CudaUniquePtr<std::uint32_t[]> keep_mask_d_{nullptr};
+  CudaUniquePtr<std::uint32_t[]> output_offsets_d_{nullptr};
+  CudaUniquePtr<std::uint8_t[]> scan_workspace_d_{nullptr};
+  std::size_t scan_workspace_size_{0};
+  std::size_t output_capacity_{0};
   CudaUniquePtr<float[]> color_map_d_{nullptr};
   CudaUniquePtr<std::uint8_t[]> class_id_to_classification_d_{nullptr};
   CudaUniquePtr<std::uint32_t[]> filter_class_indices_d_{nullptr};
