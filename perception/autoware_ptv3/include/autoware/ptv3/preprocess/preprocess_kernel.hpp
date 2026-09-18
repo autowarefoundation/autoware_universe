@@ -140,6 +140,11 @@ public:
   [[nodiscard]] const std::uint32_t * cropIndices() const { return crop_indices_d_.get(); }
   /// In-range densified rows in cropped order, current frame first.
   [[nodiscard]] const float * croppedFeatures() const { return cropped_points_d_.get(); }
+  /// Valid after generateVoxels, until the next preprocessing call.
+  [[nodiscard]] VoxelPointMapping voxelPointMapping(std::size_t num_current_points) const
+  {
+    return {sorted_code_indices_d_.get(), voxel_start_d_.get(), num_current_points};
+  }
 
 private:
   PTv3Config config_;
@@ -159,6 +164,7 @@ private:
   // both deduplicates voxels and puts them in order-0 serialization order.
   autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> codes_d_{nullptr};
   autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> sorted_codes_d_{nullptr};
+  // Original densified-cloud indices, compacted and then sorted alongside the voxel codes.
   autoware::cuda_utils::CudaUniquePtr<std::uint32_t[]> code_indices_d_{nullptr};
   autoware::cuda_utils::CudaUniquePtr<std::uint32_t[]> sorted_code_indices_d_{nullptr};
   autoware::cuda_utils::CudaUniquePtr<std::uint32_t[]> unique_mask_d_{nullptr};

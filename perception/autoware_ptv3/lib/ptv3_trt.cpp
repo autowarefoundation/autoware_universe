@@ -1079,11 +1079,12 @@ bool PTv3TRT::postProcess(
   const auto source_probs = config_.source_reconstruction_ != SourceReconstruction::NONE
                               ? reconstructed_probs_d_.get()
                               : pred_probs_d_.get();
-  const void * source_points = config_.source_reconstruction_ == SourceReconstruction::FULL
-                                 ? densified_cloud_.current_msg->data.get()
-                               : config_.source_reconstruction_ == SourceReconstruction::PARTIAL
+  const auto voxel_mapping = config_.source_reconstruction_ == SourceReconstruction::NONE
+                               ? pre_ptr_->voxelPointMapping(num_current_points_)
+                               : VoxelPointMapping{};
+  const void * source_points = config_.source_reconstruction_ == SourceReconstruction::PARTIAL
                                  ? cropped_source_points_d_.get()
-                                 : nullptr;
+                                 : densified_cloud_.current_msg->data.get();
   const auto num_source_output_points =
     config_.source_reconstruction_ == SourceReconstruction::FULL      ? num_current_points_
     : config_.source_reconstruction_ == SourceReconstruction::PARTIAL ? num_cropped_current_points_
@@ -1093,7 +1094,7 @@ bool PTv3TRT::postProcess(
     const auto num_segmented_points = post_ptr_->createSegmentationPointcloud(
       source_features, source_feature_stride, source_labels, source_probs,
       reinterpret_cast<point_types::PointXYZCPE *>(segmented_points_msg_ptr_->data.get()),
-      config_.segmentation_class_names_.size(), num_source_output_points);
+      config_.segmentation_class_names_.size(), num_source_output_points, voxel_mapping);
     CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 
     segmented_points_msg_ptr_->header = header;
@@ -1106,32 +1107,30 @@ bool PTv3TRT::postProcess(
 
   // Visualization pointcloud
   if (should_publish_visualization_pointcloud) {
-    post_ptr_->createVisualizationPointcloud(
+    const auto num_visualization_points = post_ptr_->createVisualizationPointcloud(
       source_features, source_feature_stride, source_labels,
       reinterpret_cast<float *>(visualization_points_msg_ptr_->data.get()),
-      config_.segmentation_class_names_.size(), num_source_output_points);
+      config_.segmentation_class_names_.size(), num_source_output_points, voxel_mapping);
     CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
     visualization_points_msg_ptr_->header = header;
-    visualization_points_msg_ptr_->width = static_cast<std::uint32_t>(num_source_output_points);
+    visualization_points_msg_ptr_->width = static_cast<std::uint32_t>(num_visualization_points);
+    visualization_points_msg_ptr_->row_step =
+      visualization_points_msg_ptr_->width * visualization_points_msg_ptr_->point_step;
     publish_visualization_pointcloud_(std::move(visualization_points_msg_ptr_));
     visualization_points_msg_ptr_ = nullptr;
   }
 
   if (should_publish_filtered_pointcloud) {
-    // The filtered cloud is rebuilt from the current frame's original points; PTv3Config
-    // rejects filter classes in 'none' mode, where no per-point source exists.
-    if (source_points == nullptr) {
-      throw std::runtime_error(
-        "The filtered pointcloud requires source_reconstruction 'partial' or 'full'.");
-    }
     const auto num_filtered_points = post_ptr_->createFilteredPointcloud(
       source_points, densified_cloud_.current_format, filtered_output_format_, source_probs,
       filtered_points_msg_ptr_->data.get(), config_.segmentation_class_names_.size(),
-      num_source_output_points);
+      num_source_output_points, voxel_mapping);
     CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 
     filtered_points_msg_ptr_->header = header;
     filtered_points_msg_ptr_->width = num_filtered_points;
+    filtered_points_msg_ptr_->row_step =
+      filtered_points_msg_ptr_->width * filtered_points_msg_ptr_->point_step;
     publish_filtered_pointcloud_(std::move(filtered_points_msg_ptr_));
     filtered_points_msg_ptr_ = nullptr;
   }

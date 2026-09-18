@@ -26,13 +26,20 @@ namespace autoware::ptv3
 {
 using autoware::point_types::PointCloudClassification;
 
+__device__ std::int64_t sourcePointIndex(std::uint32_t idx, VoxelPointMapping mapping)
+{
+  if (mapping.voxel_starts == nullptr) return idx;
+  const auto source_idx = mapping.sorted_point_indices[mapping.voxel_starts[idx]];
+  return source_idx < mapping.num_current_points ? static_cast<std::int64_t>(source_idx) : -1;
+}
+
 __global__ void createVisualizationPointcloudKernel(
   const float * input_features, std::int64_t feature_stride, const float * colors,
   const std::int64_t * labels, float4 * output_points, std::size_t num_classes,
-  std::size_t num_points)
+  std::size_t num_points, VoxelPointMapping voxel_mapping, std::uint32_t * output_num_points)
 {
   const auto idx = static_cast<std::uint32_t>(blockIdx.x * blockDim.x + threadIdx.x);
-  if (idx >= num_points) {
+  if (idx >= num_points || sourcePointIndex(idx, voxel_mapping) < 0) {
     return;
   }
 
@@ -41,7 +48,9 @@ __global__ void createVisualizationPointcloudKernel(
     label >= 0 && static_cast<std::size_t>(label) < num_classes ? colors[label] : 0.0f;
 
   const float * input_point = &input_features[idx * feature_stride];
-  output_points[idx] = make_float4(input_point[0], input_point[1], input_point[2], color);
+  const auto output_idx =
+    voxel_mapping.voxel_starts != nullptr ? atomicAdd(output_num_points, 1U) : idx;
+  output_points[output_idx] = make_float4(input_point[0], input_point[1], input_point[2], color);
 }
 
 __global__ void createSegmentationPointcloudKernel(
@@ -49,10 +58,10 @@ __global__ void createSegmentationPointcloudKernel(
   const float * pred_probs, const std::uint8_t * class_id_to_classification,
   const std::uint32_t * filter_class_indices, std::size_t num_filter_classes,
   std::uint32_t * output_num_points, point_types::PointXYZCPE * output_points,
-  std::size_t num_classes, std::size_t num_points)
+  std::size_t num_classes, std::size_t num_points, VoxelPointMapping voxel_mapping)
 {
   const auto idx = static_cast<std::uint32_t>(blockIdx.x * blockDim.x + threadIdx.x);
-  if (idx >= num_points) {
+  if (idx >= num_points || sourcePointIndex(idx, voxel_mapping) < 0) {
     return;
   }
 
@@ -239,10 +248,10 @@ __global__ void createFilteredPointcloudKernel(
   const InputPointT * input_points, const float * pred_probs,
   const std::uint32_t * filter_class_indices, std::size_t num_filter_classes,
   std::size_t num_classes, std::uint32_t * output_num_points, OutputPointT * output_points,
-  std::size_t num_points)
+  std::size_t num_points, VoxelPointMapping voxel_mapping)
 {
   const auto idx = static_cast<std::uint32_t>(blockIdx.x * blockDim.x + threadIdx.x);
-  if (idx >= num_points) {
+  if (idx >= num_points || sourcePointIndex(idx, voxel_mapping) < 0) {
     return;
   }
 
@@ -269,7 +278,8 @@ __global__ void createFilteredPointcloudKernel(
   }
 
   const auto output_idx = atomicAdd(output_num_points, 1U);
-  set_point_from_input(output_points[output_idx], input_points[idx]);
+  const auto source_idx = sourcePointIndex(idx, voxel_mapping);
+  set_point_from_input(output_points[output_idx], input_points[source_idx]);
 }
 
 template <typename InputPointT, typename OutputPointT>
@@ -277,13 +287,13 @@ void createFilteredPointcloudTyped(
   cudaStream_t stream, std::uint32_t threads_per_block, const void * compact_input_points,
   const float * pred_probs, const std::uint32_t * filter_class_indices,
   std::size_t num_filter_classes, std::size_t num_classes, std::uint32_t * output_num_points,
-  void * output_points, std::size_t num_points)
+  void * output_points, std::size_t num_points, VoxelPointMapping voxel_mapping)
 {
   const auto num_blocks = divup(num_points, threads_per_block);
   createFilteredPointcloudKernel<<<num_blocks, threads_per_block, 0, stream>>>(
     static_cast<const InputPointT *>(compact_input_points), pred_probs, filter_class_indices,
     num_filter_classes, num_classes, output_num_points, static_cast<OutputPointT *>(output_points),
-    num_points);
+    num_points, voxel_mapping);
 }
 
 PostprocessCuda::PostprocessCuda(const PTv3Config & config, cudaStream_t stream)
@@ -316,24 +326,37 @@ PostprocessCuda::PostprocessCuda(const PTv3Config & config, cudaStream_t stream)
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 }
 
-void PostprocessCuda::createVisualizationPointcloud(
+std::size_t PostprocessCuda::createVisualizationPointcloud(
   const float * input_features, const std::int64_t feature_stride, const std::int64_t * labels,
-  float * output_points, std::size_t num_classes, std::size_t num_points)
+  float * output_points, std::size_t num_classes, std::size_t num_points,
+  VoxelPointMapping voxel_mapping)
 {
+  if (num_points == 0) return 0;
+  CHECK_CUDA_ERROR(cudaMemsetAsync(filtered_mask_d_.get(), 0, sizeof(std::uint32_t), stream_));
   auto num_blocks = divup(num_points, config_.threads_per_block_);
 
   createVisualizationPointcloudKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
     input_features, feature_stride, color_map_d_.get(), labels,
-    reinterpret_cast<float4 *>(output_points), num_classes, num_points);
+    reinterpret_cast<float4 *>(output_points), num_classes, num_points, voxel_mapping,
+    filtered_mask_d_.get());
+  CHECK_CUDA_ERROR(cudaPeekAtLastError());
 
+  std::uint32_t num_output_points = static_cast<std::uint32_t>(num_points);
+  if (voxel_mapping.voxel_starts != nullptr) {
+    CHECK_CUDA_ERROR(cudaMemcpyAsync(
+      &num_output_points, filtered_mask_d_.get(), sizeof(std::uint32_t), cudaMemcpyDeviceToHost,
+      stream_));
+  }
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
+  return num_output_points;
 }
 
 std::size_t PostprocessCuda::createSegmentationPointcloud(
   const float * input_features, const std::int64_t feature_stride, const std::int64_t * pred_labels,
   const float * pred_probs, point_types::PointXYZCPE * output_points, std::size_t num_classes,
-  std::size_t num_points)
+  std::size_t num_points, VoxelPointMapping voxel_mapping)
 {
+  if (num_points == 0) return 0;
   cudaMemsetAsync(filtered_mask_d_.get(), 0, sizeof(std::uint32_t), stream_);
 
   auto num_blocks = divup(num_points, config_.threads_per_block_);
@@ -343,7 +366,8 @@ std::size_t PostprocessCuda::createSegmentationPointcloud(
   createSegmentationPointcloudKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
     input_features, feature_stride, pred_labels, pred_probs, class_id_to_classification_d_.get(),
     filter_class_indices_d_.get(), num_filter_classes, filtered_mask_d_.get(), output_points,
-    num_classes, num_points);
+    num_classes, num_points, voxel_mapping);
+  CHECK_CUDA_ERROR(cudaPeekAtLastError());
 
   std::uint32_t num_segmented_points = 0;
   cudaMemcpyAsync(
@@ -387,8 +411,10 @@ void PostprocessCuda::reconstructFull(
 
 std::size_t PostprocessCuda::createFilteredPointcloud(
   const void * compact_input_points, CloudFormat input_format, CloudFormat output_format,
-  const float * pred_probs, void * output_points, std::size_t num_classes, std::size_t num_points)
+  const float * pred_probs, void * output_points, std::size_t num_classes, std::size_t num_points,
+  VoxelPointMapping voxel_mapping)
 {
+  if (num_points == 0) return 0;
   cudaMemsetAsync(filtered_mask_d_.get(), 0, sizeof(std::uint32_t), stream_);
 
   switch (input_format) {
@@ -398,19 +424,19 @@ std::size_t PostprocessCuda::createFilteredPointcloud(
           createFilteredPointcloudTyped<CloudPointTypeXYZIRCAEDT, CloudPointTypeXYZIRCAEDT>(
             stream_, config_.threads_per_block_, compact_input_points, pred_probs,
             filter_class_indices_d_.get(), config_.filter_class_indices_.size(), num_classes,
-            filtered_mask_d_.get(), output_points, num_points);
+            filtered_mask_d_.get(), output_points, num_points, voxel_mapping);
           break;
         case CloudFormat::XYZIRC:
           createFilteredPointcloudTyped<CloudPointTypeXYZIRCAEDT, CloudPointTypeXYZIRC>(
             stream_, config_.threads_per_block_, compact_input_points, pred_probs,
             filter_class_indices_d_.get(), config_.filter_class_indices_.size(), num_classes,
-            filtered_mask_d_.get(), output_points, num_points);
+            filtered_mask_d_.get(), output_points, num_points, voxel_mapping);
           break;
         case CloudFormat::XYZI:
           createFilteredPointcloudTyped<CloudPointTypeXYZIRCAEDT, CloudPointTypeXYZI>(
             stream_, config_.threads_per_block_, compact_input_points, pred_probs,
             filter_class_indices_d_.get(), config_.filter_class_indices_.size(), num_classes,
-            filtered_mask_d_.get(), output_points, num_points);
+            filtered_mask_d_.get(), output_points, num_points, voxel_mapping);
           break;
         default:
           throw std::runtime_error("Unsupported filtered output format.");
@@ -422,13 +448,13 @@ std::size_t PostprocessCuda::createFilteredPointcloud(
           createFilteredPointcloudTyped<CloudPointTypeXYZIRADRT, CloudPointTypeXYZIRADRT>(
             stream_, config_.threads_per_block_, compact_input_points, pred_probs,
             filter_class_indices_d_.get(), config_.filter_class_indices_.size(), num_classes,
-            filtered_mask_d_.get(), output_points, num_points);
+            filtered_mask_d_.get(), output_points, num_points, voxel_mapping);
           break;
         case CloudFormat::XYZI:
           createFilteredPointcloudTyped<CloudPointTypeXYZIRADRT, CloudPointTypeXYZI>(
             stream_, config_.threads_per_block_, compact_input_points, pred_probs,
             filter_class_indices_d_.get(), config_.filter_class_indices_.size(), num_classes,
-            filtered_mask_d_.get(), output_points, num_points);
+            filtered_mask_d_.get(), output_points, num_points, voxel_mapping);
           break;
         default:
           throw std::runtime_error("Unsupported filtered output format.");
@@ -440,13 +466,13 @@ std::size_t PostprocessCuda::createFilteredPointcloud(
           createFilteredPointcloudTyped<CloudPointTypeXYZIRC, CloudPointTypeXYZIRC>(
             stream_, config_.threads_per_block_, compact_input_points, pred_probs,
             filter_class_indices_d_.get(), config_.filter_class_indices_.size(), num_classes,
-            filtered_mask_d_.get(), output_points, num_points);
+            filtered_mask_d_.get(), output_points, num_points, voxel_mapping);
           break;
         case CloudFormat::XYZI:
           createFilteredPointcloudTyped<CloudPointTypeXYZIRC, CloudPointTypeXYZI>(
             stream_, config_.threads_per_block_, compact_input_points, pred_probs,
             filter_class_indices_d_.get(), config_.filter_class_indices_.size(), num_classes,
-            filtered_mask_d_.get(), output_points, num_points);
+            filtered_mask_d_.get(), output_points, num_points, voxel_mapping);
           break;
         default:
           throw std::runtime_error("Unsupported filtered output format.");
@@ -459,12 +485,13 @@ std::size_t PostprocessCuda::createFilteredPointcloud(
       createFilteredPointcloudTyped<CloudPointTypeXYZI, CloudPointTypeXYZI>(
         stream_, config_.threads_per_block_, compact_input_points, pred_probs,
         filter_class_indices_d_.get(), config_.filter_class_indices_.size(), num_classes,
-        filtered_mask_d_.get(), output_points, num_points);
+        filtered_mask_d_.get(), output_points, num_points, voxel_mapping);
       break;
     default:
       throw std::runtime_error("Unsupported input point cloud format.");
   }
 
+  CHECK_CUDA_ERROR(cudaPeekAtLastError());
   std::uint32_t num_filtered_points = 0;
   cudaMemcpyAsync(
     &num_filtered_points, filtered_mask_d_.get(), sizeof(std::uint32_t), cudaMemcpyDeviceToHost,

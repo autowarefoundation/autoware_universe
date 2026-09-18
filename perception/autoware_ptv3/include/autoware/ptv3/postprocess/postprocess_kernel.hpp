@@ -34,16 +34,19 @@ class PostprocessCuda
 public:
   explicit PostprocessCuda(const PTv3Config & config, cudaStream_t stream);
 
+  /// Optional voxel mapping excludes past-only voxels.
   /// `input_features` holds one row of `feature_stride` floats per point, xyz first.
-  void createVisualizationPointcloud(
+  std::size_t createVisualizationPointcloud(
     const float * input_features, std::int64_t feature_stride, const std::int64_t * pred_labels,
-    float * output_points, std::size_t num_classes, std::size_t num_points);
+    float * output_points, std::size_t num_classes, std::size_t num_points,
+    VoxelPointMapping voxel_mapping = {});
 
+  /// Optional voxel mapping excludes past-only voxels.
   /// `input_features` holds one row of `feature_stride` floats per point, xyz first.
   std::size_t createSegmentationPointcloud(
     const float * input_features, std::int64_t feature_stride, const std::int64_t * pred_labels,
     const float * pred_probs, point_types::PointXYZCPE * output_points, std::size_t num_classes,
-    std::size_t num_points);
+    std::size_t num_points, VoxelPointMapping voxel_mapping = {});
 
   void reconstructPartial(
     const std::int64_t * inverse_map, const std::int64_t * voxel_labels, const float * voxel_probs,
@@ -56,10 +59,11 @@ public:
     std::int64_t * output_labels, float * output_probs, std::size_t num_classes,
     std::size_t num_points, std::size_t num_voxels);
 
+  /// Optional voxel mapping selects current-frame representatives from the original input.
   std::size_t createFilteredPointcloud(
     const void * compact_input_points, CloudFormat input_format, CloudFormat output_format,
-    const float * pred_probs, void * output_points, std::size_t num_classes,
-    std::size_t num_points);
+    const float * pred_probs, void * output_points, std::size_t num_classes, std::size_t num_points,
+    VoxelPointMapping voxel_mapping = {});
 
 private:
   PTv3Config config_;

@@ -152,14 +152,6 @@ public:
       filter_apply_to_segmentation_ = filter_apply_to_segmentation;
       source_reconstruction_ = parse_source_reconstruction(source_reconstruction);
 
-      // The filtered cloud is rebuilt from the current frame's original points, which requires
-      // per-point reconstruction. Voxel representatives can come from past sweeps, so there is
-      // no original-point source in 'none' mode.
-      if (source_reconstruction_ == SourceReconstruction::NONE && !filter_class_indices_.empty()) {
-        throw std::runtime_error(
-          "segmentation3d.filter.classes requires source_reconstruction 'partial' or 'full'.");
-      }
-
       // dec_depths drives the seg-head engine input set: block stages consume their
       if (dec_depths.size() != pooling_strides_.size()) {
         throw std::runtime_error(

@@ -167,6 +167,22 @@ protected:
     return result;
   }
 
+  std::vector<std::int64_t> currentVoxelSources(
+    const GenerateVoxelsResult & result, std::size_t num_current_points)
+  {
+    const auto mapping = preprocess_->voxelPointMapping(num_current_points);
+    const auto retained =
+      std::min(result.num_voxels, static_cast<std::size_t>(config_->max_num_voxels_));
+    const auto starts = copyToHost(mapping.voxel_starts, retained);
+    const auto sorted = copyToHost(mapping.sorted_point_indices, result.num_cropped_points);
+    std::vector<std::int64_t> sources;
+    for (const auto start : starts) {
+      sources.push_back(
+        sorted[start] < num_current_points ? static_cast<std::int64_t>(sorted[start]) : -1);
+    }
+    return sources;
+  }
+
   // Returns the (x, y, z, intensity, time_lag) row of one padded voxel slot.
   static std::vector<float> voxelSlot(
     const std::vector<float> & voxels, const std::size_t voxel_idx, const std::size_t slot,
@@ -319,6 +335,64 @@ TEST_F(PreprocessKernelTest, PaddedVoxelsSaturateAtMaxPointsPerVoxel)
   const auto voxels = copyToHost(result.voxels_d.get(), result.num_voxels * 2 * kNumFeatures);
   expectFloatVectorEq(voxelSlot(voxels, crowded_voxel, 0, 2), {0.10F, 0.10F, 0.10F, 1.0F, 0.0F});
   expectFloatVectorEq(voxelSlot(voxels, crowded_voxel, 1, 2), {0.20F, 0.20F, 0.20F, 2.0F, 0.0F});
+}
+
+// Source indices refer to the original current message, despite cropping, sorting and saturation.
+TEST_F(PreprocessKernelTest, VoxelMappingPreservesOriginalPointIndices)
+{
+  PTv3ConfigParams params;
+  params.source_reconstruction = "none";
+  params.max_points_per_voxel = 1;
+  auto points = kDensifiedPoints;
+  points.insert(points.end(), {0.5F, 0.2F, 0.3F, 8.5F, 0.1F});  // shared voxel, past point
+
+  for (const std::int64_t voxel_limit : {8, 2}) {
+    params.voxels_num = {1, 2, voxel_limit};
+    params.pooled_voxels_num_max = {voxel_limit, voxel_limit};
+    const auto result = runGenerateVoxels(params, points, kNumCurrentPoints);
+    const auto retained = std::min(result.num_voxels, static_cast<std::size_t>(voxel_limit));
+    const auto sources = currentVoxelSources(result, kNumCurrentPoints);
+    const auto inverse = copyToHost(result.inverse_map_d.get(), result.num_cropped_points);
+    const auto voxels = copyToHost(result.voxels_d.get(), retained * kNumFeatures);
+    ASSERT_EQ(result.num_voxels, 4U);
+    // Cropped order: original current indices 0, 1, 2, 4, then two past points.
+    const std::vector<std::int64_t> expected_sources{0, 0, 2, 4, -1, 0};
+    for (std::size_t i = 0; i < inverse.size(); ++i) {
+      const auto voxel = static_cast<std::size_t>(inverse[i]);
+      if (voxel >= retained) continue;
+      EXPECT_EQ(sources[voxel], expected_sources[i]);
+      if (sources[voxel] >= 0) {
+        EXPECT_FLOAT_EQ(voxels[voxel * kNumFeatures], kCurrentSourcePoints[sources[voxel]].x);
+      }
+    }
+  }
+}
+
+TEST_F(PreprocessKernelTest, VoxelMappingExcludesVoxelsWhenAllCurrentPointsAreCropped)
+{
+  PTv3ConfigParams params;
+  params.source_reconstruction = "none";
+  const std::vector<float> points{
+    4.0F, 0.0F, 0.0F, 1.0F, 0.0F,  // current, out of range
+    0.1F, 0.2F, 0.3F, 2.0F, 0.1F,  // past only
+  };
+  const auto result = runGenerateVoxels(params, points, 1);
+  EXPECT_EQ(result.num_cropped_current_points, 0U);
+  ASSERT_EQ(result.num_voxels, 1U);
+  EXPECT_EQ(currentVoxelSources(result, 1), (std::vector<std::int64_t>{-1}));
+}
+
+TEST_F(PreprocessKernelTest, VoxelMappingWorksWithoutDensification)
+{
+  PTv3ConfigParams params;
+  params.source_reconstruction = "none";
+  params.densification_num_past_frames = 0;
+  const std::vector<float> points(
+    kDensifiedPoints.begin(), kDensifiedPoints.begin() + 5 * kNumFeatures);
+  const auto result = runGenerateVoxels(params, points, kNumCurrentPoints);
+  auto sources = currentVoxelSources(result, kNumCurrentPoints);
+  std::sort(sources.begin(), sources.end());
+  EXPECT_EQ(sources, (std::vector<std::int64_t>{0, 2, 4}));
 }
 
 TEST_F(PreprocessKernelTest, VoxelCoordsMatchTheOccupiedCells)

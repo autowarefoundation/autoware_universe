@@ -20,10 +20,6 @@
 #include <autoware/cuda_utils/cuda_unique_ptr.hpp>
 #include <cub/cub.cuh>
 
-#include <thrust/device_ptr.h>
-#include <thrust/execution_policy.h>
-#include <thrust/sequence.h>
-
 #include <algorithm>
 #include <cassert>
 #include <stdexcept>
@@ -54,7 +50,6 @@ PreprocessCuda::PreprocessCuda(const PTv3Config & config, cudaStream_t stream)
   crop_mask_d_ = autoware::cuda_utils::make_unique<std::uint32_t[]>(capacity);
   crop_indices_d_ = autoware::cuda_utils::make_unique<std::uint32_t[]>(capacity);
 
-  auto policy = thrust::cuda::par.on(stream_);
   codes_d_ = autoware::cuda_utils::make_unique<std::int64_t[]>(capacity);
   sorted_codes_d_ = autoware::cuda_utils::make_unique<std::int64_t[]>(capacity);
   code_indices_d_ = autoware::cuda_utils::make_unique<std::uint32_t[]>(capacity);
@@ -62,8 +57,6 @@ PreprocessCuda::PreprocessCuda(const PTv3Config & config, cudaStream_t stream)
   unique_mask_d_ = autoware::cuda_utils::make_unique<std::uint32_t[]>(capacity);
   unique_indices_d_ = autoware::cuda_utils::make_unique<std::uint32_t[]>(capacity);
   voxel_start_d_ = autoware::cuda_utils::make_unique<std::uint32_t[]>(capacity);
-  thrust::device_ptr<std::uint32_t> idx_ptr(code_indices_d_.get());
-  thrust::sequence(policy, idx_ptr, idx_ptr + capacity, 0);
 
   // Serialized codes occupy 3 * serialization_depth_ bits, and pooling only right-shifts them, so
   // this bound holds for every stage. std::max guards serialization_depth_ == 0 (CUB requires
@@ -195,11 +188,12 @@ template <typename mask_t>
 __global__ void extractFeatureRowsKernel(
   const float * __restrict__ input_data, const mask_t * __restrict__ masks,
   const mask_t * __restrict__ indices, float * __restrict__ output_data, std::size_t num_points,
-  std::int64_t num_features)
+  std::int64_t num_features, mask_t * __restrict__ original_indices)
 {
   const auto idx = static_cast<std::size_t>(blockIdx.x) * blockDim.x + threadIdx.x;
   if (idx < num_points && masks[idx] == 1) {
     const auto out_index = static_cast<std::size_t>(indices[idx] - 1);
+    original_indices[out_index] = static_cast<mask_t>(idx);
     for (std::int64_t feature = 0; feature < num_features; ++feature) {
       output_data[out_index * num_features + feature] = input_data[idx * num_features + feature];
     }
@@ -209,13 +203,15 @@ __global__ void extractFeatureRowsKernel(
 template <typename mask_t>
 __global__ void scatterInverseMapKernel(
   const mask_t * __restrict__ unique_indices, const mask_t * __restrict__ sorted_code_indices,
-  std::int64_t * __restrict__ inverse_map, std::size_t num_points)
+  const mask_t * __restrict__ crop_indices, std::int64_t * __restrict__ inverse_map,
+  std::size_t num_points)
 {
   const auto idx = static_cast<std::size_t>(blockIdx.x) * blockDim.x + threadIdx.x;
   if (idx >= num_points) {
     return;
   }
-  inverse_map[sorted_code_indices[idx]] = static_cast<std::int64_t>(unique_indices[idx] - 1);
+  const auto cropped_index = crop_indices[sorted_code_indices[idx]] - 1;
+  inverse_map[cropped_index] = static_cast<std::int64_t>(unique_indices[idx] - 1);
 }
 
 /// Records where each voxel's run of sorted points starts.
@@ -241,7 +237,7 @@ __global__ void scatterVoxelStartKernel(
  */
 template <typename mask_t>
 __global__ void fillPaddedVoxelsKernel(
-  const float * __restrict__ cropped_points, const mask_t * __restrict__ sorted_code_indices,
+  const float * __restrict__ points, const mask_t * __restrict__ sorted_code_indices,
   const mask_t * __restrict__ unique_indices, const mask_t * __restrict__ voxel_start,
   std::size_t num_points, std::int64_t num_features, std::int64_t max_points_per_voxel,
   std::int64_t max_num_voxels, float * __restrict__ voxels)
@@ -258,8 +254,7 @@ __global__ void fillPaddedVoxelsKernel(
   if (slot >= max_points_per_voxel) {
     return;
   }
-  const float * point =
-    &cropped_points[static_cast<std::size_t>(sorted_code_indices[idx]) * num_features];
+  const float * point = &points[static_cast<std::size_t>(sorted_code_indices[idx]) * num_features];
   float * output = &voxels[(voxel_index * max_points_per_voxel + slot) * num_features];
   for (std::int64_t feature = 0; feature < num_features; ++feature) {
     output[feature] = point[feature];
@@ -846,7 +841,7 @@ std::size_t PreprocessCuda::generateVoxels(
 
   extractFeatureRowsKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
     points, crop_mask_d_.get(), crop_indices_d_.get(), cropped_points_d_.get(), num_points,
-    num_features);
+    num_features, code_indices_d_.get());
   CHECK_CUDA_ERROR(cudaPeekAtLastError());
 
   CHECK_CUDA_ERROR(cudaEventSynchronize(num_cropped_points_copy_event_));
@@ -913,9 +908,8 @@ std::size_t PreprocessCuda::generateVoxels(
     unique_mask_d_.get(), unique_indices_d_.get(), voxel_start_d_.get(), num_cropped_points);
   CHECK_CUDA_ERROR(cudaPeekAtLastError());
   fillPaddedVoxelsKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
-    cropped_points_d_.get(), sorted_code_indices_d_.get(), unique_indices_d_.get(),
-    voxel_start_d_.get(), num_cropped_points, num_features, max_points_per_voxel,
-    config_.max_num_voxels_, voxels);
+    points, sorted_code_indices_d_.get(), unique_indices_d_.get(), voxel_start_d_.get(),
+    num_cropped_points, num_features, max_points_per_voxel, config_.max_num_voxels_, voxels);
   CHECK_CUDA_ERROR(cudaPeekAtLastError());
 
   const auto num_voxel_blocks = divup(num_voxels, config_.threads_per_block_);
@@ -932,7 +926,8 @@ std::size_t PreprocessCuda::generateVoxels(
 
   if (inverse_map != nullptr) {
     scatterInverseMapKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
-      unique_indices_d_.get(), sorted_code_indices_d_.get(), inverse_map, num_cropped_points);
+      unique_indices_d_.get(), sorted_code_indices_d_.get(), crop_indices_d_.get(), inverse_map,
+      num_cropped_points);
     CHECK_CUDA_ERROR(cudaPeekAtLastError());
   }
 

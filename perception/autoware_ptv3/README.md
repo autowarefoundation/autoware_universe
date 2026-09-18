@@ -116,9 +116,7 @@ The filtered output cloud format is controlled by `filter.output_format`. When i
 empty string, the filtered output preserves the same format as the input cloud.
 
 Densification requires the transform between `densification_world_frame_id` and the lidar frame;
-frames are skipped while the transform is unavailable. The filtered output cloud is rebuilt from
-the current frame's original points and therefore requires `source_reconstruction` to be
-`partial` or `full`.
+frames are skipped while the transform is unavailable.
 
 ## Trained Models
 

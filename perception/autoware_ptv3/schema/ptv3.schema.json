@@ -149,7 +149,7 @@
         },
         "source_reconstruction": {
           "type": "string",
-          "description": "Controls mapping of voxel predictions back to source points. 'none': voxel representative points; 'partial': cropped source points inside point_cloud_range; 'full': full input cloud with unknown label 255 for out-of-range points.",
+          "description": "Controls mapping of voxel predictions back to source points. 'none': one representative per voxel occupied by the current frame; 'partial': cropped source points inside point_cloud_range; 'full': full input cloud with unknown label 255 for out-of-range points.",
           "enum": ["none", "partial", "full"]
         },
         "class_mapping": {
