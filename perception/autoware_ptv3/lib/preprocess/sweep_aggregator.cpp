@@ -123,8 +123,12 @@ DensifiedCloud SweepAggregator::aggregate()
       densified.current_format = cache_iter->format;
     }
 
+    // The current frame already sits in the current lidar frame. Multiplying its pose by its own
+    // inverse only adds float error, which would move the points the outputs publish.
     const Eigen::Affine3f affine_past2current =
-      densification_ptr_->getAffineWorldToCurrent() * cache_iter->affine_past2world;
+      is_current_frame
+        ? Eigen::Affine3f::Identity()
+        : densification_ptr_->getAffineWorldToCurrent() * cache_iter->affine_past2world;
     static_assert(!Eigen::Matrix4f::IsRowMajor, "matrices should be col-major.");
     SweepTransform transform{};
     static_assert(
