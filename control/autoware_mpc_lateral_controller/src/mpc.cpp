@@ -446,11 +446,6 @@ void MPC::setReferenceTrajectory(
   last_point.vx = 0.0;                // stop velocity at a terminal point
   mpc_traj_smoothed.push_back(last_point);
 
-  if (!mpc_traj_smoothed.size()) {
-    RCLCPP_DEBUG(m_logger, "path callback: trajectory size is undesired.");
-    return;
-  }
-
   mpc_traj_smoothed.stamp = trajectory_msg.header.stamp;
 
   m_reference_trajectory = mpc_traj_smoothed;

@@ -544,12 +544,6 @@ bool calcNearestPoseInterp(
   }
 
   const auto autoware_traj = convertToAutowareTrajectory(traj);
-  if (autoware_traj.points.empty()) {
-    const auto logger = rclcpp::get_logger("mpc_util");
-    auto clock = rclcpp::Clock(RCL_ROS_TIME);
-    RCLCPP_WARN_THROTTLE(logger, clock, 5000, "[calcNearestPoseInterp] input trajectory is empty");
-    return false;
-  }
 
   *nearest_index = autoware::motion_utils::findFirstNearestIndexWithSoftConstraints(
     autoware_traj.points, self_pose, max_dist, max_yaw);
