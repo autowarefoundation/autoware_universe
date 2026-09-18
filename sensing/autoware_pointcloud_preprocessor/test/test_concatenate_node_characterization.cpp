@@ -119,6 +119,7 @@ struct NodeParams
   std::string synchronized_pointcloud_postfix{"pointcloud_sync"};
   int maximum_queue_size{5};
   double rosbag_length{0.0};
+  std::vector<double> lidar_timestamp_noise_windows{noise_window, noise_window, noise_window};
 };
 
 // ---------------------------------------------------------------------------------------
@@ -534,6 +535,17 @@ protected:
     return concatenated_clouds_.empty() ? PointCloud2{} : concatenated_clouds_.front();
   }
 
+  // Waits for `count` concatenated clouds, then keeps spinning briefly so that an
+  // unexpected extra publication is recorded too.
+  std::vector<PointCloud2> await_concatenated_clouds(
+    size_t count, std::chrono::nanoseconds timeout = std::chrono::seconds(3))
+  {
+    EXPECT_TRUE(wait_until([this, count] { return concatenated_clouds_.size() >= count; }, timeout))
+      << "expected " << count << " concatenated clouds, got " << concatenated_clouds_.size();
+    spin_for(std::chrono::milliseconds(300));
+    return concatenated_clouds_;
+  }
+
   ConcatenatedPointCloudInfo await_concatenation_info(
     std::chrono::nanoseconds timeout = std::chrono::seconds(2))
   {
@@ -806,8 +818,7 @@ private:
     if (params_.matching_strategy == "advanced") {
       overrides.emplace_back("matching_strategy.lidar_timestamp_offsets", timestamp_offsets);
       overrides.emplace_back(
-        "matching_strategy.lidar_timestamp_noise_window",
-        std::vector<double>(num_sensors, noise_window));
+        "matching_strategy.lidar_timestamp_noise_window", params_.lidar_timestamp_noise_windows);
     }
     return overrides;
   }
@@ -914,6 +925,7 @@ PointCloud2 ConcatenateNodeTest::make_cloud(
 //   The concatenated cloud      - header, layout, payload, motion compensation
 //   ConcatenatedPointCloudInfo  - the metadata published alongside each concatenated cloud
 //   Synchronized clouds         - the per-source clouds, in both frame modes
+//   Collector matching          - which collector a cloud joins, and what happens when none fit
 //   A source that never arrives - the timeout path
 //   Empty inputs                - sources that arrive carrying no points
 //   Naive matching              - grouping by arrival time instead of by stamp
@@ -1339,6 +1351,121 @@ TEST_F(ConcatenateNodeTest, TwistQueueIsClearedWhenTwistTimeJumpsBackwards)
       expected_points_in_output_frame(i, calculate_motion_shift_x(i))))
       << "sensor " << i;
   }
+}
+
+// ---------------------------------------------------------------------------------------
+// Collector matching. Covers AdvancedMatchingPolicy::match() and the collector selection
+// that cloud_callback() does around it.
+// ---------------------------------------------------------------------------------------
+
+TEST_F(ConcatenateNodeTest, CloudOutsideTheReferenceWindowOpensASecondCollector)
+{
+  // Arrange
+  NodeParams params;
+  params.is_motion_compensated = false;
+  start(params);
+
+  // Act
+  // The first two clouds arrive at their configured offsets and share a collector. The third
+  // is half a second late, so its reference time misses that window and starts its own.
+  publish_cloud(0, base_stamp_sec);
+  publish_cloud(1, base_stamp_sec + 0.04);
+  publish_cloud(2, base_stamp_sec + 0.08 + 0.5);
+  const auto clouds = await_concatenated_clouds(2);
+
+  // Assert
+  // Two collectors, each timing out on its own, so two concatenated clouds come out.
+  ASSERT_EQ(clouds.size(), 2u);
+  ASSERT_EQ(concatenation_infos_.size(), 2u);
+
+  EXPECT_EQ(clouds.at(0).width, 2 * num_points);
+  EXPECT_EQ(rclcpp::Time(clouds.at(0).header.stamp), to_time(base_stamp_sec));
+  EXPECT_EQ(concatenation_infos_.at(0).source_info.at(0).status, SourcePointCloudInfo::STATUS_OK);
+  EXPECT_EQ(concatenation_infos_.at(0).source_info.at(1).status, SourcePointCloudInfo::STATUS_OK);
+  EXPECT_EQ(
+    concatenation_infos_.at(0).source_info.at(2).status, SourcePointCloudInfo::STATUS_TIMEOUT);
+
+  EXPECT_EQ(clouds.at(1).width, num_points);
+  EXPECT_EQ(rclcpp::Time(clouds.at(1).header.stamp), to_time(base_stamp_sec + 0.58));
+  EXPECT_EQ(
+    concatenation_infos_.at(1).source_info.at(0).status, SourcePointCloudInfo::STATUS_TIMEOUT);
+  EXPECT_EQ(
+    concatenation_infos_.at(1).source_info.at(1).status, SourcePointCloudInfo::STATUS_TIMEOUT);
+  EXPECT_EQ(concatenation_infos_.at(1).source_info.at(2).status, SourcePointCloudInfo::STATUS_OK);
+}
+
+TEST_F(ConcatenateNodeTest, MatchingUsesTheNoiseWindowOfTheArrivingTopic)
+{
+  // Arrange
+  NodeParams params;
+  params.is_motion_compensated = false;
+  // A wide window for the middle lidar, narrow ones either side. With all three equal, a
+  // swap of the array would be invisible.
+  params.lidar_timestamp_noise_windows = {0.001, 0.05, 0.001};
+  start(params);
+
+  // Act
+  // Both later clouds sit 30 ms off their configured offset. The middle lidar's own window
+  // absorbs that; the last lidar's does not.
+  publish_cloud(0, base_stamp_sec);
+  publish_cloud(1, base_stamp_sec + 0.04 + 0.03);
+  publish_cloud(2, base_stamp_sec + 0.08 + 0.03);
+  const auto clouds = await_concatenated_clouds(2);
+
+  // Assert
+  ASSERT_EQ(clouds.size(), 2u);
+  EXPECT_EQ(clouds.at(0).width, 2 * num_points) << "lidars 0 and 1 should share a collector";
+  EXPECT_EQ(clouds.at(1).width, num_points) << "lidar 2 should be alone";
+}
+
+TEST_F(ConcatenateNodeTest, SameTopicArrivingTwiceReplacesTheEarlierCloud)
+{
+  // Arrange
+  NodeParams params;
+  params.is_motion_compensated = false;
+  start(params);
+
+  // Act
+  publish_cloud(0, base_stamp_sec);
+  publish_cloud(0, base_stamp_sec + 0.005);
+  const auto cloud = await_concatenated_cloud();
+  const auto info = await_concatenation_info();
+
+  // Assert
+  // The second cloud is inside the collector's window, so it takes the first one's slot
+  // instead of being added beside it: one cloud's worth of points, carrying the later stamp.
+  EXPECT_EQ(cloud.width, num_points);
+  EXPECT_EQ(rclcpp::Time(cloud.header.stamp), to_time(base_stamp_sec + 0.005));
+  EXPECT_EQ(info.source_info.at(0).status, SourcePointCloudInfo::STATUS_OK);
+  EXPECT_EQ(rclcpp::Time(info.source_info.at(0).header.stamp), to_time(base_stamp_sec + 0.005));
+  EXPECT_EQ(info.source_info.at(1).status, SourcePointCloudInfo::STATUS_TIMEOUT);
+  EXPECT_EQ(info.source_info.at(2).status, SourcePointCloudInfo::STATUS_TIMEOUT);
+}
+
+TEST_F(ConcatenateNodeTest, FourthConcurrentGroupDisplacesTheOldestCollector)
+{
+  // Arrange
+  NodeParams params;
+  params.is_motion_compensated = false;
+  start(params);
+
+  // Act
+  // Four reference times a second apart, so none of them share a collector, against the
+  // three collectors the node keeps.
+  for (int group = 0; group < 4; ++group) {
+    publish_cloud(0, base_stamp_sec + group);
+  }
+  const auto clouds = await_concatenated_clouds(3);
+
+  // Assert
+  // The oldest group is reset to make room for the fourth, and is
+  // dropped without ever being published. Four groups in, three clouds out.
+  ASSERT_EQ(clouds.size(), 3u);
+  EXPECT_EQ(rclcpp::Time(clouds.at(0).header.stamp), to_time(base_stamp_sec + 1));
+  EXPECT_EQ(rclcpp::Time(clouds.at(1).header.stamp), to_time(base_stamp_sec + 2));
+  EXPECT_EQ(rclcpp::Time(clouds.at(2).header.stamp), to_time(base_stamp_sec + 3));
+  wait_out_the_timeout();
+  EXPECT_EQ(concatenated_clouds_.size(), 3u) << "the displaced group must not appear later";
 }
 
 // ---------------------------------------------------------------------------------------
