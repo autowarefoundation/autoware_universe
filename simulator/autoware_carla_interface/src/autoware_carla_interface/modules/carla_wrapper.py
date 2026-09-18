@@ -238,6 +238,15 @@ class SensorWrapper(object):
         elif not sensor_type.startswith("sensor."):
             logging.warning(f"Unknown sensor type: {sensor_type}, skipping spawn")
             return False
+
+        # CARLA defaults sensor_tick to 0, which captures on every simulation
+        # step: at a 1/600 s step that is 600 captures a second per camera, and
+        # the rate is then decided solely by the bridge's frequency_hz throttle,
+        # which can only drop whole frames. A mapping asking for 60 Hz came out
+        # at 85.7 and a 200 Hz IMU at 300. Setting sensor_tick lets CARLA
+        # generate at the rate the mapping asks for instead.
+        if "sensor_tick" in sensor_spec:
+            self._set_attribute_if_supported(bp, "sensor_tick", str(sensor_spec["sensor_tick"]))
         return True
 
     def _configure_camera_attributes(self, bp, spec):
