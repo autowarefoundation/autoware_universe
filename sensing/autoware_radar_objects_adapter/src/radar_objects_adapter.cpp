@@ -80,9 +80,8 @@ RadarObjectsAdapter::RadarObjectsAdapter(const rclcpp::NodeOptions & options)
     topic_hash_code_[i] = static_cast<std::uint8_t>((hash_code >> (i * 8)) & 0xFF);
   }
 
-  // Load classification remap policy
-  // classification_remap_ : std::unordered_map<std::string, std::string>
-  // declare_parameter 用 string → string マップ
+  // Load the classification remap policy: radar label -> perception label, as names in the
+  // parameters and as label ids in classification_remap_.
   classification_remap_str_["UNKNOWN"] =
     declare_parameter<std::string>("classification_remap.UNKNOWN", "UNKNOWN");
   classification_remap_str_["CAR"] =
@@ -398,7 +397,6 @@ void RadarObjectsAdapter::radar_info_callback(
   size_z_available_ = field_info_map_.count("size_z") > 0;
 
   orientation_std_available_ = field_info_map_.count("orientation_std") > 0;
-  orientation_rate_available_ = field_info_map_.count("orientation_rate") > 0;
   orientation_rate_std_available_ = field_info_map_.count("orientation_rate_std") > 0;
 
   if (!position_z_available_) {
@@ -418,21 +416,21 @@ void RadarObjectsAdapter::radar_info_callback(
   if (!size_x_available_) {
     RCLCPP_WARN_ONCE(
       get_logger(),
-      "The field shape_x is not available in the radar info message. Defaulting to %f.",
+      "The field size_x is not available in the radar info message. Defaulting to %f.",
       default_size_x_);
   }
 
   if (!size_y_available_) {
     RCLCPP_WARN_ONCE(
       get_logger(),
-      "The field shape_y is not available in the radar info message. Defaulting to %f.",
+      "The field size_y is not available in the radar info message. Defaulting to %f.",
       default_size_y_);
   }
 
   if (!size_z_available_) {
     RCLCPP_WARN_ONCE(
       get_logger(),
-      "The field shape_z is not available in the radar info message. Defaulting to %f.",
+      "The field size_z is not available in the radar info message. Defaulting to %f.",
       default_size_z_);
   }
 }

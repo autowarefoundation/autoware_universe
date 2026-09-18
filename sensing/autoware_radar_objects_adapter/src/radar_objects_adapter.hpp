@@ -91,7 +91,6 @@ private:
   bool size_z_available_;
 
   bool orientation_std_available_;
-  bool orientation_rate_available_;
   bool orientation_rate_std_available_;
 
   // Maps for classification remapping
