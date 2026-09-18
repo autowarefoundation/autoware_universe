@@ -35,6 +35,7 @@
 
 #include <chrono>
 #include <memory>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -43,7 +44,10 @@ namespace
 using autoware::RadarObjectsAdapter;
 using autoware_perception_msgs::msg::DetectedObjects;
 using autoware_perception_msgs::msg::TrackedObjects;
+using autoware_sensing_msgs::msg::RadarClassification;
+using autoware_sensing_msgs::msg::RadarFieldInfo;
 using autoware_sensing_msgs::msg::RadarInfo;
+using autoware_sensing_msgs::msg::RadarObject;
 using autoware_sensing_msgs::msg::RadarObjects;
 
 // The node fixes its own name in the constructor and resolves its topics against it.
@@ -96,6 +100,117 @@ struct DefaultParameters
     return options;
   }
 };
+
+// A radar info message that declares exactly these object fields. Only the names matter to the
+// node; the min/max/resolution of each field are left unset.
+RadarInfo make_radar_info(const std::set<std::string> & field_names)
+{
+  RadarInfo info;
+  info.header.frame_id = "base_link";
+  for (const auto & name : field_names) {
+    RadarFieldInfo field;
+    field.field_name.data = name;
+    info.object_fields_info.push_back(field);
+  }
+  return info;
+}
+
+std::set<std::string> without(std::set<std::string> fields, const std::string & removed)
+{
+  fields.erase(removed);
+  return fields;
+}
+
+std::set<std::string> with(std::set<std::string> fields, const std::set<std::string> & added)
+{
+  fields.insert(added.begin(), added.end());
+  return fields;
+}
+
+// The eight object fields the node insists on. Without any one of them it reports the radar as
+// incompatible and converts nothing.
+const std::set<std::string> required_fields = {
+  "existence_probability", "position_x",     "position_y", "velocity_x", "velocity_y",
+  "acceleration_x",        "acceleration_y", "orientation"};
+
+// The object fields a Continental ARS548 declares through its nebula driver (read from
+// continental_ars548_decoder_wrapper.cpp on 2026-09-17). velocity_z, acceleration_z and size_z are
+// not among them, so on the vehicle those three come from the parameters.
+const std::set<std::string> ars548_fields = with(
+  required_fields,
+  {"object_id", "age", "measurement_status", "movement_status", "position_z", "size_x", "size_y",
+   "orientation_std", "orientation_rate", "orientation_rate_std"});
+
+// Every field the node looks at, so that nothing falls back to a parameter.
+const std::set<std::string> all_fields =
+  with(ars548_fields, {"velocity_z", "acceleration_z", "size_z"});
+
+RadarClassification make_classification(uint8_t label, float probability)
+{
+  RadarClassification classification;
+  classification.label = label;
+  classification.probability = probability;
+  return classification;
+}
+
+// A radar object with every field set to a distinct, recognizable value. Tests that care about a
+// particular field overwrite it.
+RadarObject make_radar_object()
+{
+  RadarObject object;
+  object.object_id = 0x04030201u;
+  object.age = 12;
+  object.measurement_status = RadarObject::MEASUREMENT_STATUS_MEASURED;
+  object.movement_status = RadarObject::MOVEMENT_STATUS_DYNAMIC;
+  object.position.x = 10.0;
+  object.position.y = -2.0;
+  object.position.z = 0.8;
+  object.velocity.x = 3.0;
+  object.velocity.y = 0.5;
+  object.velocity.z = 0.1;
+  object.acceleration.x = 0.2;
+  object.acceleration.y = -0.1;
+  object.acceleration.z = 0.05;
+  object.size.x = 4.5;
+  object.size.y = 1.8;
+  object.size.z = 1.4;
+  // Upper triangles in the order XX, XY, XZ, YY, YZ, ZZ.
+  object.position_covariance = {1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f};
+  object.velocity_covariance = {0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.6f};
+  object.acceleration_covariance = {0.01f, 0.02f, 0.03f, 0.04f, 0.05f, 0.06f};
+  object.size_covariance = {0.7f, 0.8f, 0.9f, 1.1f, 1.2f, 1.3f};
+  object.orientation = 0.3f;
+  object.orientation_std = 0.1f;
+  object.orientation_rate = 0.05f;
+  object.orientation_rate_std = 0.02f;
+  object.existence_probability = 0.9f;
+  object.classifications = {make_classification(RadarClassification::CAR, 0.8f)};
+  return object;
+}
+
+builtin_interfaces::msg::Time make_stamp(int32_t sec, uint32_t nanosec)
+{
+  builtin_interfaces::msg::Time stamp;
+  stamp.sec = sec;
+  stamp.nanosec = nanosec;
+  return stamp;
+}
+
+// Stamps are deliberately constant: the node copies the input header into both outputs, so a
+// recognizable stamp tells which input an output came from.
+const builtin_interfaces::msg::Time first_stamp = make_stamp(1700000000, 100);
+const builtin_interfaces::msg::Time second_stamp = make_stamp(1700000001, 200);
+
+RadarObjects make_radar_objects(
+  const std::vector<RadarObject> & objects,
+  const builtin_interfaces::msg::Time & stamp = first_stamp)
+{
+  RadarObjects msg;
+  msg.header.stamp = stamp;
+  msg.header.frame_id = "base_link";
+  msg.objects = objects;
+  return msg;
+}
 
 }  // namespace
 
@@ -182,6 +297,33 @@ protected:
                detections_sub_->get_publisher_count() > 0 && tracks_sub_->get_publisher_count() > 0;
       },
       discovery_budget);
+  }
+
+  // Publishes a radar info message and gives it time to arrive. The node does not acknowledge
+  // it; what it made of the message shows only in what it does with the next radar objects.
+  void send_radar_info(const RadarInfo & info)
+  {
+    radar_info_pub_->publish(info);
+    pump(delivery_budget);
+  }
+
+  // Publishes radar objects and waits until both outputs have grown by one message.
+  bool send_objects_and_wait_for_outputs(const RadarObjects & objects)
+  {
+    const size_t detections_before = detections_.size();
+    const size_t tracks_before = tracks_.size();
+    objects_pub_->publish(objects);
+    return pump_until(
+      [&] { return detections_.size() > detections_before && tracks_.size() > tracks_before; },
+      output_budget);
+  }
+
+  // Publishes radar objects that are expected to produce nothing, and waits the delivery budget
+  // out so that a publication would have been seen.
+  void send_objects_expecting_no_output(const RadarObjects & objects)
+  {
+    objects_pub_->publish(objects);
+    pump(delivery_budget);
   }
 
   std::shared_ptr<RadarObjectsAdapter> node_;
@@ -274,4 +416,76 @@ TEST_F(RadarObjectsAdapterCharacterization, Interface_Qos_BestEffortInputsLatche
     peer_->get_publishers_info_by_topic(node_topic("output/tracks")).at(0).qos_profile();
   EXPECT_EQ(tracks_qos.reliability(), rclcpp::ReliabilityPolicy::Reliable);
   EXPECT_EQ(tracks_qos.durability(), rclcpp::DurabilityPolicy::TransientLocal);
+}
+
+// ---------------------------------------------------------------------------------------------
+// The radar info gate. Radar objects are converted only after a radar info message has declared
+// all of the fields the node requires; until then every radar objects message is dropped with a
+// throttled warning.
+// ---------------------------------------------------------------------------------------------
+
+// On the vehicle the radar info arrives later than the first radar objects: the driver publishes
+// it only every tenth objects message. Until it arrives the node does not know which fields the
+// radar provides, and it converts nothing rather than guess. The objects dropped in the meantime
+// are gone for good - nothing is queued and replayed once the radar info is in - and only the
+// objects that arrive after it are converted.
+//
+// The warning logged while the gate is closed is not pinned.
+TEST_F(RadarObjectsAdapterCharacterization, Gate_ObjectsBeforeRadarInfo_DroppedNotReplayed)
+{
+  start_node();
+  ASSERT_TRUE(wait_for_discovery());
+
+  send_objects_expecting_no_output(make_radar_objects({make_radar_object()}, first_stamp));
+  EXPECT_TRUE(detections_.empty());
+  EXPECT_TRUE(tracks_.empty());
+
+  send_radar_info(make_radar_info(ars548_fields));
+  ASSERT_TRUE(
+    send_objects_and_wait_for_outputs(make_radar_objects({make_radar_object()}, second_stamp)));
+
+  // Only the message published after the radar info came through
+  ASSERT_EQ(detections_.size(), 1u);
+  EXPECT_EQ(detections_[0]->header.stamp, second_stamp);
+  ASSERT_EQ(tracks_.size(), 1u);
+  EXPECT_EQ(tracks_[0]->header.stamp, second_stamp);
+}
+
+// A radar info that lacks one of the required fields (here: orientation) marks the radar as
+// incompatible, and radar objects keep being dropped.
+//
+// Which field is missing makes no difference to the node, so only one is tried.
+TEST_F(RadarObjectsAdapterCharacterization, Gate_RadarInfoMissingRequiredField_ObjectsDropped)
+{
+  start_node();
+  ASSERT_TRUE(wait_for_discovery());
+  send_radar_info(make_radar_info(without(required_fields, "orientation")));
+
+  send_objects_expecting_no_output(make_radar_objects({make_radar_object()}));
+
+  EXPECT_TRUE(detections_.empty());
+  EXPECT_TRUE(tracks_.empty());
+}
+
+// Once a radar info declares all required fields, every radar objects message produces one
+// detected objects message and one tracked objects message, both carrying the input header.
+//
+// The contents of the objects are pinned by the conversion tests, not here.
+TEST_F(RadarObjectsAdapterCharacterization, Gate_ValidRadarInfo_ObjectsConverted)
+{
+  start_node();
+  ASSERT_TRUE(wait_for_discovery());
+  send_radar_info(make_radar_info(ars548_fields));
+
+  ASSERT_TRUE(send_objects_and_wait_for_outputs(make_radar_objects({make_radar_object()})));
+
+  ASSERT_EQ(detections_.size(), 1u);
+  EXPECT_EQ(detections_[0]->header.stamp, first_stamp);
+  EXPECT_EQ(detections_[0]->header.frame_id, "base_link");
+  EXPECT_EQ(detections_[0]->objects.size(), 1u);
+
+  ASSERT_EQ(tracks_.size(), 1u);
+  EXPECT_EQ(tracks_[0]->header.stamp, first_stamp);
+  EXPECT_EQ(tracks_[0]->header.frame_id, "base_link");
+  EXPECT_EQ(tracks_[0]->objects.size(), 1u);
 }
