@@ -83,15 +83,15 @@ private:
   float default_size_y_;
   float default_size_z_;
 
-  bool position_z_available_;
-  bool velocity_z_available_;
-  bool acceleration_z_available_;
-  bool size_x_available_;
-  bool size_y_available_;
-  bool size_z_available_;
+  bool position_z_available_{false};
+  bool velocity_z_available_{false};
+  bool acceleration_z_available_{false};
+  bool size_x_available_{false};
+  bool size_y_available_{false};
+  bool size_z_available_{false};
 
-  bool orientation_std_available_;
-  bool orientation_rate_std_available_;
+  bool orientation_std_available_{false};
+  bool orientation_rate_std_available_{false};
 
   // Maps for classification remapping
   static const std::map<std::string, std::uint8_t> RADAR_LABEL_TO_UINT_MAP;

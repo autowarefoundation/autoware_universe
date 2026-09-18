@@ -392,6 +392,7 @@ void RadarObjectsAdapter::radar_info_callback(
 
   position_z_available_ = field_info_map_.count("position_z") > 0;
   velocity_z_available_ = field_info_map_.count("velocity_z") > 0;
+  acceleration_z_available_ = field_info_map_.count("acceleration_z") > 0;
   size_x_available_ = field_info_map_.count("size_x") > 0;
   size_y_available_ = field_info_map_.count("size_y") > 0;
   size_z_available_ = field_info_map_.count("size_z") > 0;
@@ -411,6 +412,13 @@ void RadarObjectsAdapter::radar_info_callback(
       get_logger(),
       "The field velocity_z is not available in the radar info message. Defaulting to %f.",
       default_velocity_z_);
+  }
+
+  if (!acceleration_z_available_) {
+    RCLCPP_WARN_ONCE(
+      get_logger(),
+      "The field acceleration_z is not available in the radar info message. Defaulting to %f.",
+      default_acceleration_z_);
   }
 
   if (!size_x_available_) {
