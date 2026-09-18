@@ -45,15 +45,15 @@ protected:
 
   std::vector<float> runSweepFeatures(
     const void * input_points_d, const CloudFormat format, const std::size_t num_points,
-    const float time_lag, const float close_radius = 1.0F)
+    const float time_lag, const float close_radius = 1.0F, const bool is_current_frame = false)
   {
     SweepTransform transform{};
     std::copy(kTranslationTransform.begin(), kTranslationTransform.end(), transform.matrix);
     auto output_d = makeDeviceBuffer<float>(num_points * kNumFeatures);
 
     generateSweepFeaturesLaunch(
-      input_points_d, format, num_points, time_lag, close_radius, transform, kNumFeatures,
-      output_d.get(), kThreadsPerBlock, stream_);
+      input_points_d, format, num_points, time_lag, is_current_frame, close_radius, transform,
+      kNumFeatures, output_d.get(), kThreadsPerBlock, stream_);
     EXPECT_EQ(cudaStreamSynchronize(stream_), cudaSuccess);
 
     return copyToHost(output_d.get(), num_points * kNumFeatures);
@@ -91,7 +91,8 @@ TEST_F(SweepKernelTest, NormalizesEightBitIntensity)
   auto points_d = makeDeviceBuffer<CloudPointTypeXYZIRC>(points.size());
   copyToDevice(points_d.get(), points);
 
-  const auto output = runSweepFeatures(points_d.get(), CloudFormat::XYZIRC, points.size(), 0.0F);
+  const auto output =
+    runSweepFeatures(points_d.get(), CloudFormat::XYZIRC, points.size(), 0.0F, 1.0F, true);
 
   // XYZIRC carries 8-bit intensity, normalized to [0, 1] like the training strength.
   EXPECT_FLOAT_EQ(output[3], 1.0F);
@@ -129,19 +130,37 @@ TEST_F(SweepKernelTest, KeepsCurrentFramePointsNearTheOrigin)
   auto points_d = makeDeviceBuffer<CloudPointTypeXYZI>(points.size());
   copyToDevice(points_d.get(), points);
 
-  const auto output = runSweepFeatures(points_d.get(), CloudFormat::XYZI, points.size(), 0.0F);
+  const auto output =
+    runSweepFeatures(points_d.get(), CloudFormat::XYZI, points.size(), 0.0F, 1.0F, true);
 
-  // The current frame carries lag 0 and is never poisoned, whatever its position.
+  // The current frame is never poisoned, whatever its position.
   EXPECT_FLOAT_EQ(output[0], 1.0F);
   EXPECT_FLOAT_EQ(output[1], 2.0F);
   EXPECT_FLOAT_EQ(output[2], 3.0F);
   EXPECT_FLOAT_EQ(output[4], 0.0F);
 }
 
+// A replayed bag can give a sweep the current frame's stamp; the flag, not the lag, decides.
+TEST_F(SweepKernelTest, PoisonsEgoGhostsOfASweepThatCarriesAZeroLag)
+{
+  const std::vector<CloudPointTypeXYZI> points{
+    {0.0F, 0.0F, 0.0F, 10.0F},
+  };
+  auto points_d = makeDeviceBuffer<CloudPointTypeXYZI>(points.size());
+  copyToDevice(points_d.get(), points);
+
+  const auto output =
+    runSweepFeatures(points_d.get(), CloudFormat::XYZI, points.size(), 0.0F, 1.0F, false);
+
+  EXPECT_TRUE(std::isnan(output[0]));
+  EXPECT_TRUE(std::isnan(output[1]));
+  EXPECT_TRUE(std::isnan(output[2]));
+}
+
 TEST_F(SweepKernelTest, SkipsEmptyFrames)
 {
   generateSweepFeaturesLaunch(
-    nullptr, CloudFormat::XYZI, 0, 0.25F, 1.0F, SweepTransform{}, kNumFeatures, nullptr,
+    nullptr, CloudFormat::XYZI, 0, 0.25F, false, 1.0F, SweepTransform{}, kNumFeatures, nullptr,
     kThreadsPerBlock, stream_);
 
   EXPECT_EQ(cudaStreamSynchronize(stream_), cudaSuccess);

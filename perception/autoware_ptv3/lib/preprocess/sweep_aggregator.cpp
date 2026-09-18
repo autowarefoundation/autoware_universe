@@ -137,10 +137,19 @@ DensifiedCloud SweepAggregator::aggregate()
 
     const auto time_lag = static_cast<float>(
       densification_ptr_->getCurrentTimestamp() - rclcpp::Time(msg_ptr->header.stamp).seconds());
+    // A sweep must be strictly older than the current frame. A replayed or out-of-order stamp
+    // would otherwise enter as a second copy of it and keep its ego ghosts.
+    if (!is_current_frame && time_lag <= 0.0F) {
+      RCLCPP_WARN_STREAM(
+        rclcpp::get_logger("ptv3"),
+        "Skipping a cached sweep whose stamp is not older than the current frame (lag " << time_lag
+                                                                                        << " s).");
+      continue;
+    }
 
     generateSweepFeaturesLaunch(
       msg_ptr->data.get(), format, frame_num_points, is_current_frame ? 0.f : time_lag,
-      config_.sweep_close_radius_, transform, config_.num_point_feature_size_,
+      is_current_frame, config_.sweep_close_radius_, transform, config_.num_point_feature_size_,
       points_d_.get() + point_counter * config_.num_point_feature_size_, config_.threads_per_block_,
       stream_);
     CHECK_CUDA_ERROR(cudaPeekAtLastError());

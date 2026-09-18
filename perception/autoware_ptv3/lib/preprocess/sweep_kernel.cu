@@ -48,7 +48,7 @@ __device__ float normalizedIntensity(const CloudPointTypeXYZI & point)
 template <typename PointT>
 __global__ void generateSweepFeaturesKernel(
   const PointT * __restrict__ input_points, std::size_t points_size, float time_lag,
-  float close_radius, SweepTransform transform, std::int64_t num_features,
+  bool is_current_frame, float close_radius, SweepTransform transform, std::int64_t num_features,
   float * __restrict__ output_points)
 {
   const auto idx = static_cast<std::size_t>(blockIdx.x) * blockDim.x + threadIdx.x;
@@ -67,7 +67,7 @@ __global__ void generateSweepFeaturesKernel(
   // before the motion compensation moves it, matching the training-side remove_close.
   // NaN coordinates make the range crop drop them while every frame keeps its row count,
   // so the current frame stays the leading block.
-  const bool ego_ghost = time_lag != 0.f && fabsf(x) < close_radius && fabsf(y) < close_radius;
+  const bool ego_ghost = !is_current_frame && fabsf(x) < close_radius && fabsf(y) < close_radius;
   if (ego_ghost) {
     output_point[0] = nanf("");
     output_point[1] = nanf("");
@@ -90,8 +90,8 @@ __global__ void generateSweepFeaturesKernel(
 
 void generateSweepFeaturesLaunch(
   const void * input_data, CloudFormat input_format, std::size_t num_points, float time_lag,
-  float close_radius, SweepTransform transform, std::int64_t num_features, float * output_points,
-  std::uint32_t threads_per_block, cudaStream_t stream)
+  bool is_current_frame, float close_radius, SweepTransform transform, std::int64_t num_features,
+  float * output_points, std::uint32_t threads_per_block, cudaStream_t stream)
 {
   // A zero-sized grid is an invalid CUDA launch; an empty frame contributes nothing.
   if (num_points == 0) {
@@ -102,22 +102,22 @@ void generateSweepFeaturesLaunch(
     case CloudFormat::XYZIRCAEDT:
       generateSweepFeaturesKernel<<<num_blocks, threads_per_block, 0, stream>>>(
         static_cast<const CloudPointTypeXYZIRCAEDT *>(input_data), num_points, time_lag,
-        close_radius, transform, num_features, output_points);
+        is_current_frame, close_radius, transform, num_features, output_points);
       break;
     case CloudFormat::XYZIRADRT:
       generateSweepFeaturesKernel<<<num_blocks, threads_per_block, 0, stream>>>(
         static_cast<const CloudPointTypeXYZIRADRT *>(input_data), num_points, time_lag,
-        close_radius, transform, num_features, output_points);
+        is_current_frame, close_radius, transform, num_features, output_points);
       break;
     case CloudFormat::XYZIRC:
       generateSweepFeaturesKernel<<<num_blocks, threads_per_block, 0, stream>>>(
-        static_cast<const CloudPointTypeXYZIRC *>(input_data), num_points, time_lag, close_radius,
-        transform, num_features, output_points);
+        static_cast<const CloudPointTypeXYZIRC *>(input_data), num_points, time_lag,
+        is_current_frame, close_radius, transform, num_features, output_points);
       break;
     case CloudFormat::XYZI:
       generateSweepFeaturesKernel<<<num_blocks, threads_per_block, 0, stream>>>(
-        static_cast<const CloudPointTypeXYZI *>(input_data), num_points, time_lag, close_radius,
-        transform, num_features, output_points);
+        static_cast<const CloudPointTypeXYZI *>(input_data), num_points, time_lag, is_current_frame,
+        close_radius, transform, num_features, output_points);
       break;
     default:
       throw std::runtime_error("Unsupported input point cloud format.");

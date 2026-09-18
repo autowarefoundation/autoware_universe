@@ -40,11 +40,12 @@ struct SweepTransform
 /// current frame). Intensity keeps the format-specific
 /// normalization used in training (`/255` for the 8-bit intensity formats, raw
 /// for the float intensity formats). `time_lag` is `0` for the current frame and
-/// the age in seconds for sweeps.
+/// the age in seconds for sweeps. `is_current_frame` marks the frame the sweeps
+/// are compensated into; only sweeps drop their ego ghosts.
 void generateSweepFeaturesLaunch(
   const void * input_data, CloudFormat input_format, std::size_t num_points, float time_lag,
-  float close_radius, SweepTransform transform, std::int64_t num_features, float * output_points,
-  std::uint32_t threads_per_block, cudaStream_t stream);
+  bool is_current_frame, float close_radius, SweepTransform transform, std::int64_t num_features,
+  float * output_points, std::uint32_t threads_per_block, cudaStream_t stream);
 
 }  // namespace autoware::ptv3
 

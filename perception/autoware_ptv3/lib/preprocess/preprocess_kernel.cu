@@ -147,9 +147,9 @@ PreprocessCuda::~PreprocessCuda()
 /**
  * @brief Marks the densified rows the network consumes.
  *
- * Out-of-range rows are dropped. Sweep rows (non-zero time lag) within the close radius of the
- * current lidar origin are ego ghosts left behind by ego motion; they are dropped like the
- * training loader's remove_close. Current-frame rows near the origin stay.
+ * Out-of-range rows are dropped. The sweep kernel has already poisoned the ego ghosts of every
+ * past sweep with NaN coordinates, so they fail the range test here like the training loader's
+ * remove_close. Current-frame rows near the origin stay.
  */
 __global__ void cropKernel(
   const float * __restrict__ points, std::uint32_t * __restrict__ mask, std::size_t num_points,
