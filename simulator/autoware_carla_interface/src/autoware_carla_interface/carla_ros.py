@@ -905,6 +905,9 @@ class carla_ros2_interface(object):
         CARLA renders BGRA. Converting to mono8 here rather than in the
         consumer keeps three of every four bytes off the wire, and a consumer
         that wants luminance was going to do this conversion anyway.
+
+        bgr8 drops only the alpha channel, which CARLA fills with 255 and no
+        consumer reads: a quarter of the bytes for none of the information.
         """
         image_array = numpy.ndarray(
             shape=(carla_camera_data.height, carla_camera_data.width, 4),
@@ -913,6 +916,8 @@ class carla_ros2_interface(object):
         )
         if encoding == "mono8":
             image_array = cv2.cvtColor(image_array, cv2.COLOR_BGRA2GRAY)
+        elif encoding == "bgr8":
+            image_array = image_array[:, :, :3]
         return self.cv_bridge.cv2_to_imgmsg(image_array, encoding=encoding)
 
     def imu(self, carla_imu_measurement):
