@@ -12,49 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Bag-to-bag runner for the traffic light pipeline: a recorded rosbag in, a rosbag of the
-// pipeline's own results out, as fast as the machine can go. It drives this package's ROS-free
-// front-end core (TrafficLightRecognition) followed by autoware_traffic_light_multi_camera_fusion's
-// MultiCameraFusion, with no rclcpp::init, no executor and no DDS anywhere -- so the run is not
-// bound to the bag's recorded rate and always produces the same output for the same input bag.
-//
-// The back-end here is MultiCameraFusion alone. Production continues with arbiter ->
-// crosswalk_traffic_light_estimator, but this package composes no fusion Node yet, so
-// `multi_camera_fusion.fuse()` is where the chain stops: its output is production's
-// /perception/traffic_light_recognition/internal/traffic_signals.
-//
-// Three passes:
-//   A. front-end, one camera at a time. For each camera it loads only that camera's
-//      (image, camera_info) pairs out of the input bag (load_frames_for_camera()), drives a
-//      fresh TrafficLightRecognition over them, then discards those frames before moving to the
-//      next camera -- so memory stays proportional to one camera's frames rather than every
-//      camera's combined. The front-end has no cross-camera state, so this changes nothing about
-//      any individual result; the per-camera results are then sorted back into ascending
-//      (stamp, camera_index) order.
-//   B. back-end. One MultiCameraFusion instance, fed pass A's results in that order. Splitting the
-//      two passes rather than interleaving them frame by frame (the way the Node graph does) is
-//      safe because MultiCameraFusion is stateful but never reads the clock: every timestamp it
-//      acts on comes from the trigger's own camera_info/roi header, so replaying the same input
-//      sequence in the same order through a fresh instance produces identical output.
-//   C. rosbag output, under production topic names.
-//
-// Usage:
-//   traffic_light_pipeline_bag2bag_runner
-//     --input-bag <input bag dir>
-//     --map <map dir, holding one .osm map and a map_projector_info.yaml>
-//     --output-bag <output bag dir>
-//     --camera 4,5                     (the cameras the input bag recorded)
-//     [--ml-model-path <dir>]          (default $HOME/autoware_data)
-//     [--config <param.yaml>]          (default this package's installed
-//                                       config/traffic_light_recognition.param.yaml)
-//
-// The runner has no config file of its own: the front-end's tuning comes from the very file the
-// Node is launched with, this package's config/traffic_light_recognition.param.yaml, so the
-// default run reproduces the deployed configuration (see build_bag2bag_config()). --config swaps
-// in another copy of that same file, for sweeping a threshold without editing the installed one.
-// The topic names follow from the camera namespaces, and the back-end's settings are the deployed
-// constants below.
-
 #include "traffic_light_recognition/traffic_light_recognition.hpp"
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
@@ -90,7 +47,6 @@
 #include <iostream>
 #include <map>
 #include <memory>
-#include <optional>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -109,8 +65,6 @@ using autoware::traffic_light::TrafficLightRecognitionResult;
 
 // --- run config ---------------------------------------------------------------------------------
 
-// Returns `node[key]`, throwing if it is missing -- the recognition config is expected to carry
-// every value the Node declares, so a missing one is a broken config file rather than a default.
 YAML::Node require(const YAML::Node & node, const std::string & key)
 {
   const auto child = node[key];
@@ -120,23 +74,14 @@ YAML::Node require(const YAML::Node & node, const std::string & key)
   return child;
 }
 
-// This package's installed config/traffic_light_recognition.param.yaml -- the very file
-// launch/traffic_light_recognition.launch.xml passes the Node as `<param from="..."/>`. Used
-// whenever --config is not given, so that the default run measures the deployed configuration.
 std::string default_recognition_config_path()
 {
   return ament_index_cpp::get_package_share_directory("autoware_traffic_light_pipeline") +
          "/config/traffic_light_recognition.param.yaml";
 }
 
-// The `/**: ros__parameters:` block of the file above, or of the --config file, which has to have
-// the same layout because it is meant to be a copy of it. Read with yaml-cpp rather than rcl's
-// yaml parser because nothing here is a Node: every value the Node declares is a plain scalar
-// under that one block, so the two parsers see the same thing.
 YAML::Node recognition_parameters(const std::string & config_path)
 {
-  // yaml-cpp reports a missing file as a bare "bad file", which says nothing about a path the
-  // caller may have mistyped on the command line.
   if (!std::filesystem::exists(config_path)) {
     throw std::runtime_error("recognition config does not exist: " + config_path);
   }
@@ -144,21 +89,12 @@ YAML::Node recognition_parameters(const std::string & config_path)
   return require(require(root, "/**"), "ros__parameters");
 }
 
-// The whole-image detector ships this remap csv as installed package data, so unlike the model /
-// label files (which live under the user's ML artifact directory) it is not configurable at all:
-// it is resolved from autoware_tensorrt_yolox's own share directory, the same file the production
-// launch file defaults to via $(find-pkg-share autoware_tensorrt_yolox). The Node declares the
-// parameter with no default for a reason -- an empty remap leaves every detector label unmapped,
-// which makes TrtYoloXDetector discard every detection.
 std::string default_roi_remap_path()
 {
   return ament_index_cpp::get_package_share_directory("autoware_tensorrt_yolox") +
          "/config/traffic_light_roi_label_remap.csv";
 }
 
-// `<ml_model_path>/<the relative name in the package config>`, mirroring the Node's
-// resolve_artifact(): the package config names the artifacts relative to the directory the launch
-// file injects as `ml_model_path`, so the same join has to happen here.
 std::string resolve_artifact(
   const YAML::Node & parameters, const std::string & ml_model_path, const std::string & section,
   const std::string & key)
@@ -167,7 +103,6 @@ std::string resolve_artifact(
   return ml_model_path.empty() ? relative_path : ml_model_path + "/" + relative_path;
 }
 
-// $HOME/autoware_data, the launch file's `data_path` default.
 std::string default_ml_model_path()
 {
   const char * home = std::getenv("HOME");
@@ -179,8 +114,6 @@ std::string default_ml_model_path()
   return std::string(home) + "/autoware_data";
 }
 
-// One classifier's model/label/precision/normalization, mirroring the Node's
-// declare_classifier_config(). `section` is "car_classifier" or "pedestrian_classifier".
 ClassifierModelConfig read_classifier_config(
   const YAML::Node & parameters, const std::string & ml_model_path, const std::string & section)
 {
@@ -195,8 +128,6 @@ ClassifierModelConfig read_classifier_config(
   return classifier_config;
 }
 
-// Every tuned value of the front-end, read from `config_path`; only the artifact directory comes
-// from the command line. See build_bag2bag_config().
 TrafficLightRecognitionConfig build_recognition_config(
   const std::string & ml_model_path, const std::string & config_path)
 {
@@ -235,14 +166,6 @@ TrafficLightRecognitionConfig build_recognition_config(
   return config;
 }
 
-// One camera's topics, all four derived from its namespace the same way the production topic graph
-// derives them, so nothing has to be configured:
-//   - the two inputs are launch/traffic_light_recognition.launch.xml's `input/image` and
-//     `input/camera_info` defaults (`/sensing/camera/<ns>/...`), with the compressed variant of
-//     the image the input bag records rather than the raw one the Node subscribes to;
-//   - the two outputs are its `output/traffic_signals` and `output/rois` defaults, which are in
-//     turn the names traffic_light_multi_camera_fusion derives from its `camera_namespaces`
-//     parameter.
 struct CameraConfig
 {
   std::string camera_namespace;
@@ -271,8 +194,6 @@ CameraConfig build_camera_config(int camera_index)
 struct Bag2BagConfig
 {
   std::string input_bag_path;
-  // The two files found in the map directory; see find_lanelet2_map() /
-  // find_map_projector_info().
   std::string lanelet2_map_path;
   std::string map_projector_info_path;
 
@@ -280,10 +201,6 @@ struct Bag2BagConfig
   TrafficLightRecognitionConfig recognition;
 };
 
-// The one .osm file directly inside `map_path`: a map directory holds a single lanelet2 map, but
-// its name varies, so it is found by extension rather than assumed. Anything else -- none, or
-// several -- is reported rather than resolved by picking one, which would silently run against a
-// map the caller did not mean.
 std::string find_lanelet2_map(const std::string & map_path)
 {
   std::vector<std::string> found_paths;
@@ -300,9 +217,6 @@ std::string find_lanelet2_map(const std::string & map_path)
   return found_paths.front();
 }
 
-// The projector info, by name rather than by extension: `map_projector_info.yaml` is the name
-// autoware_map_projection_loader itself expects, and a map directory holds other yaml files too
-// (pointcloud_map_metadata.yaml, ...), so the extension does not identify it.
 std::string find_map_projector_info(const std::string & map_path)
 {
   const auto path = map_path + "/map_projector_info.yaml";
@@ -312,23 +226,6 @@ std::string find_map_projector_info(const std::string & map_path)
   return path;
 }
 
-// Builds the whole run's configuration from the four things that vary per run -- the input bag, the
-// map directory, the cameras the bag recorded (`camera_indices`, e.g. {4, 5} for camera4/camera5)
-// and the directory the ML artifacts live in -- and this package's own
-// config/traffic_light_recognition.param.yaml for everything else.
-//
-// There is no config file of the runner's own on purpose. Every tuned value comes from a config
-// in the Node's own format -- by default the very file launch/traffic_light_recognition.launch.xml
-// feeds the Node -- so a bag-to-bag run reproduces the deployed configuration and never states a
-// threshold of its own. An empty `config_path` selects that default; anything else has to be a
-// copy of it, which is how a threshold is swept without editing the installed file. What is left
-// is derivable: the topic names follow from each camera's namespace exactly as the launch file's
-// own defaults do (see build_camera_config()).
-//
-// `ml_model_path` is the launch file's `data_path` argument -- a property of the machine the run
-// happens on rather than of the pipeline's tuning, which is why the package config names the
-// artifacts relative to it instead of carrying it. An empty string means $HOME/autoware_data, the
-// launch file's default.
 Bag2BagConfig build_bag2bag_config(
   const std::string & input_bag_path, const std::string & map_path,
   const std::vector<int> & camera_indices, const std::string & ml_model_path,
@@ -367,11 +264,7 @@ int64_t stamp_nanoseconds(const std_msgs::msg::Header & header)
   return rclcpp::Time(header.stamp).nanoseconds();
 }
 
-// One exact-stamp matched (image, camera_info) pair, tagged with the camera it came from -- the
-// same input unit the Node's message_filters::ExactTime sync hands to run(). `image` is kept
-// compressed, as it was read from the bag: decoding every frame up front, for the whole bag, is
-// what makes frame loading the dominant memory cost of a run. Call decode_frame_image() instead,
-// right before handing the frame to the pipeline.
+// One exact-stamp matched (image, camera_info) pair, tagged with the camera it came from.
 struct Frame
 {
   std::size_t camera_index;
@@ -381,19 +274,13 @@ struct Frame
 
 // One camera's images/camera_infos keyed by header stamp while the bag is being read, so pairing
 // does not depend on how the two topics happened to interleave on disk. Images are kept
-// compressed, as read -- see Frame.
+// compressed, as read.
 struct CameraBuffers
 {
   std::map<int64_t, sensor_msgs::msg::CompressedImage> images_by_stamp;
   std::map<int64_t, sensor_msgs::msg::CameraInfo> camera_infos_by_stamp;
 };
 
-// Reads only `config.cameras[camera_index]`'s image/camera_info topics out of
-// `config.input_bag_path` and returns that camera's exact-stamp matched frames, in ascending stamp
-// order. Messages with no same-stamp partner on the other topic are dropped -- the same policy
-// message_filters::ExactTime enforces in production. Reading one camera at a time -- call this,
-// process that camera's frames, then let them go out of scope before moving to the next camera --
-// keeps memory proportional to one camera's frame count rather than the whole bag's.
 std::vector<Frame> load_frames_for_camera(const Bag2BagConfig & config, std::size_t camera_index)
 {
   const auto & camera = config.cameras.at(camera_index);
@@ -430,27 +317,8 @@ std::vector<Frame> load_frames_for_camera(const Bag2BagConfig & config, std::siz
   return frames;
 }
 
-// Decodes `frame.image`, returning the plain image the pipeline consumes. Meant to be called right
-// before that -- one frame at a time, as it is about to be processed -- rather than while frames
-// are being buffered, so at most one decoded image is ever held in memory.
-std::optional<sensor_msgs::msg::Image> decode_frame_image(const Frame & frame)
-{
-  // decompress() reports an undecodable payload by throwing, leaving the policy to its caller
-  // (see its own doc comment). Here that policy is the Node's: log the frame and drop it.
-  try {
-    return autoware::image_preprocessor::image_transport_decompressor::decompress(
-      frame.image, "default");
-  } catch (const std::exception & e) {
-    std::cerr << "failed to decompress image at " << stamp_nanoseconds(frame.image.header) << ": "
-              << e.what() << std::endl;
-    return std::nullopt;
-  }
-}
-
 // The Node gets its map->camera transforms from a tf2_ros::TransformListener; here they all come
-// from the input bag instead. The cache time is deliberately far longer than tf2::BufferCore's
-// 10 s default: the whole bag's transforms must stay resolvable for the whole run, since frames
-// are processed after the bag has been fully read.
+// from the input bag instead.
 std::unique_ptr<tf2::BufferCore> load_transform_buffer(const std::string & bag_path)
 {
   auto buffer = std::make_unique<tf2::BufferCore>(tf2::durationFromSec(24 * 60 * 60));
@@ -489,28 +357,11 @@ autoware_map_msgs::msg::LaneletMapBin load_map(const Bag2BagConfig & config)
 constexpr char kFusionOutputTopic[] =
   "/perception/traffic_light_recognition/internal/traffic_signals";
 
-// The back-end's settings, as constants rather than as configuration. Unlike the front-end's, none
-// of them can come from a package config file: this package composes no fusion Node, so it has no
-// config/*.param.yaml that a launch file would feed one. Nor can they be read from
-// autoware_traffic_light_multi_camera_fusion's own package config, whose message_lifespan (0.09) is
-// not the deployed value -- autoware_launch overrides it to 0.12. So the deployed values are stated
-// here, where the reason they are what they are can be stated with them.
 MultiCameraFusionConfig fusion_config(const autoware_map_msgs::msg::LaneletMapBin & map_msg)
 {
   MultiCameraFusionConfig config;
-
-  // The deployed value
-  // (autoware_launch/config/perception/traffic_light_recognition/traffic_light_multi_camera_fusion/traffic_light_multi_camera_fusion.param.yaml).
-  // It must stay strictly greater than the camera period (0.100005 s on x2): fuse() drops every
-  // record older than message_lifespan relative to the newest one, so at the package default of
-  // 0.09 the previous cycle's other-camera record is always already stale and each fusion trigger
-  // sees only its own camera -- i.e. half the output becomes monocular, losing whichever light only
-  // the other camera can see.
   config.message_lifespan = 0.12;
   config.prior_log_odds = 0.0;
-
-  // MultiCameraFusionNode declares these three, but no x2 param file sets any of them, so all
-  // three keep the package default (disabled).
   config.use_signal_consistency_check = false;
   config.publish_partial_matched_signal = false;
   config.use_map_based_signal_filter = false;
@@ -534,42 +385,8 @@ struct RecordedFrameResult
   TrafficLightRecognitionResult result;
 };
 
-// Loads the tf buffer, then drives one TrafficLightRecognition per camera, one camera at a time
-// (see pass A in this file's header comment). Results come back grouped by camera rather than
-// interleaved by stamp, so they are sorted into ascending (stamp, camera_index) order before being
-// returned: pass B (run_fusion(), stateful) needs the order production feeds it results in. Frames
-// that fail are logged to stderr and skipped, exactly as the Node drops them.
-std::vector<RecordedFrameResult> run_recognition(
-  const Bag2BagConfig & config, const autoware_map_msgs::msg::LaneletMapBin & map_msg)
+void sort_by_stamp_and_camera(std::vector<RecordedFrameResult> & recorded_results)
 {
-  const auto tf_buffer = load_transform_buffer(config.input_bag_path);
-
-  std::vector<RecordedFrameResult> recorded_results;
-  for (std::size_t camera_index = 0; camera_index < config.cameras.size(); ++camera_index) {
-    const auto & camera = config.cameras[camera_index];
-    TrafficLightRecognition recognition(config.recognition, *tf_buffer);
-    recognition.set_map(map_msg);
-
-    const auto frames = load_frames_for_camera(config, camera_index);
-    std::cerr << "loaded " << frames.size() << " frames for camera " << camera.camera_namespace
-              << " from " << config.input_bag_path << std::endl;
-
-    for (const auto & frame : frames) {
-      const auto image = decode_frame_image(frame);
-      if (!image) {
-        continue;
-      }
-      const auto result = recognition.run(*image, frame.camera_info);
-      if (!result) {
-        std::cerr << "camera " << camera.camera_namespace << " frame at "
-                  << rclcpp::Time(image->header.stamp).nanoseconds()
-                  << " failed: " << result.error() << std::endl;
-        continue;
-      }
-      recorded_results.push_back({camera_index, frame.camera_info, *result});
-    }
-  }
-
   std::stable_sort(
     recorded_results.begin(), recorded_results.end(),
     [](const RecordedFrameResult & lhs, const RecordedFrameResult & rhs) {
@@ -577,6 +394,50 @@ std::vector<RecordedFrameResult> run_recognition(
       const auto rhs_stamp = rclcpp::Time(rhs.camera_info.header.stamp).nanoseconds();
       return std::tie(lhs_stamp, lhs.camera_index) < std::tie(rhs_stamp, rhs.camera_index);
     });
+}
+
+std::vector<RecordedFrameResult> run_recognition_for_camera(
+  const Bag2BagConfig & config, const autoware_map_msgs::msg::LaneletMapBin & map_msg,
+  tf2::BufferCore & tf_buffer, std::size_t camera_index)
+{
+  const auto & camera = config.cameras[camera_index];
+  TrafficLightRecognition recognition(config.recognition, tf_buffer);
+  recognition.set_map(map_msg);
+
+  const auto frames = load_frames_for_camera(config, camera_index);
+  std::cerr << "loaded " << frames.size() << " frames for camera " << camera.camera_namespace
+            << " from " << config.input_bag_path << std::endl;
+
+  std::vector<RecordedFrameResult> recorded_results;
+  recorded_results.reserve(frames.size());
+  for (const auto & frame : frames) {
+    const auto image = autoware::image_preprocessor::image_transport_decompressor::decompress(
+      frame.image, "default");
+    const auto result = recognition.run(image, frame.camera_info);
+    if (!result) {
+      std::cerr << "camera " << camera.camera_namespace << " frame at "
+                << rclcpp::Time(image.header.stamp).nanoseconds() << " failed: " << result.error()
+                << std::endl;
+      continue;
+    }
+    recorded_results.push_back({camera_index, frame.camera_info, *result});
+  }
+  return recorded_results;
+}
+
+std::vector<RecordedFrameResult> run_recognition(
+  const Bag2BagConfig & config, const autoware_map_msgs::msg::LaneletMapBin & map_msg)
+{
+  const auto tf_buffer = load_transform_buffer(config.input_bag_path);
+
+  std::vector<RecordedFrameResult> recorded_results;
+  for (std::size_t camera_index = 0; camera_index < config.cameras.size(); ++camera_index) {
+    const auto camera_results =
+      run_recognition_for_camera(config, map_msg, *tf_buffer, camera_index);
+    recorded_results.insert(recorded_results.end(), camera_results.begin(), camera_results.end());
+  }
+
+  sort_by_stamp_and_camera(recorded_results);
   return recorded_results;
 }
 
@@ -646,10 +507,6 @@ void remove_output_bag_if_exists(const std::string & output_bag_path)
   std::filesystem::remove_all(output_bag_path);
 }
 
-// Writes every front-end and back-end result to `output_bag_path` under production topic names.
-// The input image/camera_info topics are not copied over, and neither are the cores' intermediate
-// stages. Each message is written at its own header stamp (never wall-clock time), so the same
-// input always produces the same bag.
 void write_to_rosbag(
   const Bag2BagConfig & config, const std::string & output_bag_path,
   const std::vector<RecordedFrameResult> & recorded_frame_results,
@@ -750,9 +607,6 @@ CommandLineArgs parse_args(int argc, char ** argv)
   return args;
 }
 
-// Runs the front-end then the back-end over every camera and writes the results to
-// `args.output_bag_path`. This is the whole of main()'s work, factored out so it can be driven
-// without going through argv (e.g. from tests).
 void run_bag2bag(const CommandLineArgs & args)
 {
   const auto config = build_bag2bag_config(
