@@ -787,7 +787,9 @@ bool PTv3TRT::preProcess(
 {
   using autoware::cuda_utils::clear_async;
 
-  aggregator_ptr_->enqueuePointCloud(msg_ptr, affine_world2current);
+  if (!aggregator_ptr_->enqueuePointCloud(msg_ptr, affine_world2current)) {
+    return false;
+  }
   densified_cloud_ = aggregator_ptr_->aggregate();
   num_current_points_ = static_cast<std::int64_t>(densified_cloud_.num_current_points);
 

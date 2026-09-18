@@ -15,6 +15,8 @@
 #ifndef AUTOWARE__PTV3__PREPROCESS__POINTCLOUD_DENSIFICATION_HPP_
 #define AUTOWARE__PTV3__PREPROCESS__POINTCLOUD_DENSIFICATION_HPP_
 
+#include "autoware/ptv3/preprocess/point_type.hpp"
+
 #include <Eigen/Geometry>
 #include <cuda_blackboard/cuda_pointcloud2.hpp>
 
@@ -46,6 +48,8 @@ struct PointCloudWithTransform
 {
   std::shared_ptr<const cuda_blackboard::CudaPointCloud2> input_pointcloud_msg_ptr;
   Eigen::Affine3f affine_past2world;
+  /// Validated when the frame is cached, so aggregation never meets an unsupported layout.
+  CloudFormat format{CloudFormat::UNKNOWN};
 };
 
 /// Cache of the current lidar frame and its ego-motion history.
@@ -61,7 +65,7 @@ public:
   /// Cache the incoming frame together with the world-to-lidar transform at its stamp.
   void enqueuePointCloud(
     const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr,
-    const Eigen::Affine3f & affine_world2current);
+    const Eigen::Affine3f & affine_world2current, CloudFormat format);
 
   double getCurrentTimestamp() const { return current_timestamp_; }
   Eigen::Affine3f getAffineWorldToCurrent() const { return affine_world2current_; }
@@ -86,7 +90,7 @@ public:
 private:
   void enqueue(
     const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr,
-    const Eigen::Affine3f & affine);
+    const Eigen::Affine3f & affine, CloudFormat format);
   void dequeue();
 
   DensificationParam param_;

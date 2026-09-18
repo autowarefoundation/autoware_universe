@@ -51,7 +51,10 @@ public:
   SweepAggregator(const PTv3Config & config, cudaStream_t stream);
 
   /// Cache the incoming frame together with the world-to-lidar transform at its stamp.
-  void enqueuePointCloud(
+  ///
+  /// Returns false for a frame the network cannot consume (unsupported layout, or more points
+  /// than the configured capacity). Such a frame is not cached and the caller skips it.
+  [[nodiscard]] bool enqueuePointCloud(
     const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr,
     const Eigen::Affine3f & affine_world2current);
 

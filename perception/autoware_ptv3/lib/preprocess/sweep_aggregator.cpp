@@ -22,8 +22,6 @@
 
 #include <algorithm>
 #include <memory>
-#include <stdexcept>
-#include <string>
 #include <type_traits>
 
 namespace autoware::ptv3
@@ -65,11 +63,32 @@ SweepAggregator::SweepAggregator(const PTv3Config & config, cudaStream_t stream)
     config_.densified_cloud_capacity_ * config_.num_point_feature_size_);
 }
 
-void SweepAggregator::enqueuePointCloud(
+bool SweepAggregator::enqueuePointCloud(
   const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr,
   const Eigen::Affine3f & affine_world2current)
 {
-  densification_ptr_->enqueuePointCloud(msg_ptr, affine_world2current);
+  const auto format = detectCloudFormat(*msg_ptr);
+  if (format == CloudFormat::UNKNOWN) {
+    RCLCPP_WARN_STREAM(
+      rclcpp::get_logger("ptv3"),
+      "Skipping a frame with an unsupported point cloud type. Expected one of: XYZIRCAEDT (10 "
+      "fields), XYZIRADRT (9 fields), XYZIRC (6 fields), or XYZI (4 fields).");
+    return false;
+  }
+
+  // The segmentation reconstruction buffers and output messages are sized per frame, so every
+  // frame must fit the single-frame capacity, not just the densified one.
+  const auto frame_num_points = static_cast<std::size_t>(msg_ptr->height * msg_ptr->width);
+  if (frame_num_points > static_cast<std::size_t>(config_.cloud_capacity_)) {
+    RCLCPP_WARN_STREAM(
+      rclcpp::get_logger("ptv3"),
+      "Skipping a frame of " << frame_num_points << " points; it exceeds the cloud capacity ("
+                             << config_.cloud_capacity_ << "). Increase cloud_capacity.");
+    return false;
+  }
+
+  densification_ptr_->enqueuePointCloud(msg_ptr, affine_world2current, format);
+  return true;
 }
 
 DensifiedCloud SweepAggregator::aggregate()
@@ -85,23 +104,11 @@ DensifiedCloud SweepAggregator::aggregate()
     const auto frame_num_points = static_cast<std::size_t>(msg_ptr->height * msg_ptr->width);
     const bool is_current_frame = densification_ptr_->getIdx(cache_iter) == 0;
 
-    // The segmentation reconstruction buffers and output messages are sized per frame, so the
-    // current frame must fit the single-frame capacity, not just the densified one.
-    if (is_current_frame && frame_num_points > static_cast<std::size_t>(config_.cloud_capacity_)) {
-      throw std::runtime_error(
-        "The current frame (" + std::to_string(frame_num_points) +
-        " points) exceeds the cloud capacity (" + std::to_string(config_.cloud_capacity_) +
-        "). Increase cloud_capacity.");
-    }
+    // Frames are validated against the single-frame capacity when they are cached, so only the
+    // accumulated sweeps can run out of room here.
     if (
       point_counter + frame_num_points >
       static_cast<std::size_t>(config_.densified_cloud_capacity_)) {
-      if (is_current_frame) {
-        throw std::runtime_error(
-          "The current frame (" + std::to_string(frame_num_points) +
-          " points) exceeds the densified cloud capacity (" +
-          std::to_string(config_.densified_cloud_capacity_) + "). Increase cloud_capacity.");
-      }
       RCLCPP_WARN_STREAM(
         rclcpp::get_logger("ptv3"), "Exceeding densified cloud capacity. Used "
                                       << densification_ptr_->getIdx(cache_iter) << " out of "
@@ -109,17 +116,10 @@ DensifiedCloud SweepAggregator::aggregate()
       break;
     }
 
-    const auto format = detectCloudFormat(*msg_ptr);
-    if (format == CloudFormat::UNKNOWN) {
-      throw std::runtime_error(
-        "Unsupported point cloud type. Expected one of: XYZIRCAEDT (10 fields), "
-        "XYZIRADRT (9 fields), XYZIRC (6 fields), or XYZI (4 fields).");
-    }
-
     if (is_current_frame) {
       densified.num_current_points = frame_num_points;
       densified.current_msg = msg_ptr;
-      densified.current_format = format;
+      densified.current_format = cache_iter->format;
     }
 
     const Eigen::Affine3f affine_past2current =
@@ -148,7 +148,7 @@ DensifiedCloud SweepAggregator::aggregate()
     }
 
     generateSweepFeaturesLaunch(
-      msg_ptr->data.get(), format, frame_num_points, is_current_frame ? 0.f : time_lag,
+      msg_ptr->data.get(), cache_iter->format, frame_num_points, is_current_frame ? 0.f : time_lag,
       is_current_frame, config_.sweep_close_radius_, transform, config_.num_point_feature_size_,
       points_d_.get() + point_counter * config_.num_point_feature_size_, config_.threads_per_block_,
       stream_);

@@ -28,20 +28,20 @@ PointCloudDensification::PointCloudDensification(const DensificationParam & para
 
 void PointCloudDensification::enqueuePointCloud(
   const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr,
-  const Eigen::Affine3f & affine_world2current)
+  const Eigen::Affine3f & affine_world2current, const CloudFormat format)
 {
-  enqueue(msg_ptr, affine_world2current);
+  enqueue(msg_ptr, affine_world2current, format);
   dequeue();
 }
 
 void PointCloudDensification::enqueue(
   const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr,
-  const Eigen::Affine3f & affine_world2current)
+  const Eigen::Affine3f & affine_world2current, const CloudFormat format)
 {
   affine_world2current_ = affine_world2current;
   current_timestamp_ = rclcpp::Time(msg_ptr->header.stamp).seconds();
 
-  PointCloudWithTransform pointcloud = {msg_ptr, affine_world2current.inverse()};
+  PointCloudWithTransform pointcloud = {msg_ptr, affine_world2current.inverse(), format};
 
   pointcloud_cache_.push_front(std::move(pointcloud));
 }
