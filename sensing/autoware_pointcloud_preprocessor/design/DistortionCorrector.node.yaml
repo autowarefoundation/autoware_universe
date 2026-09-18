@@ -1,4 +1,4 @@
-autoware_system_design_format: 0.3.0
+autoware_system_design_format: 0.4.1
 
 # node information
 name: DistortionCorrector.node
@@ -40,12 +40,21 @@ param_values:
 
 # processes
 processes:
+  - name: queue_twist
+    trigger_conditions:
+      - on_input: twist
+    outcomes:
+      - to_queue: twist
+  - name: queue_imu
+    trigger_conditions:
+      - on_input: imu
+    outcomes:
+      - to_queue: imu
   - name: undistort
     trigger_conditions:
-      - and:
-          - on_input: pointcloud
-          - or:
-              - on_input: twist
-              - on_input: imu
+      - on_input: pointcloud
+    reads:
+      - from_queue: twist
+      - from_queue: imu
     outcomes:
       - to_output: pointcloud
