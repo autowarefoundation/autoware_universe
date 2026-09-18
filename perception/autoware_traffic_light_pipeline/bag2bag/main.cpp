@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #include "config_builder.hpp"
-#include "runner.hpp"
+#include "pipeline_runner.hpp"
 
 #include <exception>
 #include <iostream>

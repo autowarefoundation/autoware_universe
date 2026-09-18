@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef PERCEPTION__AUTOWARE_TRAFFIC_LIGHT_PIPELINE__BAG2BAG__RUNNER_HPP_
-#define PERCEPTION__AUTOWARE_TRAFFIC_LIGHT_PIPELINE__BAG2BAG__RUNNER_HPP_
+#ifndef PERCEPTION__AUTOWARE_TRAFFIC_LIGHT_PIPELINE__BAG2BAG__PIPELINE_RUNNER_HPP_
+#define PERCEPTION__AUTOWARE_TRAFFIC_LIGHT_PIPELINE__BAG2BAG__PIPELINE_RUNNER_HPP_
 
 #include "traffic_light_recognition/traffic_light_recognition.hpp"
 
@@ -49,4 +49,4 @@ void run_bag2bag(const Bag2BagConfig & config);
 
 }  // namespace autoware::traffic_light
 
-#endif  // PERCEPTION__AUTOWARE_TRAFFIC_LIGHT_PIPELINE__BAG2BAG__RUNNER_HPP_
+#endif  // PERCEPTION__AUTOWARE_TRAFFIC_LIGHT_PIPELINE__BAG2BAG__PIPELINE_RUNNER_HPP_

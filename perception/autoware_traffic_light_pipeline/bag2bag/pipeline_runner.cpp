@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "runner.hpp"
+#include "pipeline_runner.hpp"
 
 #include "traffic_light_recognition/traffic_light_recognition.hpp"
 

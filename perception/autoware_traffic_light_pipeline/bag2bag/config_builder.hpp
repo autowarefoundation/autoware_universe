@@ -15,7 +15,7 @@
 #ifndef PERCEPTION__AUTOWARE_TRAFFIC_LIGHT_PIPELINE__BAG2BAG__CONFIG_BUILDER_HPP_
 #define PERCEPTION__AUTOWARE_TRAFFIC_LIGHT_PIPELINE__BAG2BAG__CONFIG_BUILDER_HPP_
 
-#include "runner.hpp"
+#include "pipeline_runner.hpp"
 
 #include <string>
 #include <vector>
