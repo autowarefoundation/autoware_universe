@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This package converts `autoware_sensing_msgs::msg::RadarObjects` into `autoware_perception_msgs::msg::DetectedObjects`, acting as a simple integration of radars into the perception pipeline.
+This package converts `autoware_sensing_msgs::msg::RadarObjects` into `autoware_perception_msgs::msg::DetectedObjects` and `autoware_perception_msgs::msg::TrackedObjects`, acting as a simple integration of radars into the perception pipeline.
 
 ## RadarObjectsAdapter
 
@@ -28,9 +28,10 @@ This does not violate any logic in Autoware but may be worth monitoring.
 
 #### Output
 
-| Name             | Type                                           | Description                                    |
-| ---------------- | ---------------------------------------------- | ---------------------------------------------- |
-| ~/output/objects | autoware_perception_msgs::msg::DetectedObjects | Output radar objects in the perception format. |
+| Name                | Type                                           | Description                                                                                            |
+| ------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| ~/output/detections | autoware_perception_msgs::msg::DetectedObjects | Output radar objects as detections.                                                                    |
+| ~/output/tracks     | autoware_perception_msgs::msg::TrackedObjects  | Output radar objects as tracks, keeping the radar's object ids (made unique per input topic as UUIDs). |
 
 ## Parameters
 
