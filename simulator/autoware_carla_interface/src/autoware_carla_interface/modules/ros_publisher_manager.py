@@ -124,7 +124,12 @@ class ROSPublisherManager:
         try:
             sensor_type = sensor_config.carla_type
 
-            if sensor_type == "sensor.camera.rgb":
+            # Any camera, not only the rgb one. CARLA's depth and semantic
+            # segmentation cameras deliver the same BGRA frame through the same
+            # callback and want the same pair of publishers. Matching the type
+            # exactly meant a mapping could name one, have it spawned, and then
+            # lose every frame it produced with only a warning to say so.
+            if sensor_type.startswith("sensor.camera"):
                 return self._create_camera_publishers(sensor_config)
             elif sensor_type == "sensor.lidar.ray_cast":
                 return self._create_lidar_publisher(sensor_config)

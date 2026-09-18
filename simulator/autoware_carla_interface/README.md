@@ -296,6 +296,11 @@ works on luminance alone, such as feature tracking or visual odometry. A
 
 For CARLA sensor parameters, see [CARLA Sensor Reference](https://carla.readthedocs.io/en/latest/ref_sensors/).
 
+A `carla_type` of any `sensor.camera.*` is published as a camera: CARLA's depth
+and semantic segmentation cameras deliver the same BGRA frame through the same
+callback as the RGB one, and are published on the mapping's `topic_image` and
+`topic_info` with the encoded values untouched.
+
 ##### Sensor Noise
 
 The IMU and GNSS are spawned noise-free unless the mapping says otherwise, which
