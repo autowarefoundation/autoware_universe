@@ -65,8 +65,10 @@ private:
   /// World-to-lidar transform at the frame stamp, or nothing when TF cannot provide it.
   std::optional<Eigen::Affine3f> lookupWorldToLidar(const std_msgs::msg::Header & header) const;
 
-  tf2_ros::Buffer tf_buffer_;
-  tf2_ros::TransformListener tf_listener_{tf_buffer_};
+  // Densification is optional: without past frames no sweep is ever transformed, so the TF
+  // buffer and its listener thread are never created.
+  std::optional<tf2_ros::Buffer> tf_buffer_;
+  std::optional<tf2_ros::TransformListener> tf_listener_;
 
   std::unique_ptr<cuda_blackboard::CudaBlackboardSubscriber<cuda_blackboard::CudaPointCloud2>>
     pointcloud_sub_;

@@ -28,8 +28,7 @@
 namespace autoware::ptv3
 {
 
-PTv3Node::PTv3Node(const rclcpp::NodeOptions & options)
-: Node("ptv3", options), tf_buffer_(this->get_clock())
+PTv3Node::PTv3Node(const rclcpp::NodeOptions & options) : Node("ptv3", options)
 {
   auto descriptor = rcl_interfaces::msg::ParameterDescriptor{}.set__read_only(true);
 
@@ -57,6 +56,10 @@ PTv3Node::PTv3Node(const rclcpp::NodeOptions & options)
     this->declare_parameter<std::int64_t>("densification_num_past_frames", descriptor);
   densification_world_frame_id_ = densification_world_frame_id;
   densification_num_past_frames_ = densification_num_past_frames;
+  if (densification_num_past_frames_ > 0) {
+    tf_buffer_.emplace(this->get_clock());
+    tf_listener_.emplace(*tf_buffer_);
+  }
 
   // Encoder parameters
   const std::string encoder_onnx_path =
@@ -296,11 +299,11 @@ std::optional<Eigen::Affine3f> PTv3Node::lookupWorldToLidar(
   const std_msgs::msg::Header & header) const
 {
   // Without past frames every cached sweep is the current frame itself and the pose cancels out.
-  if (densification_num_past_frames_ == 0) {
+  if (!tf_buffer_) {
     return Eigen::Affine3f::Identity();
   }
   try {
-    const auto transform = tf_buffer_.lookupTransform(
+    const auto transform = tf_buffer_->lookupTransform(
       header.frame_id, densification_world_frame_id_, header.stamp,
       rclcpp::Duration::from_seconds(0.5));
     Eigen::Affine3f affine;
