@@ -541,3 +541,275 @@ TEST_F(RadarObjectsAdapterCharacterization, Gate_ValidRadarInfo_ObjectsConverted
   EXPECT_EQ(tracks_[0]->header.frame_id, "base_link");
   EXPECT_EQ(tracks_[0]->objects.size(), 1u);
 }
+
+// ---------------------------------------------------------------------------------------------
+// Conversion into detected objects. A radar object is converted into a detected object with the
+// fields that are explicitly declared in a preceding radar info. Each test case evaluates the
+// converted outcome against a radar object with some specific aspects. The tracked object made of
+// the same input is covered further down.
+//
+// Every case follows the same shape: the radar info and the radar objects are prepared first,
+// the node is run on them once, and the output is read.
+// ---------------------------------------------------------------------------------------------
+
+// A radar objects message with no objects still produces one detected objects message and one
+// tracked objects message, each empty and carrying the input header. This keeps the outputs alive
+// while the radar sees nothing, and it is the minimal behavior an integration test can check
+// without knowing anything about the conversion.
+TEST_F(RadarObjectsAdapterCharacterization, Conversion_EmptyObjects_PublishesEmptyOutputs)
+{
+  // Arrange
+  const RadarInfo info = make_radar_info(ars548_fields);
+
+  // Act
+  const auto outputs = run_node_and_collect_outputs(info, {});
+  ASSERT_TRUE(outputs.has_value());
+
+  // Assert
+  EXPECT_EQ(outputs->detections.header.stamp, first_stamp);
+  EXPECT_TRUE(outputs->detections.objects.empty());
+  EXPECT_EQ(outputs->tracks.header.stamp, first_stamp);
+  EXPECT_TRUE(outputs->tracks.objects.empty());
+}
+
+// When the radar info declares a field, the node copies it from the radar object as it is - no
+// coordinate transform, no scaling. Every field the radar info can declare is declared here, so
+// nothing falls back to a parameter.
+//
+// The velocity's x and y are not copied but rotated, and are pinned separately.
+TEST_F(RadarObjectsAdapterCharacterization, Detections_DeclaredFields_CopiedFromObject)
+{
+  // Arrange
+  const RadarInfo info = make_radar_info(all_fields);
+  const RadarObject radar = make_radar_object();
+
+  // Act
+  const auto outputs = run_node_and_collect_outputs(info, {radar});
+  ASSERT_TRUE(outputs.has_value());
+
+  // Assert: every declared field carries the radar object's value
+  const DetectedObject & detected = outputs->detections.objects.at(0);
+
+  EXPECT_FLOAT_EQ(detected.existence_probability, radar.existence_probability);
+
+  const auto & position = detected.kinematics.pose_with_covariance.pose.position;
+  EXPECT_DOUBLE_EQ(position.x, radar.position.x);
+  EXPECT_DOUBLE_EQ(position.y, radar.position.y);
+  EXPECT_DOUBLE_EQ(position.z, radar.position.z);
+
+  const auto & twist = detected.kinematics.twist_with_covariance.twist;
+  EXPECT_DOUBLE_EQ(twist.linear.z, radar.velocity.z);
+  EXPECT_DOUBLE_EQ(twist.angular.z, static_cast<double>(radar.orientation_rate));
+
+  EXPECT_EQ(detected.shape.type, Shape::BOUNDING_BOX);
+  EXPECT_DOUBLE_EQ(detected.shape.dimensions.x, radar.size.x);
+  EXPECT_DOUBLE_EQ(detected.shape.dimensions.y, radar.size.y);
+  EXPECT_DOUBLE_EQ(detected.shape.dimensions.z, radar.size.z);
+}
+
+// When the radar info does not declare a field, the node ignores the value in the radar object
+// and fills the field from the parameter. This is the situation on the vehicle for velocity_z,
+// acceleration_z and size_z; here every optional field is left undeclared so that every fallback
+// is seen at once. The yaw variances stay zero because the orientation standard deviations are
+// undeclared as well.
+TEST_F(RadarObjectsAdapterCharacterization, Detections_UndeclaredFields_FilledFromParameters)
+{
+  // Arrange
+  const DefaultParameters defaults;
+  const RadarInfo info = make_radar_info(required_fields);
+  const RadarObject radar = make_radar_object();
+
+  // Act
+  const auto outputs = run_node_and_collect_outputs(info, {radar}, defaults.to_options());
+  ASSERT_TRUE(outputs.has_value());
+
+  // Assert: every undeclared field carries the parameter's value
+  const DetectedObject & detected = outputs->detections.objects.at(0);
+
+  const auto & kinematics = detected.kinematics;
+  EXPECT_DOUBLE_EQ(kinematics.pose_with_covariance.pose.position.z, defaults.position_z);
+  EXPECT_DOUBLE_EQ(kinematics.twist_with_covariance.twist.linear.z, defaults.velocity_z);
+  EXPECT_DOUBLE_EQ(kinematics.pose_with_covariance.covariance[cov_yaw_yaw], 0.0);
+  EXPECT_DOUBLE_EQ(kinematics.twist_with_covariance.covariance[cov_yaw_yaw], 0.0);
+
+  EXPECT_EQ(detected.shape.type, Shape::BOUNDING_BOX);
+  EXPECT_DOUBLE_EQ(detected.shape.dimensions.x, defaults.size_x);
+  EXPECT_DOUBLE_EQ(detected.shape.dimensions.y, defaults.size_y);
+  EXPECT_DOUBLE_EQ(detected.shape.dimensions.z, defaults.size_z);
+}
+
+// The radar's yaw angle becomes the orientation quaternion: a rotation about z alone.
+TEST_F(RadarObjectsAdapterCharacterization, Detections_Orientation_QuaternionFromYaw)
+{
+  // Arrange
+  const RadarInfo info = make_radar_info(ars548_fields);
+  const RadarObject rotated_object = facing(make_radar_object(), 0.3);
+
+  // Act
+  const auto outputs = run_node_and_collect_outputs(info, {rotated_object});
+  ASSERT_TRUE(outputs.has_value());
+
+  // Assert: a yaw of 0.3 rad about z is (0, 0, sin(0.15), cos(0.15))
+  const auto & orientation =
+    outputs->detections.objects.at(0).kinematics.pose_with_covariance.pose.orientation;
+  EXPECT_NEAR(orientation.x, 0.0, 1e-9);
+  EXPECT_NEAR(orientation.y, 0.0, 1e-9);
+  EXPECT_NEAR(orientation.z, std::sin(0.15), 1e-6);
+  EXPECT_NEAR(orientation.w, std::cos(0.15), 1e-6);
+}
+
+namespace
+{
+// The detected object's kinematics flags say what the message carries, not where a value came
+// from: the pose covariance, the twist and the twist covariance are declared present and the
+// orientation fully known. Two cases check that this holds whatever the radar info declares.
+void expect_all_kinematics_flags_set(const DetectedObjectKinematics & kinematics)
+{
+  EXPECT_TRUE(kinematics.has_position_covariance);
+  EXPECT_EQ(kinematics.orientation_availability, DetectedObjectKinematics::AVAILABLE);
+  EXPECT_TRUE(kinematics.has_twist);
+  EXPECT_TRUE(kinematics.has_twist_covariance);
+}
+}  // namespace
+
+// With only the required fields declared, both flagged covariances come from the parameters -
+// and the flags are set all the same.
+TEST_F(RadarObjectsAdapterCharacterization, Detections_KinematicsFlags_SetWithOnlyRequiredFields)
+{
+  // Arrange
+  const RadarInfo info = make_radar_info(required_fields);
+  const RadarObject radar = make_radar_object();
+
+  // Act
+  const auto outputs = run_node_and_collect_outputs(info, {radar});
+  ASSERT_TRUE(outputs.has_value());
+
+  // Assert
+  expect_all_kinematics_flags_set(outputs->detections.objects.at(0).kinematics);
+}
+
+// With every optional field declared, the same flags are set.
+TEST_F(RadarObjectsAdapterCharacterization, Detections_KinematicsFlags_SetWithAllFields)
+{
+  // Arrange
+  const RadarInfo info = make_radar_info(all_fields);
+  const RadarObject radar = make_radar_object();
+
+  // Act
+  const auto outputs = run_node_and_collect_outputs(info, {radar});
+  ASSERT_TRUE(outputs.has_value());
+
+  // Assert
+  expect_all_kinematics_flags_set(outputs->detections.objects.at(0).kinematics);
+}
+
+// The radar reports velocity in its own frame; the detected object's twist is expressed in the
+// object's frame, so the node rotates the velocity by the object's yaw. With a quarter turn, a
+// velocity along the radar's x axis becomes a velocity along the object's negative y axis.
+//
+// Since ars548_fields does not have velocity_z, radar.velocity.z is ignored; the z component is
+// not part of the rotation, and where it comes from is pinned by the declared/undeclared cases.
+TEST_F(RadarObjectsAdapterCharacterization, Detections_Twist_VelocityRotatedIntoObjectFrame)
+{
+  // Arrange
+  const RadarInfo info = make_radar_info(ars548_fields);
+  RadarObject radar = facing(make_radar_object(), quarter_turn);
+  radar.velocity.x = 1.0;
+  radar.velocity.y = 0.0;
+
+  // Act
+  const auto outputs = run_node_and_collect_outputs(info, {radar});
+  ASSERT_TRUE(outputs.has_value());
+
+  // Assert: (1, 0) in the radar's frame is (0, -1) in the object's frame
+  const auto & linear =
+    outputs->detections.objects.at(0).kinematics.twist_with_covariance.twist.linear;
+  EXPECT_NEAR(linear.x, 0.0, 1e-6);
+  EXPECT_NEAR(linear.y, -1.0, 1e-6);
+}
+
+// The x/y block of the position covariance is copied without rotation - it is expressed in the
+// header frame, like the position itself - and the yaw variance is the square of the radar's
+// orientation standard deviation. The z entries of the radar covariance are dropped, and every
+// other entry of the 6x6 matrix stays zero.
+TEST_F(
+  RadarObjectsAdapterCharacterization,
+  Detections_PoseCovariance_CopiedWithoutRotationWithYawVariance)
+{
+  // Arrange
+  const RadarInfo info = make_radar_info(ars548_fields);
+  const RadarObject radar = facing(make_radar_object(), quarter_turn);
+
+  // Act
+  const auto outputs = run_node_and_collect_outputs(info, {radar});
+  ASSERT_TRUE(outputs.has_value());
+
+  // Assert
+  const auto & covariance =
+    outputs->detections.objects.at(0).kinematics.pose_with_covariance.covariance;
+  // The x/y block, as the radar reported it (XX, XY, YY), not rotated by the quarter turn
+  EXPECT_NEAR(covariance[cov_x_x], radar.position_covariance[0], covariance_tolerance);
+  EXPECT_NEAR(covariance[cov_x_y], radar.position_covariance[1], covariance_tolerance);
+  EXPECT_NEAR(covariance[cov_y_x], radar.position_covariance[1], covariance_tolerance);
+  EXPECT_NEAR(covariance[cov_y_y], radar.position_covariance[3], covariance_tolerance);
+  // The z entries of the radar covariance are not carried over
+  EXPECT_DOUBLE_EQ(covariance[cov_x_z], 0.0);
+  EXPECT_DOUBLE_EQ(covariance[cov_z_z], 0.0);
+  // The yaw variance
+  const double yaw_std = radar.orientation_std;
+  EXPECT_NEAR(covariance[cov_yaw_yaw], yaw_std * yaw_std, covariance_tolerance);
+  EXPECT_TRUE(
+    only_these_entries_set(covariance, {cov_x_x, cov_x_y, cov_y_x, cov_y_y, cov_yaw_yaw}));
+}
+
+// The x/y block of the velocity covariance is rotated into the object's frame along with the
+// velocity. With a quarter turn the x and y variances swap places and the covariance changes
+// sign. The yaw rate variance is the square of the radar's orientation rate standard deviation.
+TEST_F(RadarObjectsAdapterCharacterization, Detections_TwistCovariance_RotatedByYaw)
+{
+  // Arrange
+  const RadarInfo info = make_radar_info(ars548_fields);
+  RadarObject radar = facing(make_radar_object(), quarter_turn);
+  radar.velocity_covariance = {1.0f, 0.5f, 0.0f, 4.0f, 0.0f, 0.0f};
+
+  // Act
+  const auto outputs = run_node_and_collect_outputs(info, {radar});
+  ASSERT_TRUE(outputs.has_value());
+
+  // Assert
+  const auto & covariance =
+    outputs->detections.objects.at(0).kinematics.twist_with_covariance.covariance;
+  // Variances swapped, covariance negated
+  EXPECT_NEAR(covariance[cov_x_x], 4.0, covariance_tolerance);
+  EXPECT_NEAR(covariance[cov_y_y], 1.0, covariance_tolerance);
+  EXPECT_NEAR(covariance[cov_x_y], -0.5, covariance_tolerance);
+  EXPECT_NEAR(covariance[cov_y_x], -0.5, covariance_tolerance);
+  // The yaw rate variance
+  const double yaw_rate_std = radar.orientation_rate_std;
+  EXPECT_NEAR(covariance[cov_yaw_yaw], yaw_rate_std * yaw_rate_std, covariance_tolerance);
+  EXPECT_TRUE(
+    only_these_entries_set(covariance, {cov_x_x, cov_x_y, cov_y_x, cov_y_y, cov_yaw_yaw}));
+}
+
+// A radar marks a covariance entry it cannot provide with INVALID_COV_VALUE (-1). The node turns
+// those into zero instead of passing a negative variance downstream. The yaw variances are not
+// affected, because they come from the standard deviations, not from these arrays.
+TEST_F(RadarObjectsAdapterCharacterization, Detections_InvalidCovariance_MaskedToZero)
+{
+  // Arrange
+  const RadarInfo info = make_radar_info(ars548_fields);
+  RadarObject radar = make_radar_object();
+  radar.position_covariance.fill(RadarObject::INVALID_COV_VALUE);
+  radar.velocity_covariance.fill(RadarObject::INVALID_COV_VALUE);
+
+  // Act
+  const auto outputs = run_node_and_collect_outputs(info, {radar});
+  ASSERT_TRUE(outputs.has_value());
+
+  // Assert: the x/y blocks are zero, the yaw variances are not
+  const auto & kinematics = outputs->detections.objects.at(0).kinematics;
+  EXPECT_TRUE(only_these_entries_set(kinematics.pose_with_covariance.covariance, {cov_yaw_yaw}));
+  EXPECT_GT(kinematics.pose_with_covariance.covariance[cov_yaw_yaw], 0.0);
+  EXPECT_TRUE(only_these_entries_set(kinematics.twist_with_covariance.covariance, {cov_yaw_yaw}));
+  EXPECT_GT(kinematics.twist_with_covariance.covariance[cov_yaw_yaw], 0.0);
+}
