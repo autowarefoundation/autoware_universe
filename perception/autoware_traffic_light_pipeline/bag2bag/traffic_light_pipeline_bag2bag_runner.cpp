@@ -45,10 +45,15 @@
 //     --output-bag <output bag dir>
 //     --camera 4,5                     (the cameras the input bag recorded)
 //     [--ml-model-path <dir>]          (default $HOME/autoware_data)
+//     [--config <param.yaml>]          (default this package's installed
+//                                       config/traffic_light_recognition.param.yaml)
 //
-// There is no config file: the front-end's tuning comes from this package's own
-// config/traffic_light_recognition.param.yaml (see build_bag2bag_config()), the topic names follow
-// from the camera namespaces, and the back-end's settings are the deployed constants below.
+// The runner has no config file of its own: the front-end's tuning comes from the very file the
+// Node is launched with, this package's config/traffic_light_recognition.param.yaml, so the
+// default run reproduces the deployed configuration (see build_bag2bag_config()). --config swaps
+// in another copy of that same file, for sweeping a threshold without editing the installed one.
+// The topic names follow from the camera namespaces, and the back-end's settings are the deployed
+// constants below.
 
 #include "traffic_light_recognition/traffic_light_recognition.hpp"
 
@@ -104,29 +109,38 @@ using autoware::traffic_light::TrafficLightRecognitionResult;
 
 // --- run config ---------------------------------------------------------------------------------
 
-// Returns `node[key]`, throwing if it is missing -- the package config is expected to carry every
-// value the Node declares, so a missing one is a broken config file rather than a default.
+// Returns `node[key]`, throwing if it is missing -- the recognition config is expected to carry
+// every value the Node declares, so a missing one is a broken config file rather than a default.
 YAML::Node require(const YAML::Node & node, const std::string & key)
 {
   const auto child = node[key];
   if (!child) {
-    throw std::runtime_error(
-      "traffic_light_recognition.param.yaml: missing required key '" + key + "'");
+    throw std::runtime_error("recognition config: missing required key '" + key + "'");
   }
   return child;
 }
 
-// The `/**: ros__parameters:` block of this package's installed
-// config/traffic_light_recognition.param.yaml -- the very file
-// launch/traffic_light_recognition.launch.xml passes the Node as `<param from="..."/>`. Read with
-// yaml-cpp rather than rcl's yaml parser because nothing here is a Node: every value the Node
-// declares is a plain scalar under that one block, so the two parsers see the same thing.
-YAML::Node package_recognition_parameters()
+// This package's installed config/traffic_light_recognition.param.yaml -- the very file
+// launch/traffic_light_recognition.launch.xml passes the Node as `<param from="..."/>`. Used
+// whenever --config is not given, so that the default run measures the deployed configuration.
+std::string default_recognition_config_path()
 {
-  const auto path =
-    ament_index_cpp::get_package_share_directory("autoware_traffic_light_pipeline") +
-    "/config/traffic_light_recognition.param.yaml";
-  const auto root = YAML::LoadFile(path);
+  return ament_index_cpp::get_package_share_directory("autoware_traffic_light_pipeline") +
+         "/config/traffic_light_recognition.param.yaml";
+}
+
+// The `/**: ros__parameters:` block of the file above, or of the --config file, which has to have
+// the same layout because it is meant to be a copy of it. Read with yaml-cpp rather than rcl's
+// yaml parser because nothing here is a Node: every value the Node declares is a plain scalar
+// under that one block, so the two parsers see the same thing.
+YAML::Node recognition_parameters(const std::string & config_path)
+{
+  // yaml-cpp reports a missing file as a bare "bad file", which says nothing about a path the
+  // caller may have mistyped on the command line.
+  if (!std::filesystem::exists(config_path)) {
+    throw std::runtime_error("recognition config does not exist: " + config_path);
+  }
+  const auto root = YAML::LoadFile(config_path);
   return require(require(root, "/**"), "ros__parameters");
 }
 
@@ -181,11 +195,12 @@ ClassifierModelConfig read_classifier_config(
   return classifier_config;
 }
 
-// Every tuned value of the front-end, read from the package config; only the artifact directory
-// comes from the command line. See build_bag2bag_config().
-TrafficLightRecognitionConfig build_recognition_config(const std::string & ml_model_path)
+// Every tuned value of the front-end, read from `config_path`; only the artifact directory comes
+// from the command line. See build_bag2bag_config().
+TrafficLightRecognitionConfig build_recognition_config(
+  const std::string & ml_model_path, const std::string & config_path)
 {
-  const auto parameters = package_recognition_parameters();
+  const auto parameters = recognition_parameters(config_path);
   const auto detector = require(parameters, "whole_image_detector");
   const auto map_based_detector = require(parameters, "map_based_detector");
   const auto classifier = require(parameters, "classifier");
@@ -302,11 +317,13 @@ std::string find_map_projector_info(const std::string & map_path)
 // and the directory the ML artifacts live in -- and this package's own
 // config/traffic_light_recognition.param.yaml for everything else.
 //
-// There is no config file of the runner's own on purpose. Every tuned value comes from that
-// package config -- the same file launch/traffic_light_recognition.launch.xml feeds the Node -- so
-// a bag-to-bag run always reproduces the deployed configuration and cannot state a threshold of
-// its own. What is left is derivable: the topic names follow from each camera's namespace exactly
-// as the launch file's own defaults do (see build_camera_config()).
+// There is no config file of the runner's own on purpose. Every tuned value comes from a config
+// in the Node's own format -- by default the very file launch/traffic_light_recognition.launch.xml
+// feeds the Node -- so a bag-to-bag run reproduces the deployed configuration and never states a
+// threshold of its own. An empty `config_path` selects that default; anything else has to be a
+// copy of it, which is how a threshold is swept without editing the installed file. What is left
+// is derivable: the topic names follow from each camera's namespace exactly as the launch file's
+// own defaults do (see build_camera_config()).
 //
 // `ml_model_path` is the launch file's `data_path` argument -- a property of the machine the run
 // happens on rather than of the pipeline's tuning, which is why the package config names the
@@ -314,15 +331,17 @@ std::string find_map_projector_info(const std::string & map_path)
 // launch file's default.
 Bag2BagConfig build_bag2bag_config(
   const std::string & input_bag_path, const std::string & map_path,
-  const std::vector<int> & camera_indices, const std::string & ml_model_path)
+  const std::vector<int> & camera_indices, const std::string & ml_model_path,
+  const std::string & config_path)
 {
   Bag2BagConfig config;
   config.input_bag_path = input_bag_path;
   config.lanelet2_map_path = find_lanelet2_map(map_path);
   config.map_projector_info_path = find_map_projector_info(map_path);
 
-  config.recognition =
-    build_recognition_config(ml_model_path.empty() ? default_ml_model_path() : ml_model_path);
+  config.recognition = build_recognition_config(
+    ml_model_path.empty() ? default_ml_model_path() : ml_model_path,
+    config_path.empty() ? default_recognition_config_path() : config_path);
 
   for (const auto camera_index : camera_indices) {
     config.cameras.push_back(build_camera_config(camera_index));
@@ -662,6 +681,7 @@ struct CommandLineArgs
   std::string output_bag_path;
   std::vector<int> camera_indices;
   std::string ml_model_path;
+  std::string config_path;
 };
 
 // Parses `--camera 4,5` (or `--camera 4 --camera 5`) into {4, 5}: the numeric part of each
@@ -713,6 +733,8 @@ CommandLineArgs parse_args(int argc, char ** argv)
         args.camera_indices.end(), camera_indices.begin(), camera_indices.end());
     } else if (flag == "--ml-model-path") {
       args.ml_model_path = value;
+    } else if (flag == "--config") {
+      args.config_path = value;
     } else {
       throw std::runtime_error("unknown argument " + flag);
     }
@@ -722,7 +744,8 @@ CommandLineArgs parse_args(int argc, char ** argv)
     args.camera_indices.empty()) {
     throw std::runtime_error(
       "usage: traffic_light_pipeline_bag2bag_runner --input-bag <path> --map <dir> "
-      "--output-bag <path> --camera <numbers, e.g. 4,5> [--ml-model-path <dir>]");
+      "--output-bag <path> --camera <numbers, e.g. 4,5> [--ml-model-path <dir>] "
+      "[--config <param.yaml>]");
   }
   return args;
 }
@@ -733,7 +756,7 @@ CommandLineArgs parse_args(int argc, char ** argv)
 void run_bag2bag(const CommandLineArgs & args)
 {
   const auto config = build_bag2bag_config(
-    args.input_bag_path, args.map_path, args.camera_indices, args.ml_model_path);
+    args.input_bag_path, args.map_path, args.camera_indices, args.ml_model_path, args.config_path);
   const auto map_msg = load_map(config);
 
   const auto recorded_frame_results = run_recognition(config, map_msg);
