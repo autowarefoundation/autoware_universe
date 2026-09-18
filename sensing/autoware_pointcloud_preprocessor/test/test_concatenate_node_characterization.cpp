@@ -389,14 +389,15 @@ std::shared_ptr<rclcpp_components::NodeFactory> get_component_factory()
   return *factory;
 }
 
-const SourcePointCloudInfo & get_source_for(
+// The source entry for `topic`, or nullptr if the info message does not carry it. A plain
+// lookup: whether a missing topic is a failure is the caller's decision, not this one's.
+const SourcePointCloudInfo * get_source_for(
   const ConcatenatedPointCloudInfo & info, const std::string & topic)
 {
   const auto it = std::find_if(
     info.source_info.begin(), info.source_info.end(),
     [&topic](const auto & source) { return source.topic == topic; });
-  EXPECT_NE(it, info.source_info.end()) << topic << " missing from source_info";
-  return *it;
+  return it == info.source_info.end() ? nullptr : &*it;
 }
 
 }  // namespace
@@ -585,11 +586,21 @@ protected:
   std::vector<Point> get_segment_of(
     const ConcatenatedPointCloudInfo & info, const PointCloud2 & cloud, size_t sensor_index)
   {
-    const auto & source = get_source_for(info, input_topics_.at(sensor_index));
+    const auto & topic = input_topics_.at(sensor_index);
+    const auto * source = get_source_for(info, topic);
+    if (source == nullptr) {
+      ADD_FAILURE() << topic << " is missing from source_info";
+      return {};
+    }
     const auto points = read_points(cloud);
-    if (source.idx_begin + source.length > points.size()) return {};
+    if (source->idx_begin + source->length > points.size()) {
+      ADD_FAILURE() << topic << " claims points [" << source->idx_begin << ", "
+                    << source->idx_begin + source->length << ") of a cloud holding only "
+                    << points.size();
+      return {};
+    }
     return std::vector<Point>(
-      points.begin() + source.idx_begin, points.begin() + source.idx_begin + source.length);
+      points.begin() + source->idx_begin, points.begin() + source->idx_begin + source->length);
   }
 
   // -- topic graph introspection ---------------------------------------------------------
