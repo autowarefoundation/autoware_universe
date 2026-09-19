@@ -56,6 +56,7 @@ std::optional<Eigen::Affine3f> StaticTfSubscriber::operator()(
     extrinsic->translation() = p;
     extrinsic->matrix().topLeftCorner(3, 3) = q.toRotationMatrix();
   } catch (const tf2::TransformException & ex) {
+    (void)ex;
   }
   return extrinsic;
 }
