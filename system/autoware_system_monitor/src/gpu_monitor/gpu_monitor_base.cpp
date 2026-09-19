@@ -21,6 +21,7 @@
 
 #include <unistd.h>
 
+#include <algorithm>
 #include <string>
 #include <vector>
 
@@ -32,6 +33,7 @@ GPUMonitorBase::GPUMonitorBase(const std::string & node_name, const rclcpp::Node
   temp_error_(declare_parameter<float>("temp_error", 95.0)),
   gpu_usage_warn_(declare_parameter<float>("gpu_usage_warn", 0.90)),
   gpu_usage_error_(declare_parameter<float>("gpu_usage_error", 1.00)),
+  gpu_usage_error_duration_(declare_parameter<int>("gpu_usage_error_duration", 0)),
   memory_usage_warn_(declare_parameter<float>("memory_usage_warn", 0.95)),
   memory_usage_error_(declare_parameter<float>("memory_usage_error", 0.99))
 {
@@ -105,6 +107,37 @@ std::vector<GPUMonitorBase::GpuStatus> GPUMonitorBase::getGPUStatus() const
 void GPUMonitorBase::onTimer()
 {
   publishGPUStatus();
+}
+
+int GPUMonitorBase::gpuUsageToLevel(size_t index, float usage)
+{
+  int level = DiagStatus::OK;
+
+  if (usage >= gpu_usage_warn_) {
+    level = std::max(level, static_cast<int>(DiagStatus::WARN));
+  }
+
+  if (usage >= gpu_usage_error_) {
+    if (gpu_usage_error_duration_ <= 0) {
+      level = std::max(level, static_cast<int>(DiagStatus::ERROR));
+    } else {
+      if (index >= gpu_usage_error_start_times_.size()) {
+        gpu_usage_error_start_times_.resize(index + 1);
+      }
+      auto & start_time = gpu_usage_error_start_times_[index];
+      if (!start_time.has_value()) {
+        start_time = this->now();
+      }
+      const double elapsed_sec = (this->now() - start_time.value()).seconds();
+      if (elapsed_sec >= static_cast<double>(gpu_usage_error_duration_)) {
+        level = std::max(level, static_cast<int>(DiagStatus::ERROR));
+      }
+    }
+  } else if (index < gpu_usage_error_start_times_.size()) {
+    gpu_usage_error_start_times_[index].reset();
+  }
+
+  return level;
 }
 
 void GPUMonitorBase::publishGPUStatus()
