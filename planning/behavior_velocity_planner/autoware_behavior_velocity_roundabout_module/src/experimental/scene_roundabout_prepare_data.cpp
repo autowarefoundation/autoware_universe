@@ -88,13 +88,14 @@ Result<RoundaboutModule::BasicData, InternalError> RoundaboutModule::prepareRoun
   // ==========================================================================================
   roundabout_lanelets.update(interpolated_path_info, footprint, baselink2front, routing_graph_ptr);
 
-  if (!roundabout_lanelets.first_attention_lane()) {
+  const auto first_attention_lane = roundabout_lanelets.first_attention_lane();
+  if (!first_attention_lane) {
     // this is abnormal
     return make_err<RoundaboutModule::BasicData, InternalError>("first attention area is null");
   }
 
-  const auto roundabout_stoplines_opt = generateRoundaboutStopLines(
-    roundabout_lanelets.first_attention_lane().value(), interpolated_path_info, path, planner_data);
+  const auto roundabout_stoplines_opt =
+    generateRoundaboutStopLines(*first_attention_lane, interpolated_path_info, path, planner_data);
   if (!roundabout_stoplines_opt) {
     return make_err<RoundaboutModule::BasicData, InternalError>(
       "failed to generate roundabout_stoplines");
@@ -115,7 +116,7 @@ Result<RoundaboutModule::BasicData, InternalError> RoundaboutModule::prepareRoun
   const auto & path_lanelets = path_lanelets_opt.value();
 
   return make_ok<RoundaboutModule::BasicData, InternalError>(
-    interpolated_path_info, roundabout_stoplines, path_lanelets);
+    interpolated_path_info, roundabout_stoplines, path_lanelets, roundabout_lanelets);
 }
 
 std::optional<RoundaboutStopLines> RoundaboutModule::generateRoundaboutStopLines(
