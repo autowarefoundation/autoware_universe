@@ -296,6 +296,38 @@ works on luminance alone, such as feature tracking or visual odometry. A
 
 For CARLA sensor parameters, see [CARLA Sensor Reference](https://carla.readthedocs.io/en/latest/ref_sensors/).
 
+##### Capture Rate
+
+`frequency_hz` throttles what the bridge publishes; it does not change how often
+CARLA captures. A sensor left at CARLA's default captures on every simulation
+step, so at a 1/600 s step a camera renders 600 frames a second and the bridge
+discards all but a few. The throttle can also only drop whole frames, so a
+mapping asking for 60 Hz at that step publishes at 85.7 Hz and a 200 Hz IMU at
+300 Hz.
+
+Set `sensor_tick` (seconds between captures) under the sensor's `parameters` to
+have CARLA generate at the rate the mapping wants:
+
+```yaml
+parameters:
+  image_size_x: 1600
+  image_size_y: 900
+  fov: 70.0
+  sensor_tick: 0.0166667
+```
+
+Sensors without a `sensor_tick` keep capturing every step, as before. Avoid a
+`sensor_tick` exactly equal to `fixed_delta_seconds`: CARLA compares the tick
+interval against the elapsed time with a float, and a sensor whose tick equals
+the step can miss frames
+([carla#3653](https://github.com/carla-simulator/carla/issues/3653)).
+
+CARLA cannot capture between steps, so it holds the requested average by
+alternating shorter and longer gaps -- a 0.04 s tick at a 1/60 s step arrives
+after two steps and then three. The publish throttle allows a frame of such a
+sensor to be up to half its own tick early, so those arrivals are published
+instead of dropped.
+
 ##### Sensor Noise
 
 The IMU and GNSS are spawned noise-free unless the mapping says otherwise, which
