@@ -139,6 +139,9 @@ class carla_ros2_interface(object):
             "use_traffic_manager": (rclpy.Parameter.Type.BOOL, None),
             "max_real_delta_seconds": (rclpy.Parameter.Type.DOUBLE, None),
             "tick_follower": (rclpy.Parameter.Type.BOOL, False),
+            # Attach to the ego another client spawned, instead of loading
+            # the episode and spawning one.
+            "attach_to_existing_ego": (rclpy.Parameter.Type.BOOL, False),
             "spawn_point_ground_snap": (rclpy.Parameter.Type.BOOL, False),
             "spawn_point_ground_offset_z": (rclpy.Parameter.Type.DOUBLE, 0.5),
             "initial_pose_ground_offset_z": (rclpy.Parameter.Type.DOUBLE, 1.0),

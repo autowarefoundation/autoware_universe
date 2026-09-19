@@ -21,6 +21,11 @@
       default="False"
       description="Follow the frames ticked by an external co-simulation client instead of calling world.tick(). Exactly one client may own the simulation clock"
     />
+    <arg
+      name="attach_to_existing_ego"
+      default="False"
+      description="Attach to the vehicle another client spawned under ego_vehicle_role_name instead of loading the episode and spawning one; that client also keeps control of it"
+    />
     <arg name="spawn_point_ground_snap" default="False" description="Snap the ego spawn point and RViz initial pose onto CARLA map geometry via ground_projection"/>
     <arg name="spawn_point_ground_offset_z" default="0.5" description="Z offset added above the projected ground when ground-snapping the spawn point"/>
     <arg name="initial_pose_ground_offset_z" default="1.0" description="Z offset added above the projected ground when ground-snapping the RViz initial pose"/>
@@ -97,6 +102,7 @@
       <param name="use_traffic_manager" value="$(var use_traffic_manager)"/>
       <param name="max_real_delta_seconds" value="$(var max_real_delta_seconds)"/>
       <param name="tick_follower" value="$(var tick_follower)"/>
+      <param name="attach_to_existing_ego" value="$(var attach_to_existing_ego)"/>
       <param name="spawn_point_ground_snap" value="$(var spawn_point_ground_snap)"/>
       <param name="spawn_point_ground_offset_z" value="$(var spawn_point_ground_offset_z)"/>
       <param name="initial_pose_ground_offset_z" value="$(var initial_pose_ground_offset_z)"/>
