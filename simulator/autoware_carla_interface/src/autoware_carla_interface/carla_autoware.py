@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import math
 import queue
 import random
 import signal
@@ -90,6 +91,7 @@ class InitializeInterface(object):
         self.spawn_point_ground_offset_z = self.param_["spawn_point_ground_offset_z"]
         self.force_load_world = self.param_["force_load_world"]
         self.no_rendering_mode = self.param_["no_rendering_mode"]
+        self.max_substep_delta_time = self.param_["max_substep_delta_time"]
 
     def _parse_spawn_point(self):
         """Parse spawn point string and return transform with randomize flag."""
@@ -382,7 +384,45 @@ class InitializeInterface(object):
         settings.fixed_delta_seconds = self.fixed_delta_seconds
         settings.synchronous_mode = self.sync_mode
         settings.no_rendering_mode = self.no_rendering_mode
+        self._apply_substepping(settings)
         self.world.apply_settings(settings)
+
+    def _apply_substepping(self, settings):
+        """Bound the physics substep so the vehicle's reported state stays consistent.
+
+        CARLA integrates the physics in substeps of at most
+        max_substep_delta_time, which it defaults to 0.01 s. At that resolution
+        the angular velocity the vehicle reports stops integrating to the
+        rotation its own transform performs: driving straight for 27.8 s at a
+        1/60 s step, the reported yaw rate integrated to 9.41 deg against the
+        0.03 deg the vehicle actually turned. The IMU is faithful to the body --
+        its gyroscope matches get_angular_velocity() to seven significant
+        figures -- so the error is in the rigid body's own state and every
+        recording carries a phantom yaw rate of up to 0.9 deg/s. It is
+        deterministic and depends on where the vehicle is, which is why some
+        runs carry it and others do not.
+
+        At a 2 ms substep the same drive mismatches by 0.005 deg, and across an
+        eleven-drive bench set the worst phantom rate went from 0.90212 to
+        0.00348 deg/s. Only the substep changes: the simulation step itself is
+        untouched, so the wall-clock pacing of a run stays as it was, at the
+        cost of more physics iterations inside each step.
+
+        CARLA requires fixed_delta_seconds <= max_substep_delta_time *
+        max_substeps and rejects the settings otherwise, so the count is
+        derived from the step rather than configured separately.
+        """
+        if self.max_substep_delta_time <= 0.0:
+            return
+        settings.substepping = True
+        settings.max_substep_delta_time = self.max_substep_delta_time
+        settings.max_substeps = max(
+            1, math.ceil(self.fixed_delta_seconds / self.max_substep_delta_time)
+        )
+        self.logger.info(
+            f"Physics substepping: max {settings.max_substeps} substeps of "
+            f"{self.max_substep_delta_time} s per {self.fixed_delta_seconds} s step"
+        )
 
     def _spawn_ego_actor(self):
         """Spawn the ego vehicle at the configured (optionally ground-snapped) spawn point."""

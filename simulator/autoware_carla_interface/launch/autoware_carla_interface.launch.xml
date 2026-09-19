@@ -29,6 +29,11 @@
     <arg name="min_positive_throttle_speed_threshold" default="0.8" description="Apply min_positive_throttle only below this speed [m/s]; negative = always"/>
     <arg name="no_rendering_mode" default="False" description="Disable CARLA rendering via world settings for headless/faster simulation"/>
     <arg
+      name="max_substep_delta_time"
+      default="0.002"
+      description="Longest physics substep [s] CARLA may take inside one simulation step; 0 or negative leaves CARLA's substepping settings untouched"
+    />
+    <arg
       name="map_origin_x"
       default="0.0"
       description="X offset from the CARLA world origin to the Autoware map frame origin (0.0 = auto-derive from the OpenDRIVE geoReference for georeferenced maps; stays 0.0 for stock CARLA towns)"
@@ -104,6 +109,7 @@
       <param name="min_positive_throttle" value="$(var min_positive_throttle)"/>
       <param name="min_positive_throttle_speed_threshold" value="$(var min_positive_throttle_speed_threshold)"/>
       <param name="no_rendering_mode" value="$(var no_rendering_mode)"/>
+      <param name="max_substep_delta_time" value="$(var max_substep_delta_time)"/>
       <param name="map_origin_x" value="$(var map_origin_x)"/>
       <param name="map_origin_y" value="$(var map_origin_y)"/>
       <param name="publish_ground_truth_objects" value="$(var publish_ground_truth_objects)"/>
