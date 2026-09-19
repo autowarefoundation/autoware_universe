@@ -67,9 +67,7 @@ private:
     ground_dust_ratio_pub_;
   rclcpp::Publisher<autoware_internal_debug_msgs::msg::StringStamped>::SharedPtr blockage_type_pub_;
 
-  // cppcheck-suppress unknownMacro
   AUTOWARE_SUBSCRIPTION_PTR(sensor_msgs::msg::PointCloud2) pointcloud_sub_;
-  // cppcheck-suppress unknownMacro
   void update_diagnostics(AUTOWARE_MESSAGE_CONST_SHARED_PTR(sensor_msgs::msg::PointCloud2) input);
   void run_blockage_check(DiagnosticStatusWrapper & stat) const;
   void run_dust_check(DiagnosticStatusWrapper & stat) const;
