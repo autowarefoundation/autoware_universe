@@ -25,7 +25,7 @@ from typing import Optional
 
 # Image encodings a camera can be published as. CARLA renders BGRA, so that is
 # the default and needs no conversion.
-SUPPORTED_IMAGE_ENCODINGS = ("bgra8", "mono8")
+SUPPORTED_IMAGE_ENCODINGS = ("bgra8", "bgr8", "mono8")
 
 
 @dataclass
