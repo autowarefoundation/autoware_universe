@@ -28,7 +28,7 @@ namespace autoware::pose_covariance_modifier
 using PoseSource = PoseCovarianceModifierNode::PoseSource;
 
 PoseCovarianceModifierNode::PoseCovarianceModifierNode(const rclcpp::NodeOptions & node_options)
-: Node("PoseCovarianceModifierNode", node_options),
+: autoware::agnocast_wrapper::Node("PoseCovarianceModifierNode", node_options),
   gnss_pose_received_time_last_(this->now()),
   pose_source_(PoseSource::NDT)
 {
@@ -73,7 +73,8 @@ PoseCovarianceModifierNode::PoseCovarianceModifierNode(const rclcpp::NodeOptions
 }
 
 void PoseCovarianceModifierNode::callback_gnss_pose_with_cov(
-  const geometry_msgs::msg::PoseWithCovarianceStamped::ConstSharedPtr & msg_pose_with_cov_in)
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(geometry_msgs::msg::PoseWithCovarianceStamped) &
+  msg_pose_with_cov_in)
 {
   // will be used to check if GNSS pose has timed out in the NDT pose callback
   gnss_pose_received_time_last_ = this->now();
@@ -101,17 +102,20 @@ void PoseCovarianceModifierNode::callback_gnss_pose_with_cov(
     return;
   }
 
-  pub_pose_with_covariance_stamped_->publish(*msg_pose_with_cov_in);
+  auto pose_out = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_pose_with_covariance_stamped_);
+  *pose_out = *msg_pose_with_cov_in;
+  pub_pose_with_covariance_stamped_->publish(std::move(pose_out));
 
   if (debug_mode_) {
-    std_msgs::msg::Float64 msg_double;
-    msg_double.data = gnss_pose_stddev_xy;
-    pub_double_gnss_position_stddev_->publish(msg_double);
+    auto msg_double = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_double_gnss_position_stddev_);
+    msg_double->data = gnss_pose_stddev_xy;
+    pub_double_gnss_position_stddev_->publish(std::move(msg_double));
   }
 }
 
 void PoseCovarianceModifierNode::callback_ndt_pose_with_cov(
-  const geometry_msgs::msg::PoseWithCovarianceStamped::ConstSharedPtr & msg_pose_with_cov_in)
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(geometry_msgs::msg::PoseWithCovarianceStamped) &
+  msg_pose_with_cov_in)
 {
   if (pose_source_ == PoseSource::GNSS) {
     // if the pose source is only gnss, GNSS pose will be used in the GNSS pose callback
@@ -129,14 +133,16 @@ void PoseCovarianceModifierNode::callback_ndt_pose_with_cov(
     msg_pose_with_cov_out = ndt_pose_with_cov_updated;
   }
 
-  pub_pose_with_covariance_stamped_->publish(msg_pose_with_cov_out);
+  auto pose_out = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_pose_with_covariance_stamped_);
+  *pose_out = msg_pose_with_cov_out;
+  pub_pose_with_covariance_stamped_->publish(std::move(pose_out));
 
   if (debug_mode_) {
-    std_msgs::msg::Float64 msg_double;
-    msg_double.data = (std::sqrt(msg_pose_with_cov_out.pose.covariance[X_POS_IDX_]) +
-                       std::sqrt(msg_pose_with_cov_out.pose.covariance[Y_POS_IDX_])) /
-                      2.0;
-    pub_double_ndt_position_stddev_->publish(msg_double);
+    auto msg_double = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_double_ndt_position_stddev_);
+    msg_double->data = (std::sqrt(msg_pose_with_cov_out.pose.covariance[X_POS_IDX_]) +
+                        std::sqrt(msg_pose_with_cov_out.pose.covariance[Y_POS_IDX_])) /
+                       2.0;
+    pub_double_ndt_position_stddev_->publish(std::move(msg_double));
   }
 }
 
@@ -224,22 +230,22 @@ std::array<double, 36> PoseCovarianceModifierNode::update_ndt_covariances_from_g
 
 void PoseCovarianceModifierNode::publish_pose_type(const PoseSource & pose_source)
 {
-  std_msgs::msg::String selected_pose_type;
+  auto selected_pose_type = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_str_pose_source_);
   switch (pose_source) {
     case PoseSource::GNSS:
-      selected_pose_type.data = "GNSS";
+      selected_pose_type->data = "GNSS";
       break;
     case PoseSource::GNSS_NDT:
-      selected_pose_type.data = "GNSS_NDT";
+      selected_pose_type->data = "GNSS_NDT";
       break;
     case PoseSource::NDT:
-      selected_pose_type.data = "NDT";
+      selected_pose_type->data = "NDT";
       break;
     default:
-      selected_pose_type.data = "NOT_DEFINED";
+      selected_pose_type->data = "NOT_DEFINED";
       break;
   }
-  pub_str_pose_source_->publish(selected_pose_type);
+  pub_str_pose_source_->publish(std::move(selected_pose_type));
 }
 
 }  // namespace autoware::pose_covariance_modifier
