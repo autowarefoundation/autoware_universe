@@ -28,6 +28,9 @@ constexpr uint16_t local = 13;
 constexpr uint16_t remote = 14;
 constexpr uint16_t emergency_stop = 21;
 
+// Redundant architecture specific modes
+constexpr uint16_t in_lane_stop = 31;
+
 }  // namespace autoware::command_mode_types::sources
 
 #endif  // AUTOWARE_COMMAND_MODE_TYPES__SOURCES_HPP_
