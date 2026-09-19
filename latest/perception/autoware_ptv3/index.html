@@ -23293,6 +23293,15 @@
 <p>This package implements a TensorRT powered inference node for Point Transformers V3 (PTv3) [1].
 The sparse convolution backend corresponds to <a href="https://github.com/traveller59/spconv">spconv</a>.
 Autoware installs it automatically in its setup script. If needed, the user can also build it and install it following the <a href="https://github.com/autowarefoundation/spconv_cpp">following instructions</a>.</p>
+<p>The network input is a densified point cloud: the current lidar frame is concatenated with
+ego-motion-compensated past frames (<code>densification_num_past_frames</code>), and every point carries
+five features <code>(x, y, z, intensity, time_lag)</code>, where <code>time_lag</code> is the point age in seconds
+relative to the current frame. The densified cloud is voxelized on the GPU into padded voxels
+(<code>max_points_per_voxel</code> slots holding the first points of each voxel in input order) together with
+the valid point count per voxel, and the encoder graph averages the points of every voxel itself,
+so training and inference share one voxel feature definition. Past sweeps provide geometric and
+temporal context to the network, while every segmentation output cloud describes only the
+current frame's points.</p>
 <h2 id="inputs-outputs">Inputs / Outputs<a class="headerlink" href="#inputs-outputs" title="Permanent link">#</a></h2>
 <h3 id="input">Input<a class="headerlink" href="#input" title="Permanent link">#</a></h3>
 <table>
@@ -23465,6 +23474,20 @@ therefore guard against <code>NaN</code> before using the <code>entropy</code> f
 <td>≥1</td>
 </tr>
 <tr>
+<td>densification_<wbr>world_<wbr>frame_<wbr>id</wbr></wbr></wbr></td>
+<td>string</td>
+<td>World frame used to compensate the ego motion of cached sweeps.</td>
+<td></td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>densification_<wbr>num_<wbr>past_<wbr>frames</wbr></wbr></wbr></td>
+<td>integer</td>
+<td>Number of past lidar frames concatenated with the current frame as network input.</td>
+<td></td>
+<td>≥0</td>
+</tr>
+<tr>
 <td>encoder.<wbr>onnx_<wbr>path</wbr></wbr></td>
 <td>string</td>
 <td>Path to the encoder ONNX file.</td>
@@ -23488,7 +23511,7 @@ therefore guard against <code>NaN</code> before using the <code>entropy</code> f
 <tr>
 <td>encoder.<wbr>voxels_<wbr>num</wbr></wbr></td>
 <td>array</td>
-<td>Voxel ranges used during inference [min, opt, max].</td>
+<td>Voxel ranges used during inference [min, opt, max]. Deeper encoder stages are bounded by their grid capacity, with opt scaled accordingly.</td>
 <td>[16000, 128000, 192000]</td>
 <td>N/A</td>
 </tr>
@@ -23523,7 +23546,7 @@ therefore guard against <code>NaN</code> before using the <code>entropy</code> f
 <tr>
 <td>segmentation3d.<wbr>source_<wbr>reconstruction</wbr></wbr></td>
 <td>string</td>
-<td>Controls mapping of voxel predictions back to source points. 'none': voxel representative points; 'partial': cropped source points inside point_cloud_range; 'full': full input cloud with unknown label 255 for out-of-range points.</td>
+<td>Controls mapping of voxel predictions back to source points. 'none': one representative per voxel occupied by the current frame; 'partial': cropped source points inside point_cloud_range; 'full': full input cloud with unknown label 255 for out-of-range points.</td>
 <td></td>
 <td>['none', 'partial', 'full']</td>
 </tr>
@@ -23675,6 +23698,13 @@ therefore guard against <code>NaN</code> before using the <code>entropy</code> f
 <td>N/A</td>
 </tr>
 <tr>
+<td>encoder.<wbr>max_<wbr>points_<wbr>per_<wbr>voxel</wbr></wbr></wbr></wbr></td>
+<td>integer</td>
+<td>Padded point slots per voxel; the graph averages the valid slots. Matches the training voxelizer.</td>
+<td>32</td>
+<td>≥1</td>
+</tr>
+<tr>
 <td>encoder.<wbr>serialization_<wbr>orders</wbr></wbr></td>
 <td>array</td>
 <td>Space-filling curve serialization orders used by the exported model.</td>
@@ -23781,6 +23811,8 @@ supports:</p>
 </ul>
 <p>The filtered output cloud format is controlled by <code>filter.output_format</code>. When it is set to an
 empty string, the filtered output preserves the same format as the input cloud.</p>
+<p>Densification requires the transform between <code>densification_world_frame_id</code> and the lidar frame;
+frames are skipped while the transform is unavailable.</p>
 <h2 id="trained-models">Trained Models<a class="headerlink" href="#trained-models" title="Permanent link">#</a></h2>
 <p>The model was trained on the T4Dataset using approximately 4,000 frames and is available in the Autoware artifacts.</p>
 <h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">#</a></h2>
