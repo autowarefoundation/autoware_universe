@@ -20,8 +20,10 @@ import signal
 import time
 
 import carla
+import yaml
 
 from .carla_ros import carla_ros2_interface
+from .modules import scenario_world
 from .modules.carla_data_provider import CarlaDataProvider
 from .modules.carla_data_provider import GameTime
 from .modules.carla_utils import project_point_to_ground
@@ -34,7 +36,6 @@ class CarlaWorldLoadError(RuntimeError):
 
 
 class SensorLoop(object):
-
     def __init__(self):
         self.start_game_time = None
         self.start_system_time = None
@@ -63,7 +64,6 @@ class SensorLoop(object):
 
 
 class InitializeInterface(object):
-
     def __init__(self):
         self.interface = carla_ros2_interface()
         self.param_ = self.interface.get_param()
@@ -90,6 +90,11 @@ class InitializeInterface(object):
         self.spawn_point_ground_offset_z = self.param_["spawn_point_ground_offset_z"]
         self.force_load_world = self.param_["force_load_world"]
         self.no_rendering_mode = self.param_["no_rendering_mode"]
+        # Scenario mode: the CARLA scenario runner owns the world (loads/reloads
+        # the map and owns the clock), so the interface adopts that world instead
+        # of loading its own (see load_world / _wait_for_external_world).
+        self.scenario_mode = self.param_["scenario_mode"]
+        self.scenario_world_wait_timeout = self.param_["scenario_world_wait_timeout"]
 
     def _parse_spawn_point(self):
         """Parse spawn point string and return transform with randomize flag."""
@@ -173,6 +178,133 @@ class InitializeInterface(object):
             print("INFO: Applied a flat steering curve to the ego vehicle.")
         except RuntimeError as error:
             print(f"WARNING: Failed to flatten the steering curve: {error}")
+
+    @staticmethod
+    def _merge_physics_settings(base, override):
+        """Return *base* updated by *override*, one level deep for `wheels`."""
+        merged = dict(base)
+        for key, value in override.items():
+            if key == "wheels" and isinstance(value, dict):
+                wheels = {axle: dict(cfg) for axle, cfg in merged.get("wheels", {}).items()}
+                for axle, cfg in value.items():
+                    wheels[axle] = {**wheels.get(axle, {}), **cfg}
+                merged["wheels"] = wheels
+            else:
+                merged[key] = value
+        return merged
+
+    def _read_vehicle_physics_settings(self, path, blueprint_id):
+        """Return the physics settings for *blueprint_id*, or None if there are none."""
+        try:
+            with open(path) as config_file:
+                document = yaml.safe_load(config_file) or {}
+        except OSError as error:
+            print(f"WARNING: Cannot read vehicle_physics_config {path}: {error}")
+            return None
+        except yaml.YAMLError as error:
+            print(f"WARNING: Invalid vehicle_physics_config {path}: {error}")
+            return None
+
+        settings = document.get("default") or {}
+        settings = self._merge_physics_settings(
+            settings, (document.get("vehicles") or {}).get(blueprint_id) or {}
+        )
+        return settings or None
+
+    @staticmethod
+    def _apply_wheel_settings(physics, wheel_settings):
+        """Write the front/rear wheel settings onto *physics*; return the wheel list.
+
+        The steered wheels are the ones the server reports a non-zero
+        max_steer_angle for, so "front" keeps meaning the steered axle even after
+        this has been applied once.
+        """
+        wheels = list(physics.wheels)
+        steered = [w.max_steer_angle > 0.0 for w in wheels]
+        if not any(steered):  # nothing steers (yet): take the first half as front
+            steered = [i < len(wheels) / 2 for i in range(len(wheels))]
+        for wheel, is_front in zip(wheels, steered):
+            for key, value in (wheel_settings.get("front" if is_front else "rear") or {}).items():
+                if not hasattr(wheel, key):
+                    print(f"WARNING: Unknown wheel physics key '{key}'; skipped.")
+                    continue
+                setattr(wheel, key, float(value))
+        return wheels
+
+    def _apply_steer_normalization(self, settings, path):
+        """Take `steer_normalization_deg` out of *settings* and give it to the interface.
+
+        It is the one key read rather than written: CARLA 0.10 reports 70 deg of
+        steer for every car and ignores writes to a wheel's max_steer_angle, so the
+        angle a commanded tire angle is normalized by has to be configured. An
+        explicit ``max_wheel_steer_angle_deg`` wins over the file.
+        """
+        steer_deg = settings.pop("steer_normalization_deg", None)
+        if steer_deg is None:
+            return
+        if float(self.interface.param_values.get("max_wheel_steer_angle_deg", 0.0)) > 0.0:
+            return
+        self.interface.param_values["max_wheel_steer_angle_deg"] = float(steer_deg)
+        print(f"INFO: Steer normalization set to {float(steer_deg):.1f} deg from {path}.")
+
+    @staticmethod
+    def _write_physics_settings(physics, settings):
+        """Write *settings* onto *physics*; return the keys that were written."""
+        applied = []
+        for key, value in settings.items():
+            if key == "wheels":
+                physics.wheels = InitializeInterface._apply_wheel_settings(physics, value)
+            elif key == "steering_curve":
+                physics.steering_curve = [carla.Vector2D(float(x), float(y)) for x, y in value]
+            elif hasattr(physics, key):
+                setattr(physics, key, float(value))
+            else:
+                print(f"WARNING: Unknown vehicle physics key '{key}'; skipped.")
+                continue
+            applied.append(key)
+        return applied
+
+    def _apply_vehicle_physics(self):
+        """Apply the configured physics to the ego, so it moves like the modelled car.
+
+        CARLA 0.10 gives every vehicle the same placeholder physics, which does
+        not match the vehicle Autoware plans for -- most visibly the wheels'
+        max_steer_angle, the very value the interface normalizes a commanded tire
+        angle by. Reads `vehicle_physics_config` (empty disables this) and writes
+        only the keys it names.
+
+        The config values (45.5 deg steer normalization, a flat steering curve,
+        Lincoln mass/wheel radius) are calibrated for the 0.10 placeholder physics,
+        so this is a no-op on CARLA 0.9.x -- whose vehicles already have their own
+        correct physics -- to avoid changing steering gain and dynamics there.
+        """
+        path = str(self.interface.param_values.get("vehicle_physics_config", "")).strip()
+        if not path:
+            return
+        if not self.interface.uses_chaos_physics:
+            print(
+                "INFO: Skipping vehicle_physics_config on CARLA "
+                f"{self.interface.carla_version}: it is calibrated for the 0.10 "
+                "placeholder physics and only applied on CARLA 0.10+."
+            )
+            return
+        settings = self._read_vehicle_physics_settings(path, self.ego_actor.type_id)
+        if not settings:
+            print(f"INFO: No vehicle physics for {self.ego_actor.type_id} in {path}.")
+            return
+
+        self._apply_steer_normalization(settings, path)
+        try:
+            physics = self.ego_actor.get_physics_control()
+            applied = self._write_physics_settings(physics, settings)
+            self.ego_actor.apply_physics_control(physics)
+            self.interface.physics_control = self.ego_actor.get_physics_control()
+            print(
+                f"INFO: Applied vehicle physics from {path} to {self.ego_actor.type_id} "
+                f"({', '.join(applied) or 'nothing'})."
+            )
+        except (RuntimeError, TypeError, ValueError) as error:
+            print(f"WARNING: Failed to apply vehicle physics from {path}: {error}")
 
     def _reload_world(self, client):
         """Reload the world via client.load_world(); return the failure, if any."""
@@ -384,6 +516,12 @@ class InitializeInterface(object):
         settings.no_rendering_mode = self.no_rendering_mode
         self.world.apply_settings(settings)
 
+    def _wait_for_external_world(self, client):
+        """Adopt the scenario runner's world (see modules.scenario_world)."""
+        self.world = scenario_world.wait_for_external_world(
+            client, self.carla_map, self.scenario_world_wait_timeout, self.logger
+        )
+
     def _spawn_ego_actor(self):
         """Spawn the ego vehicle at the configured (optionally ground-snapped) spawn point."""
         spawn_point, randomize = self._parse_spawn_point()
@@ -403,23 +541,39 @@ class InitializeInterface(object):
 
     def load_world(self):
         client = self._connect_client()
-        map_verified = self._load_carla_world(client)
-        if not map_verified:
-            # After a failed OpenDRIVE parse, libcarla keeps serving the previous
-            # episode's cached map through this client, so world.get_map() would
-            # return a stale (wrong) map instead of raising. Reconnect with a fresh
-            # client so the mapless world reports honestly downstream
-            # (CarlaDataProvider.set_world then runs its map-optional fallbacks).
-            self.logger.warning(
-                "Reconnecting the CARLA client to discard the stale map cache "
-                "of the previous episode."
-            )
-            client = self._connect_client()
+        if self.scenario_mode:
+            # The scenario runner owns the world: it loads/reloads the map and
+            # owns the clock. Loading the map or applying world settings here
+            # would fight the runner, and its reload would invalidate the ego and
+            # sensors we spawn, so adopt the runner's world instead of loading
+            # our own (see the #13319 review on world/ego ownership).
+            self._wait_for_external_world(client)
+        else:
+            map_verified = self._load_carla_world(client)
+            if not map_verified:
+                # After a failed OpenDRIVE parse, libcarla keeps serving the previous
+                # episode's cached map through this client, so world.get_map() would
+                # return a stale (wrong) map instead of raising. Reconnect with a fresh
+                # client so the mapless world reports honestly downstream
+                # (CarlaDataProvider.set_world then runs its map-optional fallbacks).
+                self.logger.warning(
+                    "Reconnecting the CARLA client to discard the stale map cache "
+                    "of the previous episode."
+                )
+                client = self._connect_client()
 
-        self._wait_for_world(client)
-        self._apply_world_settings()
+            self._wait_for_world(client)
+            self._apply_world_settings()
+
         CarlaDataProvider.set_world(self.world)
         CarlaDataProvider.set_client(client)
+        if self.scenario_mode:
+            # The runner owns and drives the clock (it ticks while waiting for our
+            # ego to appear). Spawn by waiting for the runner's ticks
+            # (wait_for_tick) rather than driving our own world.tick(), so this
+            # node stays a pure follower and never double-advances the runner's
+            # synchronous simulation.
+            CarlaDataProvider.set_runtime_init_mode(True)
         # Vehicle physics differ between CARLA 0.9.x and 0.10 (Chaos); let the
         # interface derive its capability flags (e.g. whether the wheel steer
         # angle is reported) from the server version.
@@ -428,6 +582,7 @@ class InitializeInterface(object):
         self.ego_actor = self._spawn_ego_actor()
         self.interface.ego_actor = self.ego_actor  # TODO improve design
         self.interface.physics_control = self.ego_actor.get_physics_control()
+        self._apply_vehicle_physics()
         if self.interface.param_values.get("flatten_steering_curve", False):
             self._flatten_steering_curve()
 

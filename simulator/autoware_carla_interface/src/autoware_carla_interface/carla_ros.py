@@ -96,11 +96,22 @@ def _parse_geo_reference(xodr_xml: str):
     return float(lat_match.group(1)), float(lon_match.group(1))
 
 
+#: Floor on the steering_curve factor used to compensate a command. The curve is a
+#: divisor there, so a small factor would blow the command up; at 1/5 the command
+#: is already saturated for any angle the vehicle can reach.
+MIN_STEERING_CURVE_FACTOR = 0.2
+
 # Speed-unit conversions for the vehicle steering_curve lookup. The curve's speed
 # axis follows the UE vehicle plugin behind the CARLA version: Chaos (CARLA 0.10+,
 # UE5) samples it in mph, PhysX (CARLA 0.9.x, UE4) in km/h.
 MPS_TO_MPH = 2.2369362920544
 MPS_TO_KMH = 3.6
+
+#: First-order steering lag time constant [s] used on CARLA 0.9.x. This restores the
+#: pre-0.10 default so a with_scenario-empty 0.9 run keeps its previous steering
+#: response; only 0.10+ uses the shorter steering_lag_time_constant param (see the
+#: PR #13319 review on carla_ros.py control_callback).
+LEGACY_STEERING_LAG_TAU = 0.2
 
 # One consistent snapshot of the ego actor, read under a single lock so that the
 # published status reports all describe the same simulation step.
@@ -143,6 +154,17 @@ class carla_ros2_interface(object):
             "spawn_point_ground_offset_z": (rclpy.Parameter.Type.DOUBLE, 0.5),
             "initial_pose_ground_offset_z": (rclpy.Parameter.Type.DOUBLE, 1.0),
             "force_load_world": (rclpy.Parameter.Type.BOOL, False),
+            # Scenario mode (set from the launch file's with_scenario). The CARLA
+            # scenario runner then owns the world: it loads/reloads the map and
+            # owns the simulation clock, and its Autoware entity looks up the ego
+            # by role name. In this mode the interface adopts the runner's world
+            # instead of loading one and does not apply world settings (see
+            # carla_autoware.load_world / _wait_for_external_world), so its own
+            # reload cannot invalidate the ego and sensors it spawns.
+            "scenario_mode": (rclpy.Parameter.Type.BOOL, False),
+            # Seconds to wait for the scenario runner to (re)load its world
+            # before spawning the ego into it (scenario_mode only).
+            "scenario_world_wait_timeout": (rclpy.Parameter.Type.DOUBLE, 300.0),
             # Minimum throttle applied while accelerating from (near) standstill.
             # Heavy CARLA vehicles (e.g. vehicle.taxi.ford) do not creep and
             # never start moving on the small throttle the actuation map yields
@@ -171,6 +193,15 @@ class carla_ros2_interface(object):
             # identity curve (workaround for the corrupt curve data CARLA 0.10
             # returns, which attenuates steering at driving speeds).
             "flatten_steering_curve": (rclpy.Parameter.Type.BOOL, False),
+            # Path to the YAML holding the physics to write onto the ego vehicle
+            # (see config/vehicle_physics.yaml); empty leaves CARLA's own values.
+            "vehicle_physics_config": (rclpy.Parameter.Type.STRING, ""),
+            # Time constant [s] of the first-order lag on the steer command, a
+            # stand-in for the steering actuator. CARLA 0.10's own steering
+            # settles in ~0.1 s (measured from the yaw rate after a step), so a
+            # larger value here only adds delay the controller cannot see and the
+            # ego runs wide through curves.
+            "steering_lag_time_constant": (rclpy.Parameter.Type.DOUBLE, 0.05),
             # Nudge the ego physics body awake when launching from a standstill.
             # Only needed on CARLA 0.10 (UE5/Chaos), where a stationary body is
             # put to sleep and VehicleControl throttle does not wake it. Off by
@@ -451,7 +482,9 @@ class carla_ros2_interface(object):
         # Vehicle and control state
         self.prev_timestamp = None
         self.prev_steer_output = 0.0
-        self.tau = 0.2
+        # Time constant of the first-order lag applied to the steer command; see
+        # the steering_lag_time_constant parameter.
+        self.tau = 0.05
         self._max_steer_angle_rad = None
         self._physics_max_steer_angle_rad = None
         # CARLA server version and the capability flags derived from it. Set by
@@ -459,6 +492,10 @@ class carla_ros2_interface(object):
         # measured wheel angle is usable (0.9.x behavior).
         self.carla_version = None
         self._wheel_steer_angle_reliable = True
+        # Whether the server ships the CARLA 0.10 (UE5/Chaos) placeholder physics that
+        # vehicle_physics_config exists to correct. False until proven 0.10+ so the
+        # 0.10-only physics are never written on 0.9.x (or an unparsable version).
+        self.uses_chaos_physics = False
         # Speed unit the server samples steering_curve in (see set_carla_version).
         self._steering_curve_speed_scale = MPS_TO_KMH
         self.timestamp = None
@@ -951,13 +988,20 @@ class carla_ros2_interface(object):
         else:
             self.logger.warning("IMU publisher not initialized")
 
-    def first_order_steering(self, steer_input):
+    def _steering_lag_time_constant(self):
+        """Time constant [s] of the first-order lag applied to the steer command."""
+        return float(self.param_values.get("steering_lag_time_constant", self.tau))
+
+    def first_order_steering(self, steer_input, tau=None):
         """
         First order steering model.
 
         Gracefully handles:
         - Early control commands before first simulation tick (returns raw input)
         - Multiple commands in same CARLA tick (preserves filter state, no zero spike)
+
+        ``tau`` overrides the lag time constant [s]; when None the
+        steering_lag_time_constant param is used (the CARLA 0.10+ default).
 
         """
         # Guard against control commands arriving before first sensor callback
@@ -978,8 +1022,10 @@ class carla_ros2_interface(object):
             return self.prev_steer_output
 
         # Normal case: time has advanced, apply low-pass filter
+        if tau is None:
+            tau = self._steering_lag_time_constant()
         steer_output = self.prev_steer_output + (steer_input - self.prev_steer_output) * (
-            dt / (self.tau + dt)
+            dt / (tau + dt) if tau > 0.0 else 1.0
         )
         self.prev_steer_output = steer_output
         self.prev_timestamp = self.timestamp
@@ -1058,19 +1104,57 @@ class carla_ros2_interface(object):
             self._apply_min_positive_throttle(out_cmd, in_cmd)
             self._wake_sleeping_physics(out_cmd, in_cmd)
 
-            # steer_cmd is a tire angle in radians (raw_vehicle_cmd_converter
-            # passes control_cmd.steering_tire_angle through), while
-            # VehicleControl.steer expects a fraction of the wheel's max steer
-            # angle in [-1, 1]. Normalize by the max wheel angle; the sign flips
-            # because Autoware is CCW-positive and CARLA CW-positive.
-            # NOTE: no steering_curve multiplication here — the simulator applies
-            # its speed-based steering limit internally, and CARLA 0.10 returns
-            # corrupt curve data (duplicated/unsorted points) anyway.
-            steer_norm = -in_cmd.actuation.steer_cmd / self._max_wheel_steer_angle_rad()
-            steer_norm = max(-1.0, min(1.0, steer_norm))
-            out_cmd.steer = self.first_order_steering(steer_norm)
+            # The steering-curve compensation and the short lag are only correct
+            # for the CARLA 0.10 (Chaos) placeholder physics; a 0.9.x run keeps
+            # the original curve-multiply model so with_scenario-empty 0.9 launches
+            # are unchanged (see the PR #13319 review).
+            if self.uses_chaos_physics:
+                out_cmd.steer = self._chaos_steer_cmd(in_cmd)
+            else:
+                out_cmd.steer = self._legacy_steer_cmd(in_cmd)
             out_cmd.brake = in_cmd.actuation.brake_cmd
             self.current_control = out_cmd
+
+    def _chaos_steer_cmd(self, in_cmd):
+        """Steer fraction for CARLA 0.10+ (Chaos physics). Needs _state_lock held.
+
+        steer_cmd is a tire angle in radians (raw_vehicle_cmd_converter passes
+        control_cmd.steering_tire_angle through), while VehicleControl.steer
+        expects a fraction of the wheel's max steer angle in [-1, 1]. Normalize by
+        the max wheel angle; the sign flips because Autoware is CCW-positive and
+        CARLA CW-positive.
+
+        The simulator then scales that fraction by the vehicle's steering_curve
+        before turning the wheels, and CARLA 0.10 both ships a curve that halves
+        the steering by ~11 mph and ignores writes that would flatten it. Divide
+        the fraction by the same factor so the wheels reach the angle Autoware
+        asked for: without this the ego gets about half the steering it commanded
+        at driving speed and runs wide through every curve.
+        """
+        curve_factor = self._steering_curve_factor(self._ego_speed_mps())
+        curve_factor = max(curve_factor, MIN_STEERING_CURVE_FACTOR)
+        steer_norm = -in_cmd.actuation.steer_cmd / (
+            self._max_wheel_steer_angle_rad() * curve_factor
+        )
+        steer_norm = max(-1.0, min(1.0, steer_norm))
+        return self.first_order_steering(steer_norm)
+
+    def _legacy_steer_cmd(self, in_cmd):
+        """Steer fraction for CARLA 0.9.x (PhysX). Needs _state_lock held.
+
+        The pre-0.10 model: the steering_curve is a multiplier sampled at the
+        forward speed, and the longer LEGACY_STEERING_LAG_TAU lag is applied, so a
+        with_scenario-empty 0.9 run keeps its previous steering response.
+        """
+        steer_curve = self.physics_control.steering_curve
+        current_vel = self.ego_actor.get_velocity()
+        max_steer_ratio = numpy.interp(
+            abs(current_vel.x), [v.x for v in steer_curve], [v.y for v in steer_curve]
+        )
+        return (
+            self.first_order_steering(-in_cmd.actuation.steer_cmd, tau=LEGACY_STEERING_LAG_TAU)
+            * max_steer_ratio
+        )
 
     def _physics_max_wheel_steer_angle_rad(self):
         """Max steerable wheel angle [rad] reported by the vehicle physics.
@@ -1137,6 +1221,7 @@ class carla_ros2_interface(object):
             return
         major, minor = int(match.group(1)), int(match.group(2))
         self._wheel_steer_angle_reliable = (major, minor) < (0, 10)
+        self.uses_chaos_physics = (major, minor) >= (0, 10)
         # steering_curve is sampled against the forward speed in the unit the
         # underlying UE vehicle plugin uses: mph for Chaos (CARLA 0.10+ / UE5),
         # km/h for PhysX (CARLA 0.9.x / UE4).
