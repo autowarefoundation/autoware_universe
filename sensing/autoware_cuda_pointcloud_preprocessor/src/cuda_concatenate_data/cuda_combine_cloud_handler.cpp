@@ -23,34 +23,11 @@
 
 #include <cuda_runtime.h>
 
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
-
-#define CHECK_OFFSET(structure1, structure2, field)             \
-  static_assert(                                                \
-    offsetof(structure1, field) == offsetof(structure2, field), \
-    "Offset of " #field " in " #structure1 " does not match expected offset.")
-
-static_assert(
-  sizeof(autoware::pointcloud_preprocessor::PointTypeStruct) ==
-  sizeof(autoware::point_types::PointXYZIRC));
-
-CHECK_OFFSET(
-  autoware::pointcloud_preprocessor::PointTypeStruct, autoware::point_types::PointXYZIRC, x);
-CHECK_OFFSET(
-  autoware::pointcloud_preprocessor::PointTypeStruct, autoware::point_types::PointXYZIRC, y);
-CHECK_OFFSET(
-  autoware::pointcloud_preprocessor::PointTypeStruct, autoware::point_types::PointXYZIRC, z);
-CHECK_OFFSET(
-  autoware::pointcloud_preprocessor::PointTypeStruct, autoware::point_types::PointXYZIRC,
-  intensity);
-CHECK_OFFSET(
-  autoware::pointcloud_preprocessor::PointTypeStruct, autoware::point_types::PointXYZIRC,
-  return_type);
-CHECK_OFFSET(
-  autoware::pointcloud_preprocessor::PointTypeStruct, autoware::point_types::PointXYZIRC, channel);
 
 namespace autoware::pointcloud_preprocessor
 {
@@ -58,10 +35,10 @@ namespace autoware::pointcloud_preprocessor
 CombineCloudHandler<CudaPointCloud2Traits>::CombineCloudHandler(
   rclcpp::Node & node, const std::vector<std::string> & input_topics, std::string output_frame,
   bool is_motion_compensated, bool publish_synchronized_pointcloud,
-  bool keep_input_frame_in_synchronized_pointcloud)
+  bool keep_input_frame_in_synchronized_pointcloud, OutputPointType output_point_type)
 : CombineCloudHandlerBase(
     node, input_topics, output_frame, is_motion_compensated, publish_synchronized_pointcloud,
-    keep_input_frame_in_synchronized_pointcloud)
+    keep_input_frame_in_synchronized_pointcloud, output_point_type)
 {
   for (const auto & topic : input_topics_) {
     CudaConcatStruct cuda_concat_struct;
@@ -84,6 +61,34 @@ void CombineCloudHandler<CudaPointCloud2Traits>::allocate_pointclouds()
   concatenated_cloud_ptr_ = std::make_unique<cuda_blackboard::CudaPointCloud2>();
   concatenated_cloud_ptr_->data =
     cuda_blackboard::make_unique<std::uint8_t[]>(max_concat_pointcloud_size_);
+}
+
+bool CombineCloudHandler<CudaPointCloud2Traits>::is_input_layout_supported(
+  const sensor_msgs::msg::PointCloud2 & cloud) const
+{
+  // The kernels stride the buffer by the output point size, so the input must have exactly the
+  // output layout.
+  if (cloud.point_step != output_point_step_) {
+    return false;
+  }
+  return output_point_type_ == OutputPointType::XYZIRCT
+           ? autoware::point_types::is_data_layout_compatible_with_point_xyzirct(cloud.fields)
+           : autoware::point_types::is_data_layout_compatible_with_point_xyzirc(cloud.fields);
+}
+
+void CombineCloudHandler<CudaPointCloud2Traits>::launch_transform(
+  const std::uint8_t * input, int num_points, const TransformStruct & transform,
+  std::uint32_t time_offset_ns, std::uint8_t * output, cudaStream_t & stream) const
+{
+  if (output_point_type_ == OutputPointType::XYZIRCT) {
+    transform_launch(
+      reinterpret_cast<const PointXYZIRCT *>(input), num_points, transform, time_offset_ns,
+      reinterpret_cast<PointXYZIRCT *>(output), stream);
+  } else {
+    transform_launch(
+      reinterpret_cast<const PointXYZIRC *>(input), num_points, transform, time_offset_ns,
+      reinterpret_cast<PointXYZIRC *>(output), stream);
+  }
 }
 
 ConcatenatedCloudResult<CudaPointCloud2Traits>
@@ -124,7 +129,6 @@ CombineCloudHandler<CudaPointCloud2Traits>::combine_pointclouds(
     total_data_size += (cloud->height * cloud->row_step);
   }
 
-  const auto point_fields = topic_to_cloud_map.begin()->second->fields;
   constexpr int CHUNK_SIZE = 1024;
 
   // Resize concatenated cloud if needed to the next multiple of CHUNK_SIZE to reduce the number of
@@ -138,8 +142,7 @@ CombineCloudHandler<CudaPointCloud2Traits>::combine_pointclouds(
 
   concatenate_cloud_result.concatenate_cloud_ptr = std::move(concatenated_cloud_ptr_);
 
-  auto * output_points =
-    reinterpret_cast<PointTypeStruct *>(concatenate_cloud_result.concatenate_cloud_ptr->data.get());
+  auto * output_points = concatenate_cloud_result.concatenate_cloud_ptr->data.get();
   std::size_t concatenated_start_index = 0;
 
   for (const auto & [topic, cloud] : topic_to_cloud_map) {
@@ -178,10 +181,13 @@ CombineCloudHandler<CudaPointCloud2Traits>::combine_pointclouds(
     transform_struct.m32 = transform(2, 1);
     transform_struct.m33 = transform(2, 2);
 
+    // Point times, if kept, are rebased from this cloud's header stamp onto oldest_stamp.
+    const auto time_offset_ns =
+      static_cast<std::uint32_t>((current_cloud_stamp - oldest_stamp).nanoseconds());
     auto & stream = cuda_concat_struct_map_[topic].stream;
-    transform_launch(
-      reinterpret_cast<PointTypeStruct *>(cloud->data.get()), num_points, transform_struct,
-      output_points + concatenated_start_index, stream);
+    launch_transform(
+      cloud->data.get(), num_points, transform_struct, time_offset_ns,
+      output_points + concatenated_start_index * output_point_step_, stream);
     concatenated_start_index += num_points;
     concatenation_info_manager_.update_source_from_point_cloud(
       *cloud, topic, autoware_sensing_msgs::msg::SourcePointCloudInfo::STATUS_OK,
@@ -191,10 +197,10 @@ CombineCloudHandler<CudaPointCloud2Traits>::combine_pointclouds(
   concatenate_cloud_result.concatenate_cloud_ptr->header.frame_id = output_frame_;
   concatenate_cloud_result.concatenate_cloud_ptr->width = concatenated_start_index;
   concatenate_cloud_result.concatenate_cloud_ptr->height = 1;
-  concatenate_cloud_result.concatenate_cloud_ptr->point_step = sizeof(PointTypeStruct);
+  concatenate_cloud_result.concatenate_cloud_ptr->point_step = output_point_step_;
   concatenate_cloud_result.concatenate_cloud_ptr->row_step =
-    concatenated_start_index * sizeof(PointTypeStruct);
-  concatenate_cloud_result.concatenate_cloud_ptr->fields = point_fields;
+    concatenated_start_index * output_point_step_;
+  concatenate_cloud_result.concatenate_cloud_ptr->fields = output_fields_;
   concatenate_cloud_result.concatenate_cloud_ptr->is_bigendian = false;
   concatenate_cloud_result.concatenate_cloud_ptr->is_dense = true;
 
@@ -252,23 +258,24 @@ CombineCloudHandler<CudaPointCloud2Traits>::combine_pointclouds(
         transform_struct.m32 = transform(2, 1);
         transform_struct.m33 = transform(2, 2);
 
-        transform_launch(
-          output_points + concatenated_start_index, num_points, transform_struct,
-          reinterpret_cast<PointTypeStruct *>(output_cloud->data.get()), stream);
+        // Point times were already rebased in the first round.
+        launch_transform(
+          output_points + concatenated_start_index * output_point_step_, num_points,
+          transform_struct, 0U, output_cloud->data.get(), stream);
         output_cloud->header.frame_id = cloud->header.frame_id;
       } else {
         CHECK_CUDA_ERROR(cudaMemcpyAsync(
-          output_cloud->data.get(), output_points + concatenated_start_index, data_size,
-          cudaMemcpyDeviceToDevice, stream));
+          output_cloud->data.get(), output_points + concatenated_start_index * output_point_step_,
+          data_size, cudaMemcpyDeviceToDevice, stream));
         output_cloud->header.frame_id = output_frame_;
       }
 
       output_cloud->header.stamp = oldest_stamp;
       output_cloud->width = cloud->width;
       output_cloud->height = cloud->height;
-      output_cloud->point_step = sizeof(PointTypeStruct);
-      output_cloud->row_step = cloud->width * sizeof(PointTypeStruct);
-      output_cloud->fields = point_fields;
+      output_cloud->point_step = output_point_step_;
+      output_cloud->row_step = cloud->width * output_point_step_;
+      output_cloud->fields = output_fields_;
       output_cloud->is_bigendian = false;
       output_cloud->is_dense = true;
 
