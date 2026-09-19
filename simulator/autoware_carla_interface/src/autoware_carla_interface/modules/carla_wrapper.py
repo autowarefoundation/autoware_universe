@@ -86,6 +86,9 @@ class SensorInterface(object):
         """Initialize sensor interface."""
         self._sensors_objects = {}
         self._new_data_buffers = Queue()
+        # Measurements taken after the frame currently being processed, kept
+        # for the call that reaches their frame.
+        self._held = []
         self.tag = ""  # Current sensor tag
 
     def register_sensor(self, tag, sensor):
@@ -95,29 +98,41 @@ class SensorInterface(object):
 
         self._sensors_objects[tag] = sensor
 
-    def update_sensor(self, tag, data, timestamp):
+    def update_sensor(self, tag, data, frame):
         if tag not in self._sensors_objects:
             raise ValueError(f"Sensor with tag [{tag}] has not been created")
 
-        self._new_data_buffers.put((tag, timestamp, data))
+        self._new_data_buffers.put((tag, frame, data))
 
-    def get_data(self):
-        """Get all available sensor data without blocking for all sensors."""
+    def get_data(self, target_frame):
+        """Return every measurement captured at or before target_frame.
+
+        Sensor callbacks run asynchronously, so a measurement can reach the
+        queue after the loop has moved past the frame it was captured on, and a
+        sensor faster than the simulation step can deliver several between two
+        calls. Returning (tag, frame, data) rather than the latest measurement
+        per sensor keeps both: the caller can stamp each measurement with the
+        time of the frame it was actually captured on, and nothing captured is
+        silently discarded on the way.
+
+        Measurements from frames the loop has not reached yet are held for the
+        call that does, so they are never stamped with a time before their own.
+        """
         from queue import Empty
 
-        data_dict = {}
+        pending = self._held
+        self._held = []
 
-        # Non-blocking: get all available data from queue
         while True:
             try:
-                sensor_data = self._new_data_buffers.get(block=False)
-                data_dict[sensor_data[0]] = (sensor_data[1], sensor_data[2])
+                pending.append(self._new_data_buffers.get(block=False))
             except Empty:
-                # Queue is empty, break and return whatever data we have
                 break
 
-        # Return available data immediately (could be partial sensor set)
-        return data_dict
+        due = []
+        for measurement in pending:
+            (due if measurement[1] <= target_frame else self._held).append(measurement)
+        return due
 
 
 # Sensor Wrapper
