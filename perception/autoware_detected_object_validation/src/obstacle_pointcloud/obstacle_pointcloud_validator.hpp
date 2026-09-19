@@ -22,6 +22,7 @@
 #include "autoware_utils/system/stop_watch.hpp"
 #include "debugger.hpp"
 
+#include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include "autoware_perception_msgs/msg/detected_objects.hpp"
@@ -140,7 +141,7 @@ public:
   explicit ObstaclePointCloudBasedValidator(const rclcpp::NodeOptions & node_options);
 
 private:
-  rclcpp::Publisher<autoware_perception_msgs::msg::DetectedObjects>::SharedPtr objects_pub_;
+  AUTOWARE_PUBLISHER_PTR(autoware_perception_msgs::msg::DetectedObjects) objects_pub_;
   message_filters::Subscriber<autoware_perception_msgs::msg::DetectedObjects> objects_sub_;
   message_filters::Subscriber<sensor_msgs::msg::PointCloud2> obstacle_pointcloud_sub_;
   std::unique_ptr<autoware_utils::DebugPublisher> debug_publisher_{nullptr};
