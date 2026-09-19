@@ -42,6 +42,9 @@ ImplicitGemmPluginCreator::ImplicitGemmPluginCreator()
   plugin_attributes_.emplace_back("output_add_scale", nullptr, PluginFieldType::kFLOAT32, 1);
   plugin_attributes_.emplace_back("output_scale", nullptr, PluginFieldType::kFLOAT32, 1);
   plugin_attributes_.emplace_back("act_type", nullptr, PluginFieldType::kINT32, 1);
+  // INT8 (precision==1) attributes. Absent on FP nodes (default precision=0).
+  plugin_attributes_.emplace_back("precision", nullptr, PluginFieldType::kINT32, 1);
+  plugin_attributes_.emplace_back("input_scale", nullptr, PluginFieldType::kFLOAT32, 1);
 
   fc_.nbFields = plugin_attributes_.size();
   fc_.fields = plugin_attributes_.data();
@@ -87,6 +90,15 @@ IPluginV3 * ImplicitGemmPluginCreator::createPlugin(
         PLUGIN_VALIDATE(type == nvinfer1::PluginFieldType::kINT32);
         parameters.act_type = static_cast<std::int32_t const *>(fields[i].data)[0];
         PLUGIN_VALIDATE(parameters.act_type >= 0 && parameters.act_type <= 3);
+      } else if (attr_name == "precision") {
+        PLUGIN_VALIDATE(type == nvinfer1::PluginFieldType::kINT32);
+        parameters.precision = static_cast<std::int32_t const *>(fields[i].data)[0];
+        PLUGIN_VALIDATE(
+          parameters.precision == kIMPLICIT_GEMM_PRECISION_FP ||
+          parameters.precision == kIMPLICIT_GEMM_PRECISION_INT8);
+      } else if (attr_name == "input_scale") {
+        PLUGIN_VALIDATE(type == nvinfer1::PluginFieldType::kFLOAT32);
+        parameters.input_scale = static_cast<float const *>(fields[i].data)[0];
       }
     }
   };
@@ -107,7 +119,8 @@ IPluginV3 * ImplicitGemmPluginCreator::createPlugin(
          << " act_alpha=" << parameters.act_alpha << " act_beta=" << parameters.act_beta
          << " is_subm=" << parameters.is_subm << " is_train=" << parameters.is_train
          << " output_add_scale=" << parameters.output_add_scale
-         << " output_scale=" << parameters.output_scale << " act_type=" << parameters.act_type;
+         << " output_scale=" << parameters.output_scale << " act_type=" << parameters.act_type
+         << " precision=" << parameters.precision << " input_scale=" << parameters.input_scale;
       logDebug(ss.str().c_str());
 
       ImplicitGemmPlugin * const plugin{new ImplicitGemmPlugin{std::string(name), parameters}};
