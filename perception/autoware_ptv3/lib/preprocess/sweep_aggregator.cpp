@@ -78,7 +78,7 @@ bool SweepAggregator::enqueuePointCloud(
 
   // The segmentation reconstruction buffers and output messages are sized per frame, so every
   // frame must fit the single-frame capacity, not just the densified one.
-  const auto frame_num_points = static_cast<std::size_t>(msg_ptr->height * msg_ptr->width);
+  const auto frame_num_points = static_cast<std::size_t>(msg_ptr->height) * msg_ptr->width;
   if (frame_num_points > static_cast<std::size_t>(config_.cloud_capacity_)) {
     RCLCPP_WARN_STREAM(
       rclcpp::get_logger("ptv3"),
@@ -102,7 +102,7 @@ DensifiedCloud SweepAggregator::aggregate()
   for (auto cache_iter = densification_ptr_->getPointCloudCacheIter();
        !densification_ptr_->isCacheEnd(cache_iter); cache_iter++, frame_index++) {
     const auto & msg_ptr = cache_iter->input_pointcloud_msg_ptr;
-    const auto frame_num_points = static_cast<std::size_t>(msg_ptr->height * msg_ptr->width);
+    const auto frame_num_points = static_cast<std::size_t>(msg_ptr->height) * msg_ptr->width;
     const bool is_current_frame = frame_index == 0;
 
     // Frames are validated against the single-frame capacity when they are cached, so only the
