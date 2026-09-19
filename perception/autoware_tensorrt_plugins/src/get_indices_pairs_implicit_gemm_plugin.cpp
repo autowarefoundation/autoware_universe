@@ -14,6 +14,7 @@
 
 #include "autoware/tensorrt_plugins/get_indices_pairs_implicit_gemm_plugin.hpp"
 
+#include "autoware/scalar_ops/fill_scalar.hpp"
 #include "autoware/tensorrt_plugins/plugin_utils.hpp"
 
 #include <NvInferRuntime.h>
@@ -286,12 +287,18 @@ std::int32_t GetIndicesPairsImplicitGemmPlugin::getOutputShapes(
 // =========================================================================
 
 std::int32_t GetIndicesPairsImplicitGemmPlugin::enqueue(
-  PluginTensorDesc const * input_desc, [[maybe_unused]] PluginTensorDesc const * output_desc,
+  PluginTensorDesc const * input_desc, PluginTensorDesc const * output_desc,
   void const * const * inputs, void * const * outputs, [[maybe_unused]] void * workspace,
   cudaStream_t stream) noexcept
 {
   using SpconvOps = spconvlib::spconv::csrc::sparse::all::SpconvOps;
   using StaticAllocator = spconvlib::spconv::csrc::sparse::alloc::StaticAllocator;
+
+  if (isStreamCapturing(stream)) {
+    warnOnceStreamCaptureUnsupported(
+      kGET_INDICES_PAIRS_IMPLICIT_GEMM_PLUGIN_NAME, stream_capture_warned_);
+    return zeroPluginOutputs(output_desc, getNbOutputs(), outputs, stream) == cudaSuccess ? 0 : -1;
+  }
 
   const bool is_subm = params_.subm;
   const bool direct_table = true;
@@ -439,10 +446,9 @@ std::int32_t GetIndicesPairsImplicitGemmPlugin::enqueue(
   std::int32_t num_act_out_real = std::get<1>(pair_res);
   std::int32_t * num_act_out_data = static_cast<std::int32_t *>(outputs[4]);
 
-  cudaError_t const status = cudaMemcpyAsync(
-    num_act_out_data, &num_act_out_real, sizeof(std::int32_t), cudaMemcpyHostToDevice, stream);
-
-  return status;
+  // See GetIndicesPairsPlugin::enqueue: a pageable host-to-device copy is rejected while
+  // TensorRT captures the stream to time tactics, so publish the count with a kernel instead.
+  return fill_scalar_int32(num_act_out_data, num_act_out_real, stream);
 }
 
 std::int32_t GetIndicesPairsImplicitGemmPlugin::onShapeChange(
