@@ -65,6 +65,19 @@ jobs:
     secrets:
       codecov-token: ${{ secrets.CODECOV_TOKEN }}
 
+  build-and-test-differential-agnocast:
+    if: ${{ always() }}
+    needs:
+      - require-label
+    uses: ./.github/workflows/build-and-test-differential.yaml
+    with:
+      rosdistro: jazzy
+      container: ghcr.io/autowarefoundation/autoware:universe-dependencies-jazzy
+      enable-agnocast: true
+      run-condition: ${{ needs.require-label.outputs.result == 'true' && github.event.pull_request.base.ref == 'main' }}
+    secrets:
+      codecov-token: ${{ secrets.CODECOV_TOKEN }}
+
   build-and-test-packages-above-differential:
     if: ${{ always() }}
     needs:
