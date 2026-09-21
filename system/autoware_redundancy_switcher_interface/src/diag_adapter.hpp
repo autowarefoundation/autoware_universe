@@ -54,7 +54,7 @@ private:
   rclcpp::Node * node_{nullptr};
   std::shared_ptr<EventGateway> gateway_;
   std::unique_ptr<diagnostic_updater::Updater> updater_;
-  double transitional_timeout_milli_;
+  double transitional_timeout_milli_{0.0};
   std::optional<double> transitional_start_ms_;  // monotonic ms; nullopt = not in transitional
   mutable std::mutex updater_mutex_;
   mutable std::mutex transition_mutex_;

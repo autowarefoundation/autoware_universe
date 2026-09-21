@@ -26,6 +26,24 @@
 namespace autoware::redundancy_switcher
 {
 
+namespace
+{
+using DiagStatus = diagnostic_msgs::msg::DiagnosticStatus;
+
+uint8_t to_diagnostic_status(DiagLevel level)
+{
+  switch (level) {
+    case DiagLevel::Ok:
+      return DiagStatus::OK;
+    case DiagLevel::Warn:
+      return DiagStatus::WARN;
+    case DiagLevel::Error:
+      return DiagStatus::ERROR;
+  }
+  return DiagStatus::STALE;
+}
+}  // namespace
+
 void DiagAdapter::initialize(rclcpp::Node * node, std::shared_ptr<EventGateway> gateway)
 {
   if (!node) throw std::invalid_argument("DiagAdapter: node is null");
@@ -58,8 +76,6 @@ void DiagAdapter::execute(const OutputCommand & command)
 
 void DiagAdapter::update_status(diagnostic_updater::DiagnosticStatusWrapper & stat)
 {
-  using DiagStatus = diagnostic_msgs::msg::DiagnosticStatus;
-
   if (!gateway_) {
     stat.summary(DiagStatus::ERROR, "Internal error: EventGateway is not connected");
     return;
@@ -67,7 +83,7 @@ void DiagAdapter::update_status(diagnostic_updater::DiagnosticStatusWrapper & st
   const auto snap = gateway_->snapshot();
 
   const double now_ms = node_->now().nanoseconds() / 1e6;
-  auto switcher_level = DiagStatus::OK;
+  uint8_t switcher_level;
   std::string switcher_msg;
 
   {
@@ -75,7 +91,7 @@ void DiagAdapter::update_status(diagnostic_updater::DiagnosticStatusWrapper & st
     const auto result = compute_switcher_level(
       snap.switcher, now_ms, transitional_start_ms_, transitional_timeout_milli_,
       snap.autoware_ready);
-    switcher_level = static_cast<uint8_t>(result.level);
+    switcher_level = to_diagnostic_status(result.level);
     switcher_msg = result.message;
     transitional_start_ms_ = result.transitional_start_ms;
   }
