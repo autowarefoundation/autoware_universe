@@ -12,3 +12,5 @@
     srv_name: "/system/topic_relay_controller_default/operate" # necessary for enable_relay_control is true
     enable_keep_publishing: false
     #update_rate: #necessary for enable_keep_publishing is true
+    enable_throttle: false # Drop the messages that arrive faster than msgs_per_sec. Mutually exclusive with enable_keep_publishing.
+    #msgs_per_sec: #necessary for enable_throttle is true
