@@ -72,6 +72,18 @@ public:
     return r;
   }
 
+  void copy_request(void * destination, const void * source) const override
+  {
+    *static_cast<autoware_vehicle_msgs::srv::ControlModeCommand::Request *>(destination) =
+      *static_cast<const autoware_vehicle_msgs::srv::ControlModeCommand::Request *>(source);
+  }
+
+  void copy_response(void * destination, const void * source) const override
+  {
+    *static_cast<autoware_vehicle_msgs::srv::ControlModeCommand::Response *>(destination) =
+      *static_cast<const autoware_vehicle_msgs::srv::ControlModeCommand::Response *>(source);
+  }
+
 private:
   std::string input_name_;
   std::vector<OutputServiceConfig> outputs_;
