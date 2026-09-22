@@ -103,16 +103,16 @@ controller is not running. In that case `active_mode_id_` is updated without cal
 
 ### Launch Arguments
 
-| Argument                          | Type   | Default                                                       | Description                             |
-| --------------------------------- | ------ | ------------------------------------------------------------- | --------------------------------------- |
-| `config`                          | string | `config/mrm_in_lane_stop_operator.param.yaml`                 | Parameter file                          |
-| `skip_relay_call`                 | bool   | `false`                                                       | Skip all relay service calls            |
-| `driving_mode_request_topic`      | string | `/system/driving_mode/request`                                | Topic for driving mode requests         |
-| `driving_mode_info_topic`         | string | `/system/driving_mode/info`                                   | Topic for the driving mode name/ID list |
-| `mrm_state_topic`                 | string | `/system/driving_mode/mrm_state`                              | Topic for the MRM state                 |
-| `driving_mode_active_topic`       | string | `/system/driving_mode/active`                                 | Topic for the active flags              |
-| `in_lane_stop_trigger_topic`      | string | `/system/in_lane_stop/trigger`                                | Topic for the in-lane stop trigger      |
-| `relay_service_name`              | string | `/system/topic_relay_controller_pose_with_covariance/operate` | Service name for relay control          |
+| Argument                     | Type   | Default                                                       | Description                             |
+| ---------------------------- | ------ | ------------------------------------------------------------- | --------------------------------------- |
+| `config`                     | string | `config/mrm_in_lane_stop_operator.param.yaml`                 | Parameter file                          |
+| `skip_relay_call`            | bool   | `false`                                                       | Skip all relay service calls            |
+| `driving_mode_request_topic` | string | `/system/driving_mode/request`                                | Topic for driving mode requests         |
+| `driving_mode_info_topic`    | string | `/system/driving_mode/info`                                   | Topic for the driving mode name/ID list |
+| `mrm_state_topic`            | string | `/system/driving_mode/mrm_state`                              | Topic for the MRM state                 |
+| `driving_mode_active_topic`  | string | `/system/driving_mode/active`                                 | Topic for the active flags              |
+| `in_lane_stop_trigger_topic` | string | `/system/in_lane_stop/trigger`                                | Topic for the in-lane stop trigger      |
+| `relay_service_name`         | string | `/system/topic_relay_controller_pose_with_covariance/operate` | Service name for relay control          |
 
 ### Parameters (YAML)
 
