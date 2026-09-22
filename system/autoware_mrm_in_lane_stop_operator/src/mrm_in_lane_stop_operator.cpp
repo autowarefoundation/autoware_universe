@@ -144,9 +144,7 @@ bool MrmInLaneStopOperator::execute(const ModeConfig & mode)
 
 void MrmInLaneStopOperator::cancel(const ModeConfig & mode)
 {
-  // profile is only meaningful when requesting a stop (trigger=true); PROFILE_UNKNOWN makes that
-  // explicit on cancellation rather than resending mode's own (now irrelevant) profile.
-  publish_trigger(false, InLaneStopTrigger::PROFILE_UNKNOWN);
+  publish_trigger(false, mode.profile);
   call_relay(true);
   RCLCPP_INFO(get_logger(), "Cancel MRM: %s", mode.name.c_str());
 }
