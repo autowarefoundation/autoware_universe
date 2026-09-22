@@ -49,8 +49,8 @@ MrmInLaneStopOperator::MrmInLaneStopOperator(const rclcpp::NodeOptions & node_op
     relay_service_name_, AUTOWARE_DEFAULT_SERVICES_QOS_PROFILE(), relay_group_);
 
   // publisher
-  pub_trigger_ =
-    create_publisher<InLaneStopTrigger>("~/output/in_lane_stop_trigger", rclcpp::QoS{1});
+  pub_trigger_ = create_publisher<InLaneStopTrigger>(
+    "~/output/in_lane_stop_trigger", rclcpp::QoS(1).reliable().transient_local());
   pub_mrm_state_ = create_publisher<DrivingModeMrmState>("~/output/mrm_state", 1);
   pub_driving_mode_active_ = create_publisher<DrivingModeFlag>("~/output/driving_mode_active", 1);
   sub_request_ = create_subscription<DrivingModeRequest>(
