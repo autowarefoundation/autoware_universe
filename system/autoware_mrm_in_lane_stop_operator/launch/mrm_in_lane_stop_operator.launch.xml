@@ -6,7 +6,7 @@
   <arg name="driving_mode_info_topic" default="/system/driving_mode/info"/>
   <arg name="mrm_state_topic" default="/system/driving_mode/mrm_state"/>
   <arg name="driving_mode_active_topic" default="/system/driving_mode/active"/>
-  <arg name="jerk_deceleration_trigger_topic" default="/control/constant_jerk_deceleration_trigger"/>
+  <arg name="in_lane_stop_trigger_topic" default="/system/in_lane_stop/trigger"/>
   <arg name="relay_service_name" default="/system/topic_relay_controller_pose_with_covariance/operate"/>
 
   <node pkg="autoware_mrm_in_lane_stop_operator" exec="autoware_mrm_in_lane_stop_operator_node" name="mrm_in_lane_stop_operator">
@@ -16,7 +16,7 @@
     <remap from="~/input/driving_mode_request" to="$(var driving_mode_request_topic)"/>
     <remap from="~/input/driving_mode_info" to="$(var driving_mode_info_topic)"/>
     <remap from="~/input/relay_service" to="$(var relay_service_name)"/>
-    <remap from="~/output/jerk_deceleration_trigger" to="$(var jerk_deceleration_trigger_topic)"/>
+    <remap from="~/output/in_lane_stop_trigger" to="$(var in_lane_stop_trigger_topic)"/>
     <remap from="~/output/mrm_state" to="$(var mrm_state_topic)"/>
     <remap from="~/output/driving_mode_active" to="$(var driving_mode_active_topic)"/>
   </node>

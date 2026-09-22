@@ -11,8 +11,8 @@ In the MRM decision flow:
 1. **Driving Mode Manager** detects an emergency or fallback condition and issues a driving mode request for in-lane stop MRM
 2. **MrmInLaneStopOperator** receives the activation request and:
    - Validates the requested mode against configured modes
-   - Communicates with the relay controller to enable the constant jerk deceleration trigger topic
-   - Publishes `ConstantJerkDecelerationTrigger` messages to signal the in-lane stop planner to execute the maneuver
+   - Communicates with the relay controller to enable the in-lane stop trigger topic
+   - Publishes `InLaneStopTrigger` messages to signal the in-lane stop planner to execute the maneuver with the mode's configured profile
    - Tracks MRM state transitions (UNKNOWN → NORMAL/OPERATING → SUCCEEDED)
    - Detects when the vehicle has come to a complete stop
 3. **In-lane Stop Execution Modules** (e.g., `in_lane_mrm_planner`) receive the trigger and execute the controlled deceleration trajectory
@@ -26,7 +26,7 @@ In the MRM decision flow:
 
 ## Features
 
-- **Flexible Driving Mode Management**: Support for multiple configurable driving modes with per-mode deceleration parameters
+- **Flexible Driving Mode Management**: Support for multiple configurable driving modes with per-mode deceleration profiles
 - **Relay Service Control**: Seamlessly switches between normal operation and MRM mode via topic relay control
 - **MRM State Machine**: Tracks MRM operation state (UNKNOWN → NORMAL/OPERATING → SUCCEEDED)
 - **Vehicle Stop Detection**: Polls kinematic state to detect when the vehicle has come to a complete stop
@@ -50,8 +50,8 @@ In the MRM decision flow:
 
 - `~/output/mrm_state` (tier4_system_msgs/DrivingModeMrmState)
   - MRM operation state (UNKNOWN, NORMAL, OPERATING, SUCCEEDED)
-- `~/output/jerk_deceleration_trigger` (tier4_control_msgs/ConstantJerkDecelerationTrigger)
-  - Trigger signal for constant jerk deceleration when MRM is active
+- `~/output/in_lane_stop_trigger` (tier4_system_msgs/InLaneStopTrigger)
+  - Trigger signal (with deceleration profile) for the in-lane stop planner when MRM is active
 - `~/output/driving_mode_active` (tier4_system_msgs/DrivingModeFlag)
   - Flags indicating active status for each configured driving mode
 
@@ -89,7 +89,7 @@ In the MRM decision flow:
 The node communicates with a relay controller service so that the MRM trajectory can take over the
 relayed topic. On mode activation:
 
-1. Publishes the deceleration trigger, then calls the relay service with `relay_on=false` to stop
+1. Publishes the in-lane stop trigger, then calls the relay service with `relay_on=false` to stop
    the normal relay
 2. Only updates the internal `active_mode_id_` if the relay service call succeeds
 3. On mode deactivation, calls the relay service with `relay_on=true` to restore the normal relay
@@ -111,7 +111,7 @@ controller is not running. In that case `active_mode_id_` is updated without cal
 | `driving_mode_info_topic`         | string | `/system/driving_mode/info`                                   | Topic for the driving mode name/ID list |
 | `mrm_state_topic`                 | string | `/system/driving_mode/mrm_state`                              | Topic for the MRM state                 |
 | `driving_mode_active_topic`       | string | `/system/driving_mode/active`                                 | Topic for the active flags              |
-| `jerk_deceleration_trigger_topic` | string | `/control/constant_jerk_deceleration_trigger`                 | Topic for jerk deceleration trigger     |
+| `in_lane_stop_trigger_topic`      | string | `/system/in_lane_stop/trigger`                                | Topic for the in-lane stop trigger      |
 | `relay_service_name`              | string | `/system/topic_relay_controller_pose_with_covariance/operate` | Service name for relay control          |
 
 ### Parameters (YAML)
@@ -129,8 +129,7 @@ Each mode in `mode_names` has a configuration block:
 
 ```yaml
 <mode_name>:
-  target_acceleration: <double> # Target acceleration [m/s²]
-  target_jerk: <double> # Target jerk [m/s³]
+  profile: <string> # Deceleration profile: "moderate" or "emergency" (see InLaneStopTrigger::PROFILE_*)
   send_active_flag: <bool> # Include this mode in ~/output/driving_mode_active (default: true)
 ```
 
@@ -143,9 +142,8 @@ Each mode in `mode_names` has a configuration block:
       - in_lane_moderate_stop
     service_timeout_ms: 100
     in_lane_moderate_stop:
+      profile: moderate
       send_active_flag: true
-      target_acceleration: -2.5
-      target_jerk: -1.5
 ```
 
 ## Usage
@@ -160,6 +158,6 @@ ros2 launch autoware_mrm_in_lane_stop_operator mrm_in_lane_stop_operator.launch.
 
 ```bash
 ros2 launch autoware_mrm_in_lane_stop_operator mrm_in_lane_stop_operator.launch.xml \
-  jerk_deceleration_trigger_topic:=/custom/trigger \
+  in_lane_stop_trigger_topic:=/custom/trigger \
   relay_service_name:=/custom/relay_service
 ```

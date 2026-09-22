@@ -16,7 +16,6 @@
 
 #include <autoware/qos_utils/qos_compatibility.hpp>
 
-#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <memory>
@@ -37,11 +36,10 @@ MrmInLaneStopOperator::MrmInLaneStopOperator(const rclcpp::NodeOptions & node_op
   for (const auto & name : mode_names) {
     ModeConfig mode;
     mode.name = name;
-    mode.target_acceleration = declare_parameter<double>(name + ".target_acceleration");
-    mode.target_jerk = declare_parameter<double>(name + ".target_jerk");
+    mode.profile = ModeConfig::profile_from_name(declare_parameter<std::string>(name + ".profile"));
     mode.send_active_flag = declare_parameter<bool>(name + ".send_active_flag", true);
 
-    modes_.push_back(std::move(mode));
+    modes_.add(std::move(mode));
   }
 
   // client
@@ -51,8 +49,7 @@ MrmInLaneStopOperator::MrmInLaneStopOperator(const rclcpp::NodeOptions & node_op
     relay_service_name_, AUTOWARE_DEFAULT_SERVICES_QOS_PROFILE(), relay_group_);
 
   // publisher
-  pub_trigger_ = create_publisher<ConstantJerkDecelerationTrigger>(
-    "~/output/jerk_deceleration_trigger", rclcpp::QoS{1});
+  pub_trigger_ = create_publisher<InLaneStopTrigger>("~/output/in_lane_stop_trigger", rclcpp::QoS{1});
   pub_mrm_state_ = create_publisher<DrivingModeMrmState>("~/output/mrm_state", 1);
   pub_driving_mode_active_ = create_publisher<DrivingModeFlag>("~/output/driving_mode_active", 1);
   sub_request_ = create_subscription<DrivingModeRequest>(
@@ -76,19 +73,13 @@ MrmInLaneStopOperator::MrmInLaneStopOperator(const rclcpp::NodeOptions & node_op
 void MrmInLaneStopOperator::on_info(DrivingModeInfo::ConstSharedPtr msg)
 {
   for (const auto & item : msg->items) {
-    for (auto & mode : modes_) {
-      if (mode.name == item.name) {
-        mode.mode_id = item.mode;
-      }
-    }
+    modes_.bind_id(item.name, item.mode);
   }
 }
 
 const ModeConfig * MrmInLaneStopOperator::find_mode_by_id(const uint32_t id) const
 {
-  const auto it = std::find_if(
-    modes_.begin(), modes_.end(), [id](const ModeConfig & mode) { return mode.mode_id == id; });
-  return it == modes_.end() ? nullptr : &*it;
+  return modes_.find_by_id(id);
 }
 
 void MrmInLaneStopOperator::cancel_active_mode()
@@ -139,7 +130,7 @@ void MrmInLaneStopOperator::on_request(DrivingModeRequest::ConstSharedPtr msg)
 
 bool MrmInLaneStopOperator::execute(const ModeConfig & mode)
 {
-  publish_trigger(true, mode.target_acceleration, mode.target_jerk);
+  publish_trigger(true, mode.profile);
   const bool relay_success = call_relay(false);
 
   if (relay_success) {
@@ -153,19 +144,19 @@ bool MrmInLaneStopOperator::execute(const ModeConfig & mode)
 
 void MrmInLaneStopOperator::cancel(const ModeConfig & mode)
 {
-  publish_trigger(false, mode.target_acceleration, mode.target_jerk);
+  // profile is only meaningful when requesting a stop (trigger=true); PROFILE_UNKNOWN makes that
+  // explicit on cancellation rather than resending mode's own (now irrelevant) profile.
+  publish_trigger(false, InLaneStopTrigger::PROFILE_UNKNOWN);
   call_relay(true);
   RCLCPP_INFO(get_logger(), "Cancel MRM: %s", mode.name.c_str());
 }
 
-void MrmInLaneStopOperator::publish_trigger(
-  bool turn_on, double target_acceleration, double target_jerk)
+void MrmInLaneStopOperator::publish_trigger(bool turn_on, ProfileType profile)
 {
-  ConstantJerkDecelerationTrigger msg;
+  InLaneStopTrigger msg;
   msg.stamp = now();
   msg.trigger = turn_on;
-  msg.target_acceleration = static_cast<float>(target_acceleration);
-  msg.target_jerk = static_cast<float>(target_jerk);
+  msg.profile = profile;
   pub_trigger_->publish(msg);
 }
 

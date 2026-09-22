@@ -15,11 +15,13 @@
 #ifndef MRM_IN_LANE_STOP_OPERATOR_HPP_
 #define MRM_IN_LANE_STOP_OPERATOR_HPP_
 
+#include "mode_table.hpp"
+
 #include <autoware_utils_rclcpp/polling_subscriber.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <nav_msgs/msg/odometry.hpp>
-#include <tier4_control_msgs/msg/constant_jerk_deceleration_trigger.hpp>
+#include <tier4_system_msgs/msg/in_lane_stop_trigger.hpp>
 #include <tier4_system_msgs/msg/driving_mode_flag.hpp>
 #include <tier4_system_msgs/msg/driving_mode_info.hpp>
 #include <tier4_system_msgs/msg/driving_mode_mrm_state.hpp>
@@ -29,27 +31,17 @@
 #include <memory>
 #include <optional>
 #include <string>
-#include <vector>
 
 namespace autoware::mrm_in_lane_stop_operator
 {
 
 using ChangeTopicRelayControl = tier4_system_msgs::srv::ChangeTopicRelayControl;
-using ConstantJerkDecelerationTrigger = tier4_control_msgs::msg::ConstantJerkDecelerationTrigger;
+using InLaneStopTrigger = tier4_system_msgs::msg::InLaneStopTrigger;
 using DrivingModeFlag = tier4_system_msgs::msg::DrivingModeFlag;
 using DrivingModeInfo = tier4_system_msgs::msg::DrivingModeInfo;
 using DrivingModeMrmState = tier4_system_msgs::msg::DrivingModeMrmState;
 using DrivingModeRequest = tier4_system_msgs::msg::DrivingModeRequest;
 using Odometry = nav_msgs::msg::Odometry;
-
-struct ModeConfig
-{
-  std::string name;
-  double target_acceleration;
-  double target_jerk;
-  bool send_active_flag;
-  std::optional<uint32_t> mode_id;
-};
 
 class MrmInLaneStopOperator : public rclcpp::Node
 {
@@ -57,7 +49,7 @@ public:
   explicit MrmInLaneStopOperator(const rclcpp::NodeOptions & node_options);
 
 private:
-  std::vector<ModeConfig> modes_;
+  ModeTable modes_;
   std::optional<uint32_t> active_mode_id_;
   int64_t service_timeout_ms_;
   bool skip_relay_call_;
@@ -66,7 +58,7 @@ private:
   rclcpp::CallbackGroup::SharedPtr relay_group_;
   rclcpp::Client<ChangeTopicRelayControl>::SharedPtr relay_client_;
 
-  rclcpp::Publisher<ConstantJerkDecelerationTrigger>::SharedPtr pub_trigger_;
+  rclcpp::Publisher<InLaneStopTrigger>::SharedPtr pub_trigger_;
   rclcpp::Publisher<DrivingModeMrmState>::SharedPtr pub_mrm_state_;
   rclcpp::Publisher<DrivingModeFlag>::SharedPtr pub_driving_mode_active_;
   rclcpp::Subscription<DrivingModeRequest>::SharedPtr sub_request_;
@@ -91,7 +83,7 @@ private:
 
   bool execute(const ModeConfig & mode);
   void cancel(const ModeConfig & mode);
-  void publish_trigger(bool turn_on, double target_acceleration, double target_jerk);
+  void publish_trigger(bool turn_on, ProfileType profile);
   bool call_relay(bool relay_on);
   void publish_driving_mode_active() const;
   void publish_mrm_state() const;

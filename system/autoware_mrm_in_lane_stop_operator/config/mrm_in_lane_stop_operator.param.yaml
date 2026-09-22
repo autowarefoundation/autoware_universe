@@ -9,7 +9,8 @@
     service_timeout_ms: 100
 
     # Per-mode parameters (one block per entry in mode_names).
+    # profile: "moderate" or "emergency", matching InLaneStopTrigger::PROFILE_*.
+    # send_active_flag: whether to publish this mode's DrivingModeActive flag.
     in_lane_moderate_stop:
+      profile: moderate
       send_active_flag: true
-      target_acceleration: -2.5  # [m/s^2]
-      target_jerk: -1.5          # [m/s^3]
