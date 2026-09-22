@@ -25,7 +25,8 @@
   <depend>perception_utils</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
-  <depend>tf2_sensor_msgs</depend>
+  <depend>tf2_eigen</depend>
+  <depend>tf2_ros</depend>
 
   <exec_depend>autoware_tensorrt_plugins</exec_depend>
 

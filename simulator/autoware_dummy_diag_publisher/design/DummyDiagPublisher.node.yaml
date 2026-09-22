@@ -21,11 +21,16 @@ publishers:
     global: /diagnostics
 
 # parameters
+# the required diagnostics come from the system-side parameter files; the package defaults are empty.
 param_files:
   - name: param_file
-    default: config/dummy_diag_publisher.param.yaml
+    default: config/_empty.param.yaml
+  - name: extra_param_file
+    default: config/_empty.param.yaml
 
-param_values: []
+param_values:
+  - name: update_rate
+    default: 10.0
 
 # processes
 processes:

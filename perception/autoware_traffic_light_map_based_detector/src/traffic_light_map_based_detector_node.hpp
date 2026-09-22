@@ -15,7 +15,7 @@
 #ifndef TRAFFIC_LIGHT_MAP_BASED_DETECTOR_NODE_HPP_
 #define TRAFFIC_LIGHT_MAP_BASED_DETECTOR_NODE_HPP_
 
-#include "traffic_light_map_based_detector.hpp"
+#include "autoware/traffic_light_map_based_detector/traffic_light_map_based_detector.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 
