@@ -17,6 +17,7 @@
 #include <tier4_system_msgs/msg/in_lane_stop_trigger.hpp>
 
 #include <stdexcept>
+#include <string>
 #include <unordered_map>
 
 namespace autoware::mrm_in_lane_stop_operator

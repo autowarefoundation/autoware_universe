@@ -14,6 +14,8 @@
 
 #include "mode_table.hpp"
 
+#include <string>
+
 namespace autoware::mrm_in_lane_stop_operator
 {
 
