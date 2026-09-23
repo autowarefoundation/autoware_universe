@@ -47,6 +47,7 @@ Launch (non-redundant / single-ECU mode):
 
 ```xml
 <include file="$(find-pkg-share autoware_redundancy_switcher_interface)/launch/redundancy_switcher_interface.launch.xml">
+  <arg name="is_main_ecu" value="true"/>
   <arg name="plugin_config"
     value="$(find-pkg-share autoware_redundancy_switcher_interface_plugins)/config/non_redundant.param.yaml"/>
 </include>
