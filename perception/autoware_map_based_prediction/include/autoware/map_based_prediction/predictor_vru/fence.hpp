@@ -31,10 +31,14 @@ public:
 
   void buildFromMap(std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr);
 
+  /// @p predicted_path_ls holds the path positions up to the crosswalk arrival index.
   [[nodiscard]] bool doesPathCrossAnyFenceBeforeCrosswalk(
-    const PredictedPathWithArrivalIndex & predicted_path) const;
+    const lanelet::BasicLineString2d & predicted_path_ls) const;
 
-  [[nodiscard]] PredictedPath cutPathBeforeFences(const PredictedPath & predicted_path) const;
+  /// @p predicted_path_ls holds all path positions of @p predicted_path.
+  [[nodiscard]] PredictedPath cutPathBeforeFences(
+    const PredictedPath & predicted_path,
+    const lanelet::BasicLineString2d & predicted_path_ls) const;
 
 private:
   lanelet::LaneletMapUPtr fence_layer_{nullptr};

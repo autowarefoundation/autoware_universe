@@ -35,19 +35,19 @@ V at_or(const std::unordered_map<K, V> & map, const K & key, const V & value)
   return map.count(key) ? map.at(key) : value;
 }
 
-tier4_perception_msgs::msg::TrafficLightElement::_color_type convertColorStringtoT4(
+tier4_perception_msgs::msg::TrafficLightElement::_color_type convert_color_string_to_t4(
   const std::string & label);
 
-tier4_perception_msgs::msg::TrafficLightElement::_shape_type convertShapeStringtoT4(
+tier4_perception_msgs::msg::TrafficLightElement::_shape_type convert_shape_string_to_t4(
   const std::string & label);
 
-std::string convertColorT4toString(
+std::string convert_color_t4_to_string(
   const tier4_perception_msgs::msg::TrafficLightElement::_color_type & label);
 
-std::string convertShapeT4toString(
+std::string convert_shape_t4_to_string(
   const tier4_perception_msgs::msg::TrafficLightElement::_shape_type & label);
 
-bool isColorLabel(const std::string & label);
+bool is_color_label(const std::string & label);
 
 double compute_brightness(const cv::Mat & img);
 

@@ -25,6 +25,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace autoware::map_based_prediction
@@ -44,8 +45,9 @@ void FenceModule::buildFromMap(std::shared_ptr<lanelet::LaneletMap> lanelet_map_
 {
   lanelet::LineStrings3d fences;
   for (const auto & linestring : lanelet_map_ptr->lineStringLayer) {
-    if (const std::string type = linestring.attributeOr(lanelet::AttributeName::Type, "none");
-        type == "fence") {
+    if (
+      const std::string type = linestring.attributeOr(lanelet::AttributeName::Type, "none");
+      type == "fence") {
       fences.emplace_back(std::const_pointer_cast<lanelet::LineStringData>(linestring.constData()));
     }
   }
@@ -53,17 +55,10 @@ void FenceModule::buildFromMap(std::shared_ptr<lanelet::LaneletMap> lanelet_map_
 }
 
 bool FenceModule::doesPathCrossAnyFenceBeforeCrosswalk(
-  const PredictedPathWithArrivalIndex & predicted_path) const
+  const lanelet::BasicLineString2d & predicted_path_ls) const
 {
-  if (!fence_layer_) {
+  if (!fence_layer_ || predicted_path_ls.size() < 2) {
     return false;
-  }
-  if (predicted_path.path.empty()) return false;
-  const size_t last_idx = std::min(predicted_path.arrival_index, predicted_path.path.size() - 1);
-  lanelet::BasicLineString2d predicted_path_ls;
-  for (auto i = 0UL; i <= last_idx; ++i) {
-    const auto & pt = predicted_path.path[i];
-    predicted_path_ls.emplace_back(pt.position.x, pt.position.y);
   }
   const auto candidates =
     fence_layer_->lineStringLayer.search(lanelet::geometry::boundingBox2d(predicted_path_ls));
@@ -75,26 +70,19 @@ bool FenceModule::doesPathCrossAnyFenceBeforeCrosswalk(
   return false;
 }
 
-PredictedPath FenceModule::cutPathBeforeFences(const PredictedPath & predicted_path) const
+PredictedPath FenceModule::cutPathBeforeFences(
+  const PredictedPath & predicted_path, const lanelet::BasicLineString2d & predicted_path_ls) const
 {
-  if (!fence_layer_) {
+  if (!fence_layer_ || predicted_path_ls.size() < 2) {
     return predicted_path;
-  }
-  const auto & path = predicted_path.path;
-  if (path.size() < 2) {
-    return predicted_path;
-  }
-  lanelet::BasicLineString2d predicted_path_ls;
-  for (const auto & pt : path) {
-    predicted_path_ls.emplace_back(pt.position.x, pt.position.y);
   }
   const auto candidates =
     fence_layer_->lineStringLayer.search(lanelet::geometry::boundingBox2d(predicted_path_ls));
-  std::vector<lanelet::ConstLineString3d> crossed_fences{};
+  std::vector<lanelet::BasicLineString2d> crossed_fences{};
   for (const auto & candidate : candidates) {
-    if (doesPathCrossFence(predicted_path_ls, candidate)) {
-      crossed_fences.push_back(candidate);
-      break;
+    auto fence_2d = lanelet::utils::to2D(candidate.basicLineString());
+    if (boost::geometry::intersects(predicted_path_ls, fence_2d)) {
+      crossed_fences.push_back(std::move(fence_2d));
     }
   }
   if (crossed_fences.empty()) {
@@ -103,11 +91,10 @@ PredictedPath FenceModule::cutPathBeforeFences(const PredictedPath & predicted_p
 
   std::optional<size_t> closest_cross_index{};
   for (auto i = 0UL; i + 1 < predicted_path_ls.size() && !closest_cross_index.has_value(); ++i) {
-    lanelet::BasicLineString2d path_segment(
+    const lanelet::BasicLineString2d path_segment(
       lanelet::BasicPoints2d{predicted_path_ls[i], predicted_path_ls[i + 1]});
-    for (const auto & fence : crossed_fences) {
-      if (boost::geometry::intersects(
-            path_segment, lanelet::utils::to2D(fence).basicLineString())) {
+    for (const auto & fence_2d : crossed_fences) {
+      if (boost::geometry::intersects(path_segment, fence_2d)) {
         closest_cross_index = i;
       }
     }
@@ -117,10 +104,7 @@ PredictedPath FenceModule::cutPathBeforeFences(const PredictedPath & predicted_p
     return predicted_path;
   }
   auto trimmed_path = predicted_path;
-  trimmed_path.path.clear();
-  for (unsigned i = 0; i <= closest_cross_index.value(); ++i) {
-    trimmed_path.path.push_back(path.at(i));
-  }
+  trimmed_path.path.resize(closest_cross_index.value() + 1);
   return trimmed_path;
 }
 

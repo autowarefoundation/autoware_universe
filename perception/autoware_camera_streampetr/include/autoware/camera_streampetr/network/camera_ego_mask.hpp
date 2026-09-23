@@ -35,31 +35,33 @@ struct EgoMaskPolygon
 struct EgoMaskRoiConfig
 {
   std::vector<EgoMaskPolygon> polygons;
-  std::array<std::uint8_t, 3> fill_bgr{0, 0, 0};
+  std::array<std::uint8_t, 3> fill_rgb{0, 0, 0};
 };
 
 struct EgoMaskParams
 {
   bool enabled{false};
-  std::array<std::uint8_t, 3> fill_bgr{0, 0, 0};
+  std::array<std::uint8_t, 3> fill_rgb{0, 0, 0};
   std::vector<std::string> roi_polygons_yaml;
   std::vector<std::optional<EgoMaskRoiConfig>> roi_mask_configs;
 };
 
-std::vector<std::optional<EgoMaskRoiConfig>> loadEgoMaskRoiConfigs(
+std::vector<std::optional<EgoMaskRoiConfig>> load_ego_mask_roi_configs(
   const EgoMaskParams & params, std::size_t rois_number);
 
-std::vector<EgoMaskPolygon> parsePolygonsYamlFile(const std::string & path);
+std::vector<EgoMaskPolygon> parse_polygons_yaml_file(const std::string & path);
 
-std::vector<EgoMaskPolygon> parsePolygonsYamlText(const std::string & yaml_text);
+std::vector<EgoMaskPolygon> parse_polygons_yaml_text(const std::string & yaml_text);
 
 /** Build UINT8 mask (255 inside polygons, 0 elsewhere) at full image resolution. */
-std::vector<std::uint8_t> buildEgoMaskRaster(
+std::vector<std::uint8_t> build_ego_mask_raster(
   const std::vector<EgoMaskPolygon> & polygons, int width, int height);
 
-cudaError_t applyEgoMask_launch(
-  std::uint8_t * image_bgr, const std::uint8_t * mask, int height, int width, std::uint8_t fill_b,
-  std::uint8_t fill_g, std::uint8_t fill_r, cudaStream_t stream);
+// The image buffer is always RGB by the time the mask is applied (a BGR source is converted
+// right after upload).
+cudaError_t apply_ego_mask_launch(
+  std::uint8_t * image, const std::uint8_t * mask, int height, int width, std::uint8_t fill_r,
+  std::uint8_t fill_g, std::uint8_t fill_b, cudaStream_t stream);
 
 }  // namespace autoware::camera_streampetr
 

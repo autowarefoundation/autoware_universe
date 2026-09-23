@@ -91,6 +91,26 @@ jobs:
         run: cp build_depends_stable.repos build_depends.repos
         shell: bash
 
+      - name: Remove released Debian packages of the source-built dependencies
+        if: ${{ steps.check-config-changed.outputs.config-changed == 'true' || steps.get-changed-files.outputs.changed-files != '' }}
+        run: |
+          ros_distro="${ROS_DISTRO:-${{ inputs.rosdistro }}}"
+          # Same step as in build-and-test-differential.yaml: the released packages install
+          # headers under /opt/ros/$ROS_DISTRO/include, which shadow the source-built ones.
+          # The clang-tidy action reuses the build cache from that job, so the workspace must
+          # match it. The action's own vcs import finds dependency_ws already populated.
+          mkdir -p dependency_ws
+          vcs import --recursive dependency_ws < build_depends.repos
+          for pkg_xml in $(find . -name package.xml); do
+            pkg_name=$(xmllint --xpath 'string(//package/name)' "$pkg_xml")
+            deb_name="ros-${ros_distro}-${pkg_name//_/-}"
+            if dpkg-query -W -f='${Status}' "$deb_name" 2>/dev/null | grep -q '^install ok installed$'; then
+              echo "Removing $deb_name"
+              sudo dpkg --remove --force-depends "$deb_name"
+            fi
+          done
+        shell: bash
+
       - name: Run clang-tidy
         if: ${{ steps.check-config-changed.outputs.config-changed == 'true' || steps.get-changed-files.outputs.changed-files != '' }}
         uses: autowarefoundation/autoware-github-actions/clang-tidy@v1

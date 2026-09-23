@@ -49,6 +49,7 @@ using autoware_internal_debug_msgs::msg::Float32MultiArrayStamped;
 using autoware_internal_debug_msgs::msg::Float32Stamped;
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_vehicle_msgs::msg::SteeringReport;
+using geometry_msgs::msg::PoseStamped;
 using nav_msgs::msg::Odometry;
 using trajectory_follower::LateralHorizon;
 
@@ -67,6 +68,11 @@ private:
   rclcpp::Logger logger_;
 
   rclcpp::Publisher<Trajectory>::SharedPtr m_pub_predicted_traj;
+  rclcpp::Publisher<Trajectory>::SharedPtr m_pub_predicted_traj_frenet;
+  rclcpp::Publisher<Trajectory>::SharedPtr m_pub_resampled_reference_traj;
+  rclcpp::Publisher<PoseStamped>::SharedPtr m_pub_nearest_pose;
+  rclcpp::Publisher<Trajectory>::SharedPtr m_pub_nearest_segment_traj;
+  rclcpp::Publisher<Float32MultiArrayStamped>::SharedPtr m_pub_nearest_info;
   rclcpp::Publisher<Float32MultiArrayStamped>::SharedPtr m_pub_debug_values;
   rclcpp::Publisher<Float32Stamped>::SharedPtr m_pub_steer_offset;
 
@@ -103,7 +109,7 @@ private:
   bool m_keep_steer_control_until_converged;
 
   // MPC solver checker.
-  ResultWithReason m_mpc_solved_status{true};
+  MpcResult m_mpc_solved_status{true};
 
   // trajectory buffer for detecting new trajectory
   std::deque<Trajectory> m_trajectory_buffer;
@@ -210,23 +216,32 @@ private:
   /**
    * @brief Create the control command.
    * @param ctrl_cmd Control command to be created.
+   * @param stamp Timestamp of this control cycle.
    * @return Created control command.
    */
-  Lateral createCtrlCmdMsg(const Lateral & ctrl_cmd);
+  Lateral createCtrlCmdMsg(const Lateral & ctrl_cmd, const builtin_interfaces::msg::Time & stamp);
 
   /**
    * @brief Create the control command horizon message.
    * @param ctrl_cmd_horizon Control command horizon to be created.
+   * @param stamp Timestamp of this control cycle.
    * @return Created control command horizon.
    */
   [[nodiscard]] LateralHorizon createCtrlCmdHorizonMsg(
-    const LateralHorizon & ctrl_cmd_horizon) const;
+    const LateralHorizon & ctrl_cmd_horizon, const builtin_interfaces::msg::Time & stamp) const;
 
   /**
    * @brief Publish the predicted future trajectory.
    * @param predicted_traj Predicted future trajectory to be published.
    */
   void publishPredictedTraj(Trajectory & predicted_traj) const;
+
+  /**
+   * @brief Publish the MPC debug topic messages (predicted trajectory in Frenet coordinate,
+   * resampled reference trajectory, nearest pose, nearest segment trajectory, nearest info).
+   * @param debug_msgs MPC debug topic messages to be published.
+   */
+  void publishDebugMessages(std::optional<MpcDebugTopicMessage> & debug_msgs) const;
 
   /**
    * @brief Publish diagnostic message.

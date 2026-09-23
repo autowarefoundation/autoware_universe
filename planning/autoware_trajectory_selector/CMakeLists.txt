@@ -30,7 +30,7 @@ autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   PLUGIN "autoware::trajectory_selector::TrajectorySelectorNode"
   EXECUTABLE ${PROJECT_NAME}_node
   ROS2_EXECUTOR SingleThreadedExecutor
-  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
 )
 
 if(BUILD_TESTING)
@@ -38,33 +38,35 @@ if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   ament_auto_find_test_dependencies()
 
-  # ==========================================
-  # Dummy Plugin (Test Utility)
-  # ==========================================
-  pluginlib_export_plugin_description_file(autoware_trajectory_validator
-    test/dummy_plugin/dummy_plugins.xml
-  )
+  if(NOT (DEFINED ENV{ENABLE_AGNOCAST} AND "$ENV{ENABLE_AGNOCAST}" STREQUAL "1"))
+    # ==========================================
+    # Dummy Plugin (Test Utility)
+    # ==========================================
+    pluginlib_export_plugin_description_file(autoware_trajectory_validator
+      test/dummy_plugin/dummy_plugins.xml
+    )
 
-  ament_auto_add_library(dummy_validator_plugin SHARED
-    test/dummy_plugin/dummy_validator_plugin.cpp
-  )
+    ament_auto_add_library(dummy_validator_plugin SHARED
+      test/dummy_plugin/dummy_validator_plugin.cpp
+    )
 
-  # ==========================================
-  # Node Integration Tests
-  # ==========================================
-  ament_add_ros_isolated_gtest(test_trajectory_selector_node
-    test/node/test_trajectory_selector_node.cpp
-  )
+    # ==========================================
+    # Node Integration Tests
+    # ==========================================
+    ament_add_ros_isolated_gtest(test_trajectory_selector_node
+      test/node/test_trajectory_selector_node.cpp
+    )
 
-  target_link_libraries(test_trajectory_selector_node
-    ${PROJECT_NAME}
-    dummy_validator_plugin
-  )
+    target_link_libraries(test_trajectory_selector_node
+      ${PROJECT_NAME}
+      dummy_validator_plugin
+    )
 
-  ament_target_dependencies(test_trajectory_selector_node
-    autoware_test_utils
-    rosgraph_msgs
-  )
+    ament_target_dependencies(test_trajectory_selector_node
+      autoware_test_utils
+      rosgraph_msgs
+    )
+  endif()
 endif()
 
 autoware_ament_auto_package(

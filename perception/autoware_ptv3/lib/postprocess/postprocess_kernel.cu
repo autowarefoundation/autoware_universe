@@ -12,131 +12,112 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/ptv3/experimental/semantic_label.hpp"
 #include "autoware/ptv3/postprocess/postprocess_kernel.hpp"
 #include "autoware/ptv3/preprocess/point_type.hpp"
 #include "autoware/ptv3/utils.hpp"
 
+#include <autoware/point_types/types.hpp>
+#include <cub/cub.cuh>
+
+#include <math_constants.h>
+
 #include <algorithm>
-#include <cctype>
 #include <stdexcept>
-#include <vector>
+#include <string>
 
 namespace autoware::ptv3
 {
-namespace
+using autoware::point_types::PointCloudClassification;
+
+// The voxel codes are radix-sorted stably over ascending original indices, so a voxel's first
+// point is its lowest one; the current sweep leads the densified cloud, hence this test.
+__device__ std::int64_t sourcePointIndex(std::uint32_t idx, VoxelPointMapping mapping)
 {
-struct OutputSegmentationPointType
-{
-  float x;
-  float y;
-  float z;
-  std::uint8_t class_id;
-  float probability;
-  float entropy;
-} __attribute__((packed));
-
-constexpr std::uint8_t kInvalidSemanticLabel = 255U;
-
-/**
- * @brief Convert a PTv3 class name to the consolidated SemanticLabel value.
- *
- * @details The input class name is normalized to uppercase before comparison, so matching is
- * case-insensitive for ASCII letters. Expected names are derived from
- * segmentation3d.class_names (e.g., car, truck, traffic_cone, drivable_flat).
- *
- * Mapping:
- * - car -> CAR
- * - truck -> TRUCK
- * - bus -> BUS
- * - bicycle -> BICYCLE
- * - pedestrian -> PEDESTRIAN
- * - traffic_cone -> HAZARD
- * - debris -> HAZARD
- * - vertical_thin -> HAZARD
- * - barrier -> STRUCTURE
- * - drivable_flat -> FLAT_SURFACE
- * - non_drivable_flat -> STRUCTURE
- * - building -> STRUCTURE
- * - static_clutter -> STRUCTURE
- * - vegetation -> VEGETATION
- * - noise -> NOISE
- *
- * @param class_name PTv3 class name string from runtime configuration.
- * @return SemanticLabel enum value encoded as std::uint8_t.
- * @throws std::runtime_error if class_name is not supported.
- */
-std::uint8_t semanticLabelFromClassName(const std::string & class_name)
-{
-  std::string normalized_class_name = class_name;
-  std::transform(
-    normalized_class_name.begin(), normalized_class_name.end(), normalized_class_name.begin(),
-    [](unsigned char c) { return static_cast<char>(std::toupper(c)); });
-
-  if (normalized_class_name == "CAR") {
-    return static_cast<std::uint8_t>(experimental::SemanticLabel::CAR);
-  }
-  if (normalized_class_name == "TRUCK") {
-    return static_cast<std::uint8_t>(experimental::SemanticLabel::TRUCK);
-  }
-  if (normalized_class_name == "BUS") {
-    return static_cast<std::uint8_t>(experimental::SemanticLabel::BUS);
-  }
-  if (normalized_class_name == "BICYCLE") {
-    return static_cast<std::uint8_t>(experimental::SemanticLabel::BICYCLE);
-  }
-  if (normalized_class_name == "PEDESTRIAN") {
-    return static_cast<std::uint8_t>(experimental::SemanticLabel::PEDESTRIAN);
-  }
-  if (
-    normalized_class_name == "TRAFFIC_CONE" || normalized_class_name == "DEBRIS" ||
-    normalized_class_name == "VERTICAL_THIN") {
-    return static_cast<std::uint8_t>(experimental::SemanticLabel::HAZARD);
-  }
-  if (normalized_class_name == "DRIVABLE_FLAT") {
-    return static_cast<std::uint8_t>(experimental::SemanticLabel::FLAT_SURFACE);
-  }
-  if (
-    normalized_class_name == "NON_DRIVABLE_FLAT" || normalized_class_name == "BARRIER" ||
-    normalized_class_name == "BUILDING" || normalized_class_name == "STATIC_CLUTTER") {
-    return static_cast<std::uint8_t>(experimental::SemanticLabel::STRUCTURE);
-  }
-  if (normalized_class_name == "VEGETATION") {
-    return static_cast<std::uint8_t>(experimental::SemanticLabel::VEGETATION);
-  }
-  if (normalized_class_name == "NOISE") {
-    return static_cast<std::uint8_t>(experimental::SemanticLabel::NOISE);
-  }
-
-  throw std::runtime_error(
-    "Unexpected PTv3 class name in segmentation3d.class_names: '" + class_name + "'");
+  if (mapping.voxel_starts == nullptr) return idx;
+  const auto source_idx = mapping.sorted_point_indices[mapping.voxel_starts[idx]];
+  return source_idx < mapping.num_current_points ? static_cast<std::int64_t>(source_idx) : -1;
 }
 
-/**
- * @brief Build lookup table from runtime class_names index to segmented class_id (SemanticLabel).
- * @details The model output label index is determined by class_names order in parameters. This
- * lookup keeps postprocess robust even when class_names order changes.
- *
- * @param class_names List of PTv3 class names from runtime configuration.
- * @return Lookup table mapping class_id to SemanticLabel.
- */
-std::vector<std::uint8_t> makeClassIdToSemanticLabelLut(
-  const std::vector<std::string> & class_names)
-{
-  std::vector<std::uint8_t> lut(class_names.size(), kInvalidSemanticLabel);
-  for (std::size_t i = 0; i < class_names.size(); ++i) {
-    lut[i] = semanticLabelFromClassName(class_names[i]);
-  }
-  return lut;
-}
-}  // namespace
-
-__global__ void createVisualizationPointcloudKernel(
-  const float4 * input_features, const float * colors, const std::int64_t * labels,
-  float4 * output_points, std::size_t num_classes, std::size_t num_points)
+/// Marks the rows an output cloud publishes; a prefix sum over the mask preserves their order.
+__global__ void markVoxelKeepKernel(
+  std::uint32_t * __restrict__ keep_mask, std::size_t num_points, VoxelPointMapping voxel_mapping)
 {
   const auto idx = static_cast<std::uint32_t>(blockIdx.x * blockDim.x + threadIdx.x);
   if (idx >= num_points) {
+    return;
+  }
+  keep_mask[idx] = sourcePointIndex(idx, voxel_mapping) < 0 ? 0U : 1U;
+}
+
+/// Drops past-only voxels and the predicted classes the segmentation filter removes.
+__global__ void markSegmentationKeepKernel(
+  const std::int64_t * __restrict__ labels, const std::uint32_t * __restrict__ filter_class_indices,
+  std::size_t num_filter_classes, std::size_t num_classes, std::uint32_t * __restrict__ keep_mask,
+  std::size_t num_points, VoxelPointMapping voxel_mapping)
+{
+  const auto idx = static_cast<std::uint32_t>(blockIdx.x * blockDim.x + threadIdx.x);
+  if (idx >= num_points) {
+    return;
+  }
+
+  bool keep = sourcePointIndex(idx, voxel_mapping) >= 0;
+  if (keep) {
+    const auto label = labels[idx];
+    if (label >= 0 && static_cast<std::size_t>(label) < num_classes) {
+      for (std::size_t i = 0; i < num_filter_classes; ++i) {
+        if (filter_class_indices[i] == static_cast<std::uint32_t>(label)) {
+          keep = false;
+          break;
+        }
+      }
+    }
+  }
+  keep_mask[idx] = keep ? 1U : 0U;
+}
+
+/// Drops past-only voxels and the rows whose most likely class the filter removes.
+__global__ void markFilteredKeepKernel(
+  const float * __restrict__ pred_probs, const std::uint32_t * __restrict__ filter_class_indices,
+  std::size_t num_filter_classes, std::size_t num_classes, std::uint32_t * __restrict__ keep_mask,
+  std::size_t num_points, VoxelPointMapping voxel_mapping)
+{
+  const auto idx = static_cast<std::uint32_t>(blockIdx.x * blockDim.x + threadIdx.x);
+  if (idx >= num_points) {
+    return;
+  }
+  if (sourcePointIndex(idx, voxel_mapping) < 0) {
+    keep_mask[idx] = 0U;
+    return;
+  }
+
+  const float * point_probs = &pred_probs[num_classes * idx];
+  std::uint32_t label = 0U;
+  float max_probability = point_probs[0];
+  for (std::uint32_t class_idx = 1U; class_idx < num_classes; ++class_idx) {
+    if (point_probs[class_idx] > max_probability) {
+      max_probability = point_probs[class_idx];
+      label = class_idx;
+    }
+  }
+
+  bool keep_point = true;
+  for (std::size_t i = 0; i < num_filter_classes; ++i) {
+    if (filter_class_indices[i] == label) {
+      keep_point = false;
+      break;
+    }
+  }
+  keep_mask[idx] = keep_point ? 1U : 0U;
+}
+
+__global__ void createVisualizationPointcloudKernel(
+  const float * input_features, std::int64_t feature_stride, const float * colors,
+  const std::int64_t * labels, float4 * output_points, std::size_t num_classes,
+  std::size_t num_points, const std::uint32_t * __restrict__ keep_mask,
+  const std::uint32_t * __restrict__ output_offsets)
+{
+  const auto idx = static_cast<std::uint32_t>(blockIdx.x * blockDim.x + threadIdx.x);
+  if (idx >= num_points || keep_mask[idx] == 0U) {
     return;
   }
 
@@ -144,40 +125,54 @@ __global__ void createVisualizationPointcloudKernel(
   const auto color =
     label >= 0 && static_cast<std::size_t>(label) < num_classes ? colors[label] : 0.0f;
 
-  output_points[idx] =
-    make_float4(input_features[idx].x, input_features[idx].y, input_features[idx].z, color);
+  const float * input_point = &input_features[idx * feature_stride];
+  output_points[output_offsets[idx] - 1U] =
+    make_float4(input_point[0], input_point[1], input_point[2], color);
 }
 
 __global__ void createSegmentationPointcloudKernel(
-  const float4 * input_features, const std::int64_t * labels, const float * pred_probs,
-  const std::uint8_t * class_id_to_semantic_label, OutputSegmentationPointType * output_points,
-  std::size_t num_classes, std::size_t num_points)
+  const float * input_features, std::int64_t feature_stride, const std::int64_t * labels,
+  const float * pred_probs, const std::uint8_t * class_id_to_classification,
+  point_types::PointXYZCPE * output_points, std::size_t num_classes, std::size_t num_points,
+  const std::uint32_t * __restrict__ keep_mask, const std::uint32_t * __restrict__ output_offsets)
 {
   const auto idx = static_cast<std::uint32_t>(blockIdx.x * blockDim.x + threadIdx.x);
-  if (idx >= num_points) {
+  if (idx >= num_points || keep_mask[idx] == 0U) {
     return;
   }
 
-  const auto input_point = input_features[idx];
+  const float * input_point = &input_features[idx * feature_stride];
   const auto label = labels[idx];
   const bool has_valid_label = label >= 0 && static_cast<std::size_t>(label) < num_classes;
-  float entropy = 0.0f;
-  for (std::size_t class_idx = 0; class_idx < num_classes; ++class_idx) {
-    const auto probability = pred_probs[idx * num_classes + class_idx];
-    if (probability > 0.0f) {
-      entropy -= probability * logf(probability);
+
+  // Points without a valid label have no meaningful class distribution, so the entropy is left as
+  // NaN, which is the default value of point_types::PointXYZCPE::entropy and denotes
+  // "not available". Note that the default member initializer does not apply here because the
+  // output buffer is raw device memory, hence the explicit assignment below.
+  float entropy = CUDART_NAN_F;
+  if (has_valid_label) {
+    entropy = 0.0f;
+    for (std::size_t class_idx = 0; class_idx < num_classes; ++class_idx) {
+      const auto probability = pred_probs[idx * num_classes + class_idx];
+      if (probability > 0.0f) {
+        entropy -= probability * logf(probability);
+      }
+    }
+    if (num_classes > 1) {
+      entropy /= logf(static_cast<float>(num_classes));
     }
   }
-  if (num_classes > 1) {
-    entropy /= logf(static_cast<float>(num_classes));
-  }
-  output_points[idx].x = input_point.x;
-  output_points[idx].y = input_point.y;
-  output_points[idx].z = input_point.z;
-  output_points[idx].class_id =
-    has_valid_label ? class_id_to_semantic_label[label] : kInvalidSemanticLabel;
-  output_points[idx].probability = has_valid_label ? pred_probs[idx * num_classes + label] : 0.0f;
-  output_points[idx].entropy = entropy;
+
+  const auto output_idx = output_offsets[idx] - 1U;
+  output_points[output_idx].x = input_point[0];
+  output_points[output_idx].y = input_point[1];
+  output_points[output_idx].z = input_point[2];
+  output_points[output_idx].class_id =
+    has_valid_label ? class_id_to_classification[label]
+                    : static_cast<std::uint8_t>(PointCloudClassification::INVALID);
+  output_points[output_idx].probability =
+    has_valid_label ? pred_probs[idx * num_classes + label] : 0.0f;
+  output_points[output_idx].entropy = entropy;
 }
 
 __global__ void reconstructPartialKernel(
@@ -320,65 +315,58 @@ __device__ void set_point_from_input<CloudPointTypeXYZIRCAEDT>(
 
 template <typename InputPointT, typename OutputPointT>
 __global__ void createFilteredPointcloudKernel(
-  const InputPointT * input_points, const float * pred_probs,
-  const std::uint32_t * filter_class_indices, std::size_t num_filter_classes,
-  float filter_class_probability_threshold, std::size_t num_classes,
-  std::uint32_t * output_num_points, OutputPointT * output_points, std::size_t num_points)
+  const InputPointT * input_points, OutputPointT * output_points, std::size_t num_points,
+  const std::uint32_t * __restrict__ keep_mask, const std::uint32_t * __restrict__ output_offsets,
+  VoxelPointMapping voxel_mapping)
 {
   const auto idx = static_cast<std::uint32_t>(blockIdx.x * blockDim.x + threadIdx.x);
-  if (idx >= num_points) {
+  if (idx >= num_points || keep_mask[idx] == 0U) {
     return;
   }
 
-  bool keep_point = true;
-  const float * point_probs = &pred_probs[num_classes * idx];
-  for (std::size_t i = 0; i < num_filter_classes; ++i) {
-    const auto class_idx = filter_class_indices[i];
-    if (point_probs[class_idx] >= filter_class_probability_threshold) {
-      keep_point = false;
-      break;
-    }
-  }
-
-  if (!keep_point) {
-    return;
-  }
-
-  const auto output_idx = atomicAdd(output_num_points, 1U);
-  set_point_from_input(output_points[output_idx], input_points[idx]);
+  const auto source_idx = sourcePointIndex(idx, voxel_mapping);
+  set_point_from_input(output_points[output_offsets[idx] - 1U], input_points[source_idx]);
 }
 
 template <typename InputPointT, typename OutputPointT>
 void createFilteredPointcloudTyped(
   cudaStream_t stream, std::uint32_t threads_per_block, const void * compact_input_points,
-  const float * pred_probs, const std::uint32_t * filter_class_indices,
-  std::size_t num_filter_classes, float filter_class_probability_threshold, std::size_t num_classes,
-  std::uint32_t * output_num_points, void * output_points, std::size_t num_points)
+  void * output_points, std::size_t num_points, const std::uint32_t * keep_mask,
+  const std::uint32_t * output_offsets, VoxelPointMapping voxel_mapping)
 {
   const auto num_blocks = divup(num_points, threads_per_block);
   createFilteredPointcloudKernel<<<num_blocks, threads_per_block, 0, stream>>>(
-    static_cast<const InputPointT *>(compact_input_points), pred_probs, filter_class_indices,
-    num_filter_classes, filter_class_probability_threshold, num_classes, output_num_points,
-    static_cast<OutputPointT *>(output_points), num_points);
+    static_cast<const InputPointT *>(compact_input_points),
+    static_cast<OutputPointT *>(output_points), num_points, keep_mask, output_offsets,
+    voxel_mapping);
 }
 
 PostprocessCuda::PostprocessCuda(const PTv3Config & config, cudaStream_t stream)
 : config_(config), stream_(stream)
 {
-  filtered_mask_d_ = autoware::cuda_utils::make_unique<std::uint32_t[]>(1);
+  // The compaction buffers cover both output paths: one row per point, or one per voxel.
+  output_capacity_ =
+    static_cast<std::size_t>(std::max(config_.cloud_capacity_, config_.max_num_voxels_));
+  keep_mask_d_ = autoware::cuda_utils::make_unique<std::uint32_t[]>(output_capacity_);
+  output_offsets_d_ = autoware::cuda_utils::make_unique<std::uint32_t[]>(output_capacity_);
+  std::uint32_t * uint32_nullptr = nullptr;
+  CHECK_CUDA_ERROR(
+    cub::DeviceScan::InclusiveSum(
+      nullptr, scan_workspace_size_, uint32_nullptr, uint32_nullptr, output_capacity_, stream_));
+  scan_workspace_d_ = autoware::cuda_utils::make_unique<std::uint8_t[]>(scan_workspace_size_);
 
   color_map_d_ = autoware::cuda_utils::make_unique<float[]>(config_.colors_rgb_.size());
   cudaMemcpyAsync(
     color_map_d_.get(), config_.colors_rgb_.data(), config_.colors_rgb_.size() * sizeof(float),
     cudaMemcpyHostToDevice, stream_);
 
-  class_id_to_semantic_label_d_ =
-    autoware::cuda_utils::make_unique<std::uint8_t[]>(config_.segmentation_class_names_.size());
-  const auto class_id_to_semantic_label_lut =
-    makeClassIdToSemanticLabelLut(config_.segmentation_class_names_);
+  // The LUT is resolved from segmentation3d.class_mapping when PTv3Config is built.
+  class_id_to_classification_d_ =
+    autoware::cuda_utils::make_unique<std::uint8_t[]>(config_.class_id_to_classification_.size());
   cudaMemcpyAsync(
-    class_id_to_semantic_label_d_.get(), class_id_to_semantic_label_lut.data(),
-    class_id_to_semantic_label_lut.size() * sizeof(std::uint8_t), cudaMemcpyHostToDevice, stream_);
+    class_id_to_classification_d_.get(), config_.class_id_to_classification_.data(),
+    config_.class_id_to_classification_.size() * sizeof(std::uint8_t), cudaMemcpyHostToDevice,
+    stream_);
 
   if (!config_.filter_class_indices_.empty()) {
     filter_class_indices_d_ =
@@ -392,31 +380,77 @@ PostprocessCuda::PostprocessCuda(const PTv3Config & config, cudaStream_t stream)
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 }
 
-void PostprocessCuda::createVisualizationPointcloud(
-  const float * input_features, const std::int64_t * labels, float * output_points,
-  std::size_t num_classes, std::size_t num_points)
+void PostprocessCuda::checkOutputCapacity(std::size_t num_points) const
 {
-  auto num_blocks = divup(num_points, config_.threads_per_block_);
-
-  createVisualizationPointcloudKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
-    reinterpret_cast<const float4 *>(input_features), color_map_d_.get(), labels,
-    reinterpret_cast<float4 *>(output_points), num_classes, num_points);
-
-  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
+  if (num_points > output_capacity_) {
+    throw std::runtime_error(
+      "Output point count (" + std::to_string(num_points) + ") exceeds the compaction capacity (" +
+      std::to_string(output_capacity_) + ").");
+  }
 }
 
-void PostprocessCuda::createSegmentationPointcloud(
-  const float * input_features, const std::int64_t * pred_labels, const float * pred_probs,
-  std::uint8_t * output_points, std::size_t num_classes, std::size_t num_points)
+void PostprocessCuda::scanKeepMask(std::size_t num_points)
 {
-  auto num_blocks = divup(num_points, config_.threads_per_block_);
+  CHECK_CUDA_ERROR(
+    cub::DeviceScan::InclusiveSum(
+      scan_workspace_d_.get(), scan_workspace_size_, keep_mask_d_.get(), output_offsets_d_.get(),
+      num_points, stream_));
+}
+
+std::size_t PostprocessCuda::readOutputCount(std::size_t num_points)
+{
+  std::uint32_t num_output_points = 0;
+  CHECK_CUDA_ERROR(cudaMemcpyAsync(
+    &num_output_points, output_offsets_d_.get() + (num_points - 1), sizeof(std::uint32_t),
+    cudaMemcpyDeviceToHost, stream_));
+  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
+  return num_output_points;
+}
+
+std::size_t PostprocessCuda::createVisualizationPointcloud(
+  const float * input_features, const std::int64_t feature_stride, const std::int64_t * labels,
+  float * output_points, std::size_t num_classes, std::size_t num_points,
+  VoxelPointMapping voxel_mapping)
+{
+  if (num_points == 0) return 0;
+  checkOutputCapacity(num_points);
+  const auto num_blocks = divup(num_points, config_.threads_per_block_);
+
+  markVoxelKeepKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
+    keep_mask_d_.get(), num_points, voxel_mapping);
+  CHECK_CUDA_ERROR(cudaPeekAtLastError());
+  scanKeepMask(num_points);
+
+  createVisualizationPointcloudKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
+    input_features, feature_stride, color_map_d_.get(), labels,
+    reinterpret_cast<float4 *>(output_points), num_classes, num_points, keep_mask_d_.get(),
+    output_offsets_d_.get());
+  CHECK_CUDA_ERROR(cudaPeekAtLastError());
+  return readOutputCount(num_points);
+}
+
+std::size_t PostprocessCuda::createSegmentationPointcloud(
+  const float * input_features, const std::int64_t feature_stride, const std::int64_t * pred_labels,
+  const float * pred_probs, point_types::PointXYZCPE * output_points, std::size_t num_classes,
+  std::size_t num_points, VoxelPointMapping voxel_mapping)
+{
+  if (num_points == 0) return 0;
+  checkOutputCapacity(num_points);
+  const auto num_blocks = divup(num_points, config_.threads_per_block_);
+  const auto num_filter_classes =
+    config_.filter_apply_to_segmentation_ ? config_.filter_class_indices_.size() : std::size_t{0};
+
+  markSegmentationKeepKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
+    pred_labels, filter_class_indices_d_.get(), num_filter_classes, num_classes, keep_mask_d_.get(),
+    num_points, voxel_mapping);
+  CHECK_CUDA_ERROR(cudaPeekAtLastError());
+  scanKeepMask(num_points);
 
   createSegmentationPointcloudKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
-    reinterpret_cast<const float4 *>(input_features), pred_labels, pred_probs,
-    class_id_to_semantic_label_d_.get(),
-    reinterpret_cast<OutputSegmentationPointType *>(output_points), num_classes, num_points);
-
-  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
+    input_features, feature_stride, pred_labels, pred_probs, class_id_to_classification_d_.get(),
+    output_points, num_classes, num_points, keep_mask_d_.get(), output_offsets_d_.get());
+  CHECK_CUDA_ERROR(cudaPeekAtLastError());
+  return readOutputCount(num_points);
 }
 
 void PostprocessCuda::reconstructPartial(
@@ -452,33 +486,36 @@ void PostprocessCuda::reconstructFull(
 
 std::size_t PostprocessCuda::createFilteredPointcloud(
   const void * compact_input_points, CloudFormat input_format, CloudFormat output_format,
-  const float * pred_probs, void * output_points, std::size_t num_classes, std::size_t num_points)
+  const float * pred_probs, void * output_points, std::size_t num_classes, std::size_t num_points,
+  VoxelPointMapping voxel_mapping)
 {
-  cudaMemsetAsync(filtered_mask_d_.get(), 0, sizeof(std::uint32_t), stream_);
+  if (num_points == 0) return 0;
+  checkOutputCapacity(num_points);
+  const auto num_blocks = divup(num_points, config_.threads_per_block_);
+
+  markFilteredKeepKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
+    pred_probs, filter_class_indices_d_.get(), config_.filter_class_indices_.size(), num_classes,
+    keep_mask_d_.get(), num_points, voxel_mapping);
+  CHECK_CUDA_ERROR(cudaPeekAtLastError());
+  scanKeepMask(num_points);
 
   switch (input_format) {
     case CloudFormat::XYZIRCAEDT:
       switch (output_format) {
         case CloudFormat::XYZIRCAEDT:
           createFilteredPointcloudTyped<CloudPointTypeXYZIRCAEDT, CloudPointTypeXYZIRCAEDT>(
-            stream_, config_.threads_per_block_, compact_input_points, pred_probs,
-            filter_class_indices_d_.get(), config_.filter_class_indices_.size(),
-            config_.filter_class_probability_threshold_, num_classes, filtered_mask_d_.get(),
-            output_points, num_points);
+            stream_, config_.threads_per_block_, compact_input_points, output_points, num_points,
+            keep_mask_d_.get(), output_offsets_d_.get(), voxel_mapping);
           break;
         case CloudFormat::XYZIRC:
           createFilteredPointcloudTyped<CloudPointTypeXYZIRCAEDT, CloudPointTypeXYZIRC>(
-            stream_, config_.threads_per_block_, compact_input_points, pred_probs,
-            filter_class_indices_d_.get(), config_.filter_class_indices_.size(),
-            config_.filter_class_probability_threshold_, num_classes, filtered_mask_d_.get(),
-            output_points, num_points);
+            stream_, config_.threads_per_block_, compact_input_points, output_points, num_points,
+            keep_mask_d_.get(), output_offsets_d_.get(), voxel_mapping);
           break;
         case CloudFormat::XYZI:
           createFilteredPointcloudTyped<CloudPointTypeXYZIRCAEDT, CloudPointTypeXYZI>(
-            stream_, config_.threads_per_block_, compact_input_points, pred_probs,
-            filter_class_indices_d_.get(), config_.filter_class_indices_.size(),
-            config_.filter_class_probability_threshold_, num_classes, filtered_mask_d_.get(),
-            output_points, num_points);
+            stream_, config_.threads_per_block_, compact_input_points, output_points, num_points,
+            keep_mask_d_.get(), output_offsets_d_.get(), voxel_mapping);
           break;
         default:
           throw std::runtime_error("Unsupported filtered output format.");
@@ -488,17 +525,13 @@ std::size_t PostprocessCuda::createFilteredPointcloud(
       switch (output_format) {
         case CloudFormat::XYZIRADRT:
           createFilteredPointcloudTyped<CloudPointTypeXYZIRADRT, CloudPointTypeXYZIRADRT>(
-            stream_, config_.threads_per_block_, compact_input_points, pred_probs,
-            filter_class_indices_d_.get(), config_.filter_class_indices_.size(),
-            config_.filter_class_probability_threshold_, num_classes, filtered_mask_d_.get(),
-            output_points, num_points);
+            stream_, config_.threads_per_block_, compact_input_points, output_points, num_points,
+            keep_mask_d_.get(), output_offsets_d_.get(), voxel_mapping);
           break;
         case CloudFormat::XYZI:
           createFilteredPointcloudTyped<CloudPointTypeXYZIRADRT, CloudPointTypeXYZI>(
-            stream_, config_.threads_per_block_, compact_input_points, pred_probs,
-            filter_class_indices_d_.get(), config_.filter_class_indices_.size(),
-            config_.filter_class_probability_threshold_, num_classes, filtered_mask_d_.get(),
-            output_points, num_points);
+            stream_, config_.threads_per_block_, compact_input_points, output_points, num_points,
+            keep_mask_d_.get(), output_offsets_d_.get(), voxel_mapping);
           break;
         default:
           throw std::runtime_error("Unsupported filtered output format.");
@@ -508,17 +541,13 @@ std::size_t PostprocessCuda::createFilteredPointcloud(
       switch (output_format) {
         case CloudFormat::XYZIRC:
           createFilteredPointcloudTyped<CloudPointTypeXYZIRC, CloudPointTypeXYZIRC>(
-            stream_, config_.threads_per_block_, compact_input_points, pred_probs,
-            filter_class_indices_d_.get(), config_.filter_class_indices_.size(),
-            config_.filter_class_probability_threshold_, num_classes, filtered_mask_d_.get(),
-            output_points, num_points);
+            stream_, config_.threads_per_block_, compact_input_points, output_points, num_points,
+            keep_mask_d_.get(), output_offsets_d_.get(), voxel_mapping);
           break;
         case CloudFormat::XYZI:
           createFilteredPointcloudTyped<CloudPointTypeXYZIRC, CloudPointTypeXYZI>(
-            stream_, config_.threads_per_block_, compact_input_points, pred_probs,
-            filter_class_indices_d_.get(), config_.filter_class_indices_.size(),
-            config_.filter_class_probability_threshold_, num_classes, filtered_mask_d_.get(),
-            output_points, num_points);
+            stream_, config_.threads_per_block_, compact_input_points, output_points, num_points,
+            keep_mask_d_.get(), output_offsets_d_.get(), voxel_mapping);
           break;
         default:
           throw std::runtime_error("Unsupported filtered output format.");
@@ -529,21 +558,15 @@ std::size_t PostprocessCuda::createFilteredPointcloud(
         throw std::runtime_error("Unsupported filtered output format.");
       }
       createFilteredPointcloudTyped<CloudPointTypeXYZI, CloudPointTypeXYZI>(
-        stream_, config_.threads_per_block_, compact_input_points, pred_probs,
-        filter_class_indices_d_.get(), config_.filter_class_indices_.size(),
-        config_.filter_class_probability_threshold_, num_classes, filtered_mask_d_.get(),
-        output_points, num_points);
+        stream_, config_.threads_per_block_, compact_input_points, output_points, num_points,
+        keep_mask_d_.get(), output_offsets_d_.get(), voxel_mapping);
       break;
     default:
       throw std::runtime_error("Unsupported input point cloud format.");
   }
 
-  std::uint32_t num_filtered_points = 0;
-  cudaMemcpyAsync(
-    &num_filtered_points, filtered_mask_d_.get(), sizeof(std::uint32_t), cudaMemcpyDeviceToHost,
-    stream_);
-  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
-  return num_filtered_points;
+  CHECK_CUDA_ERROR(cudaPeekAtLastError());
+  return readOutputCount(num_points);
 }
 
 }  // namespace autoware::ptv3

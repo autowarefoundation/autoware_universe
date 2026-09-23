@@ -135,4 +135,3 @@ std::vector<double> calculate_smoothed_curvatures(
 
 // clang-format off
 #endif  // AUTOWARE__BEHAVIOR_PATH_PLANNER_COMMON__UTILS__DRIVABLE_AREA_EXPANSION__DRIVABLE_AREA_EXPANSION_HPP_  // NOLINT
-// clang-format on

@@ -1,0 +1,48 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: DiagnosticGraphLogging.node
+
+package:
+  name: autoware_diagnostic_graph_utils
+  provider: autoware
+
+launch:
+  plugin: autoware::diagnostic_graph_utils::LoggingNode
+  executable: logging_node
+  node_output: screen
+
+# interfaces
+# subscribes the diagnostic graph (struct + status) and logs the error graph.
+# debug error_graph_text publisher omitted.
+subscribers:
+  - name: diag_graph_struct
+    message_type: tier4_system_msgs/msg/DiagGraphStruct
+    remap_target: /diagnostics_graph/struct
+  - name: diag_graph_status
+    message_type: tier4_system_msgs/msg/DiagGraphStatus
+    remap_target: /diagnostics_graph/status
+
+publishers: []
+
+# parameters
+param_files: []
+
+param_values:
+  - name: root_path
+    default: /autoware/modes/autonomous
+  - name: max_depth
+    default: 3
+  - name: show_rate
+    default: 1.0
+  - name: enable_terminal_log
+    default: false
+  - name: ignore_dependent_error
+    default: false
+
+# processes
+processes:
+  - name: log
+    trigger_conditions:
+      - on_input: diag_graph_status
+    outcomes: []

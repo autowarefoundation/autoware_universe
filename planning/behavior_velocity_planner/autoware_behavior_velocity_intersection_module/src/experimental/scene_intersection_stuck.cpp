@@ -160,8 +160,8 @@ std::optional<StuckStop> IntersectionModule::isStuckStatus(
           default_stopline_idx_opt &&
           can_smoothly_stop_at(path, closest_idx, default_stopline_idx_opt.value(), planner_data)) {
           stopline_idx = default_stopline_idx_opt.value();
-        } else if (can_smoothly_stop_at(
-                     path, closest_idx, first_attention_stopline_idx, planner_data)) {
+        } else if (
+          can_smoothly_stop_at(path, closest_idx, first_attention_stopline_idx, planner_data)) {
           stopline_idx = first_attention_stopline_idx;
         }
       }

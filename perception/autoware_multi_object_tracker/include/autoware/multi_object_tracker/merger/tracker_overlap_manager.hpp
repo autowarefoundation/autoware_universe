@@ -39,7 +39,7 @@ namespace autoware::multi_object_tracker
 ///   tracker_list order.
 /// - The winner of a merge must be confident and carry a parametric shape (bounding box or
 ///   cylinder); polygon-only trackers may only be absorbed — two polygon-only trackers never
-///   merge.
+///   merge. A winner the publish gate would drop never absorbs a tracker the gate keeps.
 /// - Applied merges form a star forest per cycle (no tracker both absorbs and is absorbed);
 ///   longer chains converge over subsequent cycles with direct geometry checks.
 class TrackerOverlapManager

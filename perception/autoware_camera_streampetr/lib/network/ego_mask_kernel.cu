@@ -20,9 +20,9 @@
 namespace autoware::camera_streampetr
 {
 
-__global__ void applyEgoMask_kernel(
-  std::uint8_t * __restrict__ image_bgr, const std::uint8_t * __restrict__ mask, int height,
-  int width, std::uint8_t fill_b, std::uint8_t fill_g, std::uint8_t fill_r)
+__global__ void apply_ego_mask_kernel(
+  std::uint8_t * __restrict__ image, const std::uint8_t * __restrict__ mask, int height, int width,
+  std::uint8_t fill_r, std::uint8_t fill_g, std::uint8_t fill_b)
 {
   const int x = blockIdx.x * blockDim.x + threadIdx.x;
   const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -36,19 +36,19 @@ __global__ void applyEgoMask_kernel(
   }
 
   const int img_idx = mask_idx * 3;
-  image_bgr[img_idx] = fill_b;
-  image_bgr[img_idx + 1] = fill_g;
-  image_bgr[img_idx + 2] = fill_r;
+  image[img_idx] = fill_r;
+  image[img_idx + 1] = fill_g;
+  image[img_idx + 2] = fill_b;
 }
 
-cudaError_t applyEgoMask_launch(
-  std::uint8_t * image_bgr, const std::uint8_t * mask, int height, int width, std::uint8_t fill_b,
-  std::uint8_t fill_g, std::uint8_t fill_r, cudaStream_t stream)
+cudaError_t apply_ego_mask_launch(
+  std::uint8_t * image, const std::uint8_t * mask, int height, int width, std::uint8_t fill_r,
+  std::uint8_t fill_g, std::uint8_t fill_b, cudaStream_t stream)
 {
   dim3 threads(16, 16);
   dim3 blocks(divup(width, threads.x), divup(height, threads.y));
-  applyEgoMask_kernel<<<blocks, threads, 0, stream>>>(
-    image_bgr, mask, height, width, fill_b, fill_g, fill_r);
+  apply_ego_mask_kernel<<<blocks, threads, 0, stream>>>(
+    image, mask, height, width, fill_r, fill_g, fill_b);
   return cudaGetLastError();
 }
 

@@ -14,6 +14,10 @@
 
 #include "autoware/multi_object_tracker/tracker/trackers/pedestrian_and_bicycle_tracker.hpp"
 
+#include <autoware_utils_math/normalization.hpp>
+
+#include <cmath>
+
 namespace autoware::multi_object_tracker
 {
 PedestrianAndBicycleTracker::PedestrianAndBicycleTracker(
@@ -40,8 +44,19 @@ bool PedestrianAndBicycleTracker::measure(
   bicycle_tracker_.measure(object, time, channel_info);
   pedestrian_tracker_.setLatestMeasurementTime(time);
   bicycle_tracker_.setLatestMeasurementTime(time);
+  alignOrientationSigns();
 
   return true;
+}
+
+// Only the bicycle layer accumulates heading-sign evidence; the pedestrian layer follows it.
+void PedestrianAndBicycleTracker::alignOrientationSigns()
+{
+  const double yaw_diff = autoware_utils_math::normalize_radian(
+    bicycle_tracker_.getYawState() - pedestrian_tracker_.getYawState());
+  if (std::abs(yaw_diff) > M_PI_2) {
+    pedestrian_tracker_.flipOrientationSign();
+  }
 }
 
 bool PedestrianAndBicycleTracker::getTrackedObject(

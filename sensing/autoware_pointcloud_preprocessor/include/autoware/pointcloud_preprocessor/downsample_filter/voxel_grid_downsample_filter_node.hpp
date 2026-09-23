@@ -92,4 +92,3 @@ public:
 
 // clang-format off
 #endif  // AUTOWARE__POINTCLOUD_PREPROCESSOR__DOWNSAMPLE_FILTER__VOXEL_GRID_DOWNSAMPLE_FILTER_NODE_HPP_  // NOLINT
-// clang-format on

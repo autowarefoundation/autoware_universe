@@ -48,7 +48,10 @@ ament_target_dependencies(pointcloud_preprocessor_filter_base
   pcl_ros
   autoware_point_types
   managed_transform_buffer
+  autoware_agnocast_wrapper
 )
+
+autoware_agnocast_wrapper_setup(pointcloud_preprocessor_filter_base)
 
 add_library(faster_voxel_grid_downsample_filter SHARED
   src/downsample_filter/faster_voxel_grid_downsample_filter.cpp
@@ -70,13 +73,18 @@ add_library(concatenate_data SHARED
   src/concatenate_data/combine_cloud_handler_base.cpp
   src/concatenate_data/combine_cloud_handler.cpp
   src/concatenate_data/cloud_collector.cpp
-  src/concatenate_data/collector_matching_strategy.cpp
+  src/concatenate_data/collector_matcher.cpp
+  src/concatenate_data/matching_policy.cpp
   src/concatenate_data/concatenate_pointclouds.cpp
 )
 
 target_include_directories(concatenate_data PUBLIC
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
   "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>"
+)
+
+target_link_libraries(concatenate_data
+  pointcloud_preprocessor_filter_base
 )
 
 ament_target_dependencies(concatenate_data
@@ -170,9 +178,12 @@ rclcpp_components_register_node(pointcloud_preprocessor_filter
   EXECUTABLE pickup_based_voxel_grid_downsample_filter_node)
 
 # -- Random Downsample Filter --
-rclcpp_components_register_node(pointcloud_preprocessor_filter
+autoware_agnocast_wrapper_register_node(pointcloud_preprocessor_filter
   PLUGIN "autoware::pointcloud_preprocessor::RandomDownsampleFilterComponent"
-  EXECUTABLE random_downsample_filter_node)
+  EXECUTABLE random_downsample_filter_node
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
+  ROS2_EXECUTOR SingleThreadedExecutor
+)
 
 rclcpp_components_register_node(pointcloud_preprocessor_filter
   PLUGIN "autoware::pointcloud_preprocessor::ApproximateDownsampleFilterComponent"
@@ -336,9 +347,11 @@ if(BUILD_TESTING)
     test/test_concatenation_info.cpp
   )
 
-  ament_add_gtest(test_polar_voxel_outlier_filter_node
-    test/test_polar_voxel_outlier_filter_node.cpp
+  ament_add_gtest(test_matching_policy
+    test/test_matching_policy.cpp
+    src/concatenate_data/matching_policy.cpp
   )
+  target_include_directories(test_matching_policy PRIVATE include)
 
   ament_add_gtest(test_polar_voxel_noise_filter_node
     test/test_polar_voxel_noise_filter_node.cpp
@@ -348,9 +361,17 @@ if(BUILD_TESTING)
     test/blockage_diag/test_blockage_diag.cpp
   )
 
-  ament_add_gtest(test_blockage_diag_node
-    test/blockage_diag/test_blockage_diag_node.cpp
-  )
+  if(NOT "$ENV{ENABLE_AGNOCAST}" STREQUAL "1")
+    ament_add_gtest(test_polar_voxel_outlier_filter_node
+      test/test_polar_voxel_outlier_filter_node.cpp
+    )
+    target_link_libraries(test_polar_voxel_outlier_filter_node pointcloud_preprocessor_filter)
+
+    ament_add_gtest(test_blockage_diag_node
+      test/blockage_diag/test_blockage_diag_node.cpp
+    )
+    target_link_libraries(test_blockage_diag_node pointcloud_preprocessor_filter)
+  endif()
 
   ament_add_gtest(test_pointcloud2_to_depth_image
     test/blockage_diag/test_pointcloud2_to_depth_image.cpp
@@ -373,10 +394,8 @@ if(BUILD_TESTING)
   target_link_libraries(test_concatenate_node_unit pointcloud_preprocessor_filter)
   target_link_libraries(test_pickup_based_voxel_grid_downsample_filter_node pointcloud_preprocessor_filter)
   target_link_libraries(test_concatenation_info concatenate_data)
-  target_link_libraries(test_polar_voxel_outlier_filter_node pointcloud_preprocessor_filter)
   target_link_libraries(test_polar_voxel_noise_filter_node pointcloud_preprocessor_filter)
   target_link_libraries(test_blockage_diag pointcloud_preprocessor_filter)
-  target_link_libraries(test_blockage_diag_node pointcloud_preprocessor_filter)
   target_link_libraries(test_pointcloud2_to_depth_image pointcloud_preprocessor_filter)
   target_link_libraries(test_blockage_detection pointcloud_preprocessor_filter)
   target_link_libraries(test_dust_detection pointcloud_preprocessor_filter)
@@ -386,5 +405,14 @@ if(BUILD_TESTING)
     test/test_concatenate_node_component.py
     TIMEOUT "50"
   )
+
+  # Black-box characterization test used as a refactoring safety net for the
+  # concatenate_data module. See the comment at the top of the test for details.
+  ament_add_gtest(test_concatenate_node_characterization
+    test/test_concatenate_node_characterization.cpp
+    TIMEOUT 180
+  )
+  target_link_libraries(test_concatenate_node_characterization pointcloud_preprocessor_filter)
+  ament_target_dependencies(test_concatenate_node_characterization rclcpp_components tf2_ros)
 
 endif()

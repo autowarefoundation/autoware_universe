@@ -269,11 +269,12 @@ void ObjectAssociationMergerNode::objectsCallback(
     for (const auto & unknown_object : unknown_objects) {
       bool is_overlapped = false;
       for (const auto & known_object : known_objects) {
-        if (isUnknownObjectOverlapped(
-              unknown_object, known_object, overlapped_judge_param_.precision_threshold,
-              overlapped_judge_param_.recall_threshold,
-              overlapped_judge_param_.distance_threshold_map,
-              overlapped_judge_param_.generalized_iou_threshold)) {
+        if (
+          isUnknownObjectOverlapped(
+            unknown_object, known_object, overlapped_judge_param_.precision_threshold,
+            overlapped_judge_param_.recall_threshold,
+            overlapped_judge_param_.distance_threshold_map,
+            overlapped_judge_param_.generalized_iou_threshold)) {
           is_overlapped = true;
           break;
         }

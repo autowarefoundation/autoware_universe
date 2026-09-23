@@ -212,7 +212,10 @@ void TrackerProcessor::prune(const rclcpp::Time & time)
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
-  if (time.nanoseconds() - last_prune_time_.nanoseconds() < 2000 /*2ms*/) {
+  // Minimum spacing between prune cycles; a call at an unchanged or earlier measurement time is
+  // skipped.
+  constexpr int64_t min_prune_interval_ns = 2 * 1000 * 1000;  // 2 ms
+  if (time.nanoseconds() - last_prune_time_.nanoseconds() < min_prune_interval_ns) {
     return;
   }
 

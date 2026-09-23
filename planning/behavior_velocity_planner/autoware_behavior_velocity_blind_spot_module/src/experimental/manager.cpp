@@ -61,8 +61,9 @@ void BlindSpotModuleManager::launchNewModules(
       continue;
     }
 
-    if (get_neighboring_turn_lanelet(
-          planner_data.route_handler_, ll, planner_data.current_odometry->pose)) {
+    if (
+      get_neighboring_turn_lanelet(
+        planner_data.route_handler_, ll, planner_data.current_odometry->pose)) {
       continue;
     }
 

@@ -15,6 +15,7 @@
 #ifndef AUTOWARE__TRAJECTORY_CONCATENATOR__TRAJECTORY_CONCATENATOR_WRAPPER_HPP_
 #define AUTOWARE__TRAJECTORY_CONCATENATOR__TRAJECTORY_CONCATENATOR_WRAPPER_HPP_
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware/trajectory_concatenator/detail/trajectory_concatenator.hpp>
 #include <autoware_trajectory_concatenator/autoware_trajectory_concatenator_param.hpp>
 #include <builtin_interfaces/msg/time.hpp>
@@ -39,9 +40,9 @@ public:
    * @param node_parameters_interface Parameter interface for declaring and reading parameters.
    */
   TrajectoryConcatenatorWrapper(
-    rclcpp::Node & node,
+    autoware::agnocast_wrapper::Node & node,
     rclcpp::node_interfaces::NodeParametersInterface::SharedPtr node_parameters_interface)
-  : node_ptr_(&node),
+  : clock_(node.get_clock()),
     logger_(node.get_logger().get_child(interface_name_)),
     concatenator_params_listener_(node_parameters_interface),
     concatenator_params_(concatenator_params_listener_.get_params()),
@@ -75,7 +76,7 @@ public:
   [[nodiscard]] autoware_internal_planning_msgs::msg::CandidateTrajectories get_concatenated()
   {
     update_parameters();
-    const auto time_now = node_ptr_->get_clock()->now();
+    const auto time_now = clock_->now();
 
     std::lock_guard<std::mutex> lock(concatenator_mutex_);
     RCLCPP_DEBUG(logger_, "get_concatenated()");
@@ -84,7 +85,7 @@ public:
 
 private:
   std::string interface_name_{"trajectory_concatenator"};
-  rclcpp::Node * node_ptr_{nullptr};
+  rclcpp::Clock::SharedPtr clock_;
   rclcpp::Logger logger_;
   concatenator::ParamListener concatenator_params_listener_;
   concatenator::Params concatenator_params_;

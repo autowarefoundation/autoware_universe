@@ -33,7 +33,7 @@
 
 #include <stdio.h>
 
-__global__ void ApplyDeltaFromMem(float delta, float * mem, float * buf, int n_elem)
+__global__ void apply_delta_from_mem(float delta, float * mem, float * buf, int n_elem)
 {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
   if (idx < n_elem) {
@@ -42,7 +42,7 @@ __global__ void ApplyDeltaFromMem(float delta, float * mem, float * buf, int n_e
   }
 }
 
-__global__ void ApplyDeltaToMem(float delta, float * mem, float * buf, int n_elem)
+__global__ void apply_delta_to_mem(float delta, float * mem, float * buf, int n_elem)
 {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
   if (idx < n_elem) {
@@ -51,7 +51,7 @@ __global__ void ApplyDeltaToMem(float delta, float * mem, float * buf, int n_ele
   }
 }
 
-void Memory::StepReset()
+void Memory::step_reset()
 {
   if (mem_stream == nullptr) {
     fprintf(stderr, "Memory stream is not initialized.\n");
@@ -61,29 +61,29 @@ void Memory::StepReset()
   cudaMemsetAsync(pre_buf, 0, sizeof(float) * mem_len, mem_stream);
 }
 
-void Memory::StepPre(float ts)
+void Memory::step_pre(float ts)
 {
   if (mem_stream == nullptr) {
     fprintf(stderr, "Memory stream is not initialized.\n");
     return;
   }
   // update timestamp in pre_update_memory
-  ApplyDeltaFromMem<<<pre_len, 1, 0, mem_stream>>>(
+  apply_delta_from_mem<<<pre_len, 1, 0, mem_stream>>>(
     ts, reinterpret_cast<float *>(mem_buf), pre_buf, pre_len);
 }
 
-void Memory::StepPost(float ts)
+void Memory::step_post(float ts)
 {
   if (mem_stream == nullptr) {
     fprintf(stderr, "Memory stream is not initialized.\n");
     return;
   }
   // update timestamp in post_update_memory
-  ApplyDeltaToMem<<<mem_len, 1, 0, mem_stream>>>(
+  apply_delta_to_mem<<<mem_len, 1, 0, mem_stream>>>(
     ts, reinterpret_cast<float *>(mem_buf), post_buf, mem_len);
 }
 
-void Memory::DebugPrint()
+void Memory::debug_print()
 {
   if (mem_stream == nullptr) {
     fprintf(stderr, "Memory stream is not initialized.\n");
