@@ -77,6 +77,8 @@ private:
   bool set_initializing_flag(
     const rclcpp::Client<SetBool>::SharedPtr & client, const char * label, bool initializing,
     bool & flag);
+  /// No-op when `is_redundant_` is false, since the switcher interface has nothing to set then.
+  bool set_redundancy_switcher_interface_initializing(bool initializing);
   bool call_reset_redundancy_switcher(std::string & message);
   bool call_reset_redundancy_switcher();
   bool call_reset_diag_graph(std::string & message);

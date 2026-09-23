@@ -225,10 +225,7 @@ bool MrmResetManager::run_init_step(InitState state)
       return call_reset_redundancy_switcher();
 
     case InitState::SET_SWITCHER_INTERFACE_INIT:
-      return set_initializing_flag(
-        cli_set_redundancy_switcher_interface_initializing_,
-        "set_redundancy_switcher_interface_initializing", true,
-        is_redundancy_switcher_interface_initializing_);
+      return set_redundancy_switcher_interface_initializing(true);
 
     case InitState::DONE:
       break;
@@ -330,10 +327,7 @@ void MrmResetManager::leave_initializing_phase()
   if (!call_reset_redundancy_switcher()) {
     return;
   }
-  (void)set_initializing_flag(
-    cli_set_redundancy_switcher_interface_initializing_,
-    "set_redundancy_switcher_interface_initializing", false,
-    is_redundancy_switcher_interface_initializing_);
+  (void)set_redundancy_switcher_interface_initializing(false);
 }
 
 bool MrmResetManager::set_initializing_flag(
@@ -351,6 +345,18 @@ bool MrmResetManager::set_initializing_flag(
   }
   flag = initializing;
   return true;
+}
+
+bool MrmResetManager::set_redundancy_switcher_interface_initializing(bool initializing)
+{
+  if (!is_redundant_) {
+    is_redundancy_switcher_interface_initializing_ = initializing;
+    return true;
+  }
+  return set_initializing_flag(
+    cli_set_redundancy_switcher_interface_initializing_,
+    "set_redundancy_switcher_interface_initializing", initializing,
+    is_redundancy_switcher_interface_initializing_);
 }
 
 bool MrmResetManager::call_reset_redundancy_switcher(std::string & message)
