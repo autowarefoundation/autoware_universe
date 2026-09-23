@@ -276,7 +276,7 @@ void MrmResetManager::on_periodic_reset_check()
   if (!is_initializing()) {
     return;
   }
-  if (is_autoware_ready()) {
+  if (is_autoware_ready() && is_ready_for_operation()) {
     apply_ready_state();
     return;
   }
