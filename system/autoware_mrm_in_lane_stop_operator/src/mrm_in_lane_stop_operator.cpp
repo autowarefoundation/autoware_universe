@@ -113,18 +113,21 @@ void MrmInLaneStopOperator::on_request(DrivingModeRequest::ConstSharedPtr msg)
   const auto requested_id = msg->mode;
   const auto * requested = find_mode_by_id(requested_id);
 
-  if (!requested) {
-    // Request is not for any of our modes; cancel if we are active.
+  if (!requested || requested->profile == InLaneStopTrigger::PROFILE_UNKNOWN) {
+    // Not one of our modes, or explicitly requests no stop; cancel if we are active.
     cancel_active_mode();
     active_mode_id_ = std::nullopt;
     return;
   }
-  if (active_mode_id_ == requested_id) {
-    return;  // Already running this exact mode; do nothing.
+
+  if (active_mode_id_.has_value()) {
+    const auto * current = find_mode_by_id(active_mode_id_.value());
+    if (current && current->profile == requested->profile) {
+      return;  // Same profile already active; nothing to do even if the mode id differs.
+    }
   }
 
-  // A different one of our modes is running; cancel it first.
-  cancel_active_mode();
+  // Switch straight to the new profile; no cancel in between.
   activate_mode(*requested, requested_id);
 }
 
