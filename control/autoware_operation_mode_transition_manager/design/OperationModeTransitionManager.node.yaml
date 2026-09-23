@@ -31,21 +31,46 @@ subscribers:
   - name: gate_operation_mode
     message_type: autoware_adapi_v1_msgs/msg/OperationModeState
     remap_target: gate_operation_mode
+  # legacy interfaces: node-side names are fixed
   - name: engage
     message_type: autoware_vehicle_msgs/msg/Engage
+    remap_target: /api/autoware/get/engage
+  - name: current_gate_mode
+    message_type: tier4_control_msgs/msg/GateMode
+    remap_target: /control/current_gate_mode
+  - name: current_selector_mode
+    message_type: tier4_control_msgs/msg/ExternalCommandSelectorMode
+    remap_target: /control/external_cmd_selector/current_selector_mode
 
 publishers:
+  # system interfaces: node-side names are fixed
   - name: operation_mode
     message_type: autoware_adapi_v1_msgs/msg/OperationModeState
+    remap_target: /system/operation_mode/state
+  # legacy interfaces: node-side names are fixed
   - name: engage
     message_type: autoware_vehicle_msgs/msg/Engage
+    remap_target: /autoware/engage
   - name: gate_mode_cmd
     message_type: tier4_control_msgs/msg/GateMode
+    remap_target: /control/gate_mode_cmd
+
+servers:
+  # system interfaces: node-side names are fixed
+  - name: change_operation_mode
+    message_type: autoware_system_msgs/srv/ChangeOperationMode
+    remap_target: /system/operation_mode/change_operation_mode
+  - name: change_autoware_control
+    message_type: autoware_system_msgs/srv/ChangeAutowareControl
+    remap_target: /system/operation_mode/change_autoware_control
 
 clients:
   - name: control_mode_request
     message_type: autoware_vehicle_msgs/srv/ControlModeCommand
     remap_target: control_mode_request
+  - name: select_external_command
+    message_type: tier4_control_msgs/srv/ExternalCommandSelect
+    remap_target: /control/external_cmd_selector/select_external_command
 
 # parameters
 param_files:

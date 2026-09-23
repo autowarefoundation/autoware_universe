@@ -14,12 +14,13 @@
 #include "topic_relay_controller_node.hpp"
 
 #include <memory>
+#include <stdexcept>
 #include <string>
 
 namespace autoware::topic_relay_controller
 {
 TopicRelayController::TopicRelayController(const rclcpp::NodeOptions & options)
-: Node("topic_relay_controller", options), is_relaying_(true)
+: Node("topic_relay_controller", options), is_relaying_(true), throttle_period_(0, 0)
 {
   // Parameter
   node_param_.topic = declare_parameter<std::string>("topic");
@@ -34,6 +35,27 @@ TopicRelayController::TopicRelayController(const rclcpp::NodeOptions & options)
   node_param_.enable_keep_publishing = declare_parameter<bool>("enable_keep_publishing");
   if (node_param_.enable_keep_publishing)
     node_param_.update_rate = declare_parameter<int>("update_rate");
+  node_param_.enable_throttle = declare_parameter<bool>("enable_throttle", false);
+  if (node_param_.enable_throttle) {
+    node_param_.msgs_per_sec = declare_parameter<double>("msgs_per_sec");
+    if (node_param_.msgs_per_sec <= 0.0) {
+      throw std::invalid_argument("msgs_per_sec must be greater than 0");
+    }
+    throttle_period_ = rclcpp::Duration(rclcpp::Rate(node_param_.msgs_per_sec).period());
+    last_relayed_time_ = now();
+  }
+
+  // Both modes set the output rate, from opposite ends: enable_keep_publishing republishes the
+  // last value on a timer whether or not one arrived, enable_throttle forwards arrivals and drops
+  // the ones that come too soon. Combining them would leave the timer publishing at update_rate
+  // regardless of the throttle, so the throttle is the one that gives way.
+  if (node_param_.enable_throttle && node_param_.enable_keep_publishing) {
+    RCLCPP_ERROR(
+      get_logger(),
+      "enable_throttle and enable_keep_publishing are mutually exclusive. Ignoring "
+      "enable_throttle.");
+    node_param_.enable_throttle = false;
+  }
 
   if (node_param_.is_transform) {
     node_param_.frame_id = declare_parameter<std::string>("frame_id");
@@ -77,7 +99,7 @@ TopicRelayController::TopicRelayController(const rclcpp::NodeOptions & options)
     pub_transform_ = this->create_publisher<tf2_msgs::msg::TFMessage>(node_param_.remap_topic, qos);
 
     sub_transform_ = this->create_subscription<tf2_msgs::msg::TFMessage>(
-      node_param_.topic, qos, [this](tf2_msgs::msg::TFMessage::SharedPtr msg) {
+      node_param_.topic, qos, [this](tf2_msgs::msg::TFMessage::ConstSharedPtr msg) {
         for (const auto & transform : msg->transforms) {
           if (
             transform.header.frame_id != node_param_.frame_id ||
@@ -86,7 +108,7 @@ TopicRelayController::TopicRelayController(const rclcpp::NodeOptions & options)
 
           if (node_param_.enable_keep_publishing) {
             last_tf_topic_ = msg;
-          } else {
+          } else if (!node_param_.enable_throttle || is_throttle_period_elapsed()) {
             pub_transform_->publish(*msg);
           }
         }
@@ -98,12 +120,12 @@ TopicRelayController::TopicRelayController(const rclcpp::NodeOptions & options)
 
     sub_topic_ = this->create_generic_subscription(
       node_param_.topic, node_param_.topic_type, qos,
-      [this]([[maybe_unused]] std::shared_ptr<rclcpp::SerializedMessage> msg) {
+      [this](std::shared_ptr<const rclcpp::SerializedMessage> msg) {
         if (!is_relaying_) return;
 
         if (node_param_.enable_keep_publishing) {
           last_topic_ = msg;
-        } else {
+        } else if (!node_param_.enable_throttle || is_throttle_period_elapsed()) {
           pub_topic_->publish(*msg);
         }
       });
@@ -112,16 +134,34 @@ TopicRelayController::TopicRelayController(const rclcpp::NodeOptions & options)
   // Timer
   if (node_param_.enable_keep_publishing) {
     const auto update_period_ns = rclcpp::Rate(node_param_.update_rate).period();
-    timer_ = rclcpp::create_timer(this, get_clock(), update_period_ns, [this]() {
-      if (!is_relaying_) return;
-
-      if (node_param_.is_transform) {
-        if (last_tf_topic_) pub_transform_->publish(*last_tf_topic_);
-      } else {
-        if (last_topic_) pub_topic_->publish(*last_topic_);
-      }
-    });
+    timer_ =
+      autoware::agnocast_wrapper::create_timer(this, get_clock(), update_period_ns, [this]() {
+        if (node_param_.is_transform) {
+          if (last_tf_topic_) pub_transform_->publish(*last_tf_topic_);
+        } else {
+          if (last_topic_) pub_topic_->publish(*last_topic_);
+        }
+      });
   }
+}
+
+bool TopicRelayController::is_throttle_period_elapsed()
+{
+  const auto stamp = now();
+
+  // A clock that jumps back (a replayed bag, a sim-time reset) would otherwise stall the relay
+  // until the clock caught up with the stale timestamp.
+  if (stamp < last_relayed_time_) {
+    RCLCPP_WARN(get_logger(), "Detected jump back in time, resetting the throttle period.");
+    last_relayed_time_ = stamp;
+  }
+
+  if (stamp - last_relayed_time_ < throttle_period_) {
+    return false;
+  }
+
+  last_relayed_time_ = stamp;
+  return true;
 }
 }  // namespace autoware::topic_relay_controller
 

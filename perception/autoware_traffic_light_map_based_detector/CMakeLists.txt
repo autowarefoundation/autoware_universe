@@ -13,11 +13,18 @@ include_directories(
 
 ament_auto_add_library(${PROJECT_NAME} SHARED
   src/traffic_light_map_based_detector.cpp
-  src/traffic_light_map_based_detector_node.cpp
   src/traffic_light_map_based_detector_process.cpp
 )
 
-rclcpp_components_register_node(${PROJECT_NAME}
+ament_auto_add_library(${PROJECT_NAME}_node SHARED
+  src/traffic_light_map_based_detector_node.cpp
+)
+
+target_link_libraries(${PROJECT_NAME}_node
+  ${PROJECT_NAME}
+)
+
+rclcpp_components_register_node(${PROJECT_NAME}_node
   PLUGIN "autoware::traffic_light::MapBasedDetector"
   EXECUTABLE traffic_light_map_based_detector_node
 )
@@ -27,11 +34,20 @@ if(BUILD_TESTING)
   ament_auto_add_gtest(test_utils
     test/test_utils.cpp
   )
+  target_link_libraries(test_utils
+    ${PROJECT_NAME}
+  )
   ament_auto_add_gtest(test_traffic_light_map_based_detector
     test/test_traffic_light_map_based_detector.cpp
   )
+  target_link_libraries(test_traffic_light_map_based_detector
+    ${PROJECT_NAME}
+  )
   ament_auto_add_gtest(test_traffic_light_map_based_detector_node
     test/test_traffic_light_map_based_detector_node.cpp
+  )
+  target_link_libraries(test_traffic_light_map_based_detector_node
+    ${PROJECT_NAME}_node
   )
 endif()
 

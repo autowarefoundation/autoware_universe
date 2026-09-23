@@ -18,6 +18,7 @@ subscribers:
 publishers:
   - name: weighted_particles
     message_type: yabloc_particle_filter/msg/ParticleArray
+    global: /localization/pose_estimator/yabloc/pf/weighted_particles
   - name: gnss_range_marker
     message_type: visualization_msgs/msg/MarkerArray
     remap_target: ~/debug/gnss_range_marker

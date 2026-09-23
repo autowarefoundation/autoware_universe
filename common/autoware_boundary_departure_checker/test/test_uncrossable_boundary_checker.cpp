@@ -42,7 +42,7 @@ UncrossableBoundaryChecker create_default_checker()
 
   // 2. Param
   UncrossableBoundaryDepartureParam param;
-  param.lateral_margin_m = 0.01;   // [m]
+  param.critical_departure_lateral_th_m = 0.01;  // [m]
   param.on_time_buffer_s = 0.15;   // 150ms of continuous violation to trigger CRITICAL
   param.off_time_buffer_s = 0.15;  // 150ms of continuous safety to clear CRITICAL
   param.max_deceleration_mps2 = -4.0;
@@ -185,7 +185,10 @@ TEST(UncrossableBoundaryCheckerTest, TestTimeBufferingHysteresis)
   auto res2 = checker.update_departure_status(traj_danger, state_danger, state);
 
   // Assert:
-  EXPECT_TRUE(res2.status == DepartureType::NONE) << "Should be NONE due to ON time buffer.";
+  EXPECT_TRUE(res2.status == DepartureType::NEAR_BOUNDARY)
+    << "CRITICAL is suppressed by the ON time buffer, but the advisory NEAR_BOUNDARY remains so "
+       "the "
+       "reported severity does not dip back to NONE.";
 
   // STEP 3: Wait for ON buffer to expire. Time increases by 0.2 seconds.
   // Act:

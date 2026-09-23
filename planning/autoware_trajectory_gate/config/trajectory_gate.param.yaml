@@ -3,8 +3,8 @@
     trajectory_warn_duration: 0.3
     trajectory_error_duration: 0.5
 
-    source_ids: [100, 200, 300]
+    source_ids: [101, 102, 103]
     source:
-      100: { name: main }
-      200: { name: mrm1 }
-      300: { name: mrm2 }
+      101: { name: main }
+      102: { name: mrm1 }
+      103: { name: mrm2 }

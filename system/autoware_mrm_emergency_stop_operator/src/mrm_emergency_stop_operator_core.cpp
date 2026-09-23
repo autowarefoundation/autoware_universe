@@ -60,6 +60,7 @@ MrmEmergencyStopOperator::MrmEmergencyStopOperator(const rclcpp::NodeOptions & n
 
   // Driving mode interface
   pub_mrm_state_ = create_publisher<DrivingModeMrmState>("~/output/mrm_state", 1);
+  pub_driving_mode_active_ = create_publisher<DrivingModeFlag>("~/output/driving_mode_active", 1);
   sub_driving_mode_request_ = create_subscription<DrivingModeRequest>(
     "~/input/driving_mode_request", 1,
     std::bind(&MrmEmergencyStopOperator::onDrivingModeRequest, this, std::placeholders::_1));
@@ -121,6 +122,22 @@ void MrmEmergencyStopOperator::onDrivingModeInfo(const DrivingModeInfo & msg)
   }
 }
 
+void MrmEmergencyStopOperator::publishDrivingModeActive() const
+{
+  if (!driving_mode_id_) {
+    return;
+  }
+
+  tier4_system_msgs::msg::DrivingModeFlagItem item;
+  item.mode = driving_mode_id_.value();
+  item.flag = (status_.state == MrmBehaviorStatus::OPERATING);
+
+  DrivingModeFlag msg;
+  msg.stamp = this->now();
+  msg.items = {item};
+  pub_driving_mode_active_->publish(msg);
+}
+
 void MrmEmergencyStopOperator::publishMrmState() const
 {
   // See the following page for the definition of the MRM state.
@@ -175,6 +192,7 @@ void MrmEmergencyStopOperator::onTimer()
     publishControlCommand(prev_control_cmd_);
   }
   publishStatus();
+  publishDrivingModeActive();
   publishMrmState();
 }
 

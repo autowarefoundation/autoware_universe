@@ -138,6 +138,7 @@ private:
   bool search();
   void expandNodes(AstarNode & current_node, const bool is_back = false);
   void resetData();
+  void recordFirstTouch(const AstarNode & node, const IndexXYT & index);
   void setPath(const AstarNode & goal);
   void setStartNode(const double cost_offset = 0.0);
   double estimateCost(const Pose & pose, const IndexXYT & index) const;
@@ -157,6 +158,7 @@ private:
 
   // hybrid astar variables
   std::vector<AstarNode> graph_;
+  std::vector<int> touched_node_ids_;
   std::vector<double> col_free_distance_map_;
 
   std::priority_queue<AstarNode *, std::vector<AstarNode *>, NodeComparison> openlist_;

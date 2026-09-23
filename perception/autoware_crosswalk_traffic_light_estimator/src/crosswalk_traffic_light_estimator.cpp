@@ -11,7 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#include "crosswalk_traffic_light_estimator.hpp"
+#include "autoware/crosswalk_traffic_light_estimator/crosswalk_traffic_light_estimator.hpp"
 
 #include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/Forward.hpp>
@@ -315,9 +315,10 @@ void CrosswalkTrafficLightEstimator::update_crosswalk_overrides_from_map(
   }
 }
 
-TrafficSignalArray CrosswalkTrafficLightEstimator::estimate(
-  const TrafficSignalArray & msg, const rclcpp::Time & current_time)
+TrafficSignalArray CrosswalkTrafficLightEstimator::estimate(const TrafficSignalArray & msg)
 {
+  const rclcpp::Time current_time(msg.stamp);
+
   TrafficSignalArray output = msg;
 
   TrafficLightIdMap traffic_light_id_map;

@@ -8,6 +8,7 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   src/lib/graph.cpp
   src/lib/subscription.cpp
 )
+autoware_agnocast_wrapper_setup(${PROJECT_NAME})
 
 ament_auto_add_library(${PROJECT_NAME}_tools SHARED
   src/node/dump.cpp
@@ -15,19 +16,25 @@ ament_auto_add_library(${PROJECT_NAME}_tools SHARED
   src/node/logging.cpp
 )
 
-rclcpp_components_register_node(${PROJECT_NAME}_tools
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}_tools
   PLUGIN "autoware::diagnostic_graph_utils::DumpNode"
   EXECUTABLE dump_node
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
+  ROS2_EXECUTOR SingleThreadedExecutor
 )
 
-rclcpp_components_register_node(${PROJECT_NAME}_tools
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}_tools
   PLUGIN "autoware::diagnostic_graph_utils::ConverterNode"
   EXECUTABLE converter_node
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
+  ROS2_EXECUTOR SingleThreadedExecutor
 )
 
-rclcpp_components_register_node(${PROJECT_NAME}_tools
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}_tools
   PLUGIN "autoware::diagnostic_graph_utils::LoggingNode"
   EXECUTABLE logging_node
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
+  ROS2_EXECUTOR SingleThreadedExecutor
 )
 
 ament_auto_package(INSTALL_TO_SHARE launch)

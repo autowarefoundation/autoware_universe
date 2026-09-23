@@ -17,6 +17,8 @@
 
 #include "autoware/trajectory_ranker/interface/data_interface.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
+#include <autoware_trajectory_ranker/autoware_trajectory_ranker_param.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -24,6 +26,7 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace autoware::trajectory_ranker::metrics
 {
@@ -52,8 +55,7 @@ public:
    * @param result Trajectory data interface to evaluate
    * @param max_value Maximum value for normalization
    */
-  virtual void evaluate(
-    const std::shared_ptr<DataInterface> & result, const float max_value) const = 0;
+  virtual void evaluate(const std::shared_ptr<DataInterface> & result) const = 0;
 
   /**
    * @brief Checks if this metric measures deviation from ideal
@@ -64,23 +66,26 @@ public:
   /**
    * @brief Initializes the metric with vehicle info and time resolution
    * @param vehicle_info Vehicle parameters (dimensions, wheelbase, etc.)
-   * @param resolution Time resolution for evaluation [s]
    * @param node Optional node pointer for parameter access
    */
   void init(
-    const std::shared_ptr<VehicleInfo> & vehicle_info, const float resolution,
-    rclcpp::Node * node = nullptr)
+    const std::shared_ptr<VehicleInfo> & vehicle_info,
+    const trajectory_ranker_params::Params::Evaluation & params,
+    autoware::agnocast_wrapper::Node * node = nullptr)
   {
     vehicle_info_ = vehicle_info;
-    resolution_ = resolution;
     node_ptr_ = node;
-    setup_parameters();
+    resolution_ = static_cast<float>(params.sampling_resolution);
+    setup_parameters(params);
   }
 
   /**
    * @brief Setup metric-specific parameters (optional override)
    */
-  virtual void setup_parameters() {}
+  virtual void setup_parameters(
+    [[maybe_unused]] const trajectory_ranker_params::Params::Evaluation & params)
+  {
+  }
 
   /**
    * @brief Sets the metric index for storage in result arrays
@@ -100,6 +105,10 @@ public:
    */
   size_t index() const { return index_; }
 
+  virtual double weight() const = 0;
+
+  virtual std::vector<double> decay_weights() const = 0;
+
 protected:
   /**
    * @brief Gets vehicle info
@@ -117,7 +126,7 @@ protected:
    * @brief Gets node pointer (for parameter access)
    * @return Node pointer
    */
-  rclcpp::Node * node() const { return node_ptr_; }
+  autoware::agnocast_wrapper::Node * node() const { return node_ptr_; }
 
 private:
   std::shared_ptr<VehicleInfo> vehicle_info_;
@@ -128,7 +137,7 @@ private:
 
   float resolution_;
 
-  rclcpp::Node * node_ptr_{nullptr};
+  autoware::agnocast_wrapper::Node * node_ptr_{nullptr};
 };
 
 }  // namespace autoware::trajectory_ranker::metrics

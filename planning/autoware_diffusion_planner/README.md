@@ -65,6 +65,19 @@ not an authoritative 8-second phase sequence; red-light atoms therefore use
 the model's `typed_missing` status when the selected route contains a signal,
 and `not_applicable` when it does not.
 
+CAMP is disabled by default. If `ego_snap_to_prev_trajectory.enable` is enabled,
+the next frame snaps to the previously selected row, rather than always row 0.
+Retained plan and turn-indicator state is updated only after the complete
+planning output has been constructed successfully. The core clears history on
+map/route changes, a backwards odometry clock, or an explicit `reset()` at an
+episode boundary. This is output history, not confirmation that a downstream
+controller executed the trajectory.
+
+This ROS path consumes the version-1 Fixed export with K=8. The separate CAMP
+library's Scene and explicitly exported variable-K scorers do not automatically
+enable those modes here. They require a matched encoder/tensor and candidate
+generation adapter; the bundled model and generation settings are unchanged.
+
 ## Features
 
 - **Diffusion-based trajectory generation** for flexible and robust planning
@@ -176,7 +189,7 @@ To download the latest model, follow [Download artifacts](https://github.com/aut
 
 - [Diffusion Planner (original repo)](https://github.com/ZhengYinan-AIR/Diffusion-Planner)
 - [Diffusion planner (our fork of the previous repo, used to train the model)](https://github.com/tier4/Diffusion-Planner)
-- ["Diffusion-Based Planning for Autonomous Driving with Flexible Guidance"](https://arxiv.org/abs/2309.00615)
+- ["Diffusion-Based Planning for Autonomous Driving with Flexible Guidance"](https://arxiv.org/abs/2501.15564)
 
 ---
 

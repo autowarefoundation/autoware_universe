@@ -37,6 +37,8 @@ struct ObstacleTypeParameters
   double surround_check_front_distance{0.0};
   double surround_check_side_distance{0.0};
   double surround_check_back_distance{0.0};
+  bool enable_bbox_check{true};
+  bool enable_polygon_check{true};
 };
 
 struct Parameters

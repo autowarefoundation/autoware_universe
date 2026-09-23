@@ -163,8 +163,9 @@ struct DiffusionPlannerParams
   bool build_only;
   double planning_frequency_hz;
   bool ignore_neighbors;
+  bool remap_unsupported_objects_to_pedestrian;
   double traffic_light_group_msg_timeout_seconds;
-  bool camp_enabled;
+  bool camp_enabled{false};
   std::string camp_fixed_weight_model_path;
   int batch_size;
   std::vector<double> temperature_list;
@@ -223,6 +224,16 @@ public:
   void update_params(const DiffusionPlannerParams & params);
 
   void resolve_model_paths();
+
+  /**
+   * @brief Clear retained planning and observation history at an episode boundary.
+   *
+   *
+   * Loaded models, the map and the current route are preserved. Map/route changes and
+   * a
+   * backwards odometry clock also reset this history automatically.
+   */
+  void reset();
 
   /**
    * @brief Prepare frame context for inference.
@@ -369,6 +380,8 @@ public:
   bool is_camp_enabled() const { return params_.camp_enabled; }
 
 private:
+  friend class DiffusionPlannerCoreTestPeer;
+
   // Parameters
   DiffusionPlannerParams params_;
   VehicleSpec vehicle_spec_;
@@ -401,6 +414,8 @@ private:
   std::map<lanelet::Id, TrafficSignalStamped> traffic_light_id_map_;
   std::vector<std::vector<std::vector<Eigen::Matrix4d>>> last_agent_poses_map_;
   std::optional<Eigen::Matrix4d> last_ego_to_map_transform_;
+  std::size_t last_selected_candidate_index_{0};
+  std::optional<rclcpp::Time> last_frame_time_;
   std::optional<trajectory_ranker::CampFixedWeightModel> camp_model_;
   std::optional<CampPreviousPlan> camp_previous_plan_;
 

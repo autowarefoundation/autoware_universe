@@ -113,7 +113,9 @@ bool EuclideanCluster::cluster(
       indexed_cluster.cloud.width = indexed_cluster.cloud.points.size();
       indexed_cluster.cloud.height = 1;
       indexed_cluster.cloud.is_dense = false;
-      clusters.push_back(std::move(indexed_cluster));
+      if (isClusterLargeEnough(indexed_cluster.cloud)) {
+        clusters.push_back(std::move(indexed_cluster));
+      }
     }
   }
   return true;

@@ -86,7 +86,10 @@ private:
 
   bool worldToMap(double wx, double wy, unsigned int & mx, unsigned int & my) const;
 
-  void initRosParam([[maybe_unused]] rclcpp::Node & node) override {}
+  void initRosParam(
+    [[maybe_unused]] rclcpp::node_interfaces::NodeParametersInterface & parameters) override
+  {
+  }
 
   rclcpp::Logger logger_{rclcpp::get_logger("laserscan_based_occupancy_grid_map")};
   rclcpp::Clock clock_{RCL_ROS_TIME};

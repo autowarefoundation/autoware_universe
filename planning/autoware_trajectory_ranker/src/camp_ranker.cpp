@@ -139,9 +139,10 @@ CampFixedWeightModel load_camp_fixed_weight_model(const std::filesystem::path & 
   model.transition_component_scales = parse_transition_scales(root.at("transition_scales"));
 
   for (const auto & pattern_json : root.at("patterns")) {
-    model.patterns.push_back(CampPatternWeights{
-      parse_status_pattern(pattern_json.at("status")),
-      parse_atom_vector(pattern_json.at("weights"), "pattern weights")});
+    model.patterns.push_back(
+      CampPatternWeights{
+        parse_status_pattern(pattern_json.at("status")),
+        parse_atom_vector(pattern_json.at("weights"), "pattern weights")});
   }
 
   validate_model(model);

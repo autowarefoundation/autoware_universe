@@ -30,4 +30,6 @@ target_link_libraries(${PROJECT_NAME}
   intersection_collision_checker_node_parameters
 )
 
+autoware_agnocast_wrapper_setup(${PROJECT_NAME})
+
 ament_auto_package(INSTALL_TO_SHARE config)

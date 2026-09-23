@@ -5,8 +5,10 @@ This tool displays `/diagnostics_graph` in table format.
 ## Usage
 
 ```bash
-ros2 run autoware_diagnostic_graph_utils dump_node
+ros2 launch autoware_diagnostic_graph_utils dump.launch.xml
 ```
+
+Use the launch file rather than `ros2 run`: it preloads the Agnocast heaphook, keeping the node consistent with the rest of the stack when built with `ENABLE_AGNOCAST=1`.
 
 ## Examples
 
@@ -19,7 +21,7 @@ ros2 launch diagnostic_graph_aggregator example-main.launch.xml
 Terminal 2:
 
 ```bash
-ros2 run autoware_diagnostic_graph_utils dump_node
+ros2 launch autoware_diagnostic_graph_utils dump.launch.xml
 ```
 
 Output:

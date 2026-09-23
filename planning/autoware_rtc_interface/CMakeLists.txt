@@ -19,6 +19,8 @@ ament_auto_add_library(autoware_rtc_interface SHARED
   src/rtc_interface.cpp
 )
 
+autoware_agnocast_wrapper_setup(autoware_rtc_interface)
+
 # Test
 if(BUILD_TESTING)
   ament_add_ros_isolated_gtest(test_${PROJECT_NAME}

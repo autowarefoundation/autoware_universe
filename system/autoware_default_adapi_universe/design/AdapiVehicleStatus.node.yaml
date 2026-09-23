@@ -1,0 +1,74 @@
+autoware_system_design_format: 0.4.0
+
+# node information
+name: AdapiVehicleStatus.node
+
+description: Publishes the vehicle kinematics with a geographic pose and the vehicle status converted from the vehicle reports.
+
+package:
+  name: autoware_default_adapi_universe
+  provider: autoware
+
+launch:
+  plugin: autoware::default_adapi::VehicleStatusNode
+  node_output: screen
+
+# interfaces
+subscribers:
+  - name: kinematic_state
+    message_type: nav_msgs/msg/Odometry
+    description: Ego kinematics from the localization.
+    remap_target: /localization/kinematic_state
+  - name: acceleration
+    message_type: geometry_msgs/msg/AccelWithCovarianceStamped
+    description: Ego acceleration from the localization.
+    remap_target: /localization/acceleration
+  - name: map_projector_info
+    message_type: autoware_map_msgs/msg/MapProjectorInfo
+    description: Map projector info used to compute the geographic pose.
+    remap_target: /map/map_projector_info
+  - name: gear_status
+    message_type: autoware_vehicle_msgs/msg/GearReport
+    description: Gear report from the vehicle.
+    remap_target: /vehicle/status/gear_status
+  - name: steering_status
+    message_type: autoware_vehicle_msgs/msg/SteeringReport
+    description: Steering report from the vehicle.
+    remap_target: /vehicle/status/steering_status
+  - name: turn_indicators_status
+    message_type: autoware_vehicle_msgs/msg/TurnIndicatorsReport
+    description: Turn indicators report from the vehicle.
+    remap_target: /vehicle/status/turn_indicators_status
+  - name: hazard_lights_status
+    message_type: autoware_vehicle_msgs/msg/HazardLightsReport
+    description: Hazard lights report from the vehicle.
+    remap_target: /vehicle/status/hazard_lights_status
+  - name: battery_charge
+    message_type: tier4_vehicle_msgs/msg/BatteryStatus
+    description: Battery status from the vehicle.
+    remap_target: /vehicle/status/battery_charge
+
+publishers:
+  - name: kinematics
+    message_type: autoware_adapi_v1_msgs/msg/VehicleKinematics
+    description: Vehicle kinematics for the API.
+    remap_target: /api/vehicle/kinematics
+  - name: status
+    message_type: autoware_adapi_v1_msgs/msg/VehicleStatus
+    description: Vehicle status for the API.
+    remap_target: /api/vehicle/status
+
+# parameters
+param_files: []
+
+param_values: []
+
+# processes
+processes:
+  - name: publish_status
+    description: Periodically converts the latest localization and vehicle reports into the API kinematics and status.
+    trigger_conditions:
+      - periodic: 10.0
+    outcomes:
+      - to_output: kinematics
+      - to_output: status

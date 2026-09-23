@@ -4,6 +4,7 @@
   <version>0.52.0</version>
   <description>Manual lane change handler node extracted from autoware_mission_planner_universe</description>
   <maintainer email="arjun.ram@tier4.jp">Arjun Jagdish Ram</maintainer>
+  <maintainer email="taiki.yamada@tier4.jp">Taiki Yamada</maintainer>
   <license>Apache-2.0</license>
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>

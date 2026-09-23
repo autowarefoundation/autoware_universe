@@ -25,6 +25,7 @@
 
 #include <functional>
 #include <memory>
+#include <unordered_map>
 #include <vector>
 
 namespace autoware::map_based_prediction
@@ -48,6 +49,9 @@ public:
   /// Predicate returning true when the given crosswalk / walkway lanelet has a red signal.
   using CrosswalkSignalRedFn = std::function<bool(const lanelet::ConstLanelet &)>;
 
+  /// Crosswalk rings converted once at map load, keyed by the lanelet id.
+  using CrosswalkPolygonMap = std::unordered_map<lanelet::Id, lanelet::BasicPolygon2d>;
+
   /// Return the object's predicted paths trimmed where they first cross a road boundary.
   /// When @p object_within_road is true the paths are returned unchanged. A path is cut only when
   /// the object can decelerate to a stop before the boundary; otherwise the jump-out is treated as
@@ -65,6 +69,7 @@ private:
   // Crosswalk / walkway lanelets. A boundary crossing that falls inside one of these is treated as
   // a legitimate crosswalk crossing and is not cut.
   lanelet::LaneletMapConstUPtr crosswalk_layer_{nullptr};
+  CrosswalkPolygonMap crosswalk_polygons_;
   utils::ObjectDecelerationParams object_deceleration_params_{};
 };
 

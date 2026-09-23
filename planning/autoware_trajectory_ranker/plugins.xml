@@ -16,14 +16,6 @@
     </description>
   </class>
 
-  <!-- Time To Collision Metric -->
-  <class type="autoware::trajectory_ranker::metrics::TimeToCollision"
-         base_class_type="autoware::trajectory_ranker::metrics::MetricInterface">
-    <description>
-      Evaluates time to collision with obstacles
-    </description>
-  </class>
-
   <!-- Distance Metric -->
   <class type="autoware::trajectory_ranker::metrics::TravelDistance"
          base_class_type="autoware::trajectory_ranker::metrics::MetricInterface">

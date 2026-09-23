@@ -57,6 +57,7 @@ publishers:
 servers:
   - name: select_external_command
     message_type: tier4_control_msgs/srv/ExternalCommandSelect
+    remap_target: ~/service/select_external_command
 
 # parameters
 param_files:

@@ -24,9 +24,9 @@ namespace autoware::default_adapi
 using ServiceResponse = autoware_adapi_v1_msgs::srv::ChangeOperationMode::Response;
 
 OperationModeNode::OperationModeNode(const rclcpp::NodeOptions & options)
-: Node("operation_mode", options)
+: autoware::agnocast_wrapper::Node("operation_mode", options)
 {
-  const auto adaptor = autoware::component_interface_utils::NodeAdaptor(this);
+  const auto adaptor = autoware::component_interface_utils::NodeAdaptor<NodeT>(this);
   group_cli_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
   adaptor.init_sub(sub_state_, this, &OperationModeNode::on_state);
   adaptor.init_pub(pub_state_);
@@ -49,7 +49,7 @@ OperationModeNode::OperationModeNode(const rclcpp::NodeOptions & options)
   };
   sub_availability_ = create_subscription<OperationModeAvailability>(name, qos, callback);
 
-  timer_ = rclcpp::create_timer(
+  timer_ = autoware::agnocast_wrapper::create_timer(
     this, get_clock(), rclcpp::Rate(5.0).period(), std::bind(&OperationModeNode::on_timer, this));
 
   curr_state_.mode = OperationModeState::Message::UNKNOWN;

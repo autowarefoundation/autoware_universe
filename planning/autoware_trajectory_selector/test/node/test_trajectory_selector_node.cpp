@@ -78,12 +78,12 @@ protected:
         "/trajectory_selector_node/input/trajectories_backup", 1);
 
     output_sub_ =
-      test_node_->create_subscription<autoware_internal_planning_msgs::msg::CandidateTrajectories>(
-        "/trajectory_selector_node/output/trajectories", 1,
-        [this](
-          const autoware_internal_planning_msgs::msg::CandidateTrajectories::ConstSharedPtr msg) {
-          last_output_ = msg;
-        });
+      test_node_
+        ->create_subscription<autoware_internal_planning_msgs::msg::ScoredCandidateTrajectories>(
+          "/trajectory_selector_node/output/scored_trajectories", 1,
+          [this](
+            const autoware_internal_planning_msgs::msg::ScoredCandidateTrajectories::ConstSharedPtr
+              msg) { last_output_ = msg; });
 
     // Seed the simulated clock at t = 1 s to avoid zero-time edge cases.
     // Publishing immediately triggers the initial (warm-up) timer fire because the node's
@@ -215,9 +215,9 @@ protected:
   rclcpp::Publisher<autoware_internal_planning_msgs::msg::CandidateTrajectories>::SharedPtr
     backup_traj_pub_;
 
-  rclcpp::Subscription<autoware_internal_planning_msgs::msg::CandidateTrajectories>::SharedPtr
+  rclcpp::Subscription<autoware_internal_planning_msgs::msg::ScoredCandidateTrajectories>::SharedPtr
     output_sub_;
-  autoware_internal_planning_msgs::msg::CandidateTrajectories::ConstSharedPtr last_output_;
+  autoware_internal_planning_msgs::msg::ScoredCandidateTrajectories::ConstSharedPtr last_output_;
 };
 
 TEST_F(TrajectorySelectorNodeTest, FiltersTrajectoriesViaPlugin)
@@ -228,18 +228,20 @@ TEST_F(TrajectorySelectorNodeTest, FiltersTrajectoriesViaPlugin)
   const auto now = sim_time_;
   autoware_internal_planning_msgs::msg::CandidateTrajectories msg;
 
-  add_trajectory(msg, "SafePlanner", 10.0, now);
-  add_trajectory(msg, "RejectedPlanner", -999.0, now);
+  add_trajectory(msg, "DiffusionPlanner_Safe", 10.0, now);
+  add_trajectory(msg, "DiffusionPlanner_Rejected", -999.0, now);
 
   traj_pub_->publish(msg);
 
   ASSERT_TRUE(spin_until(
-    [this] { return last_output_ != nullptr && !last_output_->candidate_trajectories.empty(); },
+    [this] {
+      return last_output_ != nullptr && !last_output_->scored_candidate_trajectories.empty();
+    },
     rclcpp::Duration(std::chrono::seconds(1))));
 
-  EXPECT_EQ(last_output_->candidate_trajectories.size(), 1u);
+  EXPECT_EQ(last_output_->scored_candidate_trajectories.size(), 1u);
   ASSERT_EQ(last_output_->generator_info.size(), 1u);
-  EXPECT_EQ(last_output_->generator_info.front().generator_name.data, "SafePlanner");
+  EXPECT_EQ(last_output_->generator_info.front().generator_name.data, "DiffusionPlanner_Safe");
 }
 
 TEST_F(TrajectorySelectorNodeTest, ImmediateOutputOnGenerativeInput)
@@ -316,7 +318,7 @@ TEST_F(TrajectorySelectorNodeTest, HandlesPluginRejection)
   traj_pub_->publish(msg);
 
   ASSERT_TRUE(spin_until([this] { return last_output_ != nullptr; }));
-  EXPECT_EQ(last_output_->candidate_trajectories.size(), 0u);
+  EXPECT_EQ(last_output_->scored_candidate_trajectories.size(), 0u);
 }
 
 TEST_F(TrajectorySelectorNodeTest, NoPublishWhenOdometryMissing)

@@ -8,7 +8,7 @@ package:
   provider: autoware
 
 launch:
-  plugin: autoware::control_evaluator::ControlEvaluatorNode
+  plugin: control_diagnostics::ControlEvaluatorNode
   executable: control_evaluator
   node_output: screen
 
@@ -32,26 +32,41 @@ subscribers:
     message_type: autoware_perception_msgs/msg/PredictedObjects
   - name: blind_spot
     message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+    remap_target: /planning/planning_factors/blind_spot
   - name: crosswalk
     message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+    remap_target: /planning/planning_factors/crosswalk
   - name: detection_area
     message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+    remap_target: /planning/planning_factors/detection_area
   - name: intersection
     message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+    remap_target: /planning/planning_factors/intersection
+  - name: merge_from_private
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+    remap_target: /planning/planning_factors/merge_from_private
+  - name: no_drivable_lane
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+    remap_target: /planning/planning_factors/no_drivable_lane
   - name: no_stopping_area
     message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+    remap_target: /planning/planning_factors/no_stopping_area
   - name: stop_line
     message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+    remap_target: /planning/planning_factors/stop_line
   - name: traffic_light
     message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+    remap_target: /planning/planning_factors/traffic_light
   - name: virtual_traffic_light
     message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+    remap_target: /planning/planning_factors/virtual_traffic_light
   - name: walkway
     message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+    remap_target: /planning/planning_factors/walkway
 
 publishers:
   - name: metrics
-    message_type: autoware_control_msgs/msg/ControlEvaluation
+    message_type: tier4_metric_msgs/msg/MetricArray
 
 # parameters
 param_files:

@@ -36,9 +36,7 @@ clients:
     remap_target: /planning/mission_planning/mission_planner/set_preferred_primitive
 
 # parameters
-param_files:
-  - name: manual_lane_change_handler_param
-    default: config/manual_lane_change_handler.param.yaml
+param_files: []
 
 param_values: []
 

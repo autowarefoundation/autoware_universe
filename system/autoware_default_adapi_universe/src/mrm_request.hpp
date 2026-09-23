@@ -16,7 +16,8 @@
 #define MRM_REQUEST_HPP_
 
 #include <autoware/adapi_specs/fail_safe.hpp>
-#include <diagnostic_updater/diagnostic_updater.hpp>
+#include <autoware/agnocast_wrapper/diagnostic_updater.hpp>
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <string>
@@ -28,7 +29,7 @@
 namespace autoware::default_adapi
 {
 
-class MrmRequestNode : public rclcpp::Node
+class MrmRequestNode : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit MrmRequestNode(const rclcpp::NodeOptions & options);
@@ -38,8 +39,8 @@ private:
   using MrmRequestList = autoware::adapi_specs::fail_safe::MrmRequestList;
   using MrmRequestItem = autoware_adapi_v1_msgs::msg::MrmRequest;
 
-  Srv<SendMrmRequest> srv_send_mrm_request_;
-  Pub<MrmRequestList> pub_mrm_request_list_;
+  Srv<SendMrmRequest, NodeT> srv_send_mrm_request_;
+  Pub<MrmRequestList, NodeT> pub_mrm_request_list_;
 
   void diagnose_delegate(diagnostic_updater::DiagnosticStatusWrapper & stat);
   void publish_mrm_request_list();
@@ -47,7 +48,7 @@ private:
     const SendMrmRequest::Service::Request::SharedPtr req,
     const SendMrmRequest::Service::Response::SharedPtr res);
 
-  diagnostic_updater::Updater diagnostics_;
+  autoware::agnocast_wrapper::diagnostic_updater::Updater diagnostics_;
   std::unordered_map<std::string, MrmRequestItem> mrm_requests_;
 };
 

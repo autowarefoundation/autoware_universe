@@ -11,6 +11,7 @@
   <arg name="~/unknowns" default="/diagnostics_graph/unknowns"/>
   <arg name="~/reset" default="/diagnostics_graph/reset"/>
   <arg name="~/availability" default="/system/command_mode/availability"/>
+  <arg name="~/set_initializing" default="/system/aggregator/set_initializing"/>
 
   <node pkg="autoware_diagnostic_graph_aggregator" exec="aggregator_node">
     <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
@@ -22,6 +23,7 @@
     <remap from="~/status" to="$(var ~/status)"/>
     <remap from="~/unknowns" to="$(var ~/unknowns)"/>
     <remap from="~/reset" to="$(var ~/reset)"/>
+    <remap from="~/set_initializing" to="$(var ~/set_initializing)"/>
     <remap from="~/availability" to="$(var ~/availability)"/>
   </node>
 

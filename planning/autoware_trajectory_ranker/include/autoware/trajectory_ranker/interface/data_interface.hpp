@@ -105,8 +105,6 @@ public:
 
   std::shared_ptr<TrajectoryPoints> original() const { return core_data_->original; }
 
-  std::shared_ptr<PredictedObjects> objects() const { return core_data_->objects; }
-
   std::shared_ptr<SteeringReport> steering() const { return core_data_->steering; }
 
   std::shared_ptr<lanelet::ConstLanelets> preferred_lanes() const

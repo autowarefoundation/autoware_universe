@@ -44,7 +44,7 @@ ExternalCmdConverterNode::ExternalCmdConverterNode(const rclcpp::NodeOptions & n
   emergency_stop_timeout_ = declare_parameter<double>("emergency_stop_timeout");
 
   const auto period_ns = rclcpp::Rate(timer_rate).period();
-  rate_check_timer_ = rclcpp::create_timer(
+  rate_check_timer_ = autoware::agnocast_wrapper::create_timer(
     this, get_clock(), period_ns, std::bind(&ExternalCmdConverterNode::on_timer, this));
 
   // Parameter for accel/brake map
@@ -67,9 +67,6 @@ ExternalCmdConverterNode::ExternalCmdConverterNode(const rclcpp::NodeOptions & n
   // Diagnostics
   updater_.setHardwareID("external_cmd_converter");
   updater_.add("remote_control_topic_status", this, &ExternalCmdConverterNode::check_topic_status);
-
-  // Set default values
-  current_gear_cmd_ = std::make_shared<GearCommand>();
 }
 
 void ExternalCmdConverterNode::on_timer()
@@ -77,7 +74,8 @@ void ExternalCmdConverterNode::on_timer()
   updater_.force_update();
 }
 
-void ExternalCmdConverterNode::on_heartbeat(const ManualOperatorHeartbeat::ConstSharedPtr msg)
+void ExternalCmdConverterNode::on_heartbeat(
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(ManualOperatorHeartbeat) & msg)
 {
   if (msg->ready) {
     latest_heartbeat_received_time_ = std::make_shared<rclcpp::Time>(this->now());
@@ -85,15 +83,16 @@ void ExternalCmdConverterNode::on_heartbeat(const ManualOperatorHeartbeat::Const
   updater_.force_update();
 }
 
-void ExternalCmdConverterNode::on_pedals_cmd(const PedalsCommand::ConstSharedPtr pedals)
+void ExternalCmdConverterNode::on_pedals_cmd(
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(PedalsCommand) & pedals)
 {
   // Save received time for rate check
   latest_cmd_received_time_ = std::make_shared<rclcpp::Time>(this->now());
 
   // take data from subscribers
-  current_velocity_ptr_ = velocity_sub_.take_data();
-  current_gear_cmd_ = gear_cmd_sub_.take_data();
-  const auto steering = steering_cmd_sub_.take_data();
+  current_velocity_ptr_ = velocity_sub_->take_data();
+  current_gear_cmd_ = gear_cmd_sub_->take_data();
+  const auto steering = steering_cmd_sub_->take_data();
 
   // Wait for input data
   if (!acc_map_initialized_ || !current_velocity_ptr_ || !current_gear_cmd_ || !steering) {
@@ -126,14 +125,14 @@ void ExternalCmdConverterNode::on_pedals_cmd(const PedalsCommand::ConstSharedPtr
   }
 
   // Publish ControlCommand
-  autoware_control_msgs::msg::Control output;
-  output.stamp = pedals->stamp;
-  output.lateral.steering_tire_angle = steering->steering_tire_angle;
-  output.lateral.steering_tire_rotation_rate = steering->steering_tire_velocity;
-  output.longitudinal.velocity = static_cast<float>(ref_velocity);
-  output.longitudinal.acceleration = static_cast<float>(ref_acceleration);
+  auto output = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(cmd_pub_);
+  output->stamp = pedals->stamp;
+  output->lateral.steering_tire_angle = steering->steering_tire_angle;
+  output->lateral.steering_tire_rotation_rate = steering->steering_tire_velocity;
+  output->longitudinal.velocity = static_cast<float>(ref_velocity);
+  output->longitudinal.acceleration = static_cast<float>(ref_acceleration);
 
-  cmd_pub_->publish(output);
+  cmd_pub_->publish(std::move(output));
 }
 
 double ExternalCmdConverterNode::calculate_acc(const PedalsCommand & cmd, const double vel)
@@ -181,7 +180,7 @@ void ExternalCmdConverterNode::check_topic_status(
   using diagnostic_msgs::msg::DiagnosticStatus;
   DiagnosticStatus status;
 
-  current_gate_mode_ = gate_mode_sub_.take_data();
+  current_gate_mode_ = gate_mode_sub_->take_data();
 
   if (!check_emergency_stop_topic_timeout()) {
     status.level = DiagnosticStatus::ERROR;

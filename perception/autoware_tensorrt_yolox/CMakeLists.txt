@@ -68,6 +68,7 @@ endif()
 ament_auto_add_library(${PROJECT_NAME} SHARED
   src/tensorrt_yolox.cpp
   src/label.cpp
+  src/tensorrt_yolox_detector.cpp
 )
 
 ament_target_dependencies(${PROJECT_NAME}
@@ -150,7 +151,6 @@ rclcpp_components_register_node(yolox_single_image_inference_node
 
 ament_auto_add_library(${PROJECT_NAME}_node SHARED
   src/tensorrt_yolox_node.cpp
-  src/tensorrt_yolox_detector.cpp
 )
 
 ament_target_dependencies(${PROJECT_NAME}_node

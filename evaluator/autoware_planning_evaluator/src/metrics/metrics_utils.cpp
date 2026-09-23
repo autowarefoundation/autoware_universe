@@ -86,12 +86,16 @@ Trajectory get_lookahead_trajectory(
 
 double calc_lookahead_trajectory_distance(const Trajectory & traj, const Pose & ego_pose)
 {
+  if (traj.points.empty()) {
+    return 0.0;
+  }
+
   const auto ego_index =
     autoware::motion_utils::findNearestSegmentIndex(traj.points, ego_pose.position);
   double dist = 0.0;
   auto curr_point_it = std::next(traj.points.begin(), ego_index);
   auto prev_point_it = curr_point_it;
-  for (size_t i = 0; i < traj.points.size(); ++i) {
+  while (curr_point_it != traj.points.end()) {
     const auto d =
       autoware_utils::calc_distance2d(prev_point_it->pose.position, curr_point_it->pose.position);
     dist += d;
