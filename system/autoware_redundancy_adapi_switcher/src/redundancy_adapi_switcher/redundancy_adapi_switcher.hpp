@@ -15,6 +15,7 @@
 #ifndef REDUNDANCY_ADAPI_SWITCHER__REDUNDANCY_ADAPI_SWITCHER_HPP_
 #define REDUNDANCY_ADAPI_SWITCHER__REDUNDANCY_ADAPI_SWITCHER_HPP_
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_adapi_v1_msgs/msg/mrm_state.hpp>
@@ -34,7 +35,7 @@ using tier4_system_msgs::msg::ActiveControlUnit;
 using tier4_system_msgs::msg::DiagGraphStatus;
 using tier4_system_msgs::msg::DiagGraphStruct;
 
-class RedundancyAdapiSwitcher : public rclcpp::Node
+class RedundancyAdapiSwitcher : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit RedundancyAdapiSwitcher(const rclcpp::NodeOptions & node_options);
@@ -61,15 +62,15 @@ private:
   std::optional<DiagGraphStruct> pending_diag_struct_;
 
   // Subscribers
-  rclcpp::Subscription<MrmState>::SharedPtr sub_mrm_state_;
-  rclcpp::Subscription<DiagGraphStruct>::SharedPtr sub_diag_struct_;
-  rclcpp::Subscription<DiagGraphStatus>::SharedPtr sub_diag_status_;
-  rclcpp::Subscription<ActiveControlUnit>::SharedPtr sub_active_control_unit_;
+  AUTOWARE_SUBSCRIPTION_PTR(MrmState) sub_mrm_state_;
+  AUTOWARE_SUBSCRIPTION_PTR(DiagGraphStruct) sub_diag_struct_;
+  AUTOWARE_SUBSCRIPTION_PTR(DiagGraphStatus) sub_diag_status_;
+  AUTOWARE_SUBSCRIPTION_PTR(ActiveControlUnit) sub_active_control_unit_;
 
   // Publishers
-  rclcpp::Publisher<MrmState>::SharedPtr pub_mrm_state_;
-  rclcpp::Publisher<DiagGraphStruct>::SharedPtr pub_diag_struct_;
-  rclcpp::Publisher<DiagGraphStatus>::SharedPtr pub_diag_status_;
+  AUTOWARE_PUBLISHER_PTR(MrmState) pub_mrm_state_;
+  AUTOWARE_PUBLISHER_PTR(DiagGraphStruct) pub_diag_struct_;
+  AUTOWARE_PUBLISHER_PTR(DiagGraphStatus) pub_diag_status_;
 };
 
 }  // namespace autoware::redundancy_adapi_switcher
