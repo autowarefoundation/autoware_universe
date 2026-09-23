@@ -28,7 +28,7 @@ subscribers:
 
 publishers:
   - name: metrics
-    message_type: autoware_planning_msgs/msg/PlanningAnalysis
+    message_type: tier4_metric_msgs/msg/MetricArray
     remap_target: ~/metrics
 
 # parameters

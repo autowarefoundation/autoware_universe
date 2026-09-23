@@ -112,8 +112,8 @@ private:
   thrust::device_vector<std::uint32_t> device_indexes_tensor_;
   thrust::device_vector<std::uint32_t> device_sorted_indexes_tensor_;
   thrust::device_vector<std::int32_t> device_segment_offsets_;
-  thrust::device_vector<std::int32_t> device_max_ring_;
-  thrust::device_vector<std::int32_t> device_max_points_per_ring_;
+  thrust::device_vector<std::int32_t> device_rings_overflowed_;
+  thrust::device_vector<std::int32_t> device_points_per_ring_overflowed_;
 
   thrust::device_vector<std::uint8_t> device_scratch_workspace_;
   std::size_t workspace_bytes_{0};

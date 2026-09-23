@@ -12,7 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "traffic_light_selector.hpp"
+#include "autoware/traffic_light_selector/traffic_light_selector.hpp"
+
+#include "traffic_light_selector_utils.hpp"
 
 #include <sensor_msgs/msg/region_of_interest.hpp>
 

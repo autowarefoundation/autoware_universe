@@ -77,11 +77,19 @@ struct Violation
     return arc_length_to_cross_point < other.arc_length_to_cross_point;
   }
 };
+using Violations = std::vector<Violation>;
 
 /// @brief result of compliance check
 struct ComplianceResult
 {
-  std::vector<Violation> violations;
+  Violations violations;
+};
+
+/// @brief how the current amber phase was reached
+enum class AmberState {
+  kNotAmber,      ///< not currently in an amber state
+  kFromGreen,     ///< amber reached from green circle
+  kFromNonGreen,  ///< amber reached from non-green
 };
 
 /// @brief parameters for traffic light signal status tracking
@@ -101,18 +109,22 @@ struct Parameters
   double crossing_time_limit{2.75};
   bool treat_amber_light_as_red_light{false};
   bool treat_unknown_light_as_red_light{false};
+  bool enable_arrow_aware_amber_passing{true};
   double stop_overshoot_margin{0.5};
   double allow_if_cannot_stop_distance{0.0};
-  double stable_duration_threshold_red{0.0};
-  double stable_duration_threshold_amber{0.0};
-  double stable_duration_threshold_unknown{0.0};
-  double amber_rejection_hysteresis_duration{0.0};
+  double min_lookahead_distance{0.0};
   double ego_stopped_velocity_threshold{0.01};
+  StatusTrackerParameters status_tracker_parameters;
   struct CheckedTrajectoryLength
   {
     double deceleration_limit{2.0};
     double jerk_limit{2.0};
   } checked_trajectory_length;
+  struct AmberRejection
+  {
+    double hysteresis_duration{0.0};
+    bool reject_if_stop_detected{false};
+  } amber_rejection;
 };
 
 }  // namespace autoware::traffic_light_compliance_checker

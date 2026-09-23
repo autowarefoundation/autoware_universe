@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "../src/traffic_light_map_based_detector.hpp"
+#include "autoware/traffic_light_map_based_detector/traffic_light_map_based_detector.hpp"
 
 #include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/autoware_traffic_light.hpp>
@@ -231,6 +231,18 @@ TEST(TrafficLightMapBasedDetectorTest, ConstructorThrowsWhenMaxDetectionRangeIsN
   // Arrange
   auto config = make_default_config();
   config.max_detection_range = -1.0;
+  const auto map = make_test_map();
+
+  // Act & Assert
+  EXPECT_THROW(TrafficLightMapBasedDetector(config, map), std::invalid_argument);
+}
+
+TEST(TrafficLightMapBasedDetectorTest, ConstructorThrowsWhenTimestampOffsetRangeIsInverted)
+{
+  // Arrange
+  auto config = make_default_config();
+  config.min_timestamp_offset = 0.1;
+  config.max_timestamp_offset = -0.1;
   const auto map = make_test_map();
 
   // Act & Assert
