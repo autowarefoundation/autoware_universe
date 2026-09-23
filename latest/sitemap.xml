@@ -1277,6 +1277,38 @@
          <lastmod>2026-09-23</lastmod>
     </url>
     <url>
+         <loc>https://autowarefoundation.github.io/autoware_universe/latest/system/autoware_redundancy_switcher_interface/</loc>
+         <lastmod>2026-09-23</lastmod>
+    </url>
+    <url>
+         <loc>https://autowarefoundation.github.io/autoware_universe/latest/system/autoware_redundancy_switcher_interface/docs/ADAPTER_THREAD_SAFETY/</loc>
+         <lastmod>2026-09-23</lastmod>
+    </url>
+    <url>
+         <loc>https://autowarefoundation.github.io/autoware_universe/latest/system/autoware_redundancy_switcher_interface/docs/DESIGN/</loc>
+         <lastmod>2026-09-23</lastmod>
+    </url>
+    <url>
+         <loc>https://autowarefoundation.github.io/autoware_universe/latest/system/autoware_redundancy_switcher_interface/docs/PLUGIN_DEVELOPMENT_GUIDE/</loc>
+         <lastmod>2026-09-23</lastmod>
+    </url>
+    <url>
+         <loc>https://autowarefoundation.github.io/autoware_universe/latest/system/autoware_redundancy_switcher_interface/docs/REQUIREMENTS/</loc>
+         <lastmod>2026-09-23</lastmod>
+    </url>
+    <url>
+         <loc>https://autowarefoundation.github.io/autoware_universe/latest/system/autoware_redundancy_switcher_interface/docs/TERMINOLOGY/</loc>
+         <lastmod>2026-09-23</lastmod>
+    </url>
+    <url>
+         <loc>https://autowarefoundation.github.io/autoware_universe/latest/system/autoware_redundancy_switcher_interface_plugins/</loc>
+         <lastmod>2026-09-23</lastmod>
+    </url>
+    <url>
+         <loc>https://autowarefoundation.github.io/autoware_universe/latest/system/autoware_redundancy_switcher_interface_plugins/docs/DESIGN/</loc>
+         <lastmod>2026-09-23</lastmod>
+    </url>
+    <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/latest/system/autoware_system_monitor/</loc>
          <lastmod>2026-09-23</lastmod>
     </url>
