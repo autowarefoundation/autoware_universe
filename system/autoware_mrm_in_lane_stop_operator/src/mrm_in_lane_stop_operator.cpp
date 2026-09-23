@@ -86,7 +86,6 @@ const ModeConfig * MrmInLaneStopOperator::find_mode_by_id(const uint32_t id) con
 void MrmInLaneStopOperator::cancel_active_mode()
 {
   if (!active_mode_id_.has_value()) return;
-  if (skip_relay_call_) return;
 
   const auto * current = find_mode_by_id(active_mode_id_.value());
   if (current) cancel(*current);
@@ -94,7 +93,7 @@ void MrmInLaneStopOperator::cancel_active_mode()
 
 void MrmInLaneStopOperator::activate_mode(const ModeConfig & mode, const uint32_t mode_id)
 {
-  if (!skip_relay_call_ && !execute(mode)) {
+  if (!execute(mode)) {
     RCLCPP_WARN(
       get_logger(),
       "Failed to enable one or more relay services for mode=%u. Keep active_mode_id_ unchanged.",
@@ -132,8 +131,13 @@ void MrmInLaneStopOperator::on_request(DrivingModeRequest::ConstSharedPtr msg)
 bool MrmInLaneStopOperator::execute(const ModeConfig & mode)
 {
   publish_trigger(true, mode.profile);
-  const bool relay_success = call_relay(false);
 
+  if (skip_relay_call_) {
+    RCLCPP_INFO(get_logger(), "Execute MRM (relay call skipped): %s", mode.name.c_str());
+    return true;
+  }
+
+  const bool relay_success = call_relay(false);
   if (relay_success) {
     RCLCPP_INFO(get_logger(), "Execute MRM: %s", mode.name.c_str());
   } else {
@@ -146,7 +150,9 @@ bool MrmInLaneStopOperator::execute(const ModeConfig & mode)
 void MrmInLaneStopOperator::cancel(const ModeConfig & mode)
 {
   publish_trigger(false, mode.profile);
-  call_relay(true);
+  if (!skip_relay_call_) {
+    call_relay(true);
+  }
   RCLCPP_INFO(get_logger(), "Cancel MRM: %s", mode.name.c_str());
 }
 
