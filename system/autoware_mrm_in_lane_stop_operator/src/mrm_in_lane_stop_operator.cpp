@@ -123,6 +123,11 @@ void MrmInLaneStopOperator::on_request(DrivingModeRequest::ConstSharedPtr msg)
   if (active_mode_id_.has_value()) {
     const auto * current = find_mode_by_id(active_mode_id_.value());
     if (current && current->profile == requested->profile) {
+      if (active_mode_id_.value() != requested_id) {
+        RCLCPP_INFO(
+          get_logger(), "Mode changed (%s -> %s) but profile unchanged; keeping it active.",
+          current->name.c_str(), requested->name.c_str());
+      }
       return;  // Same profile already active; nothing to do even if the mode id differs.
     }
   }
