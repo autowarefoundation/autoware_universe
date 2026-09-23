@@ -205,13 +205,32 @@ class SensorRegistry:
             return True
 
         time_diff = current_time - sensor.last_publish_time
-        # A sensor producing at exactly the publish rate lands on time_diff
-        # values that fall a float rounding step short of the period, and
-        # those frames are dropped. The next frame then arrives a whole period
-        # late, so the sensor publishes at a fraction of the rate it was
-        # configured for. The tolerance is orders of magnitude below any
-        # simulation step, so it cannot let a genuinely early frame through.
-        return time_diff >= (1.0 / sensor.frequency_hz) - 1e-9
+        return time_diff >= (1.0 / sensor.frequency_hz) - self._tolerance(sensor)
+
+    @staticmethod
+    def _tolerance(sensor: SensorConfig) -> float:
+        """Return how early a frame may arrive and still be published.
+
+        A sensor producing at exactly the publish rate lands on time_diff
+        values that fall a float rounding step short of the period, and those
+        frames are dropped. The next frame then arrives a whole period late, so
+        the sensor publishes at a fraction of the rate it was configured for.
+        The default tolerance is orders of magnitude below any simulation step,
+        so it cannot let a genuinely early frame through.
+
+        A sensor whose mapping sets sensor_tick needs more room. CARLA cannot
+        capture between steps, so it holds the requested average by alternating
+        shorter and longer gaps: a 0.04 s tick at a 1/60 s step arrives after
+        two steps and then three. Measured against a 25 Hz publish rate, the
+        two-step arrivals are 6.7 ms early, the throttle drops each one, and
+        the sensor publishes at 15 Hz although CARLA delivered 25. Half the
+        sensor's own tick covers that skew while staying well inside the
+        interval, so a frame of the next capture cycle can still not pass.
+        """
+        sensor_tick = (sensor.parameters or {}).get("sensor_tick")
+        if not sensor_tick:
+            return 1e-9
+        return float(sensor_tick) / 2.0
 
     def get_all_sensors(self) -> Dict[str, SensorConfig]:
         """

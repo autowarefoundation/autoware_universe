@@ -25,8 +25,7 @@ namespace autoware::trajectory_ranker::metrics
 {
 
 void TravelDistance::evaluate(
-  const std::shared_ptr<autoware::trajectory_ranker::DataInterface> & result,
-  const float max_value) const
+  const std::shared_ptr<autoware::trajectory_ranker::DataInterface> & result) const
 {
   const auto points = result->points();
   if (!points || points->empty()) {
@@ -35,7 +34,7 @@ void TravelDistance::evaluate(
 
   constexpr float epsilon = 1.0e-3f;
   std::vector<float> distances(points->size(), 0.0f);
-  if (max_value < epsilon) {
+  if (params_.maximum < epsilon) {
     result->set_metric(index(), distances);
     return;
   }
@@ -43,11 +42,16 @@ void TravelDistance::evaluate(
   for (size_t i = 0; i < result->points()->size(); i++) {
     distances.at(i) = std::min(
       1.0f,
-      static_cast<float>(autoware::motion_utils::calcSignedArcLength(*result->points(), 0L, i)) /
-        max_value);
+      static_cast<float>(
+        autoware::motion_utils::calcSignedArcLength(*result->points(), 0L, i) / params_.maximum));
   }
 
   result->set_metric(index(), distances);
+}
+
+void TravelDistance::setup_parameters(const trajectory_ranker_params::Params::Evaluation & params)
+{
+  params_ = params.travel_distance;
 }
 
 }  // namespace autoware::trajectory_ranker::metrics

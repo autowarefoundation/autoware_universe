@@ -20,11 +20,14 @@ ament_auto_add_library(autoware_planning_validator_component SHARED
 
 ament_target_dependencies(autoware_planning_validator_component
   autoware_adapi_v1_msgs
+  autoware_agnocast_wrapper
 )
 
-rclcpp_components_register_node(${PROJECT_NAME}_component
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}_component
   PLUGIN "autoware::planning_validator::PlanningValidatorNode"
   EXECUTABLE ${PROJECT_NAME}_node
+  ROS2_EXECUTOR MultiThreadedExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
 )
 
 # invalid trajectory publisher (for debug)
@@ -52,7 +55,7 @@ else()
     target_link_libraries(${PROJECT_NAME}_component "${cpp_typesupport_target}")
 endif()
 
-if(BUILD_TESTING)
+if(BUILD_TESTING AND NOT "$ENV{ENABLE_AGNOCAST}" STREQUAL "1")
   find_package(autoware_planning_validator_test_utils REQUIRED)
   ament_add_ros_isolated_gtest(test_autoware_planning_validator
     test/src/test_main.cpp
