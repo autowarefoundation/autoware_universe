@@ -25,13 +25,13 @@ When `~/input/reset_mrm` is called, the node:
 
 At startup, a 1-second timer advances the following state machine:
 
-| State                         | Action                                                      |
-| ----------------------------- | ----------------------------------------------------------- |
-| `WAIT_SERVICES_READY`         | Wait until all required output services are available       |
-| `SET_AGGREGATOR_INIT`         | Call `set_aggregator_initializing(true)`                    |
-| `RESET_SWITCHER`              | Call `reset_redundancy_switcher()`                          |
-| `SET_SWITCHER_INTERFACE_INIT` | Call `set_redundancy_switcher_interface_initializing(true)` |
-| `DONE`                        | Stop init timer and start periodic 5-second check           |
+| State                         | Action                                                                                |
+| ----------------------------- | -------------------------------------------------------------------------------------- |
+| `WAIT_SERVICES_READY`         | Wait until all required output services are available (redundancy-switcher services are required only when `is_redundant=true`) |
+| `SET_AGGREGATOR_INIT`         | Call `set_aggregator_initializing(true)`                                              |
+| `RESET_SWITCHER`              | Call `reset_redundancy_switcher()` (skipped, treated as success, when `is_redundant=false`) |
+| `SET_SWITCHER_INTERFACE_INIT` | Call `set_redundancy_switcher_interface_initializing(true)` (skipped, treated as success, when `is_redundant=false`) |
+| `DONE`                        | Stop init timer and start periodic 5-second check                                     |
 
 ### 3. Ready-state transition
 
@@ -50,8 +50,8 @@ When all of the following are true:
 it performs the following actions only when `enable_autoware_ready_actions=true`:
 
 1. `set_aggregator_initializing(false)`
-2. `reset_redundancy_switcher()`
-3. `set_redundancy_switcher_interface_initializing(false)`
+2. `reset_redundancy_switcher()` (skipped, treated as success, when `is_redundant=false`)
+3. `set_redundancy_switcher_interface_initializing(false)` (skipped, treated as success, when `is_redundant=false`)
 
 If the system is still initializing and not yet ready, a 5-second periodic timer retries `reset_redundancy_switcher()`.
 
@@ -89,7 +89,7 @@ If the system is still initializing and not yet ready, a 5-second periodic timer
 | Name                            | Type | Default | Description                                                                                                                      |
 | ------------------------------- | ---- | ------- | -------------------------------------------------------------------------------------------------------------------------------- |
 | `service_timeout_ms`            | int  | 200     | Timeout for each service call                                                                                                    |
-| `is_redundant`                  | bool | true    | Enables `reset_redundancy_switcher` calls. When `false`, all reset-redundancy-switcher calls are skipped and treated as success. |
+| `is_redundant`                  | bool | true    | Enables redundancy-switcher orchestration (`reset_redundancy_switcher` and `set_redundancy_switcher_interface_initializing` calls, and waiting for their services at startup). When `false`, these calls are skipped and treated as success. |
 | `enable_autoware_ready_actions` | bool | true    | Enables service calls triggered by Autoware-ready conditions (localization initialized, route set, Autoware control enabled).    |
 
 ---
