@@ -47,6 +47,9 @@ public:
   std::optional<types::DynamicObjectList> processMessage(
     AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_perception_msgs::msg::DetectedObjects) msg);
   void push(const types::DynamicObjectList & objects, const types::AssociationResult & association);
+  void push(
+    const types::DynamicObjectList & objects, const types::AssociationResult & association,
+    const rclcpp::Time & now);
   void updateTimingStatus(const rclcpp::Time & now, const rclcpp::Time & objects_time);
 
   bool isTimeInitialized() const { return initial_count_ > 0; }
@@ -66,6 +69,7 @@ public:
     interval_var = interval_var_;
   }
   rclcpp::Time getLatestMeasurementTime() const { return latest_measurement_time_; }
+  rclcpp::Time getLatestMessageTime() const { return latest_message_time_; }
 
 private:
   const types::InputChannel channel_;
@@ -97,12 +101,17 @@ public:
 
   void setTriggerFunction(std::function<void(size_t)> func_trigger);
   size_t getTargetChannelIdx() const { return target_stream_idx_; }
+  double getTargetStreamLatency() const { return target_stream_latency_; }
   std::optional<types::DynamicObjectList> processMessage(
     const size_t channel_index,
     AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_perception_msgs::msg::DetectedObjects) msg);
   void push(
     const size_t channel_index, const types::DynamicObjectList & objects,
     const types::AssociationResult & association);
+  void push(
+    const size_t channel_index, const types::DynamicObjectList & objects,
+    const types::AssociationResult & association, const rclcpp::Time & now);
+  void optimizeChannelTimings(const rclcpp::Time & now);
 
   bool getObjects(
     const rclcpp::Time & now, types::ObjectsWithAssociationList & objects_with_associations);
@@ -124,12 +133,13 @@ private:
   double target_stream_latency_std_{0.04};   // [s]
   double target_stream_interval_{0.1};       // [s]
   double target_stream_interval_std_{0.02};  // [s]
+  std::optional<rclcpp::Time> last_optimization_time_;
 
 private:
   void getObjectTimeInterval(
     const rclcpp::Time & now, rclcpp::Time & object_latest_time,
     rclcpp::Time & object_earliest_time) const;
-  void optimizeTimings();
+  bool isStreamFresh(const InputStream & input_stream, const rclcpp::Time & now) const;
 };
 
 }  // namespace autoware::multi_object_tracker

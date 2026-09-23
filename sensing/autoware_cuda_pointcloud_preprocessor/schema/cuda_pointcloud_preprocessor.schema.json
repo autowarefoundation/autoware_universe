@@ -54,15 +54,27 @@
           "default": 691200,
           "minimum": 1
         },
+        "max_ring_count": {
+          "type": "integer",
+          "description": "Maximum number of LiDAR rings used for startup allocation of ring outlier filter CUDA buffers.",
+          "default": 128,
+          "minimum": 1
+        },
+        "max_points_per_ring": {
+          "type": "integer",
+          "description": "Maximum number of points per ring used for startup allocation of ring outlier filter CUDA buffers.",
+          "default": 7200,
+          "minimum": 1
+        },
         "max_twist_frequency_hz": {
           "type": "number",
-          "description": "Maximum expected twist input frequency. Used with twist_imu_queue_window_sec to bound the twist queue.",
+          "description": "Maximum expected twist input frequency. Used to bound the twist queue.",
           "default": 200.0,
           "exclusiveMinimum": 0.0
         },
         "max_imu_frequency_hz": {
           "type": "number",
-          "description": "Maximum expected IMU input frequency. Used with twist_imu_queue_window_sec to bound the IMU queue.",
+          "description": "Maximum expected IMU input frequency. Used to bound the IMU queue.",
           "default": 200.0,
           "exclusiveMinimum": 0.0
         },
@@ -111,6 +123,8 @@
         "processing_time_threshold_sec",
         "timestamp_mismatch_fraction_threshold",
         "max_input_point_count",
+        "max_ring_count",
+        "max_points_per_ring",
         "max_twist_frequency_hz",
         "max_imu_frequency_hz",
         "crop_box.min_x",

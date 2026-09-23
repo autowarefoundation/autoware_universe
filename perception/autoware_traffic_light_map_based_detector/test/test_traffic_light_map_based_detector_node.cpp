@@ -17,6 +17,7 @@
 #include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/autoware_traffic_light.hpp>
 #include <rclcpp/rclcpp.hpp>
+#include <tf2/LinearMath/Quaternion.hpp>
 
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <geometry_msgs/msg/transform_stamped.hpp>
@@ -24,7 +25,7 @@
 #include <tier4_perception_msgs/msg/traffic_light_roi_array.hpp>
 
 #include <gtest/gtest.h>
-#include <tf2_ros/static_transform_broadcaster.h>
+#include <tf2_ros/transform_broadcaster.h>
 
 #include <chrono>
 #include <memory>
@@ -48,17 +49,17 @@ rclcpp::NodeOptions make_node_options()
   options.append_parameter_override("max_vibration_depth", 0.5);
   options.append_parameter_override("max_detection_range", 200.0);
   options.append_parameter_override("min_timestamp_offset", -0.01);
-  options.append_parameter_override("max_timestamp_offset", 0.0);
+  options.append_parameter_override("max_timestamp_offset", 0.1);
   options.append_parameter_override("car_traffic_light_max_angle_range", 40.0);
   options.append_parameter_override("pedestrian_traffic_light_max_angle_range", 80.0);
   return options;
 }
 
-CameraInfo make_camera_info(const rclcpp::Time & stamp)
+CameraInfo make_camera_info(double stamp_sec)
 {
   CameraInfo info;
   info.header.frame_id = "camera_optical_link";
-  info.header.stamp = stamp;
+  info.header.stamp = rclcpp::Time(static_cast<int64_t>(stamp_sec * 1e9));
   info.width = 640;
   info.height = 480;
   info.p = {400.0, 0.0, 320.0, 0.0, 0.0, 400.0, 240.0, 0.0, 0.0, 0.0, 1.0, 0.0};
@@ -69,18 +70,25 @@ CameraInfo make_camera_info(const rclcpp::Time & stamp)
   return info;
 }
 
-/// Camera at map origin, looking along +x in map frame.
+/// Camera at map origin, looking along +x in map frame, optionally yawed by
+/// `yaw_deg` around the map's z axis.
 /// Optical convention: z=forward(map +x), x=right(map -y), y=down(map -z).
-geometry_msgs::msg::TransformStamped make_map_to_camera_transform(const rclcpp::Time & stamp)
+geometry_msgs::msg::TransformStamped make_map_to_camera_transform(
+  double stamp_sec, double yaw_deg = 0.0)
 {
+  const tf2::Quaternion base_rotation(-0.5, 0.5, -0.5, 0.5);
+  tf2::Quaternion yaw_rotation;
+  yaw_rotation.setRPY(0.0, 0.0, yaw_deg * M_PI / 180.0);
+  const tf2::Quaternion rotation = yaw_rotation * base_rotation;
+
   geometry_msgs::msg::TransformStamped transform;
-  transform.header.stamp = stamp;
+  transform.header.stamp = rclcpp::Time(static_cast<int64_t>(stamp_sec * 1e9));
   transform.header.frame_id = "map";
   transform.child_frame_id = "camera_optical_link";
-  transform.transform.rotation.w = 0.5;
-  transform.transform.rotation.x = -0.5;
-  transform.transform.rotation.y = 0.5;
-  transform.transform.rotation.z = -0.5;
+  transform.transform.rotation.w = rotation.w();
+  transform.transform.rotation.x = rotation.x();
+  transform.transform.rotation.y = rotation.y();
+  transform.transform.rotation.z = rotation.z();
   return transform;
 }
 
@@ -191,24 +199,41 @@ TEST(MapBasedDetectorNodeTest, PublishesRoiWhenAllInputsAreReceived)
     "/traffic_light_map_based_detector/expect/rois", rclcpp::QoS(1),
     [&](const TrafficLightRoiArray::SharedPtr msg) { received_expect_rois = msg; });
 
-  tf2_ros::StaticTransformBroadcaster tf_broadcaster(test_node);
-  const auto tf_map_to_camera = make_map_to_camera_transform(node->now());
-  const auto camera_info = make_camera_info(node->now());
+  tf2_ros::TransformBroadcaster tf_broadcaster(test_node);
+
+  const auto stamp_sec = 0.3;
+  const double max_timestamp_offset = 0.1;  // same as value set in make_node_options()
+
+  const auto camera_info = make_camera_info(stamp_sec);
+  const auto transform_with_stamp = make_map_to_camera_transform(stamp_sec, 0.0);
+  const auto transform_with_offset_stamp =
+    make_map_to_camera_transform(stamp_sec + max_timestamp_offset, 20.0);
 
   // Act
-  tf_broadcaster.sendTransform(tf_map_to_camera);
   map_pub->publish(make_test_map());
+  tf_broadcaster.sendTransform(transform_with_stamp);
   spin_for(executor, std::chrono::milliseconds(100));
+
+  // Verify that canTransform() waits until the required tf is received.
+  std::thread delayed_publisher([&] {
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    tf_broadcaster.sendTransform(transform_with_offset_stamp);
+  });
 
   camera_info_pub->publish(camera_info);
 
   const bool received_all = spin_until(
     executor, std::chrono::seconds(3), [&] { return received_rois && received_expect_rois; });
+  delayed_publisher.join();
 
   // Assert
   ASSERT_TRUE(received_all);
   EXPECT_EQ(received_rois->rois.size(), 1u);
   EXPECT_EQ(received_expect_rois->rois.size(), 1u);
+  // A single, un-yawed sample produces a narrow rough ROI (width well under 60px, matching the
+  // un-varied-yaw cases in test_traffic_light_map_based_detector.cpp). Only successfully
+  // interpolating in the delayed, 20-deg-yawed sample widens it past that.
+  EXPECT_GT(received_rois->rois[0].roi.width, 60u);
 
   rclcpp::shutdown();
 }

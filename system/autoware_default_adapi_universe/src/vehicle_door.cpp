@@ -20,12 +20,12 @@ namespace autoware::default_adapi
 {
 
 VehicleDoorNode::VehicleDoorNode(const rclcpp::NodeOptions & options)
-: Node("vehicle_door", options), diagnostics_(this)
+: autoware::agnocast_wrapper::Node("vehicle_door", options), diagnostics_(this)
 {
   diagnostics_.setHardwareID("none");
   diagnostics_.add("state", this, &VehicleDoorNode::diagnose_state);
 
-  const auto adaptor = autoware::component_interface_utils::NodeAdaptor(this);
+  const auto adaptor = autoware::component_interface_utils::NodeAdaptor<NodeT>(this);
   group_cli_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
   adaptor.relay_service(cli_layout_, srv_layout_, group_cli_);
   adaptor.init_cli(cli_command_, group_cli_);

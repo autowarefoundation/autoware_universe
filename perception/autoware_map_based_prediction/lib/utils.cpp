@@ -561,5 +561,17 @@ double distance_to_stop_with_deceleration(const double speed, const double decel
   return (speed * speed) / (2.0 * -deceleration);
 }
 
+lanelet::BasicLineString2d to_linestring_2d(
+  const std::vector<geometry_msgs::msg::Pose> & path, const size_t last_idx)
+{
+  lanelet::BasicLineString2d linestring;
+  linestring.reserve(std::min(last_idx + 1, path.size()));
+  for (auto i = 0UL; i <= last_idx && i < path.size(); ++i) {
+    const auto & position = path.at(i).position;
+    linestring.emplace_back(position.x, position.y);
+  }
+  return linestring;
+}
+
 }  // namespace utils
 }  // namespace autoware::map_based_prediction

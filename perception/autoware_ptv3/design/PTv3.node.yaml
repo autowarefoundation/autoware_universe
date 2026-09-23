@@ -39,17 +39,42 @@ publishers:
 
 # parameters
 param_files:
-  - name: model_param
+  - name: model_param_path
+    schema: schema/ptv3.schema.json
     default: config/ptv3.param.yaml
-  - name: backbone_ml_package_param
-    default: ml_package_backbone_ptv3.param.yaml
-  - name: d_head_ml_package_param
-    default: ml_package_d_head_ptv3.param.yaml
+    allow_substs: true
+  - name: encoder_ml_package_param_path
+    schema: schema/ml_package_ptv3.schema.json
+    default: config/ml_package_ptv3_encoder.param.yaml
+  - name: seg3d_head_ml_package_param_path
+    schema: schema/ml_package_ptv3.schema.json
+    default: config/ml_package_ptv3_seg3d_head.param.yaml
+  - name: det3d_head_ml_package_param_path
+    schema: schema/ml_package_ptv3.schema.json
+    default: config/ml_package_ptv3_det3d_head.param.yaml
 
+# launch-arg scope: the model param file resolves its artifact paths and head switches against these
 param_values:
   - name: build_only
     type: bool
     default: false
+    description: If true, the node will only build the model and exit.
+  - name: model_path
+    type: str
+    default: $(var data_path)/ptv3
+    description: The directory containing the model artifacts.
+  - name: model_variant
+    type: str
+    default: ptv3
+    description: The model variant selecting the artifact file names.
+  - name: use_seg3d_head
+    type: bool
+    default: true
+    description: Enable the segmentation 3D head.
+  - name: use_det3d_head
+    type: bool
+    default: true
+    description: Enable the detection 3D head.
 
 # processes
 processes:
@@ -59,3 +84,4 @@ processes:
     outcomes:
       - to_output: objects
       - to_output: pointcloud_segmentation
+      - to_output: pointcloud_filtered

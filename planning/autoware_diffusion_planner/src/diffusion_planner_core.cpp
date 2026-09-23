@@ -100,11 +100,24 @@ void DiffusionPlannerCore::sync_turn_indicator_managers()
   }
 }
 
-void DiffusionPlannerCore::load_model()
+void DiffusionPlannerCore::reset()
 {
   last_agent_poses_map_.clear();
   last_ego_to_map_transform_.reset();
+  last_selected_candidate_index_ = 0;
+  last_frame_time_.reset();
   camp_previous_plan_.reset();
+  ego_history_.clear();
+  turn_indicators_history_.clear();
+  agent_data_ = AgentData{};
+  traffic_light_id_map_.clear();
+  turn_indicator_managers_.clear();
+  sync_turn_indicator_managers();
+}
+
+void DiffusionPlannerCore::load_model()
+{
+  reset();
   camp_model_.reset();
   diffusion_planner_inference_.reset();
   if (params_.camp_enabled) {
@@ -201,7 +214,14 @@ void DiffusionPlannerCore::load_model()
 
 void DiffusionPlannerCore::update_params(const DiffusionPlannerParams & params)
 {
+  const bool output_contract_changed =
+    params.camp_enabled != params_.camp_enabled || params.batch_size != params_.batch_size ||
+    params.shift_x != params_.shift_x ||
+    params.camp_fixed_weight_model_path != params_.camp_fixed_weight_model_path;
   params_ = params;
+  if (output_contract_changed) {
+    reset();
+  }
   sync_turn_indicator_managers();
   if (start_guidance_) {
     StartGuidanceConfig start_guidance_config;
@@ -278,7 +298,7 @@ void DiffusionPlannerCore::set_map(
 {
   lane_segment_context_ = std::make_unique<preprocess::LaneSegmentContext>(
     lanelet_map_ptr, params_.line_string_max_step_m);
-  camp_previous_plan_.reset();
+  reset();
 }
 
 std::optional<FrameContext> DiffusionPlannerCore::create_frame_context(
@@ -290,10 +310,18 @@ std::optional<FrameContext> DiffusionPlannerCore::create_frame_context(
   const std::shared_ptr<const TurnIndicatorsReport> & turn_indicators,
   const LaneletRoute::ConstSharedPtr & route_ptr, const rclcpp::Time & current_time)
 {
-  if (route_ptr && route_ptr_ && route_ptr.get() != route_ptr_.get()) {
-    camp_previous_plan_.reset();
+  if (route_ptr && route_ptr_ && *route_ptr != *route_ptr_) {
+    reset();
   }
   route_ptr_ = (!route_ptr_ || route_ptr) ? route_ptr : route_ptr_;
+
+  if (ego_kinematic_state) {
+    const rclcpp::Time frame_time(ego_kinematic_state->header.stamp);
+    if (last_frame_time_ && frame_time < *last_frame_time_) {
+      reset();
+    }
+    last_frame_time_ = frame_time;
+  }
 
   TrackedObjects empty_object_list;
   auto effective_objects = objects;
@@ -318,7 +346,7 @@ std::optional<FrameContext> DiffusionPlannerCore::create_frame_context(
 
   // Snap the ego pose onto the previous planning trajectory. The previous trajectory is the
   // polyline formed by the previous planning start pose (last_ego_to_map_transform_) followed by
-  // the previous prediction (last_agent_poses_map_[0][0]), i.e. OUTPUT_T + 1 points forming
+  // the previously selected ego prediction, i.e. OUTPUT_T + 1 points forming
   // OUTPUT_T segments. The foot of the perpendicular to the closest segment becomes the next ego
   // pose. Note that kinematic_state here is already in the model frame (center frame when shift_x
   // is enabled), which matches the frame the previous trajectory was generated in.
@@ -326,9 +354,10 @@ std::optional<FrameContext> DiffusionPlannerCore::create_frame_context(
   std::optional<double> snapped_interpolation_time_s_opt;
   if (
     params_.ego_snap_to_prev_trajectory.enable && last_ego_to_map_transform_.has_value() &&
-    !last_agent_poses_map_.empty() && !last_agent_poses_map_[0].empty() &&
-    !last_agent_poses_map_[0][0].empty()) {
-    constexpr int64_t batch_idx = 0;
+    last_selected_candidate_index_ < last_agent_poses_map_.size() &&
+    !last_agent_poses_map_[last_selected_candidate_index_].empty() &&
+    !last_agent_poses_map_[last_selected_candidate_index_][0].empty()) {
+    const auto batch_idx = last_selected_candidate_index_;
     constexpr int64_t agent_idx = 0;
     const auto & prev_poses = last_agent_poses_map_[batch_idx][agent_idx];
 
@@ -405,11 +434,14 @@ std::optional<FrameContext> DiffusionPlannerCore::create_frame_context(
   // frame time); otherwise the legacy buffered histories are used directly.
   std::vector<AgentHistory> processed_neighbor_histories;
   if (params_.object_motion_resampling.enable) {
-    agent_data_.update_histories(*effective_objects, params_.object_motion_resampling);
+    agent_data_.update_histories(
+      *effective_objects, params_.object_motion_resampling,
+      params_.remap_unsupported_objects_to_pedestrian);
     processed_neighbor_histories = agent_data_.resampled_transformed_and_trimmed_histories(
       frame_time, map_to_ego_transform, NEIGHBOR_SHAPE[1], params_.object_motion_resampling);
   } else {
-    agent_data_.update_histories(*effective_objects);
+    agent_data_.update_histories(
+      *effective_objects, params_.remap_unsupported_objects_to_pedestrian);
     processed_neighbor_histories =
       agent_data_.transformed_and_trimmed_histories(map_to_ego_transform, NEIGHBOR_SHAPE[1]);
   }
@@ -674,6 +706,17 @@ PlannerOutput DiffusionPlannerCore::create_planner_output(
   const std::optional<CampTensorContext> & camp_tensor_context)
 {
   const auto & [raw_predictions, turn_indicator_logit] = inference_output.outputs;
+  if (
+    params_.batch_size <= 0 ||
+    turn_indicator_logit.size() !=
+      static_cast<std::size_t>(params_.batch_size) * TURN_INDICATOR_OUTPUT_DIM) {
+    throw std::invalid_argument("Turn indicator output does not match the candidate count");
+  }
+  if (
+    raw_predictions.size() !=
+    static_cast<std::size_t>(params_.batch_size) * MAX_NUM_AGENTS * OUTPUT_T * POSE_DIM) {
+    throw std::invalid_argument("Prediction output does not match the candidate count");
+  }
   const std::vector<float> denormalized_predictions =
     inference_output.is_denormalized
       ? raw_predictions
@@ -687,10 +730,8 @@ PlannerOutput DiffusionPlannerCore::create_planner_output(
             inference_output.denoising_predictions, state_normalization_, true);
   }
 
-  const auto agent_poses =
+  auto agent_poses =
     postprocess::parse_predictions(denormalized_predictions, frame_context.ego_to_map_transform);
-  last_agent_poses_map_ = agent_poses;
-  last_ego_to_map_transform_ = frame_context.ego_to_map_transform;
 
   const bool enable_force_stop =
     frame_context.ego_kinematic_state.twist.twist.linear.x > std::numeric_limits<double>::epsilon();
@@ -704,9 +745,16 @@ PlannerOutput DiffusionPlannerCore::create_planner_output(
                                 : turn_indicators_history_.back().report;
 
   std::size_t selected_candidate_index = 0;
-  if (camp_model_) {
+  std::optional<CampPreviousPlan> next_camp_previous_plan;
+  if (params_.camp_enabled) {
+    if (!camp_model_) {
+      throw std::invalid_argument("CAMP model is unavailable");
+    }
     if (!camp_tensor_context) {
       throw std::invalid_argument("CAMP tensor context is unavailable");
+    }
+    if (!lane_segment_context_) {
+      throw std::invalid_argument("CAMP map context is unavailable");
     }
     CampAtomMaterializationInput camp_input;
     camp_input.denormalized_predictions = denormalized_predictions;
@@ -739,10 +787,13 @@ PlannerOutput DiffusionPlannerCore::create_planner_output(
       *camp_model_, materialized.status, materialized.raw_atoms);
     selected_candidate_index = ranking.selected_index;
     output.camp_candidate_costs = ranking.costs;
-    camp_previous_plan_ = CampPreviousPlan{
+    next_camp_previous_plan = CampPreviousPlan{
       timestamp.seconds(), materialized.candidate_world_plans.at(selected_candidate_index)};
   }
   output.selected_candidate_index = selected_candidate_index;
+
+  // Only commit history once every output has been constructed successfully.
+  auto next_turn_indicator_managers = turn_indicator_managers_;
 
   // Trajectory and CandidateTrajectories
   for (int i = 0; i < params_.batch_size; i++) {
@@ -766,7 +817,8 @@ PlannerOutput DiffusionPlannerCore::create_planner_output(
       turn_indicator_logit.begin() + TURN_INDICATOR_OUTPUT_DIM * i,
       turn_indicator_logit.begin() + TURN_INDICATOR_OUTPUT_DIM * (i + 1));
     const TurnIndicatorsCommand turn_indicators_command =
-      turn_indicator_managers_.at(i).evaluate(single_turn_indicator_logit, timestamp, prev_report);
+      next_turn_indicator_managers.at(i).evaluate(
+        single_turn_indicator_logit, timestamp, prev_report);
 
     if (static_cast<std::size_t>(i) == selected_candidate_index) {
       // Keep the standalone command aligned with the selected candidate.
@@ -797,6 +849,12 @@ PlannerOutput DiffusionPlannerCore::create_planner_output(
     agent_poses, frame_context.ego_centric_neighbor_histories, timestamp, batch_idx);
 
   output.guidance_triggered = inference_output.guidance_triggered;
+
+  last_agent_poses_map_ = std::move(agent_poses);
+  last_ego_to_map_transform_ = frame_context.ego_to_map_transform;
+  last_selected_candidate_index_ = selected_candidate_index;
+  camp_previous_plan_ = std::move(next_camp_previous_plan);
+  turn_indicator_managers_ = std::move(next_turn_indicator_managers);
 
   return output;
 }

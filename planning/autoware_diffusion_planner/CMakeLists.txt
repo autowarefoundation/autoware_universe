@@ -150,6 +150,7 @@ if(TRT_AVAIL AND CUDA_AVAIL)
     ament_add_ros_isolated_gtest(test_diffusion_planner
       test/agent_test.cpp
       test/camp_atom_materializer_test.cpp
+      test/camp_output_history_test.cpp
       test/agent_history_resampler_test.cpp
       test/agent_lifecycle_test.cpp
       test/lanelet_test.cpp

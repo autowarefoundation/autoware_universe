@@ -158,8 +158,12 @@ struct TensorInfo
    * @brief Construct TensorInfo with tensor name.
    *
    * @param[in] name Tensor name.
+   * @param[in] is_optional Whether the model may omit this tensor.
    */
-  explicit TensorInfo(std::string name) : tensor_name(std::move(name)), tensor_index(-1) {}
+  explicit TensorInfo(std::string name, bool is_optional = false)
+  : optional(is_optional), tensor_name(std::move(name)), tensor_index(-1)
+  {
+  }
 
   /**
    * @brief Construct TensorInfo with tensor index.
@@ -198,6 +202,10 @@ struct TensorInfo
     return repr;
   }
 
+  //!< @brief Whether the model may omit this tensor. `setup()` drops an optional entry the model
+  //!< does not declare; a missing required entry is an error.
+  bool optional{false};
+
   //!< @brief Tensor name.
   std::string tensor_name;
 
@@ -224,11 +232,12 @@ struct NetworkIO : public TensorInfo
    * @param[in] name Tensor name.
    * @param[in] tensor_dims Tensor dimensions.
    * @param[in] data_type If set, TRT is required to produce this dtype for the tensor.
+   * @param[in] is_optional Whether the model may omit this tensor. See TensorInfo::optional.
    */
   NetworkIO(
     std::string name, const nvinfer1::Dims & tensor_dims,
-    std::optional<nvinfer1::DataType> data_type = std::nullopt)
-  : TensorInfo(std::move(name)), dims(tensor_dims), dtype(data_type)
+    std::optional<nvinfer1::DataType> data_type = std::nullopt, bool is_optional = false)
+  : TensorInfo(std::move(name), is_optional), dims(tensor_dims), dtype(data_type)
   {
   }
 
@@ -320,11 +329,12 @@ struct ProfileDims : public TensorInfo
    * @param[in] min Minimum dimensions for optimization profile.
    * @param[in] opt Optimal dimensions for optimization profile.
    * @param[in] max Maximum dimensions for optimization profile.
+   * @param[in] is_optional Whether the model may omit this tensor. See TensorInfo::optional.
    */
   ProfileDims(
     std::string name, const nvinfer1::Dims & min, const nvinfer1::Dims & opt,
-    const nvinfer1::Dims & max)
-  : TensorInfo(std::move(name)), min_dims(min), opt_dims(opt), max_dims(max)
+    const nvinfer1::Dims & max, bool is_optional = false)
+  : TensorInfo(std::move(name), is_optional), min_dims(min), opt_dims(opt), max_dims(max)
   {
   }
 
