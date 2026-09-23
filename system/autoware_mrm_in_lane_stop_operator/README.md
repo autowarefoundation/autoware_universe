@@ -84,6 +84,18 @@ In the MRM decision flow:
 - `OPERATING`: Mode is active and vehicle is still moving
 - `SUCCEEDED`: Mode is active and vehicle has stopped (abs(velocity) < 0.001 m/s)
 
+### Mode Transitions
+
+`on_request()` decides what to do based on the requested mode's deceleration **profile**, not its
+mode id:
+
+- If the requested mode is not one of the configured modes, the currently active mode (if any) is
+  cancelled.
+- If the requested mode resolves to the _same profile_ as the currently active mode, nothing
+  happens, even if the mode id itself changed (a log message notes this case).
+- If the profile differs, the node switches straight to the new mode without cancelling the
+  previous one first.
+
 ### Relay Service Integration
 
 The node communicates with a relay controller service so that the MRM trajectory can take over the
