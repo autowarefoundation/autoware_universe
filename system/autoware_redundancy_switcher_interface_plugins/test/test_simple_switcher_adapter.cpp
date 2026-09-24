@@ -17,7 +17,9 @@
 // execute() tests: require rclcpp (topic-based publish verification).
 
 #include "switcher_adapter.hpp"
+#include "portable_test_executor.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <redundancy_switcher_interface/core_logic/i_processor.hpp>
 #include <redundancy_switcher_interface/plugin/command_bus.hpp>
@@ -108,18 +110,19 @@ class SimpleSwitcherAdapterMainEcuTest : public ::testing::Test
 protected:
   void SetUp() override
   {
+    if (agnocast_executor_spin_untestable()) GTEST_SKIP();
     rclcpp::NodeOptions opts;
     opts.parameter_overrides({rclcpp::Parameter("is_main_ecu", true)});
-    node_ = std::make_shared<rclcpp::Node>("test_switcher_adapter_main", opts);
+    node_ = std::make_shared<autoware::agnocast_wrapper::Node>("test_switcher_adapter_main", opts);
     auto proc = std::make_shared<NullProcessor>();
     auto bus = std::make_shared<CommandBus>();
     gateway_ = std::make_shared<EventGateway>(proc, bus);
     adapter_ = std::make_shared<SimpleSwitcherAdapter>();
     adapter_->initialize(node_.get(), gateway_);
-    exec_.add_node(node_);
+    exec_.add_node(node_->get_node_base_interface());
   }
 
-  rclcpp::Node::SharedPtr node_;
+  autoware::agnocast_wrapper::Node::SharedPtr node_;
   std::shared_ptr<EventGateway> gateway_;
   std::shared_ptr<SimpleSwitcherAdapter> adapter_;
   rclcpp::executors::SingleThreadedExecutor exec_;
@@ -164,18 +167,19 @@ class SimpleSwitcherAdapterSubEcuTest : public ::testing::Test
 protected:
   void SetUp() override
   {
+    if (agnocast_executor_spin_untestable()) GTEST_SKIP();
     rclcpp::NodeOptions opts;
     opts.parameter_overrides({rclcpp::Parameter("is_main_ecu", false)});
-    node_ = std::make_shared<rclcpp::Node>("test_switcher_adapter_sub", opts);
+    node_ = std::make_shared<autoware::agnocast_wrapper::Node>("test_switcher_adapter_sub", opts);
     auto proc = std::make_shared<NullProcessor>();
     auto bus = std::make_shared<CommandBus>();
     gateway_ = std::make_shared<EventGateway>(proc, bus);
     adapter_ = std::make_shared<SimpleSwitcherAdapter>();
     adapter_->initialize(node_.get(), gateway_);
-    exec_.add_node(node_);
+    exec_.add_node(node_->get_node_base_interface());
   }
 
-  rclcpp::Node::SharedPtr node_;
+  autoware::agnocast_wrapper::Node::SharedPtr node_;
   std::shared_ptr<EventGateway> gateway_;
   std::shared_ptr<SimpleSwitcherAdapter> adapter_;
   rclcpp::executors::SingleThreadedExecutor exec_;

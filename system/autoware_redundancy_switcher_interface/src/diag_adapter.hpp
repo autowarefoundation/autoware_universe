@@ -14,7 +14,8 @@
 #ifndef DIAG_ADAPTER_HPP_
 #define DIAG_ADAPTER_HPP_
 
-#include <diagnostic_updater/diagnostic_updater.hpp>
+#include <autoware/agnocast_wrapper/diagnostic_updater.hpp>
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <redundancy_switcher_interface/ir/domain_types.hpp>
 #include <redundancy_switcher_interface/plugin/i_adapter_plugin.hpp>
@@ -45,15 +46,16 @@ public:
   DiagAdapter() = default;
   ~DiagAdapter() override = default;
 
-  void initialize(rclcpp::Node * node, std::shared_ptr<EventGateway> gateway) override;
+  void initialize(
+    autoware::agnocast_wrapper::Node * node, std::shared_ptr<EventGateway> gateway) override;
   void execute(const OutputCommand & command) override;
 
 private:
   void update_status(diagnostic_updater::DiagnosticStatusWrapper & stat);
 
-  rclcpp::Node * node_{nullptr};
+  autoware::agnocast_wrapper::Node * node_{nullptr};
   std::shared_ptr<EventGateway> gateway_;
-  std::unique_ptr<diagnostic_updater::Updater> updater_;
+  std::unique_ptr<autoware::agnocast_wrapper::diagnostic_updater::Updater> updater_;
   double transitional_timeout_milli_{0.0};
   std::optional<double> transitional_start_ms_;  // monotonic ms; nullopt = not in transitional
   mutable std::mutex updater_mutex_;

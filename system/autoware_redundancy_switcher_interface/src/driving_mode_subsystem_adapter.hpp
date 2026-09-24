@@ -14,6 +14,7 @@
 #ifndef DRIVING_MODE_SUBSYSTEM_ADAPTER_HPP_
 #define DRIVING_MODE_SUBSYSTEM_ADAPTER_HPP_
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <redundancy_switcher_interface/plugin/event_gateway.hpp>
 #include <redundancy_switcher_interface/plugin/i_adapter_plugin.hpp>
@@ -46,7 +47,8 @@ public:
   DrivingModeSubSystemAdapter() = default;
   ~DrivingModeSubSystemAdapter() override = default;
 
-  void initialize(rclcpp::Node * node, std::shared_ptr<EventGateway> gateway) override;
+  void initialize(
+    autoware::agnocast_wrapper::Node * node, std::shared_ptr<EventGateway> gateway) override;
   void execute(const OutputCommand & command) override;
 
 private:
@@ -63,20 +65,20 @@ private:
 
   void send_active_control_unit(const UpdateActiveControlUnitCommand & command);
 
-  rclcpp::Node * node_{nullptr};
+  autoware::agnocast_wrapper::Node * node_{nullptr};
   std::shared_ptr<EventGateway> gateway_;
 
   std::optional<ActiveControlUnitMsg::_ids_type> last_active_control_unit_ids_;
   mutable std::mutex state_mutex_;
 
-  rclcpp::Publisher<ActiveControlUnitMsg>::SharedPtr pub_active_control_unit_;
+  AUTOWARE_PUBLISHER_PTR(ActiveControlUnitMsg) pub_active_control_unit_;
 
-  rclcpp::Subscription<VelocityReport>::SharedPtr sub_velocity_report_;
-  rclcpp::Subscription<ControlModeReport>::SharedPtr sub_control_mode_;
-  rclcpp::Subscription<DrivingModeRequest>::SharedPtr sub_driving_mode_request_;
+  AUTOWARE_SUBSCRIPTION_PTR(VelocityReport) sub_velocity_report_;
+  AUTOWARE_SUBSCRIPTION_PTR(ControlModeReport) sub_control_mode_;
+  AUTOWARE_SUBSCRIPTION_PTR(DrivingModeRequest) sub_driving_mode_request_;
 
-  rclcpp::Service<SetBool>::SharedPtr srv_set_initializing_;
-  rclcpp::Service<ResetRedundancySwitcher>::SharedPtr srv_reset_;
+  AUTOWARE_SERVICE_PTR(SetBool) srv_set_initializing_;
+  AUTOWARE_SERVICE_PTR(ResetRedundancySwitcher) srv_reset_;
 };
 
 }  // namespace autoware::redundancy_switcher
