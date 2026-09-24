@@ -157,6 +157,7 @@ All the key parameters can be configured in `autoware_carla_interface.launch.xml
 | `fixed_delta_seconds`             | double | 0.05                                                                              | Time step for the simulation (related to client FPS)                                                                                                                                                                                                                                                                                                                                |
 | `use_traffic_manager`             | bool   | False                                                                             | Boolean flag to set traffic manager in CARLA                                                                                                                                                                                                                                                                                                                                        |
 | `max_real_delta_seconds`          | double | 0.05                                                                              | Parameter to limit the simulation speed below `fixed_delta_seconds`                                                                                                                                                                                                                                                                                                                 |
+| `tick_follower`                   | bool   | False                                                                             | If True, the bridge does not tick the CARLA world and instead follows the frames ticked by another client. See [Multi-client co-simulation](#multi-client-co-simulation).                                                                                                                                                                                                           |
 | `carla_map`                       | string | ""                                                                                | Explicit CARLA level name. When non-empty it overrides the name derived from `map_path`; useful for CARLA 0.10 levels whose name differs from the Autoware map directory. Empty reproduces the current behavior.                                                                                                                                                                    |
 | `no_rendering_mode`               | bool   | False                                                                             | Disable CARLA scene rendering via world settings for headless/faster simulation. Applied unconditionally on world load, so the default `False` (re-)enables rendering even if the server was started headless; set `True` to keep rendering off.                                                                                                                                    |
 | `force_load_world`                | bool   | False                                                                             | Always reload the world with `client.load_world()` instead of `load_world_if_different()`. Default False reproduces the current call (with a version-tolerant fallback).                                                                                                                                                                                                            |
@@ -168,6 +169,7 @@ All the key parameters can be configured in `autoware_carla_interface.launch.xml
 | `sensor_kit_name`                 | string | "carla_sensor_kit_description"                                                    | Name of the sensor kit package to use for sensor configuration. Should be the \*\_description package containing config/sensor_kit_calibration.yaml                                                                                                                                                                                                                                 |
 | `use_light_weight_sensor_mapping` | bool   | False                                                                             | If True, uses `sensor_mapping_light_weight.yaml` instead of the default `sensor_mapping.yaml` to reduce simulator load. See [Sensor Mapping (CARLA-specific)](#2-sensor-mapping-carla-specific) for details.                                                                                                                                                                        |
 | `sensor_mapping_file`             | string | "$(find-pkg-share autoware_carla_interface)/config/sensor_mapping.yaml"           | Path to sensor mapping YAML configuration file. When `use_light_weight_sensor_mapping` is True, this defaults to `config/sensor_mapping_light_weight.yaml`.                                                                                                                                                                                                                         |
+| `publish_ground_truth_objects`    | bool   | False                                                                             | If True, publishes every CARLA vehicle except the ego to `/perception/object_recognition/detection/objects` as ground truth detections, so tracking and prediction run on simulator truth instead of sensor based detection. Pedestrians are not covered.                                                                                                                           |
 | `config_file`                     | string | "$(find-pkg-share autoware_carla_interface)/raw_vehicle_cmd_converter.param.yaml" | Control mapping file to be used in `autoware_raw_vehicle_cmd_converter`. Current control are calibrated based on `vehicle.toyota.prius` Blueprints ID in CARLA. Changing the vehicle type may need a recalibration.                                                                                                                                                                 |
 | `traffic_light.publish`           | bool   | False                                                                             | Publish CARLA traffic-light states on `/perception/traffic_light_recognition/traffic_signals` as an `autoware_perception_msgs/TrafficLightGroupArray`. See [Publishing CARLA Traffic-Light States](#publishing-carla-traffic-light-states).                                                                                                                                         |
 | `traffic_light.force_green`       | bool   | False                                                                             | Set every CARLA traffic light to green and freeze it there at startup. Useful for camera-less closed-loop runs that have no traffic-light recognition and would otherwise hold at every signalized stop line.                                                                                                                                                                       |
@@ -210,6 +212,29 @@ On a CARLA API without `ground_projection`, snapping is skipped and the previous
 fixed z-offset is used, so enabling the flag never raises. The spawn-point path
 logs a warning when it falls back; the RViz initial-pose fallback is silent (and
 with the default random spawn the spawn-point path is not exercised at all).
+
+### Multi-client co-simulation
+
+By default this bridge owns the CARLA simulation clock: its main loop calls `world.tick()` on every
+cycle. A server in synchronous mode advances one frame per `tick()` call, so a second client that
+also ticks, for example an external traffic simulator feeding background vehicles into the same
+server, makes the simulation advance more than once per intended step.
+
+Setting `tick_follower` to `True` puts the bridge in a passive mode. It no longer ticks the world in
+its main loop, and instead publishes sensor data, the clock and the ego control for the frames that
+the external client ticks. Exactly one client in the whole setup may own the clock.
+
+Two things to keep in mind when using this mode:
+
+- **Start the bridge before the tick owner.** Loading the world still ticks it a few times to bring
+  up the ego vehicle and its sensors, and those ticks must not race the external owner.
+- **The cadence belongs to the tick owner**, so `max_real_delta_seconds` no longer paces the loop.
+  Set `fixed_delta_seconds` to the step length that the owner uses.
+- **`/clock` starts at zero on the first frame that the bridge processes.** In this mode it stays a
+  constant offset behind the CARLA elapsed time: the idle time before the owner started.
+
+If the bridge cannot keep up with the incoming cadence it drops the frames it has fallen behind on
+and reports how many it skipped through a throttled warning.
 
 ### Sensor Configuration
 
@@ -270,6 +295,38 @@ works on luminance alone, such as feature tracking or visual odometry. A
 1600x900 frame is 5,760,000 bytes as `bgra8` and 1,440,000 bytes as `mono8`.
 
 For CARLA sensor parameters, see [CARLA Sensor Reference](https://carla.readthedocs.io/en/latest/ref_sensors/).
+
+##### Capture Rate
+
+`frequency_hz` throttles what the bridge publishes; it does not change how often
+CARLA captures. A sensor left at CARLA's default captures on every simulation
+step, so at a 1/600 s step a camera renders 600 frames a second and the bridge
+discards all but a few. The throttle can also only drop whole frames, so a
+mapping asking for 60 Hz at that step publishes at 85.7 Hz and a 200 Hz IMU at
+300 Hz.
+
+Set `sensor_tick` (seconds between captures) under the sensor's `parameters` to
+have CARLA generate at the rate the mapping wants:
+
+```yaml
+parameters:
+  image_size_x: 1600
+  image_size_y: 900
+  fov: 70.0
+  sensor_tick: 0.0166667
+```
+
+Sensors without a `sensor_tick` keep capturing every step, as before. Avoid a
+`sensor_tick` exactly equal to `fixed_delta_seconds`: CARLA compares the tick
+interval against the elapsed time with a float, and a sensor whose tick equals
+the step can miss frames
+([carla#3653](https://github.com/carla-simulator/carla/issues/3653)).
+
+CARLA cannot capture between steps, so it holds the requested average by
+alternating shorter and longer gaps -- a 0.04 s tick at a 1/60 s step arrives
+after two steps and then three. The publish throttle allows a frame of such a
+sensor to be up to half its own tick early, so those arrivals are published
+instead of dropped.
 
 ##### Sensor Noise
 

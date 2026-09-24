@@ -43,17 +43,26 @@ subscribers:
     remap_target: /control/external_cmd_selector/current_selector_mode
 
 publishers:
+  # system interfaces: node-side names are fixed
   - name: operation_mode
     message_type: autoware_adapi_v1_msgs/msg/OperationModeState
-  # shared with external operators; multiple publishers
+    remap_target: /system/operation_mode/state
+  # legacy interfaces: node-side names are fixed
   - name: engage
     message_type: autoware_vehicle_msgs/msg/Engage
-    global: /autoware/engage
     remap_target: /autoware/engage
   - name: gate_mode_cmd
     message_type: tier4_control_msgs/msg/GateMode
-    global: /control/gate_mode_cmd
     remap_target: /control/gate_mode_cmd
+
+servers:
+  # system interfaces: node-side names are fixed
+  - name: change_operation_mode
+    message_type: autoware_system_msgs/srv/ChangeOperationMode
+    remap_target: /system/operation_mode/change_operation_mode
+  - name: change_autoware_control
+    message_type: autoware_system_msgs/srv/ChangeAutowareControl
+    remap_target: /system/operation_mode/change_autoware_control
 
 clients:
   - name: control_mode_request

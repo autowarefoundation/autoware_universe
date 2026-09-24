@@ -1,0 +1,7 @@
+<launch>
+  <arg name="config_file" default="$(find-pkg-share autoware_generic_service_divider)/config/generic_service_divider.param.yaml"/>
+
+  <node pkg="autoware_generic_service_divider" exec="autoware_generic_service_divider_node" name="generic_service_divider" output="screen">
+    <param from="$(var config_file)"/>
+  </node>
+</launch>
