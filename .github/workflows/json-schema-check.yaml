@@ -27,6 +27,15 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
+      # check-jsonschema uses click.ParamType[...] generics, which need click>=8.4,
+      # but only declares "click<9,>=8". The ubuntu-22.04 runner's preinstalled
+      # click==8.0.3 satisfies that loose bound, so pip never upgrades it, and
+      # check-jsonschema crashes at import time. Install the version it actually
+      # needs before it gets pulled in as a dependency.
+      - name: Ensure click satisfies check-jsonschema's actual requirement
+        run: pip install --user "click>=8.4,<9"
+        shell: bash
+
       - name: Run json-schema-check
         uses: autowarefoundation/autoware-github-actions/json-schema-check@v1
 

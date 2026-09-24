@@ -20,28 +20,34 @@
 namespace autoware::cuda_pointcloud_preprocessor
 {
 
+// `points` are sorted by ring (input order within a ring), so a point's ring neighbours are the
+// adjacent entries with the same channel; the window is clamped to them.
 __global__ void ringOutlierFilterKernel(
-  const InputPointType * points, std::uint32_t * output_mask, int num_rings,
-  int max_points_per_ring, float distance_ratio, float object_length_threshold_squared)
+  const InputPointType * points, std::uint32_t * output_mask, int num_points, float distance_ratio,
+  float object_length_threshold_squared)
 {
-  int idx = blockIdx.x * blockDim.x + threadIdx.x;
-  int j = idx / max_points_per_ring;
-  int i = idx % max_points_per_ring;
-
-  if (j >= num_rings || i >= max_points_per_ring) {
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
+  if (i >= num_points) {
     return;
   }
 
+  const auto ring = points[i].channel;
   const int window_size = 5;
   int min_i = max(i - window_size, 0);
-  int max_i = min(i + window_size, max_points_per_ring);
+  while (points[min_i].channel != ring) {
+    min_i++;
+  }
+  int max_i = min(i + window_size, num_points);
+  while (points[max_i - 1].channel != ring) {
+    max_i--;
+  }
 
   int left_idx = min_i;
   int right_idx = min_i + 1;
 
   for (int k = min_i; k < max_i - 1; k++) {
-    const InputPointType & left_point = points[j * max_points_per_ring + k];
-    const InputPointType & right_point = points[j * max_points_per_ring + k + 1];
+    const InputPointType & left_point = points[k];
+    const InputPointType & right_point = points[k + 1];
 
     // Find biggest walk that passes through i
     float azimuth_diff = right_point.azimuth - left_point.azimuth;
@@ -61,24 +67,23 @@ __global__ void ringOutlierFilterKernel(
     }
   }
 
-  const InputPointType & left_point = points[j * max_points_per_ring + left_idx];
-  const InputPointType & right_point = points[j * max_points_per_ring + right_idx - 1];
+  const InputPointType & left_point = points[left_idx];
+  const InputPointType & right_point = points[right_idx - 1];
   const float x = left_point.x - right_point.x;
   const float y = left_point.y - right_point.y;
   const float z = left_point.z - right_point.z;
 
-  output_mask[j * max_points_per_ring + i] =
+  output_mask[i] =
     static_cast<std::uint32_t>((x * x + y * y + z * z >= object_length_threshold_squared));
 }
 
 void ringOutlierFilterLaunch(
-  const InputPointType * points, std::uint32_t * output_mask, int num_rings,
-  int max_points_per_ring, float distance_ratio, float object_length_threshold_squared,
-  int threads_per_block, int blocks_per_grid, cudaStream_t & stream)
+  const InputPointType * points, std::uint32_t * output_mask, int num_points, float distance_ratio,
+  float object_length_threshold_squared, int threads_per_block, int blocks_per_grid,
+  cudaStream_t & stream)
 {
   ringOutlierFilterKernel<<<blocks_per_grid, threads_per_block, 0, stream>>>(
-    points, output_mask, num_rings, max_points_per_ring, distance_ratio,
-    object_length_threshold_squared);
+    points, output_mask, num_points, distance_ratio, object_length_threshold_squared);
   CHECK_CUDA_ERROR(cudaGetLastError());
 }
 
