@@ -232,7 +232,7 @@
             },
             "snap_strength": {
               "type": "number",
-              "default": 1.0,
+              "default": 0.9,
               "minimum": 0,
               "maximum": 1,
               "description": "How far from the raw pose toward the snapped pose the virtual pose is placed. 0 is the raw pose, so the feature has no effect; 1 is the snapped pose, fully on the previous plan. Below 1 the remaining share of the raw pose also pulls the reference back onto the vehicle."

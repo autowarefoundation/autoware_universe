@@ -229,7 +229,7 @@ void DiffusionPlanner::set_up_params()
   params_.ego_snap_to_prev_trajectory.max_search_segment_count =
     this->declare_parameter<int64_t>("ego_snap_to_prev_trajectory.max_search_segment_count", 5);
   params_.ego_snap_to_prev_trajectory.snap_strength =
-    this->declare_parameter<double>("ego_snap_to_prev_trajectory.snap_strength", 1.0);
+    this->declare_parameter<double>("ego_snap_to_prev_trajectory.snap_strength", 0.9);
   params_.ego_snap_to_prev_trajectory.history_prefix_count =
     this->declare_parameter<int64_t>("ego_snap_to_prev_trajectory.history_prefix_count", 10);
   params_.ego_snap_to_prev_trajectory.yaw_source = this->declare_parameter<std::string>(
