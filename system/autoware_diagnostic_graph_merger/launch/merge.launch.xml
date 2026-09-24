@@ -7,7 +7,10 @@
   <arg name="~/input2/struct" default="/diagnostics_graph/struct2"/>
   <arg name="~/input2/status" default="/diagnostics_graph/status2"/>
 
+  <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
+
   <node pkg="autoware_diagnostic_graph_merger" exec="autoware_diagnostic_graph_merger_node">
+    <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
     <param from="$(var param_file)"/>
     <remap from="~/output/struct" to="$(var ~/output/struct)"/>
     <remap from="~/output/status" to="$(var ~/output/status)"/>

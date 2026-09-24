@@ -42,8 +42,6 @@ namespace autoware::cuda_pointcloud_preprocessor
 struct PreprocessorCapacity
 {
   std::size_t max_input_point_count{0};
-  int max_ring_count{0};
-  int max_points_per_ring{0};
   std::size_t max_twist_struct_count{0};
 };
 
@@ -52,7 +50,7 @@ struct ProcessingStats
   int mismatch_count{0};
   int num_crop_box_passed_points{0};
   int num_nan_points{0};
-  bool ring_overflow{false};
+  int max_points_per_ring{0};
 };
 
 class CudaPointcloudPreprocessor
@@ -81,7 +79,7 @@ private:
   static cudaStream_t initialize_stream();
 
   void initializeBuffers();
-  void organizePointcloud();
+  void sortPointsByRing();
 
   CropBoxParameters self_crop_box_parameters_{};
   CropBoxParameters mirror_crop_box_parameters_{};
@@ -90,9 +88,8 @@ private:
   bool enable_ring_outlier_filter_{true};
 
   PreprocessorCapacity capacity_{};
-  int num_rings_{};
-  int max_points_per_ring_{};
-  std::size_t num_organized_points_{};
+  // Points of the current frame, after truncation to capacity_.max_input_point_count. Every
+  // buffer holds the capacity; every kernel and library call covers exactly this many.
   std::size_t num_raw_points_{};
 
   std::vector<sensor_msgs::msg::PointField> point_fields_;
@@ -105,15 +102,13 @@ private:
 
   ProcessingStats stats_;
 
-  // Organizing buffers
+  // Ring ordering: a stable radix sort of the point indices by ring key gives the input
+  // order within each ring, rings contiguous, without an organized layout.
   thrust::device_vector<InputPointType> device_input_points_;
-  thrust::device_vector<InputPointType> device_organized_points_;
-  thrust::device_vector<std::int32_t> device_ring_index_;
-  thrust::device_vector<std::uint32_t> device_indexes_tensor_;
-  thrust::device_vector<std::uint32_t> device_sorted_indexes_tensor_;
-  thrust::device_vector<std::int32_t> device_segment_offsets_;
-  thrust::device_vector<std::int32_t> device_rings_overflowed_;
-  thrust::device_vector<std::int32_t> device_points_per_ring_overflowed_;
+  thrust::device_vector<std::uint16_t> device_ring_keys_;
+  thrust::device_vector<std::uint16_t> device_sorted_ring_keys_;
+  thrust::device_vector<std::uint32_t> device_point_indices_;
+  thrust::device_vector<std::uint32_t> device_sorted_point_indices_;
 
   thrust::device_vector<std::uint8_t> device_scratch_workspace_;
   std::size_t workspace_bytes_{0};
@@ -133,7 +128,8 @@ private:
   static constexpr std::size_t crop_box_passed_stat_index = 0U;
   static constexpr std::size_t nan_stat_index = 1U;
   static constexpr std::size_t mismatch_stat_index = 2U;
-  static constexpr std::size_t processing_stat_count = 3U;
+  static constexpr std::size_t max_points_per_ring_stat_index = 3U;
+  static constexpr std::size_t processing_stat_count = 4U;
   thrust::device_vector<std::uint32_t> device_processing_stats_;
 };
 

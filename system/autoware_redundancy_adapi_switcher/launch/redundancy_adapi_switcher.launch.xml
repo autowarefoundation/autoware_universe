@@ -8,7 +8,10 @@
   <arg name="output_diag_status" default="/diagnostics_graph/status"/>
   <arg name="output_diag_struct" default="/diagnostics_graph/struct"/>
 
+  <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
+
   <node pkg="autoware_redundancy_adapi_switcher" exec="autoware_redundancy_adapi_switcher_node" name="redundancy_adapi_switcher" output="screen">
+    <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
     <param name="is_main_ecu" value="$(var is_main_ecu)"/>
     <remap from="~/input/diag/status" to="$(var input_diag_status)"/>
     <remap from="~/input/diag/struct" to="$(var input_diag_struct)"/>
