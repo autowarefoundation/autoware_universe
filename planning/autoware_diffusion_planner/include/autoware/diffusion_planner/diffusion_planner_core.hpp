@@ -122,7 +122,7 @@ struct FrameContext
  * slightly drifted localization pose. The snapped position is the closest point on a cubic spline
  * through the previous trajectory's vertices (preceded by recent ego poses so the spline extends
  * behind the vehicle); the snapped heading is the spline tangent averaged over a window of arc
- * length, or the model's own heading channel. The distance and heading limits are applied by
+ * length. The distance and heading limits are applied by
  * blending the snapped pose toward the localized pose and bounding the result, so the pose handed
  * to the model is continuous at the limits.
  */
@@ -152,15 +152,10 @@ struct EgoSnapParams
   // a far-away part of the trajectory (e.g. the return leg of a U-turn) from being selected.
   int64_t max_search_segment_count;
 
-  // Where the heading of the snapped pose comes from:
-  //  - "predicted_heading": the vertex headings of the previous trajectory interpolated at the
-  //    snapped point (the model's own heading channel, which is not kinematically tied to its xy
-  //    output).
-  //  - "polyline_tangent": tangent of the spline through the previous trajectory's xy positions,
-  //    averaged over +-yaw_fit_half_window_m of arc length around the snapped point (see
-  //    utils::snap_point_to_trajectory). Falls back to the raw localization heading when the
-  //    window is shorter than yaw_fit_min_length_m.
-  std::string yaw_source;
+  // The heading of the snapped pose is the tangent of the spline through the previous
+  // trajectory's xy positions, averaged over +-yaw_fit_half_window_m of arc length around the
+  // snapped point (see utils::snap_point_to_trajectory). It falls back to the raw localization
+  // heading when that window is shorter than yaw_fit_min_length_m.
   double yaw_fit_half_window_m;
   double yaw_fit_min_length_m;
 
@@ -172,7 +167,7 @@ struct EgoSnapParams
 };
 
 // Checks every EgoSnapParams field for a value the snap can run with: finite numbers, the
-// documented ranges, and a recognised mode string. Returns an empty string when valid, otherwise a
+// documented ranges. Returns an empty string when valid, otherwise a
 // message naming the parameter and the accepted values. Used at startup and on every runtime
 // update.
 std::string validate_ego_snap_params(const EgoSnapParams & params);

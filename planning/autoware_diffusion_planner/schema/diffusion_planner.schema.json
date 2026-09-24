@@ -237,17 +237,11 @@
               "maximum": 1,
               "description": "How far from the raw pose toward the snapped pose the virtual pose is placed. 0 is the raw pose, so the feature has no effect; 1 is the snapped pose, fully on the previous plan. Below 1 the remaining share of the raw pose also pulls the reference back onto the vehicle."
             },
-            "yaw_source": {
-              "type": "string",
-              "default": "polyline_tangent",
-              "enum": ["polyline_tangent", "predicted_heading"],
-              "description": "Heading of the snapped pose. 'polyline_tangent': tangent of the spline through the previous trajectory's xy positions, averaged over +-yaw_fit_half_window_m of arc length around the snapped point (robust to noise in the model's heading channel). 'predicted_heading': the vertex headings interpolated at the snapped point."
-            },
             "yaw_fit_half_window_m": {
               "type": "number",
               "default": 1.0,
               "minimum": 0,
-              "description": "Arc length [m] on each side of the snapped point over which the spline tangent is averaged when yaw_source is 'polyline_tangent'."
+              "description": "Arc length [m] on each side of the snapped point over which the spline tangent is averaged for the heading of the virtual pose."
             },
             "yaw_fit_min_length_m": {
               "type": "number",
@@ -268,7 +262,6 @@
             "max_yaw_error_deg",
             "max_search_segment_count",
             "snap_strength",
-            "yaw_source",
             "yaw_fit_half_window_m",
             "yaw_fit_min_length_m",
             "history_prefix_count"

@@ -231,8 +231,6 @@ void DiffusionPlanner::set_up_params()
     this->declare_parameter<double>("ego_snap_to_prev_trajectory.snap_strength", 0.9);
   params_.ego_snap_to_prev_trajectory.history_prefix_count =
     this->declare_parameter<int64_t>("ego_snap_to_prev_trajectory.history_prefix_count", 10);
-  params_.ego_snap_to_prev_trajectory.yaw_source = this->declare_parameter<std::string>(
-    "ego_snap_to_prev_trajectory.yaw_source", "polyline_tangent");
   params_.ego_snap_to_prev_trajectory.yaw_fit_half_window_m =
     this->declare_parameter<double>("ego_snap_to_prev_trajectory.yaw_fit_half_window_m", 1.0);
   params_.ego_snap_to_prev_trajectory.yaw_fit_min_length_m =
@@ -384,9 +382,6 @@ SetParametersResult DiffusionPlanner::on_parameter(
     update_param<int64_t>(
       parameters, "ego_snap_to_prev_trajectory.history_prefix_count",
       temp_params.ego_snap_to_prev_trajectory.history_prefix_count);
-    update_param<std::string>(
-      parameters, "ego_snap_to_prev_trajectory.yaw_source",
-      temp_params.ego_snap_to_prev_trajectory.yaw_source);
     update_param<double>(
       parameters, "ego_snap_to_prev_trajectory.yaw_fit_half_window_m",
       temp_params.ego_snap_to_prev_trajectory.yaw_fit_half_window_m);

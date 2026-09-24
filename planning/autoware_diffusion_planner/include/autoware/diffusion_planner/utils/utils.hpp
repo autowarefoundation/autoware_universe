@@ -105,8 +105,6 @@ struct TrajectorySnap
   //! intra-segment ratio in [0, 1]). Multiplying by the per-segment time step yields the
   //! interpolation time of the snapped point along the trajectory.
   double interpolation_index;
-  //! Heading [rad] spherically interpolated from the vertex orientations at the snapped point.
-  double heading_yaw;
   //! Heading [rad] from the geometry: circular mean of the spline tangent over
   //! +-yaw_fit_half_window_m of arc length around the snapped point. std::nullopt when the
   //! available window is shorter than yaw_fit_min_length_m (no reliable heading information).
@@ -119,20 +117,17 @@ struct TrajectorySnap
  * A cubic-spline trajectory (autoware::experimental::trajectory) is built through the leading
  * vertices of the polyline, stopping at the first pair of (almost) coincident consecutive vertices
  * so a stop at the end of a prediction does not degenerate the spline. The closest point on the
- * spline within the first max_search_segment_count segments is returned, together with two
- * headings: the interpolated vertex heading and the geometric tangent averaged over a window of
- * arc length (robust to noise in the individual vertex headings and to jitter of the short leading
- * segments of a predicted trajectory).
+ * spline within the first max_search_segment_count segments is returned, together with the
+ * geometric tangent averaged over a window of arc length (robust to noise in the model's heading
+ * channel and to jitter of the short leading segments of a predicted trajectory).
  *
  * @param query_x X coordinate of the query point.
  * @param query_y Y coordinate of the query point.
  * @param polyline Sequence of poses (4x4 transforms): options.prefix_count leading poses followed
  *        by the trajectory.
- * @param options See TrajectorySnapOptions.
+ * @param options See TrajectorySnapOptions; max_search_segment_count >= 1, prefix_count >= 0.
  * @return The snap result, or std::nullopt when fewer than two distinct vertices remain past the
  *         prefix or the spline could not be built.
- * @throw std::runtime_error if options.max_search_segment_count is less than one or
- *        options.prefix_count is negative.
  */
 // Planar: vertex z is ignored (the geometry is flattened before the spline is built), so the
 // result is the same for a trajectory on a slope or at elevation as for one on the ground plane.
@@ -169,7 +164,6 @@ struct BoundedPose
  *        placed, in [0, 1]. 0 is the real pose (feature off), 1 is the snapped pose.
  * @param max_position_error_m Saturation of the position residual [m] (> 0).
  * @param max_yaw_error_rad Saturation of the yaw residual [rad] (> 0).
- * @throw std::runtime_error on an out-of-range strength or a non-positive limit.
  */
 BoundedPose bound_snapped_pose(
   const Eigen::Vector2d & real_position, double real_yaw, const Eigen::Vector2d & snapped_position,

@@ -210,7 +210,6 @@ TEST_F(UtilsTest, SnapPointToTrajectoryOnVertexIsNoOp)
   EXPECT_NEAR(snap->position.x(), 3.0, 1e-6);
   EXPECT_NEAR(snap->position.y(), 0.0, 1e-6);
   EXPECT_NEAR(snap->interpolation_index, 3.0, 1e-6);
-  EXPECT_NEAR(snap->heading_yaw, 0.0, 1e-6);
   ASSERT_TRUE(snap->tangent_yaw.has_value());
   EXPECT_NEAR(*snap->tangent_yaw, 0.0, 1e-6);
 }
@@ -261,7 +260,7 @@ TEST_F(UtilsTest, SnapPointToTrajectoryRespectsSearchWindow)
 }
 
 // The vertex headings of a predicted trajectory can be noisy while its positions trace a clean
-// path. The interpolated vertex heading inherits that noise; the geometric tangent does not.
+// path. The geometric tangent follows the positions and ignores the vertex headings.
 TEST_F(UtilsTest, SnapPointToTrajectoryTangentIgnoresNoisyVertexHeadings)
 {
   std::vector<Eigen::Matrix4d> polyline;
@@ -270,12 +269,9 @@ TEST_F(UtilsTest, SnapPointToTrajectoryTangentIgnoresNoisyVertexHeadings)
     polyline.push_back(make_pose(static_cast<double>(i) * 0.3, 0.0, noisy_yaw));
   }
 
-  // Midway between two vertices, where the slerp of +-0.2 gives exactly 0 by symmetry, so query a
-  // point closer to one vertex instead.
   const auto snap = utils::snap_point_to_trajectory(0.9 + 0.06, 0.0, polyline, default_options);
 
   ASSERT_TRUE(snap.has_value());
-  EXPECT_GT(std::abs(snap->heading_yaw), 0.05);
   ASSERT_TRUE(snap->tangent_yaw.has_value());
   EXPECT_NEAR(*snap->tangent_yaw, 0.0, 1e-3);
 }
@@ -317,7 +313,6 @@ TEST_F(UtilsTest, SnapPointToTrajectoryTangentOnArc)
     default_options);
 
   ASSERT_TRUE(snap.has_value());
-  EXPECT_NEAR(snap->heading_yaw, query_theta, 1e-3);
   ASSERT_TRUE(snap->tangent_yaw.has_value());
   EXPECT_NEAR(*snap->tangent_yaw, query_theta, 1e-3);
 }
@@ -444,26 +439,6 @@ TEST_F(UtilsTest, BoundSnappedPoseWrapsYaw)
     Eigen::Vector2d::Zero(), M_PI - 0.01, Eigen::Vector2d::Zero(), -M_PI + 0.01, 1.0, 0.3, 0.1);
   // The residual across the +-pi seam is 0.02 rad, not 2 pi - 0.02.
   EXPECT_NEAR(std::abs(b.yaw), M_PI - 0.01, 1e-9);
-}
-
-TEST_F(UtilsTest, BoundSnappedPoseThrowsOnBadArguments)
-{
-  EXPECT_THROW(
-    utils::bound_snapped_pose(
-      Eigen::Vector2d::Zero(), 0.0, Eigen::Vector2d::Zero(), 0.0, 1.5, 0.3, 0.1),
-    std::runtime_error);
-  EXPECT_THROW(
-    utils::bound_snapped_pose(
-      Eigen::Vector2d::Zero(), 0.0, Eigen::Vector2d::Zero(), 0.0, 0.1, 0.0, 0.1),
-    std::runtime_error);
-}
-
-TEST_F(UtilsTest, SnapPointToTrajectoryThrowsOnNonPositiveSearchWindow)
-{
-  const auto polyline = straight_polyline(3, 1.0);
-  const utils::TrajectorySnapOptions options{0, 0, 1.0, 0.2};
-
-  EXPECT_THROW(utils::snap_point_to_trajectory(0.0, 0.0, polyline, options), std::runtime_error);
 }
 
 }  // namespace autoware::diffusion_planner::test

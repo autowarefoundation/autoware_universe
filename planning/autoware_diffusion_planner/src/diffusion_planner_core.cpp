@@ -387,8 +387,6 @@ std::string validate_ego_snap_params(const EgoSnapParams & p)
      "snap_strength must be in [0, 1]"},
     {p.max_search_segment_count >= 1, "max_search_segment_count must be >= 1"},
     {p.history_prefix_count >= 0, "history_prefix_count must be >= 0"},
-    {p.yaw_source == "predicted_heading" || p.yaw_source == "polyline_tangent",
-     "yaw_source must be 'predicted_heading' or 'polyline_tangent'"},
   };
   for (const auto & [holds, message] : rules) {
     if (!holds) {
@@ -456,9 +454,7 @@ std::optional<SnappedEgo> DiffusionPlannerCore::snap_ego_to_previous_trajectory(
   // tangent is unreliable (too short a window) keep the localization heading.
   const double current_yaw =
     autoware_utils_geometry::get_rpy(kinematic_state.pose.pose.orientation).z;
-  const double snapped_yaw = snap_params.yaw_source == "polyline_tangent"
-                               ? snap->tangent_yaw.value_or(current_yaw)
-                               : snap->heading_yaw;
+  const double snapped_yaw = snap->tangent_yaw.value_or(current_yaw);
 
   const Eigen::Vector2d real_position(position.x, position.y);
   const utils::BoundedPose virtual_pose = utils::bound_snapped_pose(

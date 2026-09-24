@@ -19,7 +19,6 @@
 #include "autoware/trajectory/threshold.hpp"
 #include "autoware/trajectory/utils/closest.hpp"
 
-#include <autoware_utils_geometry/geometry.hpp>
 #include <autoware_utils_math/normalization.hpp>
 
 #include <algorithm>
@@ -214,13 +213,6 @@ std::optional<TrajectorySnap> snap_point_to_trajectory(
   using autoware::experimental::trajectory::Trajectory;
   using autoware::experimental::trajectory::interpolator::CubicSpline;
 
-  if (options.max_search_segment_count < 1) {
-    throw std::runtime_error("snap_point_to_trajectory requires max_search_segment_count >= 1");
-  }
-  if (options.prefix_count < 0) {
-    throw std::runtime_error("snap_point_to_trajectory requires prefix_count >= 0");
-  }
-
   std::vector<geometry_msgs::msg::Pose> poses = leading_distinct_poses(polyline);
   // This is an xy operation, but closest_with_constraint measures 3D distance and the spline's arc
   // length includes z. A trajectory at elevation, or one climbing a slope, would otherwise be
@@ -260,7 +252,6 @@ std::optional<TrajectorySnap> snap_point_to_trajectory(
   return TrajectorySnap{
     Eigen::Vector2d(snapped.position.x, snapped.position.y),
     arc_length_to_interpolation_index(bases, *s),
-    autoware_utils_geometry::get_rpy(snapped.orientation).z,
     windowed_tangent_yaw(
       *trajectory, *s, options.yaw_fit_half_window_m, options.yaw_fit_min_length_m)};
 }
@@ -270,12 +261,6 @@ BoundedPose bound_snapped_pose(
   const Eigen::Vector2d & snapped_position, const double snapped_yaw, const double snap_strength,
   const double max_position_error_m, const double max_yaw_error_rad)
 {
-  if (snap_strength < 0.0 || snap_strength > 1.0) {
-    throw std::runtime_error("bound_snapped_pose requires snap_strength in [0, 1]");
-  }
-  if (max_position_error_m <= 0.0 || max_yaw_error_rad <= 0.0) {
-    throw std::runtime_error("bound_snapped_pose requires positive error limits");
-  }
   Eigen::Vector2d residual = snap_strength * (real_position - snapped_position);
   const double norm = residual.norm();
   if (norm > max_position_error_m) {
