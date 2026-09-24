@@ -23,7 +23,7 @@ namespace autoware::in_lane_mrm_planner
 class TrajectorySelectorStub
 {
 public:
-  Trajectory select(const Trajectory & trajectory) const { return trajectory; }
+  static Trajectory select(const Trajectory & trajectory) { return trajectory; }
 };
 
 }  // namespace autoware::in_lane_mrm_planner

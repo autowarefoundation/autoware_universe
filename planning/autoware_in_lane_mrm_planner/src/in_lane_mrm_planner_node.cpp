@@ -252,12 +252,6 @@ void InLaneMrmPlannerNode::on_timer()
 InLaneMrmPlannerNode::InputData InLaneMrmPlannerNode::take_data()
 {
   InputData input_data;
-  input_data.route_ptr = route_ptr_;
-  input_data.lanelet_map_bin_ptr = lanelet_map_bin_ptr_;
-  input_data.odometry_ptr = odometry_ptr_;
-  input_data.acceleration_ptr = acceleration_ptr_;
-  input_data.objects_ptr = objects_ptr_;
-  input_data.trigger_ptr = trigger_ptr_;
 
   if (const auto msg = route_subscriber_.take_data()) {
     if (!msg->segments.empty()) {

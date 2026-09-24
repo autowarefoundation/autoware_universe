@@ -29,7 +29,7 @@ void InLaneMrmTrajectoryValidator::update_params(const Params & params)
   params_ = params.trajectory_validator;
 }
 
-bool InLaneMrmTrajectoryValidator::has_finite_values(const TrajectoryPoints & points) const
+bool InLaneMrmTrajectoryValidator::has_finite_values(const TrajectoryPoints & points)
 {
   for (const auto & point : points) {
     if (

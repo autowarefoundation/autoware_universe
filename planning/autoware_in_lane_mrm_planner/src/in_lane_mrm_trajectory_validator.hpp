@@ -48,7 +48,7 @@ public:
 private:
   using TrajectoryValidatorParams = Params::TrajectoryValidator;
 
-  bool has_finite_values(const TrajectoryPoints & points) const;
+  static bool has_finite_values(const TrajectoryPoints & points);
 
   TrajectoryValidatorParams params_;
 };

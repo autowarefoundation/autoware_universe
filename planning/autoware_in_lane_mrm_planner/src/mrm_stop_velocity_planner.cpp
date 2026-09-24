@@ -291,7 +291,7 @@ void MrmStopVelocityPlanner::densify_near_arc_length(
 }
 
 void MrmStopVelocityPlanner::fill_zero_velocity_profile(
-  TrajectoryPoints & points, const float longitudinal_accel_mps2) const
+  TrajectoryPoints & points, const float longitudinal_accel_mps2)
 {
   for (auto & point : points) {
     point.longitudinal_velocity_mps = 0.0F;
@@ -301,7 +301,7 @@ void MrmStopVelocityPlanner::fill_zero_velocity_profile(
 }
 
 void MrmStopVelocityPlanner::apply_zero_stop_profile(
-  TrajectoryPoints & points, const Odometry & odom, const float longitudinal_accel_mps2) const
+  TrajectoryPoints & points, const Odometry & odom, const float longitudinal_accel_mps2)
 {
   fill_zero_velocity_profile(points, longitudinal_accel_mps2);
   autoware::motion_utils::calculate_time_from_start(
@@ -309,7 +309,7 @@ void MrmStopVelocityPlanner::apply_zero_stop_profile(
 }
 
 void MrmStopVelocityPlanner::fill_ego_prefix(
-  TrajectoryPoints & points, const size_t ego_idx, const double v0, const double a0) const
+  TrajectoryPoints & points, const size_t ego_idx, const double v0, const double a0)
 {
   const size_t last_idx = std::min(ego_idx, points.empty() ? 0U : points.size() - 1);
   for (size_t i = 0; i <= last_idx; ++i) {
