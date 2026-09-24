@@ -15,7 +15,7 @@
 #include <rclcpp/rclcpp.hpp>
 
 #include <std_msgs/msg/bool.hpp>
-#include <tier4_control_msgs/msg/constant_jerk_deceleration_trigger.hpp>
+#include <tier4_system_msgs/msg/in_lane_stop_trigger.hpp>
 
 namespace autoware::in_lane_mrm_planner
 {
@@ -28,9 +28,9 @@ public:
   {
     pub_trigger_ = create_publisher<std_msgs::msg::Bool>("~/output/trigger", rclcpp::QoS{1});
 
-    sub_trigger_ = create_subscription<tier4_control_msgs::msg::ConstantJerkDecelerationTrigger>(
+    sub_trigger_ = create_subscription<tier4_system_msgs::msg::InLaneStopTrigger>(
       "~/input/constant_jerk_deceleration_trigger", rclcpp::QoS{1},
-      [this](const tier4_control_msgs::msg::ConstantJerkDecelerationTrigger::ConstSharedPtr msg) {
+      [this](const tier4_system_msgs::msg::InLaneStopTrigger::ConstSharedPtr msg) {
         std_msgs::msg::Bool out;
         out.data = msg->trigger;
         pub_trigger_->publish(out);
@@ -39,8 +39,7 @@ public:
 
 private:
   rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr pub_trigger_;
-  rclcpp::Subscription<tier4_control_msgs::msg::ConstantJerkDecelerationTrigger>::SharedPtr
-    sub_trigger_;
+  rclcpp::Subscription<tier4_system_msgs::msg::InLaneStopTrigger>::SharedPtr sub_trigger_;
 };
 
 }  // namespace autoware::in_lane_mrm_planner
