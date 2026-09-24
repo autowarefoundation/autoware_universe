@@ -8,13 +8,13 @@
       
       
       
-        <link rel="canonical" href="https://autowarefoundation.github.io/autoware_universe/main/planning/autoware_manual_lane_change_handler/">
+        <link rel="canonical" href="https://autowarefoundation.github.io/autoware_universe/main/planning/autoware_in_lane_mrm_planner/">
       
       
-        <link rel="prev" href="../autoware_in_lane_mrm_planner/">
+        <link rel="prev" href="../autoware_hazard_lights_selector/">
       
       
-        <link rel="next" href="../autoware_minimum_rule_based_planner/">
+        <link rel="next" href="../autoware_manual_lane_change_handler/">
       
       
         
@@ -25,7 +25,7 @@
     
     
       
-        <title>Manual Lane Change Handler - Autoware Universe Documentation</title>
+        <title>autoware_in_lane_mrm_planner - Autoware Universe Documentation</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#manual-lane-change-handler" class="md-skip">
+        <a href="#autoware_in_lane_mrm_planner" class="md-skip">
           Skip to content
         </a>
       
@@ -120,7 +120,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Manual Lane Change Handler
+              autoware_in_lane_mrm_planner
             
           </span>
         </div>
@@ -23693,22 +23693,55 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#purpose" class="md-nav__link">
+  <a href="#design" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Purpose
+        Design
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Purpose">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#build" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Build
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#launch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Launch
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#debug-topic-planner-status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Debug topic: planner status
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Debug topic: planner status">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#example-for-using-the-manual-lane-change-handler" class="md-nav__link">
+  <a href="#data-layout" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Example for using the Manual Lane Change Handler
+        data[] layout
       
     </span>
   </a>
@@ -23716,10 +23749,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#services" class="md-nav__link">
+  <a href="#reason_code-values" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Services
+        reason_code values
       
     </span>
   </a>
@@ -23727,21 +23760,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#subscriptions" class="md-nav__link">
+  <a href="#correlating-with-follower-target-speed-drops" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Subscriptions
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#publications" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Publications
+        Correlating with follower target speed drops
       
     </span>
   </a>
@@ -23754,10 +23776,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#service-client" class="md-nav__link">
+  <a href="#future-tasks" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Service client
+        Future tasks
       
     </span>
   </a>
@@ -23765,30 +23787,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#registered-servers" class="md-nav__link">
+  <a href="#dependencies" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Registered Servers
+        Dependencies
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Registered Servers">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#setting-preferred-lane" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Setting Preferred Lane
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -23812,124 +23817,287 @@
   
 
 
-<div><h1 id="manual-lane-change-handler">Manual Lane Change Handler<a class="headerlink" href="#manual-lane-change-handler" title="Permanent link">#</a></h1>
-<h2 id="purpose">Purpose<a class="headerlink" href="#purpose" title="Permanent link">#</a></h2>
-<p><code>Manual Lane Change Handler</code> helps shift the preferred-primitives of a route to the left or right. A manual lane-change handler rviz plugin is also available for use for the user.</p>
-<h3 id="example-for-using-the-manual-lane-change-handler">Example for using the Manual Lane Change Handler<a class="headerlink" href="#example-for-using-the-manual-lane-change-handler" title="Permanent link">#</a></h3>
-<p>Service call to shift the preferred-lanes to the left</p>
-<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>service<span class="w"> </span>call<span class="w"> </span>/planning/mission_planning/manual_lane_change_handler/set_preferred_lane<span class="w"> </span>tier4_external_api_msgs/srv/SetPreferredLane<span class="w"> </span>lane_change_direction:<span class="se">\ </span><span class="m">0</span><span class="se">\</span>
+<div><h1 id="autoware_in_lane_mrm_planner">autoware_in_lane_mrm_planner<a class="headerlink" href="#autoware_in_lane_mrm_planner" title="Permanent link">#</a></h1>
+<p>MRM in-lane stop trajectory planner (Phase1).</p>
+<h2 id="design">Design<a class="headerlink" href="#design" title="Permanent link">#</a></h2>
+<p>See <code>docs/design_phase1.md</code> and <code>docs/implementation_plan_phase1.md</code>.</p>
+<h2 id="build">Build<a class="headerlink" href="#build" title="Permanent link">#</a></h2>
+<p>From <code>pilot-auto.x2.v4.3.2</code> repository root (after workspace dependencies are installed):</p>
+<div class="highlight"><pre><span></span><code>./cmd_helper.sh<span class="w"> </span>--build_ccache<span class="w"> </span>--packages-select<span class="w"> </span>autoware_in_lane_mrm_planner
 </code></pre></div>
-<h3 id="services">Services<a class="headerlink" href="#services" title="Permanent link">#</a></h3>
+<p>Do not run package builds in parallel with a full workspace build.</p>
+<h2 id="launch">Launch<a class="headerlink" href="#launch" title="Permanent link">#</a></h2>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>launch<span class="w"> </span>autoware_in_lane_mrm_planner<span class="w"> </span>in_lane_mrm_planner.launch.xml
+</code></pre></div>
+<h2 id="debug-topic-planner-status">Debug topic: planner status<a class="headerlink" href="#debug-topic-planner-status" title="Permanent link">#</a></h2>
+<p>Published every control cycle to explain why <code>~/output/trajectory</code> was or was not published.</p>
 <table>
 <thead>
 <tr>
+<th>Item</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Topic (node)</td>
+<td><code>~/debug/planner_status</code></td>
+</tr>
+<tr>
+<td>Default remap</td>
+<td><code>/planning/in_lane_mrm_planner/debug/planner_status</code></td>
+</tr>
+<tr>
+<td>Domain 1 (vehicle, via bridge)</td>
+<td><code>/mrm/planning/in_lane_mrm_planner/debug/planner_status</code></td>
+</tr>
+<tr>
+<td>Type</td>
+<td><code>autoware_internal_debug_msgs/msg/Float32MultiArrayStamped</code></td>
+</tr>
+</tbody>
+</table>
+<p>Use <code>data[0]</code> as the primary reason code when plotting in PlotJuggler or post-processing rosbags.
+Other fields are boolean flags (0/1) or numeric diagnostics.</p>
+<h3 id="data-layout"><code>data[]</code> layout<a class="headerlink" href="#data-layout" title="Permanent link">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Index</th>
+<th>Field</th>
+<th>Unit / type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td><code>reason_code</code></td>
+<td>int</td>
+<td>Primary status (see table below)</td>
+</tr>
+<tr>
+<td>1</td>
+<td><code>trigger_active</code></td>
+<td>0/1</td>
+<td>MRM trigger is true</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>is_latched</code></td>
+<td>0/1</td>
+<td>Trajectory latch is active</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>has_latest_candidate</code></td>
+<td>0/1</td>
+<td>A candidate trajectory is stored in the latcher</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>data_ready</code></td>
+<td>0/1</td>
+<td>Map, route, odometry, and acceleration are available</td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>plan_ok</code></td>
+<td>0/1</td>
+<td>Path planning succeeded this cycle (non-latched mode only)</td>
+</tr>
+<tr>
+<td>6</td>
+<td><code>validation_ok</code></td>
+<td>0/1</td>
+<td>Trajectory validator passed (non-latched mode only)</td>
+</tr>
+<tr>
+<td>7</td>
+<td><code>planned_points</code></td>
+<td>count</td>
+<td>Trajectory point count after plan/smooth/modifier/velocity</td>
+</tr>
+<tr>
+<td>8</td>
+<td><code>published_points</code></td>
+<td>count</td>
+<td>Point count of the trajectory actually published (0 if none)</td>
+</tr>
+<tr>
+<td>9</td>
+<td><code>cycle_time_ms</code></td>
+<td>ms</td>
+<td>Wall time for this timer callback</td>
+</tr>
+<tr>
+<td>10</td>
+<td><code>odom_vx</code></td>
+<td>m/s</td>
+<td>Longitudinal velocity from input odometry</td>
+</tr>
+<tr>
+<td>11</td>
+<td><code>sanitized_points</code></td>
+<td>count</td>
+<td>Overlapping points removed before publish (should stay 0; nonzero means an upstream stage produced (near-)duplicate points)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="reason_code-values"><code>reason_code</code> values<a class="headerlink" href="#reason_code-values" title="Permanent link">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Code</th>
 <th>Name</th>
-<th>Type</th>
-<th>Description</th>
+<th>Meaning</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>/planning/manual_lane_change_handler/manual_lane_change_handler/set_preferred_lane</code></td>
-<td>tier4_external_api_msgs/srv/SetPreferredLane</td>
-<td>preferred-lane request</td>
+<td>0</td>
+<td><code>published_ok</code></td>
+<td>Non-latched mode: planned, validated, and published</td>
+</tr>
+<tr>
+<td>1</td>
+<td><code>waiting_map</code></td>
+<td>Missing <code>~/input/vector_map</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>waiting_route</code></td>
+<td>Missing <code>~/input/route</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>waiting_odometry</code></td>
+<td>Missing <code>~/input/kinematic_state</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>waiting_accel</code></td>
+<td>Missing <code>~/input/acceleration</code></td>
+</tr>
+<tr>
+<td>10</td>
+<td><code>plan_failed_update_current_lanelet</code></td>
+<td>Ego pose not on route lanelets</td>
+</tr>
+<tr>
+<td>11</td>
+<td><code>plan_failed_backward_lanelets</code></td>
+<td>Failed to extend lanelets backward on route</td>
+</tr>
+<tr>
+<td>12</td>
+<td><code>plan_failed_forward_lanelets</code></td>
+<td>Failed to extend lanelets forward on route</td>
+</tr>
+<tr>
+<td>13</td>
+<td><code>plan_failed_invalid_s_range</code></td>
+<td>Invalid path range (<code>s_end &lt;= s_start</code>)</td>
+</tr>
+<tr>
+<td>14</td>
+<td><code>plan_failed_generate_path</code></td>
+<td>Path generation failed (empty lanelet, no points, crop failed, etc.)</td>
+</tr>
+<tr>
+<td>15</td>
+<td><code>plan_failed_no_output</code></td>
+<td>Plan/validation succeeded but no trajectory to publish</td>
+</tr>
+<tr>
+<td>20</td>
+<td><code>validation_failed_point_count</code></td>
+<td>Validator: fewer than <code>min_point_count</code> points (also covers empty)</td>
+</tr>
+<tr>
+<td>21</td>
+<td><code>validation_failed_non_finite</code></td>
+<td>Validator: non-finite pose/velocity/acceleration</td>
+</tr>
+<tr>
+<td>30</td>
+<td><code>latched_output_published</code></td>
+<td>Latched mode: publishing frozen trajectory</td>
+</tr>
+<tr>
+<td>31</td>
+<td><code>latched_without_candidate</code></td>
+<td>Latched mode: no candidate stored (nothing published)</td>
+</tr>
+<tr>
+<td>99</td>
+<td><code>unknown</code></td>
+<td>Fallback / unclassified</td>
 </tr>
 </tbody>
 </table>
-<h3 id="subscriptions">Subscriptions<a class="headerlink" href="#subscriptions" title="Permanent link">#</a></h3>
-<table>
-<thead>
-<tr>
-<th>Name</th>
-<th>Type</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>input/odometry</code></td>
-<td>nav_msgs/msg/Odometry</td>
-<td>vehicle odometry</td>
-</tr>
-<tr>
-<td><code>/planning/mission_planning/route</code></td>
-<td>autoware_planning_msgs/msg/LaneletRoute</td>
-<td>current lanelet route</td>
-</tr>
-<tr>
-<td><code>/planning/scenario_planning/lane_driving/behavior_planning/behavior_path_planner/output/is_reroute_available</code></td>
-<td>tier4_planning_msgs/msg/RerouteAvailability</td>
-<td>Availability to reroute generally published by the behavior_path_planner. The <code>set_preferred_lane</code> service will be denied when this topic is <code>false</code>.</td>
-</tr>
-</tbody>
-</table>
-<h3 id="publications">Publications<a class="headerlink" href="#publications" title="Permanent link">#</a></h3>
-<table>
-<thead>
-<tr>
-<th>Name</th>
-<th>Type</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>~/debug/processing_time_ms</code></td>
-<td>autoware_internal_debug_msgs/msg/Float64Stamped</td>
-<td>processing time for lane change for debug</td>
-</tr>
-<tr>
-<td><code>~/debug/route_marker</code></td>
-<td>visualization_msgs/msg/MarkerArray</td>
-<td>route marker for debug</td>
-</tr>
-<tr>
-<td><code>~/debug/goal_footprint</code></td>
-<td>visualization_msgs/msg/MarkerArray</td>
-<td>goal footprint for debug</td>
-</tr>
-</tbody>
-</table>
-<h2 id="service-client">Service client<a class="headerlink" href="#service-client" title="Permanent link">#</a></h2>
-<table>
-<thead>
-<tr>
-<th>Service Name</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>~/set_preferred_lane</td>
-<td>The service to set the preferred lane</td>
-</tr>
-</tbody>
-</table>
-<h2 id="registered-servers">Registered Servers<a class="headerlink" href="#registered-servers" title="Permanent link">#</a></h2>
-<table>
-<thead>
-<tr>
-<th>Service Name</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>/planning/mission_planning/mission_planner/set_preferred_primitive</td>
-<td>The service to set the preferred primitive</td>
-</tr>
-</tbody>
-</table>
-<h3 id="setting-preferred-lane">Setting Preferred Lane<a class="headerlink" href="#setting-preferred-lane" title="Permanent link">#</a></h3>
-<p>This service allows for shifting the current preferred lane to the left or right, or reverting to the default preferred lane received from the route planner.
-As the vehicle moves, the shifting is done relative to the current preferred lane.</p>
-<p>Based on certain criteria, shifting may be rejected, as in the following cases:</p>
+<p>Codes are defined in <code>src/in_lane_mrm_planner_node.cpp</code> (<code>StatusReasonCode</code>).</p>
+<p>The validator is a publish-gate sanity check only (point count and finite values).
+Trajectory shape and longitudinal feasibility are owned by obstacle-stop and the
+velocity planner, not the validator.</p>
+<h3 id="correlating-with-follower-target-speed-drops">Correlating with follower target speed drops<a class="headerlink" href="#correlating-with-follower-target-speed-drops" title="Permanent link">#</a></h3>
+<p>If <code>reason_code</code> is not <code>0</code> or <code>30</code>, or <code>published_points</code> is 0 while the vehicle is moving,
+<code>~/output/trajectory</code> was not updated that cycle. The longitudinal follower then keeps the
+previous reference, which can make target speed appear to drop to zero in diagnostics.</p>
+<h2 id="future-tasks">Future tasks<a class="headerlink" href="#future-tasks" title="Permanent link">#</a></h2>
+<p>Deferred follow-ups from the 2026-06-30 incident investigation (MRM trajectory follower
+abort crash caused by duplicate points in the published trajectory; rosbags
+<code>..._2026-06-30-11-36-50_p0900_7.db3</code> and <code>..._2026-06-30-15-12-51_p0900_8.db3</code>, both while
+driving manually near the same U-turn lanelet junction around map coordinates
+(x=89149, y=42425)). The duplicate-point generation itself was fixed
+(<code>densify_near_arc_length()</code> sample spacing guard + <code>remove_overlap_points()</code> publish net),
+but the upstream degeneracies below remain:</p>
 <ol>
-<li>Left or Right shift is not available due to no lane being present to shift to</li>
-<li>The next segment is a turn or the very last lane - this is to ensure that we can navigate the enter path and end up at the goal</li>
-<li>The reroute availability provided by the behavior_path_planner is <code>false</code></li>
+<li><strong><code>shift_trajectory_to_ego()</code> short-trajectory fallback</strong> (<code>src/path_planner.cpp</code>,
+   <code>merge_idx = size - 2</code> branch): when the remaining trajectory ahead of ego is shorter than
+   the shift length <code>L</code> (ego overrunning the path end), the fallback degenerates down to a
+   3-point trajectory <code>[ego, end-1, end]</code> whose tail can lie behind ego. Agreed direction:
+   when no intermediate shift point can be generated, skip shifting and return the input
+   trajectory unchanged (the input already passes through ego laterally via
+   <code>apply_lateral_offset()</code>).</li>
+<li><strong><code>apply_lateral_offset()</code> self-intersection at sharp centerline kinks</strong>
+   (<code>src/in_lane_mrm_trajectory_planner.cpp</code>): offsetting every point along its own normal
+   self-intersects where the lateral offset exceeds the local curvature radius (observed at a
+   lanelet junction with ~107 deg heading discontinuity within 0.2 m). Additionally, near the
+   kink the ego projection flips between branches, so the applied offset <code>d</code> jumps frame to
+   frame (up to 1.7 m observed). Agreed direction: detect the kink during path generation and
+   truncate the path before it (which then relies on item 1 / item 3 for the degraded output).</li>
+<li><strong>Explicit diagnostics / "when does the MRM planner give up" design</strong>: needs a top-down
+   decision before implementation. Candidate signals identified in the investigation: ego far
+   off the reference path (large lateral offset or yaw deviation; ~2 rad observed before the
+   crash), plan failure (<code>invalid_s_range</code> after ego passes the path end), and validation
+   failure. Today these only reach the debug <code>planner_status</code> topic; whether to promote them
+   to <code>/diagnostics</code> (and with which severities/thresholds) is undecided. Related question:
+   explicit diag vs. relying on trajectory-timeout diag downstream.</li>
+<li><strong>Drive-side delay modeling in the <code>brake_delay_time</code> hold</strong>
+   (<code>src/mrm_stop_velocity_planner.cpp</code>, <code>effective_initial_accel()</code>): the hold model assumes
+   the drive command cuts immediately at the MRM trigger, so a positive current acceleration
+   is clamped to zero during the hold (valid for BEVs such as J6). For vehicles with slow
+   drive-torque decay (e.g. ICE with a torque converter), consider a separate
+   <code>drive_delay_time</code> or a parameter to disable the clamp. Until then the residual effect can
+   be absorbed by tuning <code>brake_delay_time</code> upward (agreed 2026-07-09).</li>
+<li><strong>Upper-bound validation for <code>brake_delay_time</code></strong>
+   (<code>param/in_lane_mrm_planner_parameters.yaml</code>): the parameter has no upper bound, so a
+   misconfigured value (e.g. 50.0) makes the required stop distance exceed the 500 m cap in
+   <code>calc_required_stop_distance()</code>, every plan becomes infeasible, and the planner permanently
+   publishes the zero-velocity fallback — functionally safe but silently degraded, visible
+   only in a throttled error log. Add an <code>lt_eq&lt;&gt;</code> bound (a few seconds) mirrored as
+   <code>maximum</code> in the JSON schema (review finding, 2026-07-09).</li>
+<li><strong>Regression test that <code>brake_delay_time = 0.0</code> does not clamp a positive <code>a0</code></strong>
+   (<code>test/test_mrm_stop_velocity_planner.cpp</code>): the clamp in <code>effective_initial_accel()</code> must
+   apply only when the delay is positive, but no test pins the delay-zero half; a regression
+   that clamps unconditionally would pass the current suite (review finding, 2026-07-09).</li>
 </ol>
-<p><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB2ZXJzaW9uPSIxLjEiIGRhdGEtZGlhZ3JhbS10eXBlPSJBQ1RJVklUWSIgc3R5bGU9IndpZHRoOjEzMjJweDtoZWlnaHQ6NjY1cHg7YmFja2dyb3VuZDojRkZGRkZGOyIgd2lkdGg9IjEzMjJweCIgaGVpZ2h0PSI2NjVweCIgdmlld0JveD0iMCAwIDEzMjIgNjY1IiB6b29tQW5kUGFuPSJtYWduaWZ5IiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBjb250ZW50U3R5bGVUeXBlPSJ0ZXh0L2NzcyI+PD9wbGFudHVtbCAxLjIwMjYuOGJldGExPz48ZGVmcy8+PGcgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGxlbmd0aEFkanVzdD0ic3BhY2luZyI+PGcgY2xhc3M9InRpdGxlIiBkYXRhLXNvdXJjZS1saW5lPSIxIj48dGV4dCB4PSI1NDMuMjE4IiB5PSIzMi45OTUiIGZpbGw9IiMwMDAiIGZvbnQtc2l6ZT0iMTQiIHRleHRMZW5ndGg9IjIzMy44MTYiIGZvbnQtd2VpZ2h0PSI3MDAiPnByb2Nlc3NfbGFuZV9jaGFuZ2VfcmVxdWVzdDwvdGV4dD48L2c+PGVsbGlwc2UgY3g9IjU5MC42NDEiIGN5PSI2Mi4yOTciIHJ4PSIxMCIgcnk9IjEwIiBmaWxsPSIjMjIyIiBzdHlsZT0ic3Ryb2tlOiMyMjI7c3Ryb2tlLXdpZHRoOjE7Ii8+PHJlY3QgeD0iNDU2LjA4NiIgeT0iOTIuMjk3IiB3aWR0aD0iMjY5LjExMSIgaGVpZ2h0PSIzMy45NjkiIGZpbGw9IiNGMUYxRjEiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgcng9IjEyLjUiIHJ5PSIxMi41Ii8+PHRleHQgeD0iNDY2LjA4NiIgeT0iMTEzLjQzNiIgZmlsbD0iIzAwMCIgZm9udC1zaXplPSIxMiIgdGV4dExlbmd0aD0iMjQ5LjExMSI+Q29tcHV0ZSBvdmVycmlkZV9kaXJlY3Rpb24gZnJvbSByZXF1ZXN0PC90ZXh0Pjxwb2x5Z29uIHBvaW50cz0iNTEyLjU0OCwxNDYuMjY2LDY2OC43MzQsMTQ2LjI2Niw2ODAuNzM0LDE1OC4yNjYsNjY4LjczNCwxNzAuMjY2LDUxMi41NDgsMTcwLjI2Niw1MDAuNTQ4LDE1OC4yNjYsNTEyLjU0OCwxNDYuMjY2IiBmaWxsPSIjRjFGMUYxIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PHRleHQgeD0iNTEyLjU0OCIgeT0iMTYyLjA3NCIgZmlsbD0iIzAwMCIgZm9udC1zaXplPSIxMSIgdGV4dExlbmd0aD0iMTU2LjE4NiI+b3ZlcnJpZGVfZGlyZWN0aW9uID09IEFVVE88L3RleHQ+PHRleHQgeD0iNDgxLjU0IiB5PSIxNTUuNjcxIiBmaWxsPSIjMDAwIiBmb250LXNpemU9IjExIiB0ZXh0TGVuZ3RoPSIxOS4wMDgiPnllczwvdGV4dD48dGV4dCB4PSI2ODAuNzM0IiB5PSIxNTUuNjcxIiBmaWxsPSIjMDAwIiBmb250LXNpemU9IjExIiB0ZXh0TGVuZ3RoPSIxMy43MDIiPm5vPC90ZXh0Pjxwb2x5Z29uIHBvaW50cz0iMTE2LjM3NiwxODAuMjY2LDMwMC40MjIsMTgwLjI2NiwzMTIuNDIyLDE5Mi4yNjYsMzAwLjQyMiwyMDQuMjY2LDExNi4zNzYsMjA0LjI2NiwxMDQuMzc2LDE5Mi4yNjYsMTE2LjM3NiwxODAuMjY2IiBmaWxsPSIjRjFGMUYxIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PHRleHQgeD0iMTE2LjM3NiIgeT0iMTk2LjA3NCIgZmlsbD0iIzAwMCIgZm9udC1zaXplPSIxMSIgdGV4dExlbmd0aD0iMTg0LjA0NiI+Y3VycmVudGx5IGluIGxhbmUtY2hhbmdlIG92ZXJyaWRlPC90ZXh0Pjx0ZXh0IHg9Ijg1LjM2OCIgeT0iMTg5LjY3MSIgZmlsbD0iIzAwMCIgZm9udC1zaXplPSIxMSIgdGV4dExlbmd0aD0iMTkuMDA4Ij55ZXM8L3RleHQ+PHRleHQgeD0iMzEyLjQyMiIgeT0iMTg5LjY3MSIgZmlsbD0iIzAwMCIgZm9udC1zaXplPSIxMSIgdGV4dExlbmd0aD0iMTMuNzAyIj5ubzwvdGV4dD48cmVjdCB4PSIxNiIgeT0iMjE0LjI2NiIgd2lkdGg9IjE1Ni43NTIiIGhlaWdodD0iMzMuOTY5IiBmaWxsPSIjRjFGMUYxIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHJ4PSIxMi41IiByeT0iMTIuNSIvPjx0ZXh0IHg9IjI2IiB5PSIyMzUuNDA0IiBmaWxsPSIjMDAwIiBmb250LXNpemU9IjEyIiB0ZXh0TGVuZ3RoPSIxMzYuNzUyIj5yZXZlcnQgdG8gb3JpZ2luYWwgcm91dGU8L3RleHQ+PGVsbGlwc2UgY3g9Ijk0LjM3NiIgY3k9IjI3OS4yMzQiIHJ4PSIxMSIgcnk9IjExIiBmaWxsPSJub25lIiBzdHlsZT0ic3Ryb2tlOiMyMjI7c3Ryb2tlLXdpZHRoOjE7Ii8+PGVsbGlwc2UgY3g9Ijk0LjM3NiIgY3k9IjI3OS4yMzQiIHJ4PSI2IiByeT0iNiIgZmlsbD0iIzIyMiIgc3R5bGU9InN0cm9rZTojMjIyO3N0cm9rZS13aWR0aDoxOyIvPjxyZWN0IHg9IjI4MC4xMjgiIHk9IjIxNC4yNjYiIHdpZHRoPSI4NC41ODgiIGhlaWdodD0iMzMuOTY5IiBmaWxsPSIjRjFGMUYxIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHJ4PSIxMi41IiByeT0iMTIuNSIvPjx0ZXh0IHg9IjI5MC4xMjgiIHk9IjIzNS40MDQiIGZpbGw9IiMwMDAiIGZvbnQtc2l6ZT0iMTIiIHRleHRMZW5ndGg9IjY0LjU4OCI+ZG8gbm90aGluZzwvdGV4dD48ZWxsaXBzZSBjeD0iMzIyLjQyMiIgY3k9IjI3OS4yMzQiIHJ4PSIxMSIgcnk9IjExIiBmaWxsPSJub25lIiBzdHlsZT0ic3Ryb2tlOiMyMjI7c3Ryb2tlLXdpZHRoOjE7Ii8+PGVsbGlwc2UgY3g9IjMyMi40MjIiIGN5PSIyNzkuMjM0IiByeD0iNiIgcnk9IjYiIGZpbGw9IiMyMjIiIHN0eWxlPSJzdHJva2U6IzIyMjtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBwb2ludHM9Ijk1OS4wNzcsMTgwLjI2NiwxMDc4LjY5MSwxODAuMjY2LDEwOTAuNjkxLDE5Mi4yNjYsMTA3OC42OTEsMjA0LjI2Niw5NTkuMDc3LDIwNC4yNjYsOTQ3LjA3NywxOTIuMjY2LDk1OS4wNzcsMTgwLjI2NiIgZmlsbD0iI0YxRjFGMSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjx0ZXh0IHg9Ijk1OS4wNzciIHk9IjE5Ni4wNzQiIGZpbGw9IiMwMDAiIGZvbnQtc2l6ZT0iMTEiIHRleHRMZW5ndGg9IjExOS42MTQiPmhhcyBhIHJvdXRlIGJlZW4gc2V0PzwvdGV4dD48dGV4dCB4PSI5MjguMDY5IiB5PSIxODkuNjcxIiBmaWxsPSIjMDAwIiBmb250LXNpemU9IjExIiB0ZXh0TGVuZ3RoPSIxOS4wMDgiPnllczwvdGV4dD48dGV4dCB4PSIxMDkwLjY5MSIgeT0iMTg5LjY3MSIgZmlsbD0iIzAwMCIgZm9udC1zaXplPSIxMSIgdGV4dExlbmd0aD0iMTMuNzAyIj5ubzwvdGV4dD48cmVjdCB4PSI2ODQuNzg3IiB5PSIyMTQuMjY2IiB3aWR0aD0iMTM2LjA0NSIgaGVpZ2h0PSIzMy45NjkiIGZpbGw9IiNGMUYxRjEiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgcng9IjEyLjUiIHJ5PSIxMi41Ii8+PHRleHQgeD0iNjk0Ljc4NyIgeT0iMjM1LjQwNCIgZmlsbD0iIzAwMCIgZm9udC1zaXplPSIxMiIgdGV4dExlbmd0aD0iMTE2LjA0NSI+ZmluZCBpbml0aWFsIHNlZ21lbnQ8L3RleHQ+PHBvbHlnb24gcG9pbnRzPSI2ODUuMDgzLDMyMy45NDUsODIwLjUzNiwzMjMuOTQ1LDgzMi41MzYsMzM2Ljc1LDgyMC41MzYsMzQ5LjU1NCw2ODUuMDgzLDM0OS41NTQsNjczLjA4MywzMzYuNzUsNjg1LjA4MywzMjMuOTQ1IiBmaWxsPSIjRjFGMUYxIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PHRleHQgeD0iNjg1LjA4MyIgeT0iMzM0LjE1NSIgZmlsbD0iIzAwMCIgZm9udC1zaXplPSIxMSIgdGV4dExlbmd0aD0iOTEuMDM1Ij5zaGlmdCB1bmF2YWlsYWJsZTwvdGV4dD48dGV4dCB4PSI2ODUuMDgzIiB5PSIzNDYuOTYiIGZpbGw9IiMwMDAiIGZvbnQtc2l6ZT0iMTEiIHRleHRMZW5ndGg9IjEzNS40NTQiPm9yIG5leHQgc2VnbWVudCBpcyB0dXJuPzwvdGV4dD48dGV4dCB4PSI2NTQuMDc0IiB5PSIzMzQuMTU1IiBmaWxsPSIjMDAwIiBmb250LXNpemU9IjExIiB0ZXh0TGVuZ3RoPSIxOS4wMDgiPnllczwvdGV4dD48dGV4dCB4PSI4MzIuNTM2IiB5PSIzMzQuMTU1IiBmaWxsPSIjMDAwIiBmb250LXNpemU9IjExIiB0ZXh0TGVuZ3RoPSIxMy43MDIiPm5vPC90ZXh0PjxyZWN0IHg9IjM5Mi43MTYiIHk9IjM1OS41NTQiIHdpZHRoPSIzMDYuMjEzIiBoZWlnaHQ9IjMzLjk2OSIgZmlsbD0iI0YxRjFGMSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiByeD0iMTIuNSIgcnk9IjEyLjUiLz48dGV4dCB4PSI0MDIuNzE2IiB5PSIzODAuNjkzIiBmaWxsPSIjMDAwIiBmb250LXNpemU9IjEyIiB0ZXh0TGVuZ3RoPSIyODYuMjEzIj4tPiB3aGlsZSAobm90IHBlbnVsdGltYXRlIHNlZ21lbnQpICAgJyBjb250aW51ZTwvdGV4dD48cG9seWdvbiBwb2ludHM9IjczMC45MjksMzg0LjU1NCw5MDguODc4LDM4NC41NTQsOTIwLjg3OCwzOTYuNTU0LDkwOC44NzgsNDA4LjU1NCw3MzAuOTI5LDQwOC41NTQsNzE4LjkyOSwzOTYuNTU0LDczMC45MjksMzg0LjU1NCIgZmlsbD0iI0YxRjFGMSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjx0ZXh0IHg9IjgyMy45MDQiIHk9IjQxOC43NjUiIGZpbGw9IiMwMDAiIGZvbnQtc2l6ZT0iMTEiIHRleHRMZW5ndGg9IjE5LjAwOCI+eWVzPC90ZXh0Pjx0ZXh0IHg9IjczMC45MjkiIHk9IjQwMC4zNjIiIGZpbGw9IiMwMDAiIGZvbnQtc2l6ZT0iMTEiIHRleHRMZW5ndGg9IjE3Ny45NSI+bGVmdC1zaGlmdCByZXF1ZXN0ZWQgYW5kIHBvc3NpYmxlPC90ZXh0PjxyZWN0IHg9Ijc4NS4xMTMiIHk9IjQ0MC4yNjUiIHdpZHRoPSI2OS41ODIiIGhlaWdodD0iMzMuOTY5IiBmaWxsPSIjRjFGMUYxIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHJ4PSIxMi41IiByeT0iMTIuNSIvPjx0ZXh0IHg9Ijc5NS4xMTMiIHk9IjQ2MS40MDMiIGZpbGw9IiMwMDAiIGZvbnQtc2l6ZT0iMTIiIHRleHRMZW5ndGg9IjQ5LjU4MiI+c2hpZnQgbGVmdDwvdGV4dD48cG9seWdvbiBwb2ludHM9Ijk1Mi44NzgsMzg0LjU1NCwxMTM4LjY2NSwzODQuNTU0LDExNTAuNjY1LDM5Ni41NTQsMTEzOC42NjUsNDA4LjU1NCw5NTIuODc4LDQwOC41NTQsOTQwLjg3OCwzOTYuNTU0LDk1Mi44NzgsMzg0LjU1NCIgZmlsbD0iI0YxRjFGMSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjx0ZXh0IHg9IjEwNDkuNzcxIiB5PSI0MTguNzY1IiBmaWxsPSIjMDAwIiBmb250LXNpemU9IjExIiB0ZXh0TGVuZ3RoPSIxOS4wMDgiPnllczwvdGV4dD48dGV4dCB4PSI5NTIuODc4IiB5PSI0MDAuMzYyIiBmaWxsPSIjMDAwIiBmb250LXNpemU9IjExIiB0ZXh0TGVuZ3RoPSIxODUuNzg2Ij5yaWdodC1zaGlmdCByZXF1ZXN0ZWQgYW5kIHBvc3NpYmxlPC90ZXh0PjxyZWN0IHg9IjEwMDYuNzA2IiB5PSI0NDAuMjY1IiB3aWR0aD0iNzguMTMxIiBoZWlnaHQ9IjMzLjk2OSIgZmlsbD0iI0YxRjFGMSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiByeD0iMTIuNSIgcnk9IjEyLjUiLz48dGV4dCB4PSIxMDE2LjcwNiIgeT0iNDYxLjQwMyIgZmlsbD0iIzAwMCIgZm9udC1zaXplPSIxMiIgdGV4dExlbmd0aD0iNTguMTMxIj5zaGlmdCByaWdodDwvdGV4dD48cmVjdCB4PSI3MzMuMTczIiB5PSI1MTcuMTI0IiB3aWR0aD0iNDUzLjI0OCIgaGVpZ2h0PSIzMy45NjkiIGZpbGw9IiNGMUYxRjEiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgcng9IjEyLjUiIHJ5PSIxMi41Ii8+PHRleHQgeD0iNzQzLjE3MyIgeT0iNTM4LjI2MyIgZmlsbD0iIzAwMCIgZm9udC1zaXplPSIxMiIgdGV4dExlbmd0aD0iNDMzLjI0OCI+LT4gd2hpbGUgKG5vdCBwZW51bHRpbWF0ZSBzZWdtZW50KSAgICcganVtcCBiYWNrIGluc3RlYWQgb2YgaW1wbGljaXQgam9pbjwvdGV4dD48cG9seWdvbiBwb2ludHM9Ijc1Mi44MDksNTU3LjA5Myw3NjQuODA5LDU2OS4wOTMsNzUyLjgwOSw1ODEuMDkzLDc0MC44MDksNTY5LjA5Myw3NTIuODA5LDU1Ny4wOTMiIGZpbGw9IiNGMUYxRjEiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41O3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiLz48cG9seWdvbiBwb2ludHM9IjY4Mi44NTQsMjY4LjIzNCw4MjIuNzY1LDI2OC4yMzQsODM0Ljc2NSwyODAuMjM0LDgyMi43NjUsMjkyLjIzNCw2ODIuODU0LDI5Mi4yMzQsNjcwLjg1NCwyODAuMjM0LDY4Mi44NTQsMjY4LjIzNCIgZmlsbD0iI0YxRjFGMSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjx0ZXh0IHg9Ijc1Ni44MDkiIHk9IjMwMi40NDUiIGZpbGw9IiMwMDAiIGZvbnQtc2l6ZT0iMTEiIHRleHRMZW5ndGg9IjE5LjAwOCI+eWVzPC90ZXh0Pjx0ZXh0IHg9IjY4Mi44NTQiIHk9IjI4NC4wNDIiIGZpbGw9IiMwMDAiIGZvbnQtc2l6ZT0iMTEiIHRleHRMZW5ndGg9IjEzOS45MTIiPm5vdCBwZW51bHRpbWF0ZSBzZWdtZW50PC90ZXh0Pjx0ZXh0IHg9IjY1Ny4xNTIiIHk9IjI3Ny42NCIgZmlsbD0iIzAwMCIgZm9udC1zaXplPSIxMSIgdGV4dExlbmd0aD0iMTMuNzAyIj5ubzwvdGV4dD48ZWxsaXBzZSBjeD0iNzUyLjgwOSIgY3k9IjYzNC4wOTMiIHJ4PSIxMSIgcnk9IjExIiBmaWxsPSJub25lIiBzdHlsZT0ic3Ryb2tlOiMyMjI7c3Ryb2tlLXdpZHRoOjE7Ii8+PGVsbGlwc2UgY3g9Ijc1Mi44MDkiIGN5PSI2MzQuMDkzIiByeD0iNiIgcnk9IjYiIGZpbGw9IiMyMjIiIHN0eWxlPSJzdHJva2U6IzIyMjtzdHJva2Utd2lkdGg6MTsiLz48cmVjdCB4PSIxMjE3LjY2NSIgeT0iMjE0LjI2NiIgd2lkdGg9Ijg0LjU4OCIgaGVpZ2h0PSIzMy45NjkiIGZpbGw9IiNGMUYxRjEiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgcng9IjEyLjUiIHJ5PSIxMi41Ii8+PHRleHQgeD0iMTIyNy42NjUiIHk9IjIzNS40MDQiIGZpbGw9IiMwMDAiIGZvbnQtc2l6ZT0iMTIiIHRleHRMZW5ndGg9IjY0LjU4OCI+ZG8gbm90aGluZzwvdGV4dD48ZWxsaXBzZSBjeD0iMTI1OS45NTgiIGN5PSIyNzkuMjM0IiByeD0iMTEiIHJ5PSIxMSIgZmlsbD0ibm9uZSIgc3R5bGU9InN0cm9rZTojMjIyO3N0cm9rZS13aWR0aDoxOyIvPjxlbGxpcHNlIGN4PSIxMjU5Ljk1OCIgY3k9IjI3OS4yMzQiIHJ4PSI2IiByeT0iNiIgZmlsbD0iIzIyMiIgc3R5bGU9InN0cm9rZTojMjIyO3N0cm9rZS13aWR0aDoxOyIvPjxsaW5lIHgxPSI1OTAuNjQxIiB5MT0iNzIuMjk3IiB4Mj0iNTkwLjY0MSIgeTI9IjkyLjI5NyIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIHBvaW50cz0iNTg2LjY0MSw4Mi4yOTcsNTkwLjY0MSw5Mi4yOTcsNTk0LjY0MSw4Mi4yOTcsNTkwLjY0MSw4Ni4yOTciIGZpbGw9IiMxODE4MTgiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PGxpbmUgeDE9Ijk0LjM3NiIgeTE9IjI0OC4yMzQiIHgyPSI5NC4zNzYiIHkyPSIyNjguMjM0IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gcG9pbnRzPSI5MC4zNzYsMjU4LjIzNCw5NC4zNzYsMjY4LjIzNCw5OC4zNzYsMjU4LjIzNCw5NC4zNzYsMjYyLjIzNCIgZmlsbD0iIzE4MTgxOCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiLz48bGluZSB4MT0iMzIyLjQyMiIgeTE9IjI0OC4yMzQiIHgyPSIzMjIuNDIyIiB5Mj0iMjY4LjIzNCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIHBvaW50cz0iMzE4LjQyMiwyNTguMjM0LDMyMi40MjIsMjY4LjIzNCwzMjYuNDIyLDI1OC4yMzQsMzIyLjQyMiwyNjIuMjM0IiBmaWxsPSIjMTgxODE4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjxsaW5lIHgxPSIxMDQuMzc2IiB5MT0iMTkyLjI2NiIgeDI9Ijk0LjM3NiIgeTI9IjE5Mi4yNjYiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48bGluZSB4MT0iOTQuMzc2IiB5MT0iMTkyLjI2NiIgeDI9Ijk0LjM3NiIgeTI9IjIxNC4yNjYiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBwb2ludHM9IjkwLjM3NiwyMDQuMjY2LDk0LjM3NiwyMTQuMjY2LDk4LjM3NiwyMDQuMjY2LDk0LjM3NiwyMDguMjY2IiBmaWxsPSIjMTgxODE4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjxsaW5lIHgxPSIzMTIuNDIyIiB5MT0iMTkyLjI2NiIgeDI9IjMyMi40MjIiIHkyPSIxOTIuMjY2IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PGxpbmUgeDE9IjMyMi40MjIiIHkxPSIxOTIuMjY2IiB4Mj0iMzIyLjQyMiIgeTI9IjIxNC4yNjYiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBwb2ludHM9IjMxOC40MjIsMjA0LjI2NiwzMjIuNDIyLDIxNC4yNjYsMzI2LjQyMiwyMDQuMjY2LDMyMi40MjIsMjA4LjI2NiIgZmlsbD0iIzE4MTgxOCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiLz48bGluZSB4MT0iODE5LjkwNCIgeTE9IjQwOC41NTQiIHgyPSI4MTkuOTA0IiB5Mj0iNDQwLjI2NSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIHBvaW50cz0iODE1LjkwNCw0MzAuMjY1LDgxOS45MDQsNDQwLjI2NSw4MjMuOTA0LDQzMC4yNjUsODE5LjkwNCw0MzQuMjY1IiBmaWxsPSIjMTgxODE4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjxsaW5lIHgxPSI4MTkuOTA0IiB5MT0iNDc0LjIzMyIgeDI9IjgxOS45MDQiIHkyPSI0OTcuMTI0IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gcG9pbnRzPSI4MTUuOTA0LDQ4Ny4xMjQsODE5LjkwNCw0OTcuMTI0LDgyMy45MDQsNDg3LjEyNCw4MTkuOTA0LDQ5MS4xMjQiIGZpbGw9IiMxODE4MTgiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PGxpbmUgeDE9IjEwNDUuNzcxIiB5MT0iNDA4LjU1NCIgeDI9IjEwNDUuNzcxIiB5Mj0iNDQwLjI2NSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIHBvaW50cz0iMTA0MS43NzEsNDMwLjI2NSwxMDQ1Ljc3MSw0NDAuMjY1LDEwNDkuNzcxLDQzMC4yNjUsMTA0NS43NzEsNDM0LjI2NSIgZmlsbD0iIzE4MTgxOCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiLz48bGluZSB4MT0iMTA0NS43NzEiIHkxPSI0NzQuMjMzIiB4Mj0iMTA0NS43NzEiIHkyPSI0OTcuMTI0IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gcG9pbnRzPSIxMDQxLjc3MSw0ODcuMTI0LDEwNDUuNzcxLDQ5Ny4xMjQsMTA0OS43NzEsNDg3LjEyNCwxMDQ1Ljc3MSw0OTEuMTI0IiBmaWxsPSIjMTgxODE4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjxsaW5lIHgxPSI5MjAuODc4IiB5MT0iMzk2LjU1NCIgeDI9Ijk0MC44NzgiIHkyPSIzOTYuNTU0IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gcG9pbnRzPSI5MzAuODc4LDM5Mi41NTQsOTQwLjg3OCwzOTYuNTU0LDkzMC44NzgsNDAwLjU1NCw5MzQuODc4LDM5Ni41NTQiIGZpbGw9IiMxODE4MTgiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PGxpbmUgeDE9IjgzMi41MzYiIHkxPSIzMzYuNzUiIHgyPSI5NTkuNzk3IiB5Mj0iMzM2Ljc1IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PGxpbmUgeDE9Ijk1OS43OTciIHkxPSIzMzYuNzUiIHgyPSI5NTkuNzk3IiB5Mj0iMzU5LjU1NCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxsaW5lIHgxPSI5NTkuNzk3IiB5MT0iMzU5LjU1NCIgeDI9IjgxOS45MDQiIHkyPSIzNTkuNTU0IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PGxpbmUgeDE9IjgxOS45MDQiIHkxPSIzNTkuNTU0IiB4Mj0iODE5LjkwNCIgeTI9IjM4NC41NTQiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBwb2ludHM9IjgxNS45MDQsMzc0LjU1NCw4MTkuOTA0LDM4NC41NTQsODIzLjkwNCwzNzQuNTU0LDgxOS45MDQsMzc4LjU1NCIgZmlsbD0iIzE4MTgxOCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiLz48bGluZSB4MT0iMTE1MC42NjUiIHkxPSIzOTYuNTU0IiB4Mj0iMTE4NS42NjUiIHkyPSIzOTYuNTU0IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PGxpbmUgeDE9IjExODUuNjY1IiB5MT0iMzk2LjU1NCIgeDI9IjExODUuNjY1IiB5Mj0iNDk3LjEyNCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIHBvaW50cz0iMTE4MS42NjUsNDg3LjEyNCwxMTg1LjY2NSw0OTcuMTI0LDExODkuNjY1LDQ4Ny4xMjQsMTE4NS42NjUsNDkxLjEyNCIgZmlsbD0iIzE4MTgxOCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiLz48bGluZSB4MT0iODE5LjkwNCIgeTE9IjQ5Ny4xMjQiIHgyPSIxMTg1LjY2NSIgeTI9IjQ5Ny4xMjQiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48bGluZSB4MT0iOTU5Ljc5NyIgeTE9IjQ5Ny4xMjQiIHgyPSI5NTkuNzk3IiB5Mj0iNTE3LjEyNCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIHBvaW50cz0iOTU1Ljc5Nyw1MDcuMTI0LDk1OS43OTcsNTE3LjEyNCw5NjMuNzk3LDUwNy4xMjQsOTU5Ljc5Nyw1MTEuMTI0IiBmaWxsPSIjMTgxODE4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjxsaW5lIHgxPSI2NzMuMDgzIiB5MT0iMzM2Ljc1IiB4Mj0iNTQ1LjgyMiIgeTI9IjMzNi43NSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxsaW5lIHgxPSI1NDUuODIyIiB5MT0iMzM2Ljc1IiB4Mj0iNTQ1LjgyMiIgeTI9IjM1OS41NTQiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBwb2ludHM9IjU0MS44MjIsMzQ5LjU1NCw1NDUuODIyLDM1OS41NTQsNTQ5LjgyMiwzNDkuNTU0LDU0NS44MjIsMzUzLjU1NCIgZmlsbD0iIzE4MTgxOCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiLz48bGluZSB4MT0iNTQ1LjgyMiIgeTE9IjM5My41MjMiIHgyPSI1NDUuODIyIiB5Mj0iNTY5LjA5MyIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxsaW5lIHgxPSI1NDUuODIyIiB5MT0iNTY5LjA5MyIgeDI9Ijc0MC44MDkiIHkyPSI1NjkuMDkzIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gcG9pbnRzPSI3MzAuODA5LDU2NS4wOTMsNzQwLjgwOSw1NjkuMDkzLDczMC44MDksNTczLjA5Myw3MzQuODA5LDU2OS4wOTMiIGZpbGw9IiMxODE4MTgiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PGxpbmUgeDE9Ijk1OS43OTciIHkxPSI1NTEuMDkzIiB4Mj0iOTU5Ljc5NyIgeTI9IjU2OS4wOTMiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48bGluZSB4MT0iOTU5Ljc5NyIgeTE9IjU2OS4wOTMiIHgyPSI3NjQuODA5IiB5Mj0iNTY5LjA5MyIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIHBvaW50cz0iNzc0LjgwOSw1NjUuMDkzLDc2NC44MDksNTY5LjA5Myw3NzQuODA5LDU3My4wOTMsNzcwLjgwOSw1NjkuMDkzIiBmaWxsPSIjMTgxODE4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjxsaW5lIHgxPSI3NTIuODA5IiB5MT0iMjkyLjIzNCIgeDI9Ijc1Mi44MDkiIHkyPSIzMjMuOTQ1IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gcG9pbnRzPSI3NDguODA5LDMxMy45NDUsNzUyLjgwOSwzMjMuOTQ1LDc1Ni44MDksMzEzLjk0NSw3NTIuODA5LDMxNy45NDUiIGZpbGw9IiMxODE4MTgiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PGxpbmUgeDE9Ijc1Mi44MDkiIHkxPSI1ODEuMDkzIiB4Mj0iNzUyLjgwOSIgeTI9IjU5MS4wOTMiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48bGluZSB4MT0iNzUyLjgwOSIgeTE9IjU5MS4wOTMiIHgyPSIxMjAzLjY2NSIgeTI9IjU5MS4wOTMiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBwb2ludHM9IjExOTkuNjY1LDQ3Ny4xMjQsMTIwMy42NjUsNDY3LjEyNCwxMjA3LjY2NSw0NzcuMTI0LDEyMDMuNjY1LDQ3My4xMjQiIGZpbGw9IiMxODE4MTgiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PGxpbmUgeDE9IjEyMDMuNjY1IiB5MT0iMjgwLjIzNCIgeDI9IjEyMDMuNjY1IiB5Mj0iNTkxLjA5MyIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxsaW5lIHgxPSIxMjAzLjY2NSIgeTE9IjI4MC4yMzQiIHgyPSI4MzQuNzY1IiB5Mj0iMjgwLjIzNCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIHBvaW50cz0iODQ0Ljc2NSwyNzYuMjM0LDgzNC43NjUsMjgwLjIzNCw4NDQuNzY1LDI4NC4yMzQsODQwLjc2NSwyODAuMjM0IiBmaWxsPSIjMTgxODE4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjxsaW5lIHgxPSI2NzAuODU0IiB5MT0iMjgwLjIzNCIgeDI9IjM3OC43MTYiIHkyPSIyODAuMjM0IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gcG9pbnRzPSIzNzQuNzE2LDQ2My4xMjQsMzc4LjcxNiw0NzMuMTI0LDM4Mi43MTYsNDYzLjEyNCwzNzguNzE2LDQ2Ny4xMjQiIGZpbGw9IiMxODE4MTgiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PGxpbmUgeDE9IjM3OC43MTYiIHkxPSIyODAuMjM0IiB4Mj0iMzc4LjcxNiIgeTI9IjYwMy4wOTMiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48bGluZSB4MT0iMzc4LjcxNiIgeTE9IjYwMy4wOTMiIHgyPSI3NTIuODA5IiB5Mj0iNjAzLjA5MyIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxsaW5lIHgxPSI3NTIuODA5IiB5MT0iNjAzLjA5MyIgeDI9Ijc1Mi44MDkiIHkyPSI2MjMuMDkzIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gcG9pbnRzPSI3NDguODA5LDYxMy4wOTMsNzUyLjgwOSw2MjMuMDkzLDc1Ni44MDksNjEzLjA5Myw3NTIuODA5LDYxNy4wOTMiIGZpbGw9IiMxODE4MTgiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PGxpbmUgeDE9Ijc1Mi44MDkiIHkxPSIyNDguMjM0IiB4Mj0iNzUyLjgwOSIgeTI9IjI2OC4yMzQiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBwb2ludHM9Ijc0OC44MDksMjU4LjIzNCw3NTIuODA5LDI2OC4yMzQsNzU2LjgwOSwyNTguMjM0LDc1Mi44MDksMjYyLjIzNCIgZmlsbD0iIzE4MTgxOCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiLz48bGluZSB4MT0iMTI1OS45NTgiIHkxPSIyNDguMjM0IiB4Mj0iMTI1OS45NTgiIHkyPSIyNjguMjM0IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gcG9pbnRzPSIxMjU1Ljk1OCwyNTguMjM0LDEyNTkuOTU4LDI2OC4yMzQsMTI2My45NTgsMjU4LjIzNCwxMjU5Ljk1OCwyNjIuMjM0IiBmaWxsPSIjMTgxODE4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjxsaW5lIHgxPSI5NDcuMDc3IiB5MT0iMTkyLjI2NiIgeDI9Ijc1Mi44MDkiIHkyPSIxOTIuMjY2IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PGxpbmUgeDE9Ijc1Mi44MDkiIHkxPSIxOTIuMjY2IiB4Mj0iNzUyLjgwOSIgeTI9IjIxNC4yNjYiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBwb2ludHM9Ijc0OC44MDksMjA0LjI2Niw3NTIuODA5LDIxNC4yNjYsNzU2LjgwOSwyMDQuMjY2LDc1Mi44MDksMjA4LjI2NiIgZmlsbD0iIzE4MTgxOCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiLz48bGluZSB4MT0iMTA5MC42OTEiIHkxPSIxOTIuMjY2IiB4Mj0iMTI1OS45NTgiIHkyPSIxOTIuMjY2IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PGxpbmUgeDE9IjEyNTkuOTU4IiB5MT0iMTkyLjI2NiIgeDI9IjEyNTkuOTU4IiB5Mj0iMjE0LjI2NiIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIHBvaW50cz0iMTI1NS45NTgsMjA0LjI2NiwxMjU5Ljk1OCwyMTQuMjY2LDEyNjMuOTU4LDIwNC4yNjYsMTI1OS45NTgsMjA4LjI2NiIgZmlsbD0iIzE4MTgxOCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiLz48bGluZSB4MT0iNTAwLjU0OCIgeTE9IjE1OC4yNjYiIHgyPSIyMDguMzk5IiB5Mj0iMTU4LjI2NiIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxsaW5lIHgxPSIyMDguMzk5IiB5MT0iMTU4LjI2NiIgeDI9IjIwOC4zOTkiIHkyPSIxODAuMjY2IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gcG9pbnRzPSIyMDQuMzk5LDE3MC4yNjYsMjA4LjM5OSwxODAuMjY2LDIxMi4zOTksMTcwLjI2NiwyMDguMzk5LDE3NC4yNjYiIGZpbGw9IiMxODE4MTgiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PGxpbmUgeDE9IjY4MC43MzQiIHkxPSIxNTguMjY2IiB4Mj0iMTAxOC44ODQiIHkyPSIxNTguMjY2IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PGxpbmUgeDE9IjEwMTguODg0IiB5MT0iMTU4LjI2NiIgeDI9IjEwMTguODg0IiB5Mj0iMTgwLjI2NiIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIHBvaW50cz0iMTAxNC44ODQsMTcwLjI2NiwxMDE4Ljg4NCwxODAuMjY2LDEwMjIuODg0LDE3MC4yNjYsMTAxOC44ODQsMTc0LjI2NiIgZmlsbD0iIzE4MTgxOCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiLz48bGluZSB4MT0iNTkwLjY0MSIgeTE9IjEyNi4yNjYiIHgyPSI1OTAuNjQxIiB5Mj0iMTQ2LjI2NiIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIHBvaW50cz0iNTg2LjY0MSwxMzYuMjY2LDU5MC42NDEsMTQ2LjI2Niw1OTQuNjQxLDEzNi4yNjYsNTkwLjY0MSwxNDAuMjY2IiBmaWxsPSIjMTgxODE4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjw/cGxhbnR1bWwtc3JjIGJQNURKaUQwMzhOdEVPTHREOGpTZTU1MVkwRW1XSHJJRENxdVlTbDQzWkVVR2NfRnZBVExXdjBlY29tb3AtenhwclBJWHAxdWdKNjRvWGQ2Z2t1Q2pyWHZfOFdPRENrMjZnX1B6YWR3OElnMjdENXhpYlhQeWJXaDJLRlpmT1Q1TnNPUERSM3ZIUk5SbVVGaG90Q0VzWTczdmVHWGR3SHJ6MXZQdEdjOE9LbkdwMGFrZkRONHJjRndoUTAydWdhYkRXd3lmNjFiMllmM1hZdVdSNVlJcVdnbVE0VlNkal9PS2RFYjZFY1QyTTFjMXpYWm1XSktYcE1uOFJPZjZvYWJMaTJzSnNkQnhCQ1pEX2FlM0NaSEFWS2NVSXBsRUwydXdYV3dRWEdZY3dDWFBfT0V0cld5Qzd4ZlVNM0tRX0l5UFhWNUZWbTUwaFkzTWJZOThfdWV2eDNIT2NPbHZxNEI5aEtQOTBIQUNUUDVQLUt1TDR2NmVxTlFTVlRfWnNjZ04xUC1RdWIzeDBWT2NfZXpCSmpIWjBMZldGaDFLS3FBMW80LU52M2puSS1WSnRsQnRTVmxEbTAwPz48L2c+PC9zdmc+" class="uml" alt="uml diagram" title=""></p></div>
+<h2 id="dependencies">Dependencies<a class="headerlink" href="#dependencies" title="Permanent link">#</a></h2>
+<ul>
+<li>Path / obstacle-stop logic: vendored from <code>pilot-auto.x2.v4.3.e2e</code> (see <code>docs/*_sync.md</code>)</li>
+<li>EB smoothing: <code>autoware_path_smoother</code> (v4.3.2 workspace)</li>
+</ul></div>
 
 
 
@@ -23965,7 +24133,7 @@ As the vehicle moves, the shifting is done relative to the current preferred lan
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../autoware_in_lane_mrm_planner/" class="md-footer__link md-footer__link--prev" aria-label="Previous: autoware_in_lane_mrm_planner">
+          <a href="../autoware_hazard_lights_selector/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Autoware Hazard Lights Selector">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -23975,20 +24143,20 @@ As the vehicle moves, the shifting is done relative to the current preferred lan
                 Previous
               </span>
               <div class="md-ellipsis">
-                autoware_in_lane_mrm_planner
+                Autoware Hazard Lights Selector
               </div>
             </div>
           </a>
         
         
           
-          <a href="../autoware_minimum_rule_based_planner/" class="md-footer__link md-footer__link--next" aria-label="Next: autoware_minimum_rule_based_planner">
+          <a href="../autoware_manual_lane_change_handler/" class="md-footer__link md-footer__link--next" aria-label="Next: Manual Lane Change Handler">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                autoware_minimum_rule_based_planner
+                Manual Lane Change Handler
               </div>
             </div>
             <div class="md-footer__button md-icon">
