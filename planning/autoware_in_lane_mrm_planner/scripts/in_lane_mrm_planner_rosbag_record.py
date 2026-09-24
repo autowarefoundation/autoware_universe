@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Record a minimal rosbag on Domain 1 for in-lane MRM offline analysis.
+r"""Record a minimal rosbag on Domain 1 for in-lane MRM offline analysis.
 
 Run on Domain 1 (main ECU) while psim-main and psim-main-mrm are up.
 Uses bridged /mrm/* topics plus main /localization/* for psim (no bidirectional bridge).

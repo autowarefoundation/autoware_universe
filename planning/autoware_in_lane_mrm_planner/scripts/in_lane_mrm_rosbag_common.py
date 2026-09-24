@@ -291,7 +291,7 @@ class RecordingGap:
 
 
 def find_rising_edges(series: "TimeSeries", threshold: float = 0.5) -> List[float]:
-    """Times where a 0/1 (or boolean-ish) series transitions from < threshold to >= threshold."""
+    """Return the times where a 0/1 (or boolean-ish) series crosses from below to above threshold."""
     edges: List[float] = []
     prev: Optional[float] = None
     for time_sec, value in zip(series.time_sec, series.values):
@@ -326,8 +326,10 @@ def detect_emergency_episodes(
     moving_vx: float = DEFAULT_MOVING_ODOM_THRESHOLD,
     merge_gap_sec: float = 0.3,
 ) -> List[EmergencyEpisode]:
-    """Find contiguous EMERGENCY spans and, for each, evaluate whether the overshoot-emergency
-    condition would have cleared while the ego was still moving.
+    """Find contiguous EMERGENCY spans and check whether each would clear early.
+
+    For each span, evaluate whether the overshoot-emergency condition would have
+    cleared while the ego was still moving.
 
     The overshoot-emergency entry condition is (stop_dist < -overshoot_stop_dist AND
     nearest_target_vel < eps). It *clears* when stop_dist >= -overshoot_stop_dist OR

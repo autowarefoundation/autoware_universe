@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Offline analyzer for in-lane MRM rosbag2 recordings (D1 bridged or D3 local topics).
+r"""Offline analyzer for in-lane MRM rosbag2 recordings (D1 bridged or D3 local topics).
 
 Usage:
   source /path/to/install/setup.bash
@@ -354,11 +354,11 @@ class InLaneMrmPlannerRosbagAnalyzer:
             print(f"  negative samples  : {negative} / {len(self.stop_dist.values)}")
 
         if self.gate_acc.values:
-            unique_acc = sorted(set(round(value, 3) for value in self.gate_acc.values))
+            unique_acc = sorted({round(value, 3) for value in self.gate_acc.values})
             print(f"Gate acc unique     : {unique_acc} ({len(unique_acc)} values)")
 
         if self.control_acc.values:
-            unique_acc = sorted(set(round(value, 3) for value in self.control_acc.values))
+            unique_acc = sorted({round(value, 3) for value in self.control_acc.values})
             print(f"Follower acc unique : {len(unique_acc)} distinct values")
             if len(unique_acc) <= 12:
                 print(f"  values: {unique_acc}")
@@ -625,7 +625,7 @@ class InLaneMrmPlannerRosbagAnalyzer:
             print(f"Saved planner status: {planner_csv}")
 
         export_dir = self.output_dir / "trajectory_exports"
-        msg_map = {time_sec: msg for time_sec, msg in self.trajectory_messages}
+        msg_map = dict(self.trajectory_messages)
         export_times: List[float] = []
 
         if self.export_all_anomalies:
