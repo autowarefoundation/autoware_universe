@@ -59,6 +59,24 @@ if(BUILD_TESTING)
     tier4_perception_msgs
   )
 
+  # Unit tests for the drawing separated out of the node. No ROS runtime: the logic is called
+  # directly with messages.
+  ament_add_gtest(test_roi_visualizer
+    test/traffic_light_roi_visualizer/test_roi_visualizer.cpp
+  )
+  target_include_directories(test_roi_visualizer PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+  )
+  target_link_libraries(test_roi_visualizer
+    traffic_light_roi_visualizer
+  )
+  ament_target_dependencies(test_roi_visualizer
+    ament_index_cpp
+    cv_bridge
+    sensor_msgs
+    tier4_perception_msgs
+  )
+
   ament_add_gtest(test_traffic_light_map_visualizer
     test/traffic_light_map_visualizer/test_traffic_light_map_visualizer.cpp
   )
