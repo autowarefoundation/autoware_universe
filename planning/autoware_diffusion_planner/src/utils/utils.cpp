@@ -263,7 +263,6 @@ std::optional<TrajectorySnap> snap_point_to_trajectory(
     autoware_utils_geometry::get_rpy(snapped.orientation).z,
     windowed_tangent_yaw(
       *trajectory, *s, options.yaw_fit_half_window_m, options.yaw_fit_min_length_m)};
-  ;
 }
 
 BoundedPose bound_snapped_pose(

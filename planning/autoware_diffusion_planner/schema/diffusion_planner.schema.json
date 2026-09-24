@@ -216,13 +216,13 @@
               "type": "number",
               "default": 0.3,
               "minimum": 0,
-              "description": "Maximum allowed position distance [m] between the actual ego pose and the snapped pose. If the distance exceeds this value the snap is skipped and the raw ego pose is kept."
+              "description": "Maximum distance [m] between the actual ego pose and the virtual pose handed to the model. The virtual pose is clamped to this distance, so it stays continuous at the limit."
             },
             "max_yaw_error_deg": {
               "type": "number",
               "default": 5.0,
               "minimum": 0,
-              "description": "Maximum allowed heading difference [deg] between the actual ego pose and the snapped pose. If the difference exceeds this value the snap is skipped and the raw ego pose is kept."
+              "description": "Maximum heading difference [deg] between the actual ego pose and the virtual pose handed to the model. The virtual heading is clamped to this difference, so it stays continuous at the limit."
             },
             "max_search_segment_count": {
               "type": "integer",

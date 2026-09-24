@@ -152,10 +152,6 @@ struct EgoSnapParams
   // a far-away part of the trajectory (e.g. the return leg of a U-turn) from being selected.
   int64_t max_search_segment_count;
 
-  // Ego speed [m/s] below which the snap is skipped. When (nearly) stopped the first segments of
-  // the previous trajectory are only centimetres long, so their direction is dominated by model
-  // noise and snapping onto them injects heading jitter instead of removing it.
-
   // Where the heading of the snapped pose comes from:
   //  - "predicted_heading": the vertex headings of the previous trajectory interpolated at the
   //    snapped point (the model's own heading channel, which is not kinematically tied to its xy
@@ -436,17 +432,17 @@ private:
   std::vector<std::vector<std::vector<Eigen::Matrix4d>>> last_agent_poses_map_;
   std::optional<Eigen::Matrix4d> last_ego_to_map_transform_;
 
-  /**
-   * @brief Snapped ego pose (map frame, model frame convention) and interpolation time [s] of the
-   *        snapped point along the previous planning trajectory, according to
-   *        params_.ego_snap_to_prev_trajectory. std::nullopt when the snap is disabled, not yet
-   *        possible (no previous trajectory) or disabled.
-   */
   // Recent distinct ego poses, oldest first, to prepend to the previous trajectory so the snap
   // spline has geometry behind the vehicle. The newest history entry is the previous planning start
   // itself and is skipped; poses closer than a few centimetres to their successor are dropped.
   std::vector<Eigen::Matrix4d> ego_history_prefix_for_snap(int64_t max_count) const;
 
+  /**
+   * @brief Snapped ego pose (map frame, model frame convention) and interpolation time [s] of the
+   *        snapped point along the previous planning trajectory, according to
+   *        params_.ego_snap_to_prev_trajectory. std::nullopt when the snap is disabled or not yet
+   *        possible (no previous trajectory).
+   */
   std::optional<SnappedEgo> snap_ego_to_previous_trajectory(
     const nav_msgs::msg::Odometry & kinematic_state) const;
 

@@ -299,17 +299,15 @@ std::optional<FrameContext> DiffusionPlannerCore::create_frame_context(
   std::optional<Eigen::Matrix4d> snapped_pose_opt;
   std::optional<double> snapped_interpolation_time_s_opt;
   if (const auto snapped = snap_ego_to_previous_trajectory(kinematic_state)) {
-    const Eigen::Matrix4d & snapped_pose = snapped->pose;
-    const double interpolation_time_s = snapped->interpolation_time_s;
-    kinematic_state.pose.pose.position.x = snapped_pose(0, 3);
-    kinematic_state.pose.pose.position.y = snapped_pose(1, 3);
-    const Eigen::Quaterniond q(snapped_pose.block<3, 3>(0, 0));
+    kinematic_state.pose.pose.position.x = snapped->pose(0, 3);
+    kinematic_state.pose.pose.position.y = snapped->pose(1, 3);
+    const Eigen::Quaterniond q(snapped->pose.block<3, 3>(0, 0));
     kinematic_state.pose.pose.orientation.x = q.x();
     kinematic_state.pose.pose.orientation.y = q.y();
     kinematic_state.pose.pose.orientation.z = q.z();
     kinematic_state.pose.pose.orientation.w = q.w();
-    snapped_pose_opt = snapped_pose;
-    snapped_interpolation_time_s_opt = interpolation_time_s;
+    snapped_pose_opt = snapped->pose;
+    snapped_interpolation_time_s_opt = snapped->interpolation_time_s;
   }
 
   // Get transforms
@@ -463,12 +461,9 @@ std::optional<SnappedEgo> DiffusionPlannerCore::snap_ego_to_previous_trajectory(
                                : snap->heading_yaw;
 
   const Eigen::Vector2d real_position(position.x, position.y);
-  const std::optional<utils::BoundedPose> virtual_pose = utils::bound_snapped_pose(
+  const utils::BoundedPose virtual_pose = utils::bound_snapped_pose(
     real_position, current_yaw, snap->position, snapped_yaw, snap_params.snap_strength,
     snap_params.max_position_error_m, autoware_utils_math::deg2rad(snap_params.max_yaw_error_deg));
-  if (!virtual_pose) {
-    return std::nullopt;
-  }
 
   // Rotate the real orientation about the map z axis by the yaw change, rather than rebuilding the
   // orientation from the yaw alone: the trajectory carries no roll or pitch, so building a yaw-only
@@ -477,14 +472,14 @@ std::optional<SnappedEgo> DiffusionPlannerCore::snap_ego_to_previous_trajectory(
   const auto & real_orientation = kinematic_state.pose.pose.orientation;
   const Eigen::Quaterniond real_q(
     real_orientation.w, real_orientation.x, real_orientation.y, real_orientation.z);
-  const double yaw_change = autoware_utils_math::normalize_radian(virtual_pose->yaw - current_yaw);
+  const double yaw_change = autoware_utils_math::normalize_radian(virtual_pose.yaw - current_yaw);
   const Eigen::Quaterniond virtual_q =
     Eigen::Quaterniond(Eigen::AngleAxisd(yaw_change, Eigen::Vector3d::UnitZ())) * real_q;
 
   Eigen::Matrix4d snapped_pose = Eigen::Matrix4d::Identity();
   snapped_pose.block<3, 3>(0, 0) = virtual_q.normalized().toRotationMatrix();
-  snapped_pose(0, 3) = virtual_pose->position.x();
-  snapped_pose(1, 3) = virtual_pose->position.y();
+  snapped_pose(0, 3) = virtual_pose.position.x();
+  snapped_pose(1, 3) = virtual_pose.position.y();
   snapped_pose(2, 3) = position.z;
   return SnappedEgo{snapped_pose, snap->interpolation_index * constants::PREDICTION_TIME_STEP_S};
 }
@@ -743,20 +738,18 @@ PlannerOutput DiffusionPlannerCore::create_planner_output(
       output.turn_indicators_command = turn_indicators_command;
     }
 
-    const auto candidate_trajectory = autoware_internal_planning_msgs::build<
-                                        autoware_internal_planning_msgs::msg::CandidateTrajectory>()
-                                        .header(trajectory.header)
-                                        .generator_id(generator_uuid)
-                                        .points(trajectory.points)
-                                        .turn_indicators_command(turn_indicators_command);
+    autoware_internal_planning_msgs::msg::CandidateTrajectory candidate_trajectory;
+    candidate_trajectory.header = trajectory.header;
+    candidate_trajectory.generator_id = generator_uuid;
+    candidate_trajectory.points = trajectory.points;
+    candidate_trajectory.turn_indicators_command = turn_indicators_command;
 
     std_msgs::msg::String generator_name_msg;
     generator_name_msg.data = std::string("DiffusionPlanner_batch_") + std::to_string(i);
 
-    const auto generator_info =
-      autoware_internal_planning_msgs::build<autoware_internal_planning_msgs::msg::GeneratorInfo>()
-        .generator_id(generator_uuid)
-        .generator_name(generator_name_msg);
+    autoware_internal_planning_msgs::msg::GeneratorInfo generator_info;
+    generator_info.generator_id = generator_uuid;
+    generator_info.generator_name = generator_name_msg;
 
     output.candidate_trajectories.candidate_trajectories.push_back(candidate_trajectory);
     output.candidate_trajectories.generator_info.push_back(generator_info);
