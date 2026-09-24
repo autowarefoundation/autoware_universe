@@ -373,36 +373,29 @@ std::optional<FrameContext> DiffusionPlannerCore::create_frame_context(
 
 std::string validate_ego_snap_params(const EgoSnapParams & p)
 {
-  const std::string prefix = "ego_snap_to_prev_trajectory.";
-  const auto finite_positive = [&](const double v, const char * name) -> std::string {
-    return std::isfinite(v) && v > 0.0 ? "" : prefix + name + " must be a finite number > 0";
+  const auto finite = [](const double v) { return std::isfinite(v); };
+
+  // Checked in order; the first rule that does not hold is reported.
+  const std::pair<bool, const char *> rules[] = {
+    {finite(p.max_position_error_m) && p.max_position_error_m > 0.0,
+     "max_position_error_m must be a finite number > 0"},
+    {finite(p.max_yaw_error_deg) && p.max_yaw_error_deg > 0.0,
+     "max_yaw_error_deg must be a finite number > 0"},
+    {finite(p.yaw_fit_half_window_m) && p.yaw_fit_half_window_m >= 0.0,
+     "yaw_fit_half_window_m must be a finite number >= 0"},
+    {finite(p.yaw_fit_min_length_m) && p.yaw_fit_min_length_m >= 0.0,
+     "yaw_fit_min_length_m must be a finite number >= 0"},
+    {finite(p.snap_strength) && p.snap_strength >= 0.0 && p.snap_strength <= 1.0,
+     "snap_strength must be in [0, 1]"},
+    {p.max_search_segment_count >= 1, "max_search_segment_count must be >= 1"},
+    {p.history_prefix_count >= 0, "history_prefix_count must be >= 0"},
+    {p.yaw_source == "predicted_heading" || p.yaw_source == "polyline_tangent",
+     "yaw_source must be 'predicted_heading' or 'polyline_tangent'"},
   };
-  const auto finite_non_negative = [&](const double v, const char * name) -> std::string {
-    return std::isfinite(v) && v >= 0.0 ? "" : prefix + name + " must be a finite number >= 0";
-  };
-  if (auto r = finite_positive(p.max_position_error_m, "max_position_error_m"); !r.empty()) {
-    return r;
-  }
-  if (auto r = finite_positive(p.max_yaw_error_deg, "max_yaw_error_deg"); !r.empty()) {
-    return r;
-  }
-  if (auto r = finite_non_negative(p.yaw_fit_half_window_m, "yaw_fit_half_window_m"); !r.empty()) {
-    return r;
-  }
-  if (auto r = finite_non_negative(p.yaw_fit_min_length_m, "yaw_fit_min_length_m"); !r.empty()) {
-    return r;
-  }
-  if (!std::isfinite(p.snap_strength) || p.snap_strength < 0.0 || p.snap_strength > 1.0) {
-    return prefix + "snap_strength must be in [0, 1]";
-  }
-  if (p.max_search_segment_count < 1) {
-    return prefix + "max_search_segment_count must be >= 1";
-  }
-  if (p.history_prefix_count < 0) {
-    return prefix + "history_prefix_count must be >= 0";
-  }
-  if (p.yaw_source != "predicted_heading" && p.yaw_source != "polyline_tangent") {
-    return prefix + "yaw_source must be 'predicted_heading' or 'polyline_tangent'";
+  for (const auto & [holds, message] : rules) {
+    if (!holds) {
+      return std::string("ego_snap_to_prev_trajectory.") + message;
+    }
   }
   return "";
 }
