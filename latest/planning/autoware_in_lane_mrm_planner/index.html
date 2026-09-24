@@ -8,13 +8,13 @@
       
       
       
-        <link rel="canonical" href="https://autowarefoundation.github.io/autoware_universe/latest/planning/autoware_hazard_lights_selector/">
+        <link rel="canonical" href="https://autowarefoundation.github.io/autoware_universe/latest/planning/autoware_in_lane_mrm_planner/">
       
       
-        <link rel="prev" href="../autoware_freespace_planning_algorithms/rrtstar/">
+        <link rel="prev" href="../autoware_hazard_lights_selector/">
       
       
-        <link rel="next" href="../autoware_in_lane_mrm_planner/">
+        <link rel="next" href="../autoware_manual_lane_change_handler/">
       
       
         
@@ -25,7 +25,7 @@
     
     
       
-        <title>Autoware Hazard Lights Selector - Autoware Universe Documentation</title>
+        <title>autoware_in_lane_mrm_planner - Autoware Universe Documentation</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#autoware-hazard-lights-selector" class="md-skip">
+        <a href="#autoware_in_lane_mrm_planner" class="md-skip">
           Skip to content
         </a>
       
@@ -120,7 +120,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Autoware Hazard Lights Selector
+              autoware_in_lane_mrm_planner
             
           </span>
         </div>
@@ -23693,10 +23693,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#purpose" class="md-nav__link">
+  <a href="#design" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Purpose
+        Design
       
     </span>
   </a>
@@ -23704,10 +23704,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#inner-workings-algorithms" class="md-nav__link">
+  <a href="#build" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Inner-workings / Algorithms
+        Build
       
     </span>
   </a>
@@ -23715,22 +23715,33 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#inputs-outputs" class="md-nav__link">
+  <a href="#launch" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Inputs / Outputs
+        Launch
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Inputs / Outputs">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#debug-topic-planner-status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Debug topic: planner status
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Debug topic: planner status">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#input" class="md-nav__link">
+  <a href="#data-layout" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Input
+        data[] layout
       
     </span>
   </a>
@@ -23738,10 +23749,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#output" class="md-nav__link">
+  <a href="#reason_code-values" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Output
+        reason_code values
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#correlating-with-follower-target-speed-drops" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Correlating with follower target speed drops
       
     </span>
   </a>
@@ -23754,10 +23776,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#parameters" class="md-nav__link">
+  <a href="#future-tasks" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Parameters
+        Future tasks
       
     </span>
   </a>
@@ -23765,54 +23787,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#assumptions-known-limits" class="md-nav__link">
+  <a href="#dependencies" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Assumptions / Known limits
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#optional-error-detection-and-handling" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        (Optional) Error detection and handling
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#optional-performance-characterization" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        (Optional) Performance characterization
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#optional-referencesexternal-links" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        (Optional) References/External links
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#optional-future-extensions-unimplemented-parts" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        (Optional) Future extensions / Unimplemented parts
+        Dependencies
       
     </span>
   </a>
@@ -23839,81 +23817,287 @@
   
 
 
-<div><h1 id="autoware-hazard-lights-selector">Autoware Hazard Lights Selector<a class="headerlink" href="#autoware-hazard-lights-selector" title="Permanent link">#</a></h1>
-<h2 id="purpose">Purpose<a class="headerlink" href="#purpose" title="Permanent link">#</a></h2>
-<p>The Hazard Lights Selector is a node that manages and selects hazard light commands from multiple sources (planning and system) to determine the final hazard lights state of the vehicle.</p>
-<h2 id="inner-workings-algorithms">Inner-workings / Algorithms<a class="headerlink" href="#inner-workings-algorithms" title="Permanent link">#</a></h2>
-<p>The node operates on a timer-based update cycle and implements the following logic:</p>
-<ol>
-<li>Receives hazard light commands from both planning and system sources</li>
-<li>If either source requests hazard lights to be enabled, the final command will be to enable hazard lights</li>
-<li>If neither source requests hazard lights to be enabled, the final command will be to disable hazard lights</li>
-<li>The selected command is published at a configurable update rate</li>
-</ol>
-<h2 id="inputs-outputs">Inputs / Outputs<a class="headerlink" href="#inputs-outputs" title="Permanent link">#</a></h2>
-<h3 id="input">Input<a class="headerlink" href="#input" title="Permanent link">#</a></h3>
+<div><h1 id="autoware_in_lane_mrm_planner">autoware_in_lane_mrm_planner<a class="headerlink" href="#autoware_in_lane_mrm_planner" title="Permanent link">#</a></h1>
+<p>MRM in-lane stop trajectory planner (Phase1).</p>
+<h2 id="design">Design<a class="headerlink" href="#design" title="Permanent link">#</a></h2>
+<p>See <code>docs/design_phase1.md</code> and <code>docs/implementation_plan_phase1.md</code>.</p>
+<h2 id="build">Build<a class="headerlink" href="#build" title="Permanent link">#</a></h2>
+<p>From <code>pilot-auto.x2.v4.3.2</code> repository root (after workspace dependencies are installed):</p>
+<div class="highlight"><pre><span></span><code>./cmd_helper.sh<span class="w"> </span>--build_ccache<span class="w"> </span>--packages-select<span class="w"> </span>autoware_in_lane_mrm_planner
+</code></pre></div>
+<p>Do not run package builds in parallel with a full workspace build.</p>
+<h2 id="launch">Launch<a class="headerlink" href="#launch" title="Permanent link">#</a></h2>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>launch<span class="w"> </span>autoware_in_lane_mrm_planner<span class="w"> </span>in_lane_mrm_planner.launch.xml
+</code></pre></div>
+<h2 id="debug-topic-planner-status">Debug topic: planner status<a class="headerlink" href="#debug-topic-planner-status" title="Permanent link">#</a></h2>
+<p>Published every control cycle to explain why <code>~/output/trajectory</code> was or was not published.</p>
 <table>
 <thead>
 <tr>
-<th>Name</th>
-<th>Type</th>
-<th>Description</th>
+<th>Item</th>
+<th>Value</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>input/planning/hazard_lights_command</code></td>
-<td><code>autoware_vehicle_msgs/msg/HazardLightsCommand</code></td>
-<td>Hazard lights command from the planning system</td>
+<td>Topic (node)</td>
+<td><code>~/debug/planner_status</code></td>
 </tr>
 <tr>
-<td><code>input/system/hazard_lights_command</code></td>
-<td><code>autoware_vehicle_msgs/msg/HazardLightsCommand</code></td>
-<td>Hazard lights command from the system</td>
+<td>Default remap</td>
+<td><code>/planning/in_lane_mrm_planner/debug/planner_status</code></td>
+</tr>
+<tr>
+<td>Domain 1 (vehicle, via bridge)</td>
+<td><code>/mrm/planning/in_lane_mrm_planner/debug/planner_status</code></td>
+</tr>
+<tr>
+<td>Type</td>
+<td><code>autoware_internal_debug_msgs/msg/Float32MultiArrayStamped</code></td>
 </tr>
 </tbody>
 </table>
-<h3 id="output">Output<a class="headerlink" href="#output" title="Permanent link">#</a></h3>
+<p>Use <code>data[0]</code> as the primary reason code when plotting in PlotJuggler or post-processing rosbags.
+Other fields are boolean flags (0/1) or numeric diagnostics.</p>
+<h3 id="data-layout"><code>data[]</code> layout<a class="headerlink" href="#data-layout" title="Permanent link">#</a></h3>
 <table>
 <thead>
 <tr>
-<th>Name</th>
-<th>Type</th>
+<th>Index</th>
+<th>Field</th>
+<th>Unit / type</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>output/hazard_lights_command</code></td>
-<td><code>autoware_vehicle_msgs/msg/HazardLightsCommand</code></td>
-<td>The selected hazard lights command</td>
-</tr>
-</tbody>
-</table>
-<h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">#</a></h2>
-<table>
-<thead>
-<tr>
-<th>Name</th>
-<th>Type</th>
-<th>Default Value</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>update_rate</code></td>
+<td>0</td>
+<td><code>reason_code</code></td>
 <td>int</td>
+<td>Primary status (see table below)</td>
+</tr>
+<tr>
+<td>1</td>
+<td><code>trigger_active</code></td>
+<td>0/1</td>
+<td>MRM trigger is true</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>is_latched</code></td>
+<td>0/1</td>
+<td>Trajectory latch is active</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>has_latest_candidate</code></td>
+<td>0/1</td>
+<td>A candidate trajectory is stored in the latcher</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>data_ready</code></td>
+<td>0/1</td>
+<td>Map, route, odometry, and acceleration are available</td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>plan_ok</code></td>
+<td>0/1</td>
+<td>Path planning succeeded this cycle (non-latched mode only)</td>
+</tr>
+<tr>
+<td>6</td>
+<td><code>validation_ok</code></td>
+<td>0/1</td>
+<td>Trajectory validator passed (non-latched mode only)</td>
+</tr>
+<tr>
+<td>7</td>
+<td><code>planned_points</code></td>
+<td>count</td>
+<td>Trajectory point count after plan/smooth/modifier/velocity</td>
+</tr>
+<tr>
+<td>8</td>
+<td><code>published_points</code></td>
+<td>count</td>
+<td>Point count of the trajectory actually published (0 if none)</td>
+</tr>
+<tr>
+<td>9</td>
+<td><code>cycle_time_ms</code></td>
+<td>ms</td>
+<td>Wall time for this timer callback</td>
+</tr>
+<tr>
 <td>10</td>
-<td>The update rate in Hz for publishing hazard lights commands</td>
+<td><code>odom_vx</code></td>
+<td>m/s</td>
+<td>Longitudinal velocity from input odometry</td>
+</tr>
+<tr>
+<td>11</td>
+<td><code>sanitized_points</code></td>
+<td>count</td>
+<td>Overlapping points removed before publish (should stay 0; nonzero means an upstream stage produced (near-)duplicate points)</td>
 </tr>
 </tbody>
 </table>
-<h2 id="assumptions-known-limits">Assumptions / Known limits<a class="headerlink" href="#assumptions-known-limits" title="Permanent link">#</a></h2>
-<h2 id="optional-error-detection-and-handling">(Optional) Error detection and handling<a class="headerlink" href="#optional-error-detection-and-handling" title="Permanent link">#</a></h2>
-<h2 id="optional-performance-characterization">(Optional) Performance characterization<a class="headerlink" href="#optional-performance-characterization" title="Permanent link">#</a></h2>
-<h2 id="optional-referencesexternal-links">(Optional) References/External links<a class="headerlink" href="#optional-referencesexternal-links" title="Permanent link">#</a></h2>
-<h2 id="optional-future-extensions-unimplemented-parts">(Optional) Future extensions / Unimplemented parts<a class="headerlink" href="#optional-future-extensions-unimplemented-parts" title="Permanent link">#</a></h2></div>
+<h3 id="reason_code-values"><code>reason_code</code> values<a class="headerlink" href="#reason_code-values" title="Permanent link">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Code</th>
+<th>Name</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td><code>published_ok</code></td>
+<td>Non-latched mode: planned, validated, and published</td>
+</tr>
+<tr>
+<td>1</td>
+<td><code>waiting_map</code></td>
+<td>Missing <code>~/input/vector_map</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>waiting_route</code></td>
+<td>Missing <code>~/input/route</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>waiting_odometry</code></td>
+<td>Missing <code>~/input/kinematic_state</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>waiting_accel</code></td>
+<td>Missing <code>~/input/acceleration</code></td>
+</tr>
+<tr>
+<td>10</td>
+<td><code>plan_failed_update_current_lanelet</code></td>
+<td>Ego pose not on route lanelets</td>
+</tr>
+<tr>
+<td>11</td>
+<td><code>plan_failed_backward_lanelets</code></td>
+<td>Failed to extend lanelets backward on route</td>
+</tr>
+<tr>
+<td>12</td>
+<td><code>plan_failed_forward_lanelets</code></td>
+<td>Failed to extend lanelets forward on route</td>
+</tr>
+<tr>
+<td>13</td>
+<td><code>plan_failed_invalid_s_range</code></td>
+<td>Invalid path range (<code>s_end &lt;= s_start</code>)</td>
+</tr>
+<tr>
+<td>14</td>
+<td><code>plan_failed_generate_path</code></td>
+<td>Path generation failed (empty lanelet, no points, crop failed, etc.)</td>
+</tr>
+<tr>
+<td>15</td>
+<td><code>plan_failed_no_output</code></td>
+<td>Plan/validation succeeded but no trajectory to publish</td>
+</tr>
+<tr>
+<td>20</td>
+<td><code>validation_failed_point_count</code></td>
+<td>Validator: fewer than <code>min_point_count</code> points (also covers empty)</td>
+</tr>
+<tr>
+<td>21</td>
+<td><code>validation_failed_non_finite</code></td>
+<td>Validator: non-finite pose/velocity/acceleration</td>
+</tr>
+<tr>
+<td>30</td>
+<td><code>latched_output_published</code></td>
+<td>Latched mode: publishing frozen trajectory</td>
+</tr>
+<tr>
+<td>31</td>
+<td><code>latched_without_candidate</code></td>
+<td>Latched mode: no candidate stored (nothing published)</td>
+</tr>
+<tr>
+<td>99</td>
+<td><code>unknown</code></td>
+<td>Fallback / unclassified</td>
+</tr>
+</tbody>
+</table>
+<p>Codes are defined in <code>src/in_lane_mrm_planner_node.cpp</code> (<code>StatusReasonCode</code>).</p>
+<p>The validator is a publish-gate sanity check only (point count and finite values).
+Trajectory shape and longitudinal feasibility are owned by obstacle-stop and the
+velocity planner, not the validator.</p>
+<h3 id="correlating-with-follower-target-speed-drops">Correlating with follower target speed drops<a class="headerlink" href="#correlating-with-follower-target-speed-drops" title="Permanent link">#</a></h3>
+<p>If <code>reason_code</code> is not <code>0</code> or <code>30</code>, or <code>published_points</code> is 0 while the vehicle is moving,
+<code>~/output/trajectory</code> was not updated that cycle. The longitudinal follower then keeps the
+previous reference, which can make target speed appear to drop to zero in diagnostics.</p>
+<h2 id="future-tasks">Future tasks<a class="headerlink" href="#future-tasks" title="Permanent link">#</a></h2>
+<p>Deferred follow-ups from the 2026-06-30 incident investigation (MRM trajectory follower
+abort crash caused by duplicate points in the published trajectory; rosbags
+<code>..._2026-06-30-11-36-50_p0900_7.db3</code> and <code>..._2026-06-30-15-12-51_p0900_8.db3</code>, both while
+driving manually near the same U-turn lanelet junction around map coordinates
+(x=89149, y=42425)). The duplicate-point generation itself was fixed
+(<code>densify_near_arc_length()</code> sample spacing guard + <code>remove_overlap_points()</code> publish net),
+but the upstream degeneracies below remain:</p>
+<ol>
+<li><strong><code>shift_trajectory_to_ego()</code> short-trajectory fallback</strong> (<code>src/path_planner.cpp</code>,
+   <code>merge_idx = size - 2</code> branch): when the remaining trajectory ahead of ego is shorter than
+   the shift length <code>L</code> (ego overrunning the path end), the fallback degenerates down to a
+   3-point trajectory <code>[ego, end-1, end]</code> whose tail can lie behind ego. Agreed direction:
+   when no intermediate shift point can be generated, skip shifting and return the input
+   trajectory unchanged (the input already passes through ego laterally via
+   <code>apply_lateral_offset()</code>).</li>
+<li><strong><code>apply_lateral_offset()</code> self-intersection at sharp centerline kinks</strong>
+   (<code>src/in_lane_mrm_trajectory_planner.cpp</code>): offsetting every point along its own normal
+   self-intersects where the lateral offset exceeds the local curvature radius (observed at a
+   lanelet junction with ~107 deg heading discontinuity within 0.2 m). Additionally, near the
+   kink the ego projection flips between branches, so the applied offset <code>d</code> jumps frame to
+   frame (up to 1.7 m observed). Agreed direction: detect the kink during path generation and
+   truncate the path before it (which then relies on item 1 / item 3 for the degraded output).</li>
+<li><strong>Explicit diagnostics / "when does the MRM planner give up" design</strong>: needs a top-down
+   decision before implementation. Candidate signals identified in the investigation: ego far
+   off the reference path (large lateral offset or yaw deviation; ~2 rad observed before the
+   crash), plan failure (<code>invalid_s_range</code> after ego passes the path end), and validation
+   failure. Today these only reach the debug <code>planner_status</code> topic; whether to promote them
+   to <code>/diagnostics</code> (and with which severities/thresholds) is undecided. Related question:
+   explicit diag vs. relying on trajectory-timeout diag downstream.</li>
+<li><strong>Drive-side delay modeling in the <code>brake_delay_time</code> hold</strong>
+   (<code>src/mrm_stop_velocity_planner.cpp</code>, <code>effective_initial_accel()</code>): the hold model assumes
+   the drive command cuts immediately at the MRM trigger, so a positive current acceleration
+   is clamped to zero during the hold (valid for BEVs such as J6). For vehicles with slow
+   drive-torque decay (e.g. ICE with a torque converter), consider a separate
+   <code>drive_delay_time</code> or a parameter to disable the clamp. Until then the residual effect can
+   be absorbed by tuning <code>brake_delay_time</code> upward (agreed 2026-07-09).</li>
+<li><strong>Upper-bound validation for <code>brake_delay_time</code></strong>
+   (<code>param/in_lane_mrm_planner_parameters.yaml</code>): the parameter has no upper bound, so a
+   misconfigured value (e.g. 50.0) makes the required stop distance exceed the 500 m cap in
+   <code>calc_required_stop_distance()</code>, every plan becomes infeasible, and the planner permanently
+   publishes the zero-velocity fallback — functionally safe but silently degraded, visible
+   only in a throttled error log. Add an <code>lt_eq&lt;&gt;</code> bound (a few seconds) mirrored as
+   <code>maximum</code> in the JSON schema (review finding, 2026-07-09).</li>
+<li><strong>Regression test that <code>brake_delay_time = 0.0</code> does not clamp a positive <code>a0</code></strong>
+   (<code>test/test_mrm_stop_velocity_planner.cpp</code>): the clamp in <code>effective_initial_accel()</code> must
+   apply only when the delay is positive, but no test pins the delay-zero half; a regression
+   that clamps unconditionally would pass the current suite (review finding, 2026-07-09).</li>
+</ol>
+<h2 id="dependencies">Dependencies<a class="headerlink" href="#dependencies" title="Permanent link">#</a></h2>
+<ul>
+<li>Path / obstacle-stop logic: vendored from <code>pilot-auto.x2.v4.3.e2e</code> (see <code>docs/*_sync.md</code>)</li>
+<li>EB smoothing: <code>autoware_path_smoother</code> (v4.3.2 workspace)</li>
+</ul></div>
 
 
 
@@ -23949,7 +24133,7 @@
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../autoware_freespace_planning_algorithms/rrtstar/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Rrtstar">
+          <a href="../autoware_hazard_lights_selector/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Autoware Hazard Lights Selector">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -23959,20 +24143,20 @@
                 Previous
               </span>
               <div class="md-ellipsis">
-                Rrtstar
+                Autoware Hazard Lights Selector
               </div>
             </div>
           </a>
         
         
           
-          <a href="../autoware_in_lane_mrm_planner/" class="md-footer__link md-footer__link--next" aria-label="Next: autoware_in_lane_mrm_planner">
+          <a href="../autoware_manual_lane_change_handler/" class="md-footer__link md-footer__link--next" aria-label="Next: Manual Lane Change Handler">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                autoware_in_lane_mrm_planner
+                Manual Lane Change Handler
               </div>
             </div>
             <div class="md-footer__button md-icon">
