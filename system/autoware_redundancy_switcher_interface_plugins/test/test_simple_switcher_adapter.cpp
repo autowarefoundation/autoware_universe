@@ -16,8 +16,8 @@
 // Static helper: no ROS context required.
 // execute() tests: require rclcpp (topic-based publish verification).
 
-#include "switcher_adapter.hpp"
 #include "portable_test_executor.hpp"
+#include "switcher_adapter.hpp"
 
 #include <autoware/agnocast_wrapper/node.hpp>
 #include <rclcpp/rclcpp.hpp>

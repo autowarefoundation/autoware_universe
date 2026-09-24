@@ -64,7 +64,8 @@ protected:
     if (agnocast_node_construction_untestable()) GTEST_SKIP();
     rclcpp::NodeOptions options;
     options.parameter_overrides({rclcpp::Parameter("is_main_ecu", true)});
-    node_ = std::make_shared<autoware::agnocast_wrapper::Node>("test_non_redundant_adapter", options);
+    node_ =
+      std::make_shared<autoware::agnocast_wrapper::Node>("test_non_redundant_adapter", options);
     processor_ = std::make_shared<RecordingProcessor>();
     bus_ = std::make_shared<CommandBus>();
     gateway_ = std::make_shared<EventGateway>(processor_, bus_);

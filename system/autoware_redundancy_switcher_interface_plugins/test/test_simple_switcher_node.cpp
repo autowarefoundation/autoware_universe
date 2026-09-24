@@ -16,8 +16,8 @@
 // encode_signals: static pure function, no ROS required.
 // Switching behavior: exercised via topic pub/sub with an executor.
 
-#include "simple_switcher_node.hpp"
 #include "portable_test_executor.hpp"
+#include "simple_switcher_node.hpp"
 
 #include <autoware/agnocast_wrapper/node.hpp>
 #include <rclcpp/rclcpp.hpp>
