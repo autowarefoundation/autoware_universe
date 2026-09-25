@@ -14,15 +14,16 @@
 //
 // Integration tests for TrafficLightRoiVisualizerNode.
 //
-// What is left of the characterization suite that pinned the node before the drawing was
-// separated from it. The drawing itself is covered by test_roi_visualizer.cpp, which calls it
-// directly; this file keeps only what a unit test cannot answer, because it is a property of the
-// node rather than of the drawing: that the node starts or refuses to, that it subscribes to its
-// inputs only while its output is watched, that the synchronizer pairs the topics up and the
-// callbacks run, and that both publisher paths deliver.
+// The drawing is covered by test_roi_visualizer.cpp, which calls it directly. What is left for
+// the node is everything a unit test cannot reach, because it is a property of the node and not
+// of the drawing: that it starts, or refuses to; that it subscribes to its inputs only while
+// something watches its output, and picks the fourth input from a parameter; that the
+// synchronizer will not fire while one of its topics is silent; and that either publisher
+// delivers.
 //
-// The two drawing cases that remain are here to show that the callback reached the drawing at all
-// - one per synchronizer. They check that something was drawn in the signal color, not what.
+// Two cases drive the node end to end, one per synchronizer, to show that a synchronized set of
+// messages reaches the drawing and comes back out. They check that something was drawn in the
+// signal color, not what - that is the unit tests' job.
 
 #include "traffic_light_roi_visualizer/roi_visualizer_node.hpp"
 
@@ -176,7 +177,7 @@ Pixel pixel_at(const Image & image, int x, int y)
 
 }  // namespace
 
-class TrafficLightRoiVisualizerCharacterization : public ::testing::Test
+class TrafficLightRoiVisualizerNodeTest : public ::testing::Test
 {
 protected:
   // rclcpp::init() may only be called once per process, so it is done per suite rather than per
@@ -308,7 +309,7 @@ protected:
 // explicitly. Leaving out both is not tested separately, because these two cover it.
 //
 // The exception type is not pinned: it comes from rclcpp, not from this node.
-TEST_F(TrafficLightRoiVisualizerCharacterization, Construct_HighAccuracyParameterMissing_Throws)
+TEST_F(TrafficLightRoiVisualizerNodeTest, Construct_HighAccuracyParameterMissing_Throws)
 {
   rclcpp::NodeOptions options;
   options.parameter_overrides({{"use_image_transport", false}});
@@ -316,7 +317,7 @@ TEST_F(TrafficLightRoiVisualizerCharacterization, Construct_HighAccuracyParamete
   EXPECT_THROW(std::make_shared<TrafficLightRoiVisualizerNode>(options), std::exception);
 }
 
-TEST_F(TrafficLightRoiVisualizerCharacterization, Construct_ImageTransportParameterMissing_Throws)
+TEST_F(TrafficLightRoiVisualizerNodeTest, Construct_ImageTransportParameterMissing_Throws)
 {
   rclcpp::NodeOptions options;
   options.parameter_overrides({{"use_high_accuracy_detection", false}});
@@ -330,7 +331,7 @@ TEST_F(TrafficLightRoiVisualizerCharacterization, Construct_ImageTransportParame
 //
 // The reverse transition (dropping the subscriptions again once the last output subscriber goes
 // away) is not pinned; only the initial state is.
-TEST_F(TrafficLightRoiVisualizerCharacterization, Interface_OutputUnsubscribed_InputsNotSubscribed)
+TEST_F(TrafficLightRoiVisualizerNodeTest, Interface_OutputUnsubscribed_InputsNotSubscribed)
 {
   start_node(/*use_high_accuracy_detection=*/true, /*use_image_transport=*/false);
 
@@ -344,7 +345,7 @@ TEST_F(TrafficLightRoiVisualizerCharacterization, Interface_OutputUnsubscribed_I
 
 // Once the output image has a subscriber, the node subscribes to the image, the fine ROIs and the
 // traffic signals. Without high accuracy detection it leaves the rough ROIs alone.
-TEST_F(TrafficLightRoiVisualizerCharacterization, Interface_OutputSubscribed_FineInputsSubscribed)
+TEST_F(TrafficLightRoiVisualizerNodeTest, Interface_OutputSubscribed_FineInputsSubscribed)
 {
   start_node(/*use_high_accuracy_detection=*/false, /*use_image_transport=*/false);
   subscribe_output();
@@ -358,7 +359,7 @@ TEST_F(TrafficLightRoiVisualizerCharacterization, Interface_OutputSubscribed_Fin
 
 // With high accuracy detection the node additionally subscribes to the rough ROIs, which selects
 // the four-input synchronizer and image_rough_roi_callback().
-TEST_F(TrafficLightRoiVisualizerCharacterization, Interface_HighAccuracy_RoughRoiSubscribed)
+TEST_F(TrafficLightRoiVisualizerNodeTest, Interface_HighAccuracy_RoughRoiSubscribed)
 {
   start_node(/*use_high_accuracy_detection=*/true, /*use_image_transport=*/false);
   subscribe_output();
@@ -376,7 +377,7 @@ TEST_F(TrafficLightRoiVisualizerCharacterization, Interface_HighAccuracy_RoughRo
 // runs. An empty ROI array is a different thing - it completes the set, and the image comes back
 // unchanged (Visualization_NoFineRois_ImageUnchanged). The synchronizer's tolerance for
 // differing stamps is not pinned either; every other test publishes one stamp for the whole set.
-TEST_F(TrafficLightRoiVisualizerCharacterization, Sync_FineRoisMissing_NoOutput)
+TEST_F(TrafficLightRoiVisualizerNodeTest, Sync_FineRoisMissing_NoOutput)
 {
   start_node(/*use_high_accuracy_detection=*/false, /*use_image_transport=*/false);
   subscribe_output();
@@ -396,7 +397,7 @@ TEST_F(TrafficLightRoiVisualizerCharacterization, Sync_FineRoisMissing_NoOutput)
 // The reverse case (the rough ROIs arriving while high accuracy detection is off) needs no test of
 // its own, because the node does not even subscribe to them then - see
 // Interface_OutputSubscribed_FineInputsSubscribed.
-TEST_F(TrafficLightRoiVisualizerCharacterization, Sync_RoughRoisMissing_NoOutput)
+TEST_F(TrafficLightRoiVisualizerNodeTest, Sync_RoughRoisMissing_NoOutput)
 {
   start_node(/*use_high_accuracy_detection=*/true, /*use_image_transport=*/false);
   subscribe_output();
@@ -417,7 +418,7 @@ TEST_F(TrafficLightRoiVisualizerCharacterization, Sync_RoughRoisMissing_NoOutput
 //
 // The exact shape of the label box is not pinned - only that it is drawn above the ROI in the
 // signal color and contains black text - because it is a rendering detail.
-TEST_F(TrafficLightRoiVisualizerCharacterization, Visualization_FineWithSignal_FrameAndLabelDrawn)
+TEST_F(TrafficLightRoiVisualizerNodeTest, Pipeline_FineInputs_DrawnImagePublished)
 {
   start_node(/*use_high_accuracy_detection=*/false, /*use_image_transport=*/false);
   subscribe_output();
@@ -453,7 +454,7 @@ TEST_F(TrafficLightRoiVisualizerCharacterization, Visualization_FineWithSignal_F
 // The two corners checked below lie on exactly one rectangle each, and the label box is checked at
 // the fine ROI - the opposite of Visualization_RoughOnlyWithSignal_RoughLabeled, where the same
 // box lands on the rough ROI instead.
-TEST_F(TrafficLightRoiVisualizerCharacterization, Visualization_RoughAndFineWithSignal_BothDrawn)
+TEST_F(TrafficLightRoiVisualizerNodeTest, Pipeline_RoughAndFineInputs_DrawnImagePublished)
 {
   start_node(/*use_high_accuracy_detection=*/true, /*use_image_transport=*/false);
   subscribe_output();
@@ -487,7 +488,7 @@ TEST_F(TrafficLightRoiVisualizerCharacterization, Visualization_RoughAndFineWith
 // that are installed, and here there are none - checked on 2026-09-15, `ros2 pkg list` lists
 // image_transport alone, and with the parameter on the node still advertises only the raw topic.
 // Where compressed_image_transport is installed, ~/output/image/compressed would tell them apart.
-TEST_F(TrafficLightRoiVisualizerCharacterization, Interface_ImageTransportEnabled_SameOutput)
+TEST_F(TrafficLightRoiVisualizerNodeTest, Interface_ImageTransportEnabled_SameOutput)
 {
   start_node(/*use_high_accuracy_detection=*/false, /*use_image_transport=*/true);
   subscribe_output();
@@ -504,7 +505,7 @@ TEST_F(TrafficLightRoiVisualizerCharacterization, Interface_ImageTransportEnable
 
 // Each callback carries its own copy of that branch, so the one that walks the rough ROIs needs a
 // case of its own - the test above only exercises the other one.
-TEST_F(TrafficLightRoiVisualizerCharacterization, Interface_ImageTransportHighAccuracy_SameOutput)
+TEST_F(TrafficLightRoiVisualizerNodeTest, Interface_ImageTransportHighAccuracy_SameOutput)
 {
   start_node(/*use_high_accuracy_detection=*/true, /*use_image_transport=*/true);
   subscribe_output();
