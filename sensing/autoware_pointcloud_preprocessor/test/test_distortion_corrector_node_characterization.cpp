@@ -376,11 +376,9 @@ protected:
     return predicate();
   }
 
-  // Waits for the n-th output cloud (1-based), then keeps spinning briefly so that an
-  // unexpected extra publication is recorded too.
-  //
-  // The timeout is generous because a cloud whose frame is absent from TF costs the node a
-  // full one-second lookup timeout before it gets anywhere near publishing.
+  // Waits for the n-th output cloud (1-based), then spins briefly so that an unexpected extra
+  // publication is recorded too. The timeout is generous because a cloud whose frame is absent
+  // from TF costs the node a full one-second lookup timeout first.
   PointCloud2 await_output_cloud(
     size_t count = 1, std::chrono::nanoseconds timeout = std::chrono::seconds(6))
   {
@@ -388,7 +386,9 @@ protected:
       << "expected " << count << " output cloud(s) on " << output_cloud_topic() << ", got "
       << output_clouds_.size();
     spin_for(std::chrono::milliseconds(250));
-    return output_clouds_.size() < count ? PointCloud2{} : output_clouds_.at(count - 1);
+    // count is 1-based; 0 would wrap `count - 1` around to SIZE_MAX.
+    return count == 0 || output_clouds_.size() < count ? PointCloud2{}
+                                                       : output_clouds_.at(count - 1);
   }
 
   DiagnosticStatus await_diagnostic(
@@ -398,7 +398,8 @@ protected:
       << "expected " << count << " diagnostic(s) from " << node_name_ << ", got "
       << diagnostics_.size();
     spin_for(std::chrono::milliseconds(250));
-    return diagnostics_.size() < count ? DiagnosticStatus{} : diagnostics_.at(count - 1);
+    return count == 0 || diagnostics_.size() < count ? DiagnosticStatus{}
+                                                     : diagnostics_.at(count - 1);
   }
 
   // -- assertions shared by several tests ----------------------------------------------
@@ -421,6 +422,8 @@ protected:
   {
     const auto points = read_points(output);
     ASSERT_EQ(points.size(), source_points().size());
+    // Without this, a short `shifts` throws out of at() instead of failing the expectation.
+    ASSERT_EQ(shifts.size(), source_points().size()) << "expected one shift per source point";
     for (size_t i = 0; i < points.size(); ++i) {
       const auto & source = source_points().at(i);
       const auto & shift = shifts.at(i);
@@ -514,6 +517,8 @@ private:
     return matching;
   }
 
+  // One base_link -> child extrinsic, i.e. where the sensor sits on the vehicle. Per the TF
+  // convention it maps points from the child frame into base_link: p_base = R * p_child + t.
   static geometry_msgs::msg::TransformStamped make_transform(
     const std::string & child, double x, double y, double z, double qx, double qy, double qz,
     double qw)
@@ -688,17 +693,19 @@ private:
     pipeline_latency_subscription_;
 };
 
-using Test = DistortionCorrectorCharacterizationTest;
-
 // ---------------------------------------------------------------------------------------
 // The topic interface
 // ---------------------------------------------------------------------------------------
 
-TEST_F(Test, AdvertisesUndistortedPointcloudTopic)
+TEST_F(DistortionCorrectorCharacterizationTest, AdvertisesUndistortedPointcloudTopic)
 {
+  // Arrange
   start(NodeParams{});
 
+  // Act
   const auto publishers = get_publishers_on(output_cloud_topic());
+
+  // Assert
   ASSERT_EQ(publishers.size(), 1U);
   EXPECT_EQ(publishers.front().topic_type(), "sensor_msgs/msg/PointCloud2");
   // SensorDataQoS: best effort, volatile, depth 5.
@@ -707,38 +714,53 @@ TEST_F(Test, AdvertisesUndistortedPointcloudTopic)
   EXPECT_EQ(publishers.front().qos_profile().depth(), 5U);
 }
 
-TEST_F(Test, SubscribesToPointcloudTwistAndImu)
+TEST_F(DistortionCorrectorCharacterizationTest, SubscribesToPointcloudTwistAndImu)
 {
+  // Arrange
   start(NodeParams{});
 
-  ASSERT_EQ(get_subscriptions_on(input_cloud_topic()).size(), 1U);
+  // Act
+  const auto cloud_subscriptions = get_subscriptions_on(input_cloud_topic());
+  const auto twist_subscriptions = get_subscriptions_on(input_twist_topic());
+  const auto imu_subscriptions = get_subscriptions_on(input_imu_topic());
+
+  // Assert
+  ASSERT_EQ(cloud_subscriptions.size(), 1U);
   EXPECT_EQ(
-    get_subscriptions_on(input_cloud_topic()).front().qos_profile().reliability(),
-    rclcpp::ReliabilityPolicy::BestEffort);
+    cloud_subscriptions.front().qos_profile().reliability(), rclcpp::ReliabilityPolicy::BestEffort);
 
   // The twist and IMU queues are sized for a twist rate far above the cloud rate, so that a
   // whole cloud interval of samples is never dropped by the middleware.
-  ASSERT_EQ(get_subscriptions_on(input_twist_topic()).size(), 1U);
-  EXPECT_EQ(get_subscriptions_on(input_twist_topic()).front().qos_profile().depth(), 100U);
-  ASSERT_EQ(get_subscriptions_on(input_imu_topic()).size(), 1U);
-  EXPECT_EQ(get_subscriptions_on(input_imu_topic()).front().qos_profile().depth(), 100U);
+  ASSERT_EQ(twist_subscriptions.size(), 1U);
+  EXPECT_EQ(twist_subscriptions.front().qos_profile().depth(), 100U);
+  ASSERT_EQ(imu_subscriptions.size(), 1U);
+  EXPECT_EQ(imu_subscriptions.front().qos_profile().depth(), 100U);
 }
 
-TEST_F(Test, SubscribesToImuEvenWhenImuIsDisabled)
+TEST_F(DistortionCorrectorCharacterizationTest, SubscribesToImuEvenWhenImuIsDisabled)
 {
+  // Arrange
   // use_imu gates whether the samples are consumed, not whether the subscription exists.
   start(NodeParams{});
 
-  EXPECT_EQ(get_subscriptions_on(input_imu_topic()).size(), 1U);
+  // Act
+  const auto imu_subscriptions = get_subscriptions_on(input_imu_topic());
+
+  // Assert
+  EXPECT_EQ(imu_subscriptions.size(), 1U);
 }
 
-TEST_F(Test, AdvertisesDebugTopicsAndPublishesThemPerCloud)
+TEST_F(DistortionCorrectorCharacterizationTest, AdvertisesDebugTopicsAndPublishesThemPerCloud)
 {
+  // Arrange
   start(NodeParams{});
   publish_twist(base_stamp_sec, 1.0, 0.0);
+
+  // Act
   publish_cloud(base_frame, base_stamp_sec);
   await_output_cloud();
 
+  // Assert
   EXPECT_EQ(cyclic_times_.size(), 1U);
   EXPECT_EQ(processing_times_.size(), 1U);
   EXPECT_EQ(pipeline_latencies_.size(), 1U);
@@ -749,47 +771,61 @@ TEST_F(Test, AdvertisesDebugTopicsAndPublishesThemPerCloud)
 // republished, byte for byte: downstream nodes see a pass-through, not a gap.
 // ---------------------------------------------------------------------------------------
 
-TEST_F(Test, RepublishesCloudUnchangedWhenNoTwistHasArrived)
+TEST_F(DistortionCorrectorCharacterizationTest, RepublishesCloudUnchangedWhenNoTwistHasArrived)
 {
+  // Arrange
   start(NodeParams{});
 
+  // Act
   const auto input = publish_cloud(base_frame, base_stamp_sec);
+  const auto output = await_output_cloud();
 
-  expect_cloud_unchanged(await_output_cloud(), input);
+  // Assert
+  expect_cloud_unchanged(output, input);
 }
 
-TEST_F(Test, RepublishesEmptyCloudUnchanged)
+TEST_F(DistortionCorrectorCharacterizationTest, RepublishesEmptyCloudUnchanged)
 {
+  // Arrange
   start(NodeParams{});
   publish_twist(base_stamp_sec, 10.0, 0.0);
 
+  // Act
   const auto input = publish_cloud(
     base_frame, base_stamp_sec, Layout::xyzircaedt, AzimuthConvention::cartesian, true);
-
   const auto output = await_output_cloud();
+
+  // Assert
   EXPECT_EQ(output.width, 0U);
   expect_cloud_unchanged(output, input);
 }
 
-TEST_F(Test, RepublishesCloudWithIncompatibleLayoutUnchanged)
+TEST_F(DistortionCorrectorCharacterizationTest, RepublishesCloudWithIncompatibleLayoutUnchanged)
 {
+  // Arrange
   start(NodeParams{});
   publish_twist(base_stamp_sec, 10.0, 0.0);
 
+  // Act
   const auto input = publish_cloud(base_frame, base_stamp_sec, Layout::xyzi);
+  const auto output = await_output_cloud();
 
-  expect_cloud_unchanged(await_output_cloud(), input);
+  // Assert
+  expect_cloud_unchanged(output, input);
 }
 
-TEST_F(Test, PublishesExactlyOneCloudPerInputCloud)
+TEST_F(DistortionCorrectorCharacterizationTest, PublishesExactlyOneCloudPerInputCloud)
 {
+  // Arrange
   start(NodeParams{});
   publish_twist(base_stamp_sec, 10.0, 0.0);
 
+  // Act
   publish_cloud(base_frame, base_stamp_sec);
   publish_cloud(base_frame, base_stamp_sec + 0.1);
-
   await_output_cloud(2);
+
+  // Assert
   EXPECT_EQ(output_clouds_.size(), 2U);
 }
 
@@ -797,31 +833,40 @@ TEST_F(Test, PublishesExactlyOneCloudPerInputCloud)
 // Undistortion, 2D
 // ---------------------------------------------------------------------------------------
 
-TEST_F(Test, LinearTwistShiftsEachPointByItsOwnTimeOffset)
+TEST_F(DistortionCorrectorCharacterizationTest, LinearTwistShiftsEachPointByItsOwnTimeOffset)
 {
+  // Arrange
   constexpr double speed = 10.0;
   start(NodeParams{});
   publish_twist(base_stamp_sec, speed, 0.0);
 
+  // Act
   publish_cloud(base_frame, base_stamp_sec);
+  const auto output = await_output_cloud();
 
+  // Assert
   // 10 m/s over 10 ms steps: the i-th point moves 0.1 * i metres along x.
-  expect_points_shifted_by(await_output_cloud(), linear_shifts(speed), exact_tolerance);
+  expect_points_shifted_by(output, linear_shifts(speed), exact_tolerance);
 }
 
-TEST_F(Test, RotationalTwistRotatesEachPointAboutBaseLink)
+TEST_F(DistortionCorrectorCharacterizationTest, RotationalTwistRotatesEachPointAboutBaseLink)
 {
+  // Arrange
   constexpr double rate = 1.0;
   start(NodeParams{});
   publish_twist(base_stamp_sec, 0.0, rate);
 
+  // Act
   publish_cloud(base_frame, base_stamp_sec);
+  const auto output = await_output_cloud();
 
-  expect_points_shifted_by(await_output_cloud(), rotation_shifts(rate), rotation_tolerance);
+  // Assert
+  expect_points_shifted_by(output, rotation_shifts(rate), rotation_tolerance);
 }
 
-TEST_F(Test, UsesImuAngularVelocityInsteadOfTwistAngularVelocity)
+TEST_F(DistortionCorrectorCharacterizationTest, UsesImuAngularVelocityInsteadOfTwistAngularVelocity)
 {
+  // Arrange
   constexpr double imu_rate = 1.0;
   start(NodeParams{}.with_imu());
   // The twist's angular velocity is the opposite sign and five times the magnitude, so the
@@ -829,45 +874,60 @@ TEST_F(Test, UsesImuAngularVelocityInsteadOfTwistAngularVelocity)
   publish_twist(base_stamp_sec, 0.0, -5.0);
   publish_imu(base_stamp_sec, 0.0, 0.0, imu_rate);
 
+  // Act
   publish_cloud(base_frame, base_stamp_sec);
+  const auto output = await_output_cloud();
 
-  expect_points_shifted_by(await_output_cloud(), rotation_shifts(imu_rate), rotation_tolerance);
+  // Assert
+  expect_points_shifted_by(output, rotation_shifts(imu_rate), rotation_tolerance);
 }
 
-TEST_F(Test, RotatesImuAngularVelocityIntoTheBaseFrame)
+TEST_F(DistortionCorrectorCharacterizationTest, RotatesImuAngularVelocityIntoTheBaseFrame)
 {
+  // Arrange
   constexpr double imu_rate = 1.0;
   start(NodeParams{}.with_imu());
   publish_twist(base_stamp_sec, 0.0, 0.0);
   // char_imu_flipped is rolled 180 degrees about x, so +z in the IMU frame is -z in base_link.
   publish_imu(base_stamp_sec, 0.0, 0.0, imu_rate, imu_flipped_frame);
 
+  // Act
   publish_cloud(base_frame, base_stamp_sec);
+  const auto output = await_output_cloud();
 
-  expect_points_shifted_by(await_output_cloud(), rotation_shifts(-imu_rate), rotation_tolerance);
+  // Assert
+  expect_points_shifted_by(output, rotation_shifts(-imu_rate), rotation_tolerance);
 }
 
-TEST_F(Test, IgnoresImuWhenImuIsDisabled)
+TEST_F(DistortionCorrectorCharacterizationTest, IgnoresImuWhenImuIsDisabled)
 {
+  // Arrange
   constexpr double twist_rate = 1.0;
   start(NodeParams{});
   publish_twist(base_stamp_sec, 0.0, twist_rate);
   // Would dominate the yaw rate if it were consumed.
   publish_imu(base_stamp_sec, 0.0, 0.0, -5.0);
 
+  // Act
   publish_cloud(base_frame, base_stamp_sec);
+  const auto output = await_output_cloud();
 
-  expect_points_shifted_by(await_output_cloud(), rotation_shifts(twist_rate), rotation_tolerance);
+  // Assert
+  expect_points_shifted_by(output, rotation_shifts(twist_rate), rotation_tolerance);
 }
 
-TEST_F(Test, UndistortsCloudGivenInTheLidarFrame)
+TEST_F(DistortionCorrectorCharacterizationTest, UndistortsCloudGivenInTheLidarFrame)
 {
+  // Arrange
   constexpr double speed = 10.0;
   start(NodeParams{});
   publish_twist(base_stamp_sec, speed, 0.0);
 
+  // Act
   publish_cloud(lidar_frame, base_stamp_sec);
+  const auto output = await_output_cloud();
 
+  // Assert
   // The correction happens in base_link and the result is rotated back into the lidar frame.
   // char_lidar_top is yawed +90 degrees relative to base_link, so base_link's +x arrives as
   // the lidar frame's -y.
@@ -876,54 +936,68 @@ TEST_F(Test, UndistortsCloudGivenInTheLidarFrame)
     const auto travelled = static_cast<float>(speed * point_interval_sec * static_cast<double>(i));
     shifts.push_back({0.0F, -travelled, 0.0F});
   }
-  expect_points_shifted_by(await_output_cloud(), shifts, rotation_tolerance);
+  expect_points_shifted_by(output, shifts, rotation_tolerance);
 }
 
 // ---------------------------------------------------------------------------------------
 // Undistortion, 3D
 // ---------------------------------------------------------------------------------------
 
-TEST_F(Test, ThreeDimensionalCorrectionShiftsPointsByLinearTwist)
+TEST_F(DistortionCorrectorCharacterizationTest, ThreeDimensionalCorrectionShiftsPointsByLinearTwist)
 {
+  // Arrange
   constexpr double speed = 10.0;
   start(NodeParams{}.with_3d());
   publish_twist(base_stamp_sec, speed, 0.0);
 
+  // Act
   publish_cloud(base_frame, base_stamp_sec);
+  const auto output = await_output_cloud();
 
-  expect_points_shifted_by(await_output_cloud(), linear_shifts(speed), exact_tolerance);
+  // Assert
+  expect_points_shifted_by(output, linear_shifts(speed), exact_tolerance);
 }
 
-TEST_F(Test, ThreeDimensionalCorrectionUsesEveryLinearVelocityComponent)
+TEST_F(
+  DistortionCorrectorCharacterizationTest,
+  ThreeDimensionalCorrectionUsesEveryLinearVelocityComponent)
 {
+  // Arrange
   // The 2D corrector reads only linear.x and angular.z; the 3D one reads all six components.
   // Driving y and z proves which strategy is in use.
   start(NodeParams{}.with_3d());
   publish_full_twist(base_stamp_sec, {0.0, 4.0, 8.0}, {0.0, 0.0, 0.0});
 
+  // Act
   publish_cloud(base_frame, base_stamp_sec);
+  const auto output = await_output_cloud();
 
+  // Assert
   std::vector<std::array<float, 3>> shifts;
   for (size_t i = 0; i < num_points; ++i) {
     const auto elapsed = point_interval_sec * static_cast<double>(i);
     shifts.push_back({0.0F, static_cast<float>(4.0 * elapsed), static_cast<float>(8.0 * elapsed)});
   }
-  expect_points_shifted_by(await_output_cloud(), shifts, exact_tolerance);
+  expect_points_shifted_by(output, shifts, exact_tolerance);
 }
 
 // ---------------------------------------------------------------------------------------
 // The azimuth and distance rewrite
 // ---------------------------------------------------------------------------------------
 
-TEST_F(Test, LeavesAzimuthAndDistanceAloneByDefault)
+TEST_F(DistortionCorrectorCharacterizationTest, LeavesAzimuthAndDistanceAloneByDefault)
 {
+  // Arrange
   start(NodeParams{});
   publish_twist(base_stamp_sec, 10.0, 0.0);
 
+  // Act
   const auto input =
     publish_cloud(lidar_frame, base_stamp_sec, Layout::xyzircaedt, AzimuthConvention::velodyne);
+  const auto output = await_output_cloud();
 
-  const auto output_points = read_points(await_output_cloud());
+  // Assert
+  const auto output_points = read_points(output);
   const auto input_points = read_points(input);
   ASSERT_EQ(output_points.size(), input_points.size());
   for (size_t i = 0; i < output_points.size(); ++i) {
@@ -932,16 +1006,20 @@ TEST_F(Test, LeavesAzimuthAndDistanceAloneByDefault)
   }
 }
 
-TEST_F(Test, RewritesAzimuthAndDistanceFromTheCorrectedPosition)
+TEST_F(DistortionCorrectorCharacterizationTest, RewritesAzimuthAndDistanceFromTheCorrectedPosition)
 {
+  // Arrange
   start(NodeParams{}.with_azimuth_update());
   // A stationary vehicle keeps the positions put, so the azimuth and distance assertions are
   // about the rewrite alone.
   publish_twist(base_stamp_sec, 0.0, 0.0);
 
+  // Act
   publish_cloud(lidar_frame, base_stamp_sec, Layout::xyzircaedt, AzimuthConvention::velodyne);
+  const auto output = await_output_cloud();
 
-  const auto points = read_points(await_output_cloud());
+  // Assert
+  const auto points = read_points(output);
   ASSERT_EQ(points.size(), num_points);
   for (size_t i = 0; i < points.size(); ++i) {
     const auto & point = points.at(i);
@@ -954,11 +1032,18 @@ TEST_F(Test, RewritesAzimuthAndDistanceFromTheCorrectedPosition)
   }
 }
 
-TEST_F(Test, AbortsTheCallbackWhenAzimuthUpdateIsAskedForACloudAlreadyInTheBaseFrame)
+TEST_F(
+  DistortionCorrectorCharacterizationTest,
+  AbortsTheCallbackWhenAzimuthUpdateIsAskedForACloudAlreadyInTheBaseFrame)
 {
+  // Arrange
   start(NodeParams{}.with_azimuth_update());
   publish_twist(base_stamp_sec, 10.0, 0.0);
 
+  // Act & Assert
+  // Fused, because the act is what throws: the assertion has to wrap the call rather than
+  // inspect its result.
+  //
   // A cloud that is already in base_link cannot have a sensor azimuth, so the core throws
   // rather than writing a meaningless one. The exception is not caught anywhere in the node,
   // so it escapes the subscription callback into whoever is spinning -- here, the fixture.
@@ -976,14 +1061,18 @@ TEST_F(Test, AbortsTheCallbackWhenAzimuthUpdateIsAskedForACloudAlreadyInTheBaseF
 // Diagnostics
 // ---------------------------------------------------------------------------------------
 
-TEST_F(Test, PublishesDiagnosticsForEveryCloud)
+TEST_F(DistortionCorrectorCharacterizationTest, PublishesDiagnosticsForEveryCloud)
 {
+  // Arrange
   start(NodeParams{});
   publish_twist(base_stamp_sec, 10.0, 0.0);
+
+  // Act
   publish_cloud(base_frame, base_stamp_sec);
   await_output_cloud();
-
   const auto status = await_diagnostic();
+
+  // Assert
   EXPECT_EQ(status.hardware_id, node_name_);
   EXPECT_EQ(status.level, DiagnosticStatus::OK);
   // Not "Distortion correction successful": the node composes that string and hands it to
@@ -1000,43 +1089,56 @@ TEST_F(Test, PublishesDiagnosticsForEveryCloud)
   }
 }
 
-TEST_F(Test, DiagnosticsEchoTheStrategyParameters)
+TEST_F(DistortionCorrectorCharacterizationTest, DiagnosticsEchoTheStrategyParameters)
 {
+  // Arrange
   start(NodeParams{}.with_3d());
   publish_twist(base_stamp_sec, 10.0, 0.0);
+
+  // Act
   publish_cloud(base_frame, base_stamp_sec);
   await_output_cloud();
-
   const auto status = await_diagnostic();
+
+  // Assert
   ASSERT_NE(get_value_of(status, "Use 3D distortion correction"), nullptr);
   EXPECT_EQ(*get_value_of(status, "Use 3D distortion correction"), "True");
   ASSERT_NE(get_value_of(status, "Update azimuth and distance"), nullptr);
   EXPECT_EQ(*get_value_of(status, "Update azimuth and distance"), "False");
 }
 
-TEST_F(Test, ReportsNoTimestampMismatchWhenEveryPointFindsATwist)
+TEST_F(DistortionCorrectorCharacterizationTest, ReportsNoTimestampMismatchWhenEveryPointFindsATwist)
 {
+  // Arrange
   start(NodeParams{});
   publish_twist(base_stamp_sec, 10.0, 0.0);
+
+  // Act
   publish_cloud(base_frame, base_stamp_sec);
   await_output_cloud();
-
   const auto status = await_diagnostic();
+
+  // Assert
   ASSERT_NE(get_value_of(status, "Timestamp mismatch count"), nullptr);
   EXPECT_EQ(*get_value_of(status, "Timestamp mismatch count"), "0");
 }
 
-TEST_F(Test, GoesToErrorWhenTheTimestampMismatchFractionExceedsTheThreshold)
+TEST_F(
+  DistortionCorrectorCharacterizationTest,
+  GoesToErrorWhenTheTimestampMismatchFractionExceedsTheThreshold)
 {
+  // Arrange
   start(NodeParams{});
   // A twist a full second before the cloud is outside the core's 100 ms association window,
   // so no point can use it.
   publish_twist(base_stamp_sec - 1.0, 10.0, 0.0);
 
+  // Act
   publish_cloud(base_frame, base_stamp_sec);
   await_output_cloud();
-
   const auto status = await_diagnostic();
+
+  // Assert
   ASSERT_NE(get_value_of(status, "Timestamp mismatch count"), nullptr);
   EXPECT_EQ(*get_value_of(status, "Timestamp mismatch count"), std::to_string(num_points));
   EXPECT_EQ(status.level, DiagnosticStatus::ERROR);
@@ -1055,44 +1157,52 @@ TEST_F(Test, GoesToErrorWhenTheTimestampMismatchFractionExceedsTheThreshold)
 // point count.
 // ---------------------------------------------------------------------------------------
 
-TEST_F(Test, BackwardTimeJumpDiscardsTheTwistQueue)
+TEST_F(DistortionCorrectorCharacterizationTest, BackwardTimeJumpDiscardsTheTwistQueue)
 {
+  // Arrange
+  // A rosbag restart: the first twist is 10 s ahead of everything that follows it. Driving a
+  // cloud through it is part of the arrangement -- it is what gets the pre-jump sample into
+  // the core's queue in the first place.
   constexpr double speed = 10.0;
   constexpr double rewound_speed = 1.0;
   start(NodeParams{});
-
-  // A rosbag restart: the first twist is 10 s ahead of everything that follows it.
   publish_twist(base_stamp_sec + 10.0, speed, 0.0);
   publish_cloud(base_frame, base_stamp_sec + 10.0);
   await_output_cloud(1);
 
+  // Act
   publish_twist(base_stamp_sec, rewound_speed, 0.0);
   publish_cloud(base_frame, base_stamp_sec);
+  const auto output = await_output_cloud(2);
+  const auto status = await_diagnostic(2);
 
+  // Assert
   // Only reachable if the pre-jump sample was dropped. Had it survived, the queue would be
   // out of order, the search would settle on the 10 s old sample, and the cloud would come
   // back untouched.
-  expect_points_shifted_by(await_output_cloud(2), linear_shifts(rewound_speed), exact_tolerance);
-
-  const auto status = await_diagnostic(2);
+  expect_points_shifted_by(output, linear_shifts(rewound_speed), exact_tolerance);
   ASSERT_NE(get_value_of(status, "Timestamp mismatch count"), nullptr);
   EXPECT_EQ(*get_value_of(status, "Timestamp mismatch count"), "0");
 }
 
-TEST_F(Test, TwistOlderThanOneSecondIsDroppedWhenANewerOneArrives)
+TEST_F(
+  DistortionCorrectorCharacterizationTest, TwistOlderThanOneSecondIsDroppedWhenANewerOneArrives)
 {
-  start(NodeParams{});
-
+  // Arrange
   // 1.5 s apart, so inserting the second retires the first.
+  start(NodeParams{});
   publish_twist(base_stamp_sec, 10.0, 0.0);
   publish_twist(base_stamp_sec + 1.5, 1.0, 0.0);
 
+  // Act
   const auto input = publish_cloud(base_frame, base_stamp_sec);
+  const auto output = await_output_cloud();
+  const auto status = await_diagnostic();
 
+  // Assert
   // The only surviving sample is 1.5 s away from every point, far outside the association
   // window, so nothing is corrected.
-  expect_cloud_unchanged(await_output_cloud(), input);
-  const auto status = await_diagnostic();
+  expect_cloud_unchanged(output, input);
   ASSERT_NE(get_value_of(status, "Timestamp mismatch count"), nullptr);
   EXPECT_EQ(*get_value_of(status, "Timestamp mismatch count"), std::to_string(num_points));
 }
@@ -1101,81 +1211,103 @@ TEST_F(Test, TwistOlderThanOneSecondIsDroppedWhenANewerOneArrives)
 // Missing transforms
 // ---------------------------------------------------------------------------------------
 
-TEST_F(Test, StillPublishesWhenTheCloudTransformIsMissing)
+TEST_F(DistortionCorrectorCharacterizationTest, StillPublishesWhenTheCloudTransformIsMissing)
 {
+  // Arrange
   constexpr double speed = 10.0;
   start(NodeParams{});
   publish_twist(base_stamp_sec, speed, 0.0);
 
+  // Act
   publish_cloud(unmapped_frame, base_stamp_sec);
+  const auto output = await_output_cloud();
 
+  // Assert
   // The lookup fails, so the node has no lidar-to-base transform -- but it undistorts the
   // cloud anyway, treating the sensor coordinates as if they were already base_link's.
-  expect_points_shifted_by(await_output_cloud(), linear_shifts(speed), exact_tolerance);
+  expect_points_shifted_by(output, linear_shifts(speed), exact_tolerance);
 }
 
-TEST_F(Test, DiagnosticsDescribeTheCloudJustProcessedWhenItsTransformIsMissing)
+TEST_F(
+  DistortionCorrectorCharacterizationTest,
+  DiagnosticsDescribeTheCloudJustProcessedWhenItsTransformIsMissing)
 {
+  // Arrange
+  // A first cloud with a matching twist, so that nothing mismatches on it. Asserted here as
+  // a precondition rather than as the subject of the test: if this half is already wrong,
+  // the second half proves nothing.
   start(NodeParams{});
-
-  // First cloud: a matching twist, so nothing mismatches.
   publish_twist(base_stamp_sec, 10.0, 0.0);
   publish_cloud(unmapped_frame, base_stamp_sec);
   await_output_cloud(1);
   const auto first = await_diagnostic(1);
   ASSERT_NE(get_value_of(first, "Timestamp mismatch count"), nullptr);
-  EXPECT_EQ(*get_value_of(first, "Timestamp mismatch count"), "0");
+  ASSERT_EQ(*get_value_of(first, "Timestamp mismatch count"), "0");
 
-  // Second cloud: half a second later with no new twist, so every point mismatches. The
-  // point of the assertion is that the diagnostics describe THIS cloud, not the previous
-  // one -- which only holds while the mismatch counters are reset per cloud.
+  // Act
+  // A second cloud half a second later with no new twist, so every point mismatches.
   publish_cloud(unmapped_frame, base_stamp_sec + 0.5);
   await_output_cloud(2);
-
   const auto second = await_diagnostic(2);
+
+  // Assert
+  // The diagnostics describe THIS cloud, not the previous one -- which only holds while the
+  // mismatch counters are reset per cloud.
   ASSERT_NE(get_value_of(second, "Timestamp mismatch count"), nullptr);
   EXPECT_EQ(*get_value_of(second, "Timestamp mismatch count"), std::to_string(num_points));
 }
 
-TEST_F(Test, StillPublishesWhenTheImuTransformIsMissing)
+TEST_F(DistortionCorrectorCharacterizationTest, StillPublishesWhenTheImuTransformIsMissing)
 {
+  // Arrange
   start(NodeParams{}.with_imu());
   publish_twist(base_stamp_sec, 10.0, 0.0);
   // char_unmapped_lidar is not in the TF tree, so the IMU-to-base lookup fails.
   publish_imu(base_stamp_sec, 0.0, 0.0, 1.0, unmapped_frame);
 
+  // Act
   publish_cloud(base_frame, base_stamp_sec);
+  const auto output = await_output_cloud();
 
+  // Assert
   // Only the absence of a crash is asserted. The current core leaves its
   // imu-to-base-link matrix uninitialized when the lookup fails and rotates the angular
   // velocity by it regardless, so the corrected positions are indeterminate. Do not pin
   // them; fix the uninitialized read instead.
-  const auto output = await_output_cloud();
   EXPECT_EQ(output.width, static_cast<uint32_t>(num_points));
   EXPECT_EQ(output.header.frame_id, base_frame);
 }
 
-TEST_F(Test, KnownIssueFirstResolvedCloudTransformIsReusedForEveryLaterFrame)
+TEST_F(
+  DistortionCorrectorCharacterizationTest,
+  KnownIssueFirstResolvedCloudTransformIsReusedForEveryLaterFrame)
 {
+  // Arrange
+  // A cloud already in base_link resolves an identity transform and latches it. Asserted
+  // here as a precondition: the latch only means something if the first cloud was itself
+  // corrected normally.
   constexpr double speed = 10.0;
   start(NodeParams{});
   publish_twist(base_stamp_sec, speed, 0.0);
-
-  // A cloud already in base_link resolves an identity transform and latches it.
   publish_cloud(base_frame, base_stamp_sec);
-  expect_points_shifted_by(await_output_cloud(1), linear_shifts(speed), exact_tolerance);
+  const auto first = await_output_cloud(1);
+  expect_points_shifted_by(first, linear_shifts(speed), exact_tolerance);
 
-  // A cloud from the yawed lidar now arrives. The lookup is skipped because a transform is
-  // already cached, so this cloud is corrected as though it too were in base_link: the shift
-  // stays along x instead of becoming the lidar frame's -y.
+  // Act
+  // A cloud from the yawed lidar now arrives.
+  publish_twist(base_stamp_sec + 0.1, speed, 0.0);
+  publish_cloud(lidar_frame, base_stamp_sec + 0.1);
+  const auto second = await_output_cloud(2);
+
+  // Assert
+  // The lookup is skipped because a transform is already cached, so this cloud is corrected
+  // as though it too were in base_link: the shift stays along x instead of becoming the
+  // lidar frame's -y.
   //
   // This is a bug, recorded so that fixing it is a deliberate, reviewed change. Compare with
   // UndistortsCloudGivenInTheLidarFrame, which gets the transform right because the lidar
   // cloud is the first one the node sees.
-  publish_twist(base_stamp_sec + 0.1, speed, 0.0);
-  publish_cloud(lidar_frame, base_stamp_sec + 0.1);
-
-  expect_points_shifted_by(await_output_cloud(2), linear_shifts(speed), exact_tolerance);
+  expect_points_shifted_by(second, linear_shifts(speed), exact_tolerance);
 }
 
 int main(int argc, char ** argv)
