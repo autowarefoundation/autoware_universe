@@ -23822,6 +23822,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#road-border-stop-phase2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Road border stop (Phase2)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#debug-topic-planner-status" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -24038,6 +24049,48 @@
 </tbody>
 </table>
 <p>Split parameter files per operation class if different constraint values are needed.</p>
+<h2 id="road-border-stop-phase2">Road border stop (Phase2)<a class="headerlink" href="#road-border-stop-phase2" title="Permanent link">#</a></h2>
+<p><code>MrmRoadBorderStopPlanner</code> (applied inside the trajectory modifier right after the obstacle stop)
+sweeps the vehicle footprint along the candidate trajectory from the ego nearest point and
+inserts a stop point <code>road_border_stop.stop_margin</code> before the first interference with a map
+road border. Boundaries are the lanelet2 linestrings whose <code>type</code> attribute is listed in
+<code>road_border_stop.boundary_types_to_detect</code> (default <code>["road_border"]</code>); their segments are
+indexed in an R-tree that is rebuilt only when the map instance changes. The contact arc length
+is refined by bisection between the last non-interfering and the first interfering trajectory
+point. The stop point is never placed behind the ego. Deceleration feasibility is left to
+<code>MrmStopVelocityPlanner</code>, which relaxes deceleration / jerk of each profile up to
+<code>mrm_velocity.profiles.&lt;profile&gt;.max_*_relaxation</code> when the stop point is close.</p>
+<p>The footprint sweep starts at the ego pose itself and then continues over the trajectory points
+ahead of the ego, so a border behind the vehicle is never reported.</p>
+<p>Outputs:</p>
+<table>
+<thead>
+<tr>
+<th>Output</th>
+<th>Topic</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Planning factor</td>
+<td><code>/planning/planning_factors/in_lane_mrm_road_border_stop</code></td>
+<td><code>autoware_internal_planning_msgs/msg/PlanningFactorArray</code> (STOP)</td>
+</tr>
+<tr>
+<td>Debug markers</td>
+<td><code>~/road_border_stop/debug/marker</code> (node-relative, not remapped)</td>
+<td><code>visualization_msgs/msg/MarkerArray</code></td>
+</tr>
+</tbody>
+</table>
+<p>The debug marker topic is relative to the node name, so with the default launch it resolves to
+<code>/in_lane_mrm_planner/road_border_stop/debug/marker</code> (not <code>/planning/...</code>). It contains the
+contact footprint, the contact segment / point and a stop virtual wall. The wall is drawn at
+the stop pose shifted by the vehicle front (<code>max_longitudinal_offset</code>), i.e. where the vehicle
+front will be when stopped.</p>
+<p>For verification with a custom map, add a lane-crossing linestring with a dedicated type
+(e.g. <code>mrm_test_border</code>) and append that type to <code>boundary_types_to_detect</code>.</p>
 <h2 id="debug-topic-planner-status">Debug topic: planner status<a class="headerlink" href="#debug-topic-planner-status" title="Permanent link">#</a></h2>
 <p>Published every control cycle to explain why <code>~/output/trajectory</code> was or was not published.</p>
 <table>
