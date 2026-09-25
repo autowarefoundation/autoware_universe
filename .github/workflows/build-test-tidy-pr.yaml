@@ -60,21 +60,10 @@ jobs:
       rosdistro: ${{ matrix.rosdistro }}
       container: ${{ matrix.container }}
       run-condition: ${{ needs.require-label.outputs.result == 'true' }}
+      # main only: release branches use pre-built Core without Agnocast. The =0 build is covered by the above-differential job.
+      enable-agnocast: ${{ github.event.pull_request.base.ref == 'main' }}
       # The cuda job covers coverage upload when it runs; upload here otherwise.
       upload-coverage: ${{ matrix.rosdistro == 'jazzy' && needs.check-if-cuda-job-is-needed.outputs.cuda_job_is_needed != 'true' }}
-    secrets:
-      codecov-token: ${{ secrets.CODECOV_TOKEN }}
-
-  build-and-test-differential-agnocast:
-    if: ${{ always() }}
-    needs:
-      - require-label
-    uses: ./.github/workflows/build-and-test-differential.yaml
-    with:
-      rosdistro: jazzy
-      container: ghcr.io/autowarefoundation/autoware:universe-dependencies-jazzy
-      enable-agnocast: true
-      run-condition: ${{ needs.require-label.outputs.result == 'true' && github.event.pull_request.base.ref == 'main' }}
     secrets:
       codecov-token: ${{ secrets.CODECOV_TOKEN }}
 
