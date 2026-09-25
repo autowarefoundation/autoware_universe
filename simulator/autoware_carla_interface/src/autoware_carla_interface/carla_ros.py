@@ -42,6 +42,10 @@ from geometry_msgs.msg import TransformStamped
 from nav_msgs.msg import Odometry
 import numpy
 import rclpy
+from rclpy.qos import QoSDurabilityPolicy
+from rclpy.qos import QoSHistoryPolicy
+from rclpy.qos import QoSProfile
+from rclpy.qos import QoSReliabilityPolicy
 from rosgraph_msgs.msg import Clock
 from sensor_msgs.msg import CameraInfo
 from sensor_msgs.msg import Imu
@@ -285,6 +289,32 @@ class carla_ros2_interface(object):
         )
         self.sub_vehicle_initialpose = self.ros2_node.create_subscription(
             PoseWithCovarianceStamped, "initialpose", self.initialpose_callback, 1
+        )
+        # A publisher that latches its initial pose (TRANSIENT_LOCAL) and sends
+        # it once -- a scenario runner placing the ego, a replay script, a
+        # `ros2 topic pub --qos-durability transient_local` -- typically does so
+        # long before this node has a world to put an ego in. The volatile
+        # subscription above is compatible with such a publisher, so the two
+        # connect; but a volatile reader is not given the sample that was
+        # latched before it arrived, and a publisher that sends it once never
+        # sends it again. The pose is then lost and the ego stays wherever
+        # `spawn_point` put it, which defaults to a random point on the map.
+        #
+        # A second subscription asking for TRANSIENT_LOCAL is given that sample
+        # when it connects, whenever this node comes up. Both are needed: RViz's
+        # "2D Pose Estimate" publishes volatile, which a TRANSIENT_LOCAL reader
+        # is incompatible with and would never receive at all.
+        # https://design.ros2.org/articles/qos.html
+        self.sub_vehicle_initialpose_latched = self.ros2_node.create_subscription(
+            PoseWithCovarianceStamped,
+            "initialpose",
+            self.initialpose_callback,
+            QoSProfile(
+                depth=1,
+                history=QoSHistoryPolicy.KEEP_LAST,
+                reliability=QoSReliabilityPolicy.RELIABLE,
+                durability=QoSDurabilityPolicy.TRANSIENT_LOCAL,
+            ),
         )
         self.sub_turn_indicators = self.ros2_node.create_subscription(
             TurnIndicatorsCommand,
