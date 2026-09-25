@@ -24463,10 +24463,12 @@ and reports how many it skipped through a throttled warning.</p>
 <span class="w">      </span><span class="nt">fov</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">70.0</span>
 </code></pre></div>
 <p><code>image_encoding</code> applies to cameras and accepts <code>bgra8</code> (default, what CARLA
-renders) or <code>mono8</code>. Publishing <code>mono8</code> converts once in the bridge and sends a
-quarter of the bytes, which is worth it when every consumer of that camera
-works on luminance alone, such as feature tracking or visual odometry. A
-1600x900 frame is 5,760,000 bytes as <code>bgra8</code> and 1,440,000 bytes as <code>mono8</code>.</p>
+renders), <code>bgr8</code> or <code>mono8</code>. Publishing <code>mono8</code> converts once in the bridge and
+sends a quarter of the bytes, which is worth it when every consumer of that
+camera works on luminance alone, such as feature tracking or visual odometry.
+<code>bgr8</code> drops only the alpha channel, which CARLA fills with 255 and no consumer
+reads, so it costs no information at all. A 1600x900 frame is 5,760,000 bytes as
+<code>bgra8</code>, 4,320,000 bytes as <code>bgr8</code> and 1,440,000 bytes as <code>mono8</code>.</p>
 <p>For CARLA sensor parameters, see <a href="https://carla.readthedocs.io/en/latest/ref_sensors/">CARLA Sensor Reference</a>.</p>
 <h5 id="capture-rate">Capture Rate<a class="headerlink" href="#capture-rate" title="Permanent link">#</a></h5>
 <p><code>frequency_hz</code> throttles what the bridge publishes; it does not change how often
