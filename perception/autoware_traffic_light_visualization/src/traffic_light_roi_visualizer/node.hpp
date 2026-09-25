@@ -14,49 +14,24 @@
 #ifndef TRAFFIC_LIGHT_ROI_VISUALIZER__NODE_HPP_
 #define TRAFFIC_LIGHT_ROI_VISUALIZER__NODE_HPP_
 
-#include <ament_index_cpp/get_package_share_directory.hpp>
+#include "roi_visualizer.hpp"
+
 #include <image_transport/image_transport.hpp>
 #include <image_transport/subscriber_filter.hpp>
-#include <opencv2/highgui/highgui.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <sensor_msgs/msg/image.hpp>
 #include <tier4_perception_msgs/msg/traffic_light_array.hpp>
 #include <tier4_perception_msgs/msg/traffic_light_roi_array.hpp>
 
-#if __has_include(<cv_bridge/cv_bridge.hpp>)
-#include <cv_bridge/cv_bridge.hpp>  // for ROS 2 Jazzy or newer
-#else
-#include <cv_bridge/cv_bridge.h>  // for ROS 2 Humble or older
-#endif
 #include <message_filters/subscriber.h>
 #include <message_filters/sync_policies/approximate_time.h>
 #include <message_filters/synchronizer.h>
-#include <opencv2/imgproc/imgproc_c.h>
 
 #include <memory>
-#include <mutex>
-#include <sstream>
-#include <string>
-#include <vector>
 
 namespace autoware::traffic_light
 {
-struct ClassificationResult
-{
-  float prob = 0.0;
-  std::string label;
-};
-
-/**
- * @brief A struct to represent parsed traffic light shape information.
- */
-struct TrafficLightShapeInfo
-{
-  cv::Scalar color;                 //!< Color associated with "circle".
-  std::vector<std::string> shapes;  //!< Shape names.
-};
-
 class TrafficLightRoiVisualizerNode : public rclcpp::Node
 {
 public:
@@ -77,67 +52,8 @@ public:
       input_traffic_signals_msg);
 
 private:
-  /**
-   * @brief Return RGB color from color string associated with "circle".
-   * @param color Color string.
-   * @return RGB color.
-   */
-  static cv::Scalar str_to_color(const std::string & color)
-  {
-    if (color == "red") {
-      return {254, 149, 149};
-    } else if (color == "yellow") {
-      return {254, 250, 149};
-    } else if (color == "green") {
-      return {149, 254, 161};
-    } else {
-      return {250, 250, 250};
-    }
-  }
-
-  /**
-   * @brief Extract color and shape names from label.
-   * @param label String formatted as `<Color0>-<Shape0>,<Color1>-<Shape1>,...,<ColorN>-<ShapeN>`.
-   * @return Extracted information includes a color associated with "circle" and shape names.
-   */
-  static TrafficLightShapeInfo extract_shape_info(const std::string & label)
-  {
-    cv::Scalar color{255, 255, 255};
-    std::vector<std::string> shapes;
-
-    std::stringstream ss(label);
-    std::string segment;
-    while (std::getline(ss, segment, ',')) {
-      size_t hyphen_pos = segment.find('-');
-      if (hyphen_pos != std::string::npos) {
-        auto shape = segment.substr(hyphen_pos + 1);
-        if (shape == "circle") {
-          const auto color_str = segment.substr(0, hyphen_pos);
-          color = str_to_color(color_str);
-        }
-        shapes.emplace_back(shape);
-      }
-    }
-    return {color, shapes};
-  }
-
-  /// Draws the ROI in `color` and writes its traffic light id next to it.
-  bool draw_roi_with_id(
-    cv::Mat & image, const tier4_perception_msgs::msg::TrafficLightRoi & tl_roi,
-    const cv::Scalar & color);
-
-  /// Draws the ROI in the color of `result` and a label box with its shape and confidence.
-  bool draw_roi_with_label(
-    cv::Mat & image, const tier4_perception_msgs::msg::TrafficLightRoi & tl_roi,
-    const ClassificationResult & result);
-
-  bool get_classification_result(
-    int id, const tier4_perception_msgs::msg::TrafficLightArray & traffic_signals,
-    ClassificationResult & result);
-
-  bool get_roi_from_id(
-    int id, const tier4_perception_msgs::msg::TrafficLightRoiArray::ConstSharedPtr & rois,
-    tier4_perception_msgs::msg::TrafficLightRoi & correspond_roi);
+  /// Sends the drawn image out through whichever publisher the parameters selected.
+  void publish(const sensor_msgs::msg::Image::SharedPtr & drawn) const;
 
   rclcpp::TimerBase::SharedPtr timer_;
   image_transport::SubscriberFilter image_sub_;
@@ -163,8 +79,9 @@ private:
 
   bool use_high_accuracy_detection_;
   bool use_image_transport_;
-  /// Where the shape icons live. Resolved once, so that the drawing code needs no package lookup.
-  std::string shape_image_dir_;
+
+  /// Does all of the drawing. Holds no ROS state.
+  TrafficLightRoiVisualizer visualizer_;
 };
 
 }  // namespace autoware::traffic_light
