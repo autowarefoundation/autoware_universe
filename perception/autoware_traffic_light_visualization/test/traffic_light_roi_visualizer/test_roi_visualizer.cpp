@@ -56,6 +56,9 @@ constexpr Pixel background_rgb{40, 40, 40};
 
 constexpr int64_t signal_id = 42;
 constexpr int64_t other_signal_id = 43;
+// A five digit id, the length a lanelet id actually has. It is wider than the label box drawn for
+// a single shape, so a box that had to cover it could not.
+constexpr int64_t long_signal_id = 12345;
 
 struct Box
 {
@@ -175,6 +178,23 @@ size_t count_pixels_differing_from(const Image & image, const Pixel & reference)
   for (int y = 0; y < static_cast<int>(image.height); ++y) {
     for (int x = 0; x < static_cast<int>(image.width); ++x) {
       if (pixel_at(image, x, y) != reference) {
+        ++count;
+      }
+    }
+  }
+  return count;
+}
+
+// How much is drawn in the band just past the right edge of the label box. A count over the band
+// rather than one probe, because what would show there is text: its strokes are thin and a single
+// point lands between them as often as on them. For a single shape at 87% confidence the box is
+// 86 px wide and a five digit id is 101 px. Measured on 2026-09-24.
+size_t count_drawn_beside_label_box(const Image & image, const Box & box, const Pixel & background)
+{
+  size_t count = 0;
+  for (int y = box.y - 27; y < box.y; ++y) {
+    for (int x = box.x + 86; x < box.x + 110; ++x) {
+      if (pixel_at(image, x, y) != background) {
         ++count;
       }
     }
@@ -691,6 +711,31 @@ TEST(TrafficLightRoiVisualizer, RoughRoiWithoutFineOneCarriesLabelItself)
   // Nothing is drawn where a fine ROI would have been
   const auto where_the_fine_roi_would_be = pixel_at(*output, fine_box.x, fine_box.y);
   EXPECT_EQ(where_the_fine_roi_would_be, background_rgb);
+}
+
+// A box carries either an id or a label, never both. It matters when the label box is too short
+// to hide the id under it, which a five digit lanelet id and a confidence of 87% make it.
+TEST(TrafficLightRoiVisualizer, LabeledRoughRoiDoesNotAlsoCarryItsId)
+{
+  // Arrange: a rough ROI with no fine ROI for it, so the label lands on the rough one
+  const auto rough = make_rois(long_signal_id, {rough_box});
+  const auto none = make_rois(long_signal_id, {});
+  const auto signal =
+    make_signal(long_signal_id, TrafficLightElement::GREEN, TrafficLightElement::CIRCLE);
+  const auto visualizer = make_visualizer();
+
+  // Act
+  const auto output = visualizer.visualize_with_rough_rois(background_image, none, rough, signal);
+  ASSERT_NE(output, nullptr);
+
+  // Assert: the label box is drawn
+  const auto icon_above_the_rough_roi = label_icon_pixel(*output, rough_box);
+  EXPECT_EQ(icon_above_the_rough_roi, label_icon_rgb);
+
+  // Nothing is drawn past its right edge
+  const auto drawn_beside_the_label_box =
+    count_drawn_beside_label_box(*output, rough_box, background_rgb);
+  EXPECT_EQ(drawn_beside_the_label_box, 0u);
 }
 
 TEST(TrafficLightRoiVisualizer, RoughRoiWithNeitherIsDrawnOnItsOwn)
