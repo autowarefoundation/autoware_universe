@@ -173,12 +173,12 @@ def launch_setup(context, *args, **kwargs):
 
 
 def generate_launch_description():
-    argument = DeclareLaunchArgument("config", default_value=get_default_config())
-    node_keys = DeclareLaunchArgument(
+    arg_config = DeclareLaunchArgument("config", default_value=get_default_config())
+    arg_node_keys = DeclareLaunchArgument(
         "default_adapi_node_keys",
         default_value=f"[{', '.join(AGNOCAST_WRAPPER_NODES.keys())}]",
         description="a string representing a list of node keys to launch",
     )
     return launch.LaunchDescription(
-        [argument, node_keys, get_agnocast_env(), OpaqueFunction(function=launch_setup)]
+        [arg_config, arg_node_keys, get_agnocast_env(), OpaqueFunction(function=launch_setup)]
     )
