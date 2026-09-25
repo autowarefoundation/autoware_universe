@@ -432,6 +432,29 @@ TEST(TrafficLightRoiVisualizer, UndefinedColorCodeFallsBackToOffWhite)
   EXPECT_EQ(frame_corner, unknown_circle_rgb);
 }
 
+// A shape code no table entry lists reads as unknown rather than as nothing, so the label box
+// carries the unknown icon instead of being drawn empty. The frame color does not change: an
+// unknown shape is not a circle either way.
+TEST(TrafficLightRoiVisualizer, UndefinedShapeCodeIsLabeledUnknown)
+{
+  // Arrange: an element carrying a shape code outside the message definition
+  constexpr uint8_t undefined_shape = 200;
+  const auto signal = make_signal(signal_id, TrafficLightElement::GREEN, undefined_shape);
+  const auto visualizer = make_visualizer();
+
+  // Act
+  const auto output = visualizer.visualize(background_image, fine_rois, signal);
+  ASSERT_NE(output, nullptr);
+
+  // Assert: the label box is drawn
+  const auto above_the_roi = label_box_pixel(*output, fine_box);
+  EXPECT_EQ(above_the_roi, no_circle_rgb);
+
+  // An icon sits in it, rather than the box being drawn empty
+  const auto icon_slot = label_icon_pixel(*output, fine_box);
+  EXPECT_NE(icon_slot, no_circle_rgb);
+}
+
 TEST(TrafficLightRoiVisualizer, SignalWithoutCircleLeavesFrameWhite)
 {
   // Arrange: an arrow, i.e. a classified signal whose only element is not a circle. The color of

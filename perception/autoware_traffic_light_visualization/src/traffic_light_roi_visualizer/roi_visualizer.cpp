@@ -42,9 +42,7 @@ struct TrafficLightShapeInfo
   std::vector<std::string> shapes;  //!< Shape names.
 };
 
-// The word a TrafficLightElement code contributes to a label. A code that is not listed yields an
-// empty string, as the std::map this replaces did through operator[] - except that operator[] also
-// inserted the empty entry into the map, which made the lookup mutate the node's state.
+// The word a TrafficLightElement code contributes to a label.
 std::string state_to_label(int state)
 {
   using tier4_perception_msgs::msg::TrafficLightElement;
@@ -70,7 +68,7 @@ std::string state_to_label(int state)
   };
 
   const auto found = table.find(state);
-  return found == table.end() ? std::string{} : found->second;
+  return found == table.end() ? table.at(TrafficLightElement::UNKNOWN) : found->second;
 }
 
 /**
