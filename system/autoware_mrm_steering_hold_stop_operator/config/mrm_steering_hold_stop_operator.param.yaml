@@ -1,0 +1,15 @@
+/**:
+  ros__parameters:
+    update_rate: 33.3 # [Hz] output period
+    input_freshness_timeout: 0.5 # [s] allowed age of steering_status / kinematic_state / acceleration
+    low_speed_threshold: 1.0 # [m/s] below this speed the acceleration measurement is not used (start directly at target_acceleration)
+
+    # Deceleration constraints per InLaneStopTrigger profile.
+    # An unknown profile falls back to moderate.
+    profiles:
+      moderate: # InLaneStopTrigger::PROFILE_MODERATE
+        target_acceleration: -3.0 # [m/s^2]
+        target_jerk: -5.0 # [m/s^3]
+      emergency: # InLaneStopTrigger::PROFILE_EMERGENCY
+        target_acceleration: -6.0 # [m/s^2]
+        target_jerk: -20.0 # [m/s^3]

@@ -86,6 +86,11 @@ struct UnitLoopFound : public Exception
   using Exception::Exception;
 };
 
+struct ValidationError : public Exception
+{
+  using Exception::Exception;
+};
+
 }  // namespace autoware::diagnostic_graph_aggregator
 
 #endif  // COMMON__CONFIG__ERRORS_HPP_
