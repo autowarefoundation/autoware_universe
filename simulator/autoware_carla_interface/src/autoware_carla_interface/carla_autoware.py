@@ -88,6 +88,9 @@ class InitializeInterface(object):
         self.tick_follower = self.param_["tick_follower"]
         self.spawn_point_ground_snap = self.param_["spawn_point_ground_snap"]
         self.spawn_point_ground_offset_z = self.param_["spawn_point_ground_offset_z"]
+        # Spawn the ego where the initial pose says, rather than at spawn_point
+        # and then moving it there. See _spawn_ego_actor.
+        self.wait_for_initialpose = self.param_["wait_for_initialpose"]
         self.force_load_world = self.param_["force_load_world"]
         self.no_rendering_mode = self.param_["no_rendering_mode"]
 
@@ -385,10 +388,35 @@ class InitializeInterface(object):
         self.world.apply_settings(settings)
 
     def _spawn_ego_actor(self):
-        """Spawn the ego vehicle at the configured (optionally ground-snapped) spawn point."""
+        """Spawn the ego vehicle where it is meant to start.
+
+        Normally that is the configured (optionally ground-snapped)
+        ``spawn_point``, and an initial pose arriving later moves the ego onto
+        it. With ``wait_for_initialpose`` the order is reversed: the spawn waits
+        for that pose and places the ego on it directly, so the ego is never
+        somewhere else first. Whoever owns where a run starts wants that -- the
+        move is a teleport other nodes can observe, and if the pose is missed
+        the ego is left at ``spawn_point``, which defaults to a random point on
+        the map.
+        """
+        if self.wait_for_initialpose:
+            spawn_point = self.interface.wait_for_initialpose()
+            if spawn_point is None:
+                raise RuntimeError(
+                    "wait_for_initialpose is set but no initial pose arrived; "
+                    "there is nowhere to spawn the ego"
+                )
+            # Already ground-snapped by the interface, with
+            # initial_pose_ground_offset_z.
+            return self._request_ego_actor(spawn_point, False)
+
         spawn_point, randomize = self._parse_spawn_point()
         if not randomize:
             spawn_point = self._snap_spawn_point_to_ground(spawn_point)
+        return self._request_ego_actor(spawn_point, randomize)
+
+    def _request_ego_actor(self, spawn_point, randomize):
+        """Ask CARLA for the ego actor at *spawn_point*."""
         ego_actor = CarlaDataProvider.request_new_actor(
             self.vehicle_type, spawn_point, self.agent_role_name, random_location=randomize
         )
