@@ -97,6 +97,10 @@ contact footprint, the contact segment / point and a stop virtual wall. The wall
 the stop pose shifted by the vehicle front (`max_longitudinal_offset`), i.e. where the vehicle
 front will be when stopped.
 
+While the trigger is latched the candidates are not re-planned. The planning factor and the
+debug markers keep showing the contact the latched trajectory was planned with (the planning
+factor distance is measured from the current ego pose) until the trigger is released.
+
 For verification with a custom map, add a lane-crossing linestring with a dedicated type
 (e.g. `mrm_test_border`) and append that type to `boundary_types_to_detect`.
 

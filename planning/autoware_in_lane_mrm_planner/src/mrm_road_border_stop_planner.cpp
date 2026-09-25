@@ -205,7 +205,7 @@ std::optional<RoadBorderContact> MrmRoadBorderStopPlanner::apply(
     set_stop_point(points, *contact, odom);
     last_contact_ = contact;
   }
-  publish_debug_markers(points, odom);
+  publish_debug_markers(odom);
   return contact;
 }
 
@@ -324,7 +324,7 @@ void MrmRoadBorderStopPlanner::set_stop_point(
 
   const auto stop_idx = autoware::motion_utils::insertStopPoint(contact.stop_arc_length, points);
   if (!stop_idx) return;
-  contact.stop_index = stop_idx;
+  contact.stop_pose = points.at(*stop_idx).pose;
 
   if (planning_factor_interface_) {
     planning_factor_interface_->add(
@@ -347,8 +347,21 @@ void MrmRoadBorderStopPlanner::publish_planning_factor()
   }
 }
 
-void MrmRoadBorderStopPlanner::publish_debug_markers(
-  const TrajectoryPoints & points, const Odometry & odom) const
+void MrmRoadBorderStopPlanner::publish_latched(
+  const TrajectoryPoints & latched_points, const Odometry & odom)
+{
+  if (
+    planning_factor_interface_ && last_contact_ && last_contact_->stop_pose &&
+    latched_points.size() >= 2) {
+    planning_factor_interface_->add(
+      latched_points, odom.pose.pose, *last_contact_->stop_pose, PlanningFactor::STOP,
+      safety_factors_);
+  }
+  publish_planning_factor();
+  publish_debug_markers(odom);
+}
+
+void MrmRoadBorderStopPlanner::publish_debug_markers(const Odometry & odom) const
 {
   if (!node_ || !debug_marker_pub_) return;
   if (debug_marker_pub_->get_subscription_count() == 0 && !last_contact_) return;
@@ -393,10 +406,9 @@ void MrmRoadBorderStopPlanner::publish_debug_markers(
     pt.pose.position = c.contact_point;
     marker_array.markers.push_back(pt);
 
-    if (c.stop_index) {
+    if (c.stop_pose) {
       const auto wall = autoware::motion_utils::createStopVirtualWallMarker(
-        points.at(*c.stop_index).pose, kModuleName, now, 0,
-        vehicle_info_.max_longitudinal_offset_m);
+        *c.stop_pose, kModuleName, now, 0, vehicle_info_.max_longitudinal_offset_m);
       marker_array.markers.insert(
         marker_array.markers.end(), wall.markers.begin(), wall.markers.end());
     }
