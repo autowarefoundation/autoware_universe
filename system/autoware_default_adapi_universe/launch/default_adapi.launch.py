@@ -128,14 +128,16 @@ def get_default_config():
 
 def launch_setup(context, *args, **kwargs):
     # construct a list of entries to launch (simple parse without dependencies)
-    node_keys = LaunchConfiguration("node_keys").perform(context)
+    node_keys = LaunchConfiguration("default_adapi_node_keys").perform(context)
     if (
         not isinstance(node_keys, str)
         or len(node_keys) == 0
         or node_keys[0] != "["
         or node_keys[-1] != "]"
     ):
-        raise ValueError("node_keys should be a string representing a list of strings.")
+        raise ValueError(
+            "default_adapi_node_keys should be a string representing a list of strings."
+        )
 
     node_keys = [key.strip() for key in node_keys[1:-1].split(",") if key.strip()]
 
@@ -173,7 +175,7 @@ def launch_setup(context, *args, **kwargs):
 def generate_launch_description():
     argument = DeclareLaunchArgument("config", default_value=get_default_config())
     node_keys = DeclareLaunchArgument(
-        "node_keys",
+        "default_adapi_node_keys",
         default_value=f"[{', '.join(AGNOCAST_WRAPPER_NODES.keys())}]",
         description="a string representing a list of node keys to launch",
     )
