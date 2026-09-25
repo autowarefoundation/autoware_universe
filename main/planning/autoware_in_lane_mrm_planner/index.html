@@ -23800,6 +23800,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#in-lane-stop-trigger" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        In-lane stop trigger
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#parameters-mrm-stop-velocity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parameters: MRM stop velocity
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#debug-topic-planner-status" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -23903,6 +23925,119 @@
 <h2 id="launch">Launch<a class="headerlink" href="#launch" title="Permanent link">#</a></h2>
 <div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>launch<span class="w"> </span>autoware_in_lane_mrm_planner<span class="w"> </span>in_lane_mrm_planner.launch.xml
 </code></pre></div>
+<h2 id="in-lane-stop-trigger">In-lane stop trigger<a class="headerlink" href="#in-lane-stop-trigger" title="Permanent link">#</a></h2>
+<p>The planner subscribes the trigger published by <code>autoware_mrm_in_lane_stop_operator</code> directly
+(the former <code>mrm_trigger_relay</code> node was removed).</p>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Topic (node)</td>
+<td><code>~/input/trigger</code></td>
+</tr>
+<tr>
+<td>Default remap</td>
+<td><code>/system/in_lane_stop/trigger</code> (launch arg <code>input_trigger_topic</code>)</td>
+</tr>
+<tr>
+<td>Type</td>
+<td><code>tier4_system_msgs/msg/InLaneStopTrigger</code> (<code>stamp</code>, <code>trigger</code>, <code>profile</code>)</td>
+</tr>
+<tr>
+<td>QoS</td>
+<td>reliable, transient_local, depth 1 (the operator publishes on change only)</td>
+</tr>
+</tbody>
+</table>
+<p>The trigger only selects a deceleration profile; the constraint values are owned by the planner
+(<code>mrm_velocity.profiles.&lt;name&gt;</code>).</p>
+<ul>
+<li>Every cycle while unlatched, the path is planned once and a velocity profile is filled for
+  <strong>every</strong> profile (<code>moderate</code>, <code>emergency</code>). The <code>moderate</code> candidate is published as the
+  hot-standby output.</li>
+<li><code>trigger: true</code> latches the candidate of the requested <code>profile</code> (the one planned in the
+  previous cycle). If no candidate of that profile exists yet (e.g. the planner started after
+  the trigger), the latch is retried every cycle.</li>
+<li>A profile change while triggered (e.g. <code>moderate</code> -&gt; <code>emergency</code>) re-plans from the current
+  state and re-latches the new profile. Only a candidate planned in that cycle is re-latched;
+  if planning fails the current latch is kept and the re-latch is retried.</li>
+<li><code>trigger: false</code> unlatches (and releases the latched objects).</li>
+<li>An unknown <code>profile</code> value (e.g. <code>PROFILE_UNKNOWN</code>) with <code>trigger: true</code> is treated as
+  <code>moderate</code> and reported with a throttled error log.</li>
+</ul>
+<h2 id="parameters-mrm-stop-velocity">Parameters: MRM stop velocity<a class="headerlink" href="#parameters-mrm-stop-velocity" title="Permanent link">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Default (L4)</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>mrm_velocity.profiles.moderate.target_deceleration</code></td>
+<td>-3.0</td>
+<td>Target deceleration of <code>PROFILE_MODERATE</code> [m/s^2]</td>
+</tr>
+<tr>
+<td><code>mrm_velocity.profiles.moderate.target_jerk</code></td>
+<td>-5.0</td>
+<td>Target jerk of <code>PROFILE_MODERATE</code> [m/s^3]</td>
+</tr>
+<tr>
+<td><code>mrm_velocity.profiles.moderate.max_deceleration_relaxation</code></td>
+<td>-4.0</td>
+<td>Relaxation limit of the deceleration [m/s^2]</td>
+</tr>
+<tr>
+<td><code>mrm_velocity.profiles.moderate.max_jerk_relaxation</code></td>
+<td>-10.0</td>
+<td>Relaxation limit of the jerk [m/s^3]</td>
+</tr>
+<tr>
+<td><code>mrm_velocity.profiles.emergency.target_deceleration</code></td>
+<td>-6.0</td>
+<td>Target deceleration of <code>PROFILE_EMERGENCY</code> [m/s^2]</td>
+</tr>
+<tr>
+<td><code>mrm_velocity.profiles.emergency.target_jerk</code></td>
+<td>-20.0</td>
+<td>Target jerk of <code>PROFILE_EMERGENCY</code> [m/s^3]</td>
+</tr>
+<tr>
+<td><code>mrm_velocity.profiles.emergency.max_deceleration_relaxation</code></td>
+<td>-8.0</td>
+<td>Relaxation limit of the deceleration [m/s^2]</td>
+</tr>
+<tr>
+<td><code>mrm_velocity.profiles.emergency.max_jerk_relaxation</code></td>
+<td>-30.0</td>
+<td>Relaxation limit of the jerk [m/s^3]</td>
+</tr>
+<tr>
+<td><code>mrm_velocity.step_deceleration_relaxation</code></td>
+<td>-1.0</td>
+<td>Deceleration relaxation step (shared) [m/s^2]</td>
+</tr>
+<tr>
+<td><code>mrm_velocity.step_jerk_relaxation</code></td>
+<td>-5.0</td>
+<td>Jerk relaxation step (shared) [m/s^3]</td>
+</tr>
+<tr>
+<td><code>mrm_velocity.brake_delay_time</code></td>
+<td>0.5</td>
+<td>Brake dead time before the ramp (shared) [s]</td>
+</tr>
+</tbody>
+</table>
+<p>Split parameter files per operation class if different constraint values are needed.</p>
 <h2 id="debug-topic-planner-status">Debug topic: planner status<a class="headerlink" href="#debug-topic-planner-status" title="Permanent link">#</a></h2>
 <p>Published every control cycle to explain why <code>~/output/trajectory</code> was or was not published.</p>
 <table>
@@ -23954,7 +24089,7 @@ Other fields are boolean flags (0/1) or numeric diagnostics.</p>
 <td>1</td>
 <td><code>trigger_active</code></td>
 <td>0/1</td>
-<td>MRM trigger is true</td>
+<td>In-lane stop trigger is true</td>
 </tr>
 <tr>
 <td>2</td>
@@ -23966,7 +24101,7 @@ Other fields are boolean flags (0/1) or numeric diagnostics.</p>
 <td>3</td>
 <td><code>has_latest_candidate</code></td>
 <td>0/1</td>
-<td>A candidate trajectory is stored in the latcher</td>
+<td>A candidate trajectory of the standby (<code>moderate</code>) profile is stored in the latcher</td>
 </tr>
 <tr>
 <td>4</td>
@@ -24015,6 +24150,18 @@ Other fields are boolean flags (0/1) or numeric diagnostics.</p>
 <td><code>sanitized_points</code></td>
 <td>count</td>
 <td>Overlapping points removed before publish (should stay 0; nonzero means an upstream stage produced (near-)duplicate points)</td>
+</tr>
+<tr>
+<td>12</td>
+<td><code>requested_profile</code></td>
+<td>enum</td>
+<td><code>profile</code> of the last received trigger (<code>InLaneStopTrigger::PROFILE_*</code>; 0 if none received)</td>
+</tr>
+<tr>
+<td>13</td>
+<td><code>latched_profile</code></td>
+<td>enum</td>
+<td>Profile of the latched trajectory (<code>InLaneStopTrigger::PROFILE_*</code>; 0 if not latched)</td>
 </tr>
 </tbody>
 </table>
