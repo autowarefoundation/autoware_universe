@@ -20,7 +20,7 @@ from nav_msgs.msg import OccupancyGrid
 from rclpy.serialization import serialize_message
 
 PlannerCommonParam = _fp.PlannerCommonParam
-VehicleShape = _fp.VehicleShape
+VehicleInfo = _fp.VehicleInfo
 AstarParam = _fp.AstarParam
 
 
@@ -43,10 +43,10 @@ class AstarSearch:
     def __init__(
         self,
         planner_param: PlannerCommonParam,
-        vehicle_shape: VehicleShape,
+        vehicle_info: VehicleInfo,
         astar_param: AstarParam,
     ):
-        self.astar_search = _fp.AstarSearch(planner_param, vehicle_shape, astar_param)
+        self.astar_search = _fp.AstarSearch(planner_param, vehicle_info, astar_param)
 
     def setMap(self, costmap: OccupancyGrid):
         costmap_byte = serialize_message(costmap)
