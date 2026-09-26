@@ -146,6 +146,10 @@
 
         unstable_classification_time: 2.0                # [s] If the object is classified as UNKNOWN for less than unstable_classification_time seconds, we cannot be confident that it truly does not belong to any known class..
 
+        # Objects separated from the ego path by one of these linestring types are ignored.
+        # Use ["NONE"] to disable the check.
+        uncrossable_linestring_types: ["guard_rail"]     # [-]
+
         # params for avoidance of vehicle type objects that are ambiguous as to whether they are parked.
         avoidance_for_ambiguous_vehicle:
           # policy for ego behavior for ambiguous vehicle.
