@@ -216,26 +216,55 @@
               "type": "number",
               "default": 0.3,
               "minimum": 0,
-              "description": "Maximum allowed position distance [m] between the actual ego pose and the snapped pose. If the distance exceeds this value the snap is skipped and the raw ego pose is kept."
+              "description": "Maximum distance [m] between the actual ego pose and the virtual pose handed to the model. The virtual pose is clamped to this distance, so it stays continuous at the limit."
             },
             "max_yaw_error_deg": {
               "type": "number",
               "default": 5.0,
               "minimum": 0,
-              "description": "Maximum allowed heading difference [deg] between the actual ego pose and the snapped pose. If the difference exceeds this value the snap is skipped and the raw ego pose is kept."
+              "description": "Maximum heading difference [deg] between the actual ego pose and the virtual pose handed to the model. The virtual heading is clamped to this difference, so it stays continuous at the limit."
             },
             "max_search_segment_count": {
               "type": "integer",
               "default": 5,
               "minimum": 1,
-              "description": "Number of leading segments of the previous trajectory searched for the closest one. A planning cycle only advances the ego by about one segment, so a small window is enough and it keeps a far-away part of the trajectory (e.g. the return leg of a U-turn) from being selected."
+              "description": "Number of leading segments of the previous trajectory the closest point is searched in. A planning cycle only advances the ego by about one segment, so a small window is enough and it keeps a far-away part of the trajectory (e.g. the return leg of a U-turn) from being selected."
+            },
+            "snap_strength": {
+              "type": "number",
+              "default": 0.9,
+              "minimum": 0,
+              "maximum": 1,
+              "description": "How far from the raw pose toward the snapped pose the virtual pose is placed. 0 is the raw pose, so the feature has no effect; 1 is the snapped pose, fully on the previous plan. Below 1 the remaining share of the raw pose also pulls the reference back onto the vehicle."
+            },
+            "yaw_fit_half_window_m": {
+              "type": "number",
+              "default": 1.0,
+              "minimum": 0,
+              "description": "Arc length [m] on each side of the snapped point over which the spline tangent is averaged for the heading of the virtual pose."
+            },
+            "yaw_fit_min_length_m": {
+              "type": "number",
+              "default": 0.2,
+              "minimum": 0,
+              "description": "Minimum total arc length [m] of the tangent fit window. Below it the geometry carries no reliable heading and the raw localization heading is used for the snapped pose instead."
+            },
+            "history_prefix_count": {
+              "type": "integer",
+              "default": 10,
+              "minimum": 0,
+              "description": "Number of earlier ego poses (the virtual poses of the previous frames) prepended to the previous trajectory before snapping. They extend the spline behind the snapped point so the tangent window stays symmetric and long although the ego is always within the first metre of the previous trajectory."
             }
           },
           "required": [
             "enable",
             "max_position_error_m",
             "max_yaw_error_deg",
-            "max_search_segment_count"
+            "max_search_segment_count",
+            "snap_strength",
+            "yaw_fit_half_window_m",
+            "yaw_fit_min_length_m",
+            "history_prefix_count"
           ]
         },
         "guidance": {

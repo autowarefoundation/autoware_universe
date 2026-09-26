@@ -32,6 +32,7 @@
 #include <memory>
 #include <optional>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -226,6 +227,21 @@ void DiffusionPlanner::set_up_params()
     this->declare_parameter<double>("ego_snap_to_prev_trajectory.max_yaw_error_deg", 5.0);
   params_.ego_snap_to_prev_trajectory.max_search_segment_count =
     this->declare_parameter<int64_t>("ego_snap_to_prev_trajectory.max_search_segment_count", 5);
+  params_.ego_snap_to_prev_trajectory.snap_strength =
+    this->declare_parameter<double>("ego_snap_to_prev_trajectory.snap_strength", 0.9);
+  params_.ego_snap_to_prev_trajectory.history_prefix_count =
+    this->declare_parameter<int64_t>("ego_snap_to_prev_trajectory.history_prefix_count", 10);
+  params_.ego_snap_to_prev_trajectory.yaw_fit_half_window_m =
+    this->declare_parameter<double>("ego_snap_to_prev_trajectory.yaw_fit_half_window_m", 1.0);
+  params_.ego_snap_to_prev_trajectory.yaw_fit_min_length_m =
+    this->declare_parameter<double>("ego_snap_to_prev_trajectory.yaw_fit_min_length_m", 0.2);
+  // The parameter callback is registered after this function returns, so startup values would
+  // otherwise bypass the checks it applies to runtime updates.
+  if (
+    const std::string reason = validate_ego_snap_params(params_.ego_snap_to_prev_trajectory);
+    !reason.empty()) {
+    throw std::runtime_error(reason);
+  }
   params_.start_guidance_reference_distance_m =
     this->declare_parameter<double>("guidance.start_guidance.reference_distance_m", 10.0);
   params_.start_guidance_max_scale =
@@ -361,6 +377,18 @@ SetParametersResult DiffusionPlanner::on_parameter(
       parameters, "ego_snap_to_prev_trajectory.max_search_segment_count",
       temp_params.ego_snap_to_prev_trajectory.max_search_segment_count);
     update_param<double>(
+      parameters, "ego_snap_to_prev_trajectory.snap_strength",
+      temp_params.ego_snap_to_prev_trajectory.snap_strength);
+    update_param<int64_t>(
+      parameters, "ego_snap_to_prev_trajectory.history_prefix_count",
+      temp_params.ego_snap_to_prev_trajectory.history_prefix_count);
+    update_param<double>(
+      parameters, "ego_snap_to_prev_trajectory.yaw_fit_half_window_m",
+      temp_params.ego_snap_to_prev_trajectory.yaw_fit_half_window_m);
+    update_param<double>(
+      parameters, "ego_snap_to_prev_trajectory.yaw_fit_min_length_m",
+      temp_params.ego_snap_to_prev_trajectory.yaw_fit_min_length_m);
+    update_param<double>(
       parameters, "object_motion_resampling.max_extrapolation_time",
       temp_params.object_motion_resampling.max_extrapolation_time);
     update_param<double>(
@@ -374,6 +402,14 @@ SetParametersResult DiffusionPlanner::on_parameter(
     update_param<double>(
       parameters, "guidance.centerline_guidance.start_time_s",
       temp_params.centerline_guidance_start_time_s);
+    if (
+      const std::string reason = validate_ego_snap_params(temp_params.ego_snap_to_prev_trajectory);
+      !reason.empty()) {
+      SetParametersResult result;
+      result.successful = false;
+      result.reason = reason;
+      return result;
+    }
     if (temp_params.trt_precision != "fp32" && temp_params.trt_precision != "fp16") {
       SetParametersResult result;
       result.successful = false;
