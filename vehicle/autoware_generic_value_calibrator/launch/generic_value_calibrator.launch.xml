@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<launch>
+  <!-- System parameters -->
+  <arg name="use_sim_time" default="false" description="Use simulation time (set true for rosbag playback)"/>
+
+  <!-- Calibrator parameters -->
+  <arg name="update_hz" default="10.0"/>
+  <arg name="csv_default_map_dir" default="$(find-pkg-share autoware_generic_value_calibrator)/data"/>
+  <arg name="csv_calibrated_map_dir" default="$(env HOME)/autoware_map_calibration"/>
+  <arg name="output_log_file" default=""/>
+
+  <node pkg="autoware_generic_value_calibrator" exec="autoware_generic_value_calibrator_node" name="generic_value_calibrator" output="screen">
+    <param name="use_sim_time" value="$(var use_sim_time)"/>
+    <param from="$(find-pkg-share autoware_generic_value_calibrator)/config/generic_value_calibrator.param.yaml"/>
+    <param name="update_hz" value="$(var update_hz)"/>
+    <param name="csv_default_map_dir" value="$(var csv_default_map_dir)"/>
+    <param name="csv_calibrated_map_dir" value="$(var csv_calibrated_map_dir)"/>
+    <param name="output_log_file" value="$(var output_log_file)"/>
+
+    <remap from="~/input/velocity" to="/vehicle/status/velocity_status"/>
+    <remap from="~/input/steer" to="/vehicle/status/steering_status"/>
+    <remap from="~/input/value" to="/generic/input/value"/>
+  </node>
+</launch>
