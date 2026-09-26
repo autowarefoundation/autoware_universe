@@ -26,7 +26,7 @@ namespace autoware::redundancy_switcher
 {
 
 void DrivingModeSubSystemAdapter::initialize(
-  rclcpp::Node * node, std::shared_ptr<EventGateway> gateway)
+  autoware::agnocast_wrapper::Node * node, std::shared_ptr<EventGateway> gateway)
 {
   if (!node) throw std::invalid_argument("DrivingModeSubSystemAdapter: node is null");
   if (!gateway) throw std::invalid_argument("DrivingModeSubSystemAdapter: gateway is null");

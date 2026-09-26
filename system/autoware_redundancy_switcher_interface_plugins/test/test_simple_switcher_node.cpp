@@ -16,8 +16,10 @@
 // encode_signals: static pure function, no ROS required.
 // Switching behavior: exercised via topic pub/sub with an executor.
 
+#include "portable_test_executor.hpp"
 #include "simple_switcher_node.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <std_msgs/msg/empty.hpp>
@@ -79,13 +81,17 @@ class SimpleSwitcherNodeTest : public ::testing::Test
 protected:
   void SetUp() override
   {
+    if (agnocast_executor_spin_untestable()) GTEST_SKIP();
     rclcpp::NodeOptions opts;
     // Large period to keep timer from interfering with expected message counts.
     opts.parameter_overrides({rclcpp::Parameter("publish_period_ms", int64_t{10000})});
     switcher_ = std::make_shared<SimpleSwitcherNode>(opts);
-    helper_ = std::make_shared<rclcpp::Node>("test_simple_switcher_helper");
-    exec_.add_node(switcher_);
-    exec_.add_node(helper_);
+    // helper_ must use the same Node backend as switcher_: an Agnocast-backed publisher
+    // (switcher_'s pub_active_ etc.) and a plain rclcpp::Subscription do not interoperate when
+    // actually running in Agnocast mode, since Agnocast delivery bypasses the RMW/DDS layer.
+    helper_ = std::make_shared<autoware::agnocast_wrapper::Node>("test_simple_switcher_helper");
+    exec_.add_node(switcher_->get_node_base_interface());
+    exec_.add_node(helper_->get_node_base_interface());
 
     const auto qos = rclcpp::QoS(rclcpp::KeepLast(1)).reliable();
     sub_active_ = helper_->create_subscription<tier4_system_msgs::msg::ActiveControlUnit>(
@@ -110,8 +116,7 @@ protected:
     last_active_ids_.clear();
   }
 
-  void publish_and_wait(
-    rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr pub, bool clear_first = true)
+  void publish_and_wait(AUTOWARE_PUBLISHER_PTR(std_msgs::msg::Empty) pub, bool clear_first = true)
   {
     if (clear_first) last_active_ids_.clear();
     pub->publish(std_msgs::msg::Empty{});
@@ -137,15 +142,15 @@ protected:
   }
 
   std::shared_ptr<SimpleSwitcherNode> switcher_;
-  std::shared_ptr<rclcpp::Node> helper_;
+  autoware::agnocast_wrapper::Node::SharedPtr helper_;
   rclcpp::executors::SingleThreadedExecutor exec_;
 
-  rclcpp::Subscription<tier4_system_msgs::msg::ActiveControlUnit>::SharedPtr sub_active_;
-  rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr pub_self_main_;
-  rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr pub_self_sub_;
-  rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr pub_reset_;
-  rclcpp::Publisher<std_msgs::msg::UInt16>::SharedPtr pub_priority_main_;
-  rclcpp::Publisher<std_msgs::msg::UInt16>::SharedPtr pub_priority_sub_;
+  AUTOWARE_SUBSCRIPTION_PTR(tier4_system_msgs::msg::ActiveControlUnit) sub_active_;
+  AUTOWARE_PUBLISHER_PTR(std_msgs::msg::Empty) pub_self_main_;
+  AUTOWARE_PUBLISHER_PTR(std_msgs::msg::Empty) pub_self_sub_;
+  AUTOWARE_PUBLISHER_PTR(std_msgs::msg::Empty) pub_reset_;
+  AUTOWARE_PUBLISHER_PTR(std_msgs::msg::UInt16) pub_priority_main_;
+  AUTOWARE_PUBLISHER_PTR(std_msgs::msg::UInt16) pub_priority_sub_;
 
   std::vector<uint8_t> last_active_ids_;
 };

@@ -25,7 +25,7 @@ namespace autoware::redundancy_switcher
 {
 
 void NonRedundantSwitcherAdapter::initialize(
-  rclcpp::Node * node, std::shared_ptr<EventGateway> gateway)
+  autoware::agnocast_wrapper::Node * node, std::shared_ptr<EventGateway> gateway)
 {
   if (!node) throw std::invalid_argument("NonRedundantSwitcherAdapter: node is null");
   if (!gateway) throw std::invalid_argument("NonRedundantSwitcherAdapter: gateway is null");
@@ -55,7 +55,7 @@ void NonRedundantSwitcherAdapter::initialize(
   const std::string hardware_id =
     is_main_ecu ? "main_ecu_redundancy_switcher" : "sub_ecu_redundancy_switcher";
 
-  updater_ = std::make_unique<diagnostic_updater::Updater>(node);
+  updater_ = std::make_unique<autoware::agnocast_wrapper::diagnostic_updater::Updater>(node);
   updater_->setHardwareID(hardware_id);
   updater_->add("main_ecu_fault", &NonRedundantSwitcherAdapter::diag_skipped);
   updater_->add("sub_ecu_fault", &NonRedundantSwitcherAdapter::diag_skipped);

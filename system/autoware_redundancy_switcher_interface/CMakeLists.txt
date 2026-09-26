@@ -24,9 +24,11 @@ target_include_directories(${PROJECT_NAME} PRIVATE
   src
 )
 
-rclcpp_components_register_node(${PROJECT_NAME}
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   PLUGIN "autoware::redundancy_switcher::RedundancySwitcherInterface"
   EXECUTABLE redundancy_switcher_interface_node
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
+  ROS2_EXECUTOR MultiThreadedExecutor
 )
 
 if(BUILD_TESTING)

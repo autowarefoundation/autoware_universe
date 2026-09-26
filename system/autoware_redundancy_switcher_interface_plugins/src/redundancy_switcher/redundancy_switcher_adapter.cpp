@@ -31,7 +31,7 @@ namespace autoware::redundancy_switcher
 using DiagStatus = diagnostic_msgs::msg::DiagnosticStatus;
 
 void RedundancySwitcherAdapter::initialize(
-  rclcpp::Node * node, std::shared_ptr<EventGateway> gateway)
+  autoware::agnocast_wrapper::Node * node, std::shared_ptr<EventGateway> gateway)
 {
   if (!node) throw std::invalid_argument("RedundancySwitcherAdapter: node is null");
   if (!gateway) throw std::invalid_argument("RedundancySwitcherAdapter: gateway is null");
@@ -74,7 +74,7 @@ void RedundancySwitcherAdapter::initialize(
     check_election_status_timeout();
   });
 
-  updater_ = std::make_unique<diagnostic_updater::Updater>(node_);
+  updater_ = std::make_unique<autoware::agnocast_wrapper::diagnostic_updater::Updater>(node_);
   const std::string hardware_id =
     is_main_ecu_ ? "main_ecu_redundancy_switcher" : "sub_ecu_redundancy_switcher";
   updater_->setHardwareID(hardware_id);

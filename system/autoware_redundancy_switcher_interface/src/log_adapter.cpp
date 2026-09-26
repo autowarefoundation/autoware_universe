@@ -21,7 +21,8 @@
 namespace autoware::redundancy_switcher
 {
 
-void LogAdapter::initialize(rclcpp::Node * node, std::shared_ptr<EventGateway> /*gateway*/)
+void LogAdapter::initialize(
+  autoware::agnocast_wrapper::Node * node, std::shared_ptr<EventGateway> /*gateway*/)
 {
   if (!node) {
     throw std::invalid_argument("LogAdapter: node is null");

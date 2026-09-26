@@ -44,7 +44,8 @@ uint8_t to_diagnostic_status(DiagLevel level)
 }
 }  // namespace
 
-void DiagAdapter::initialize(rclcpp::Node * node, std::shared_ptr<EventGateway> gateway)
+void DiagAdapter::initialize(
+  autoware::agnocast_wrapper::Node * node, std::shared_ptr<EventGateway> gateway)
 {
   if (!node) throw std::invalid_argument("DiagAdapter: node is null");
 
@@ -57,7 +58,7 @@ void DiagAdapter::initialize(rclcpp::Node * node, std::shared_ptr<EventGateway> 
                              : node_->declare_parameter<bool>("is_main_ecu");
   const std::string hardware_id = is_main_ecu ? "main_ecu_redundancy_switcher_interface"
                                               : "sub_ecu_redundancy_switcher_interface";
-  updater_ = std::make_unique<diagnostic_updater::Updater>(node);
+  updater_ = std::make_unique<autoware::agnocast_wrapper::diagnostic_updater::Updater>(node);
   updater_->setHardwareID(hardware_id);
   updater_->add("redundancy_switcher_interface_status", this, &DiagAdapter::update_status);
 }
