@@ -16,6 +16,7 @@ include_directories(
 set(trajectory_ranker_lib_target ${PROJECT_NAME}_lib)
 
 ament_auto_add_library(${trajectory_ranker_lib_target} SHARED
+  src/camp_ranker.cpp
   src/trajectory_ranker_wrapper.cpp
   src/trajectory_ranker.cpp
   src/evaluation.cpp
@@ -69,6 +70,16 @@ if(BUILD_TESTING)
   target_link_libraries(test_evaluator
     ${trajectory_ranker_lib_target}
     ${PROJECT_NAME}_plugins
+  )
+
+  ament_add_gtest(test_camp_ranker
+    test/test_camp_ranker.cpp
+  )
+  target_compile_definitions(test_camp_ranker PRIVATE
+    CAMP_TEST_MODEL_PATH="${CMAKE_CURRENT_SOURCE_DIR}/config/camp_v26_k8_50k.json"
+  )
+  target_link_libraries(test_camp_ranker
+    ${trajectory_ranker_lib_target}
   )
 
   ament_add_gtest(test_metrics

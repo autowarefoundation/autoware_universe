@@ -87,6 +87,41 @@ This package is primarily a C++ library consumed by `trajectory_selector_node`. 
 | --------- | ------------------------------ | ----------------------------------------------------------------- | -------------------------------------------- |
 | Publisher | `~/output/scored_trajectories` | `autoware_internal_planning_msgs/msg/ScoredCandidateTrajectories` | Scored candidates from the integrated ranker |
 
-### Parameters
+## CAMP Fixed-Weight Scoring
+
+The package also provides the scoring core for CAMP (Conic Atom Meta-Policy), a
+decision-layer ranker for an ordered pool produced by a frozen trajectory
+generator. CAMP does not modify or regenerate trajectories. It applies learned
+nonnegative weights to 16 deployment-observable trajectory atoms and selects
+the lowest-cost original candidate.
+
+The bundled `config/camp_v26_k8_50k.json` model contains the K=8 fixed-weight
+CAMP parameters, atom scales, and endpoint-status patterns. Raw observed atoms
+are normalized as `clip(raw / scale, 0, 10)`. `not_applicable` and
+`typed_missing` atoms remain inactive rather than being replaced with zero.
+Candidate ties retain the original ordering.
+
+```cpp
+const auto model = load_camp_fixed_weight_model(model_path);
+const auto ranking = rank_camp_candidates(model, status_pattern, raw_candidate_atoms);
+const auto selected_row = ranking.selected_index;
+```
+
+The scoring API consumes materialized atom vectors separately from ROS
+messages. `autoware_diffusion_planner` provides the integrated adapter: it
+constructs the atoms from the original K=8 batch output and current map/planner
+context, invokes this scoring core, and publishes the selected original row.
+The training code and original deployment bundle are available in the
+[CAMP repository](https://github.com/Fake-fate11/camp-core).
+
+This adapter uses the version-1 Fixed export and keeps its K=8 generation
+contract. The separate CAMP library also offers raw-affine Scene scoring and
+explicit exports for other pool sizes. Those capabilities are not enabled by
+this ROS adapter: Scene requires the matching frozen encoder embedding, and a
+different K requires an explicitly matched generation/export configuration.
+Do not reinterpret the bundled K=8 weights as a new training condition or
+substitute a zero embedding for the required Scene input.
+
+## Parameters
 
 {{ json_to_markdown("planning/autoware_trajectory_ranker/schema/trajectory_ranker.schema.json") }}
