@@ -1,0 +1,193 @@
+{
+  "configById": {
+    "3D!main_3d_view": {
+      "cameraState": {
+        "distance": 68.5,
+        "perspective": true,
+        "phi": 45,
+        "target": [
+          0,
+          0,
+          0
+        ],
+        "targetOffset": [
+          10,
+          0,
+          0
+        ],
+        "targetOrientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "thetaOffset": 102.7,
+        "fovy": 45,
+        "near": 0.5,
+        "far": 5000
+      },
+      "followMode": "follow-pose",
+      "followTf": "base_link",
+      "scene": {},
+      "topics": {
+        "/localization/kinematic_state": {
+          "visible": true,
+          "showEgoVehicle": true
+        },
+        "/planning/trajectory": {
+          "visible": true,
+          "viewPath": "On",
+          "viewDrivableArea": true
+        },
+        "/perception/object_recognition/objects": {
+          "visible": true
+        },
+        "/map/vector_map_marker": {
+          "visible": true
+        },
+        "/map/pointcloud_map": {
+          "visible": false,
+          "pointSize": 2,
+          "colorMode": "flat",
+          "flatColor": "#e3e1e180"
+        }
+      }
+    },
+    "Plot!cruise_velocities": {
+      "title": "Velocities",
+      "paths": [
+        {
+          "value": "/planning/scenario_planning/lane_driving/motion_planning/motion_velocity_planner/debug/obstacle_cruise/planning_info.data[0]",
+          "label": "Ego Velocity [m/s]",
+          "timestampMethod": "receiveTime",
+          "visible": true
+        },
+        {
+          "value": "/planning/scenario_planning/lane_driving/motion_planning/motion_velocity_planner/debug/obstacle_cruise/planning_info.data[12]",
+          "label": "Target Velocity [m/s]",
+          "timestampMethod": "receiveTime",
+          "visible": true
+        },
+        {
+          "value": "/planning/scenario_planning/lane_driving/motion_planning/motion_velocity_planner/debug/obstacle_cruise/planning_info.data[5]",
+          "label": "Obstacle Velocity (Raw) [m/s]",
+          "timestampMethod": "receiveTime",
+          "visible": true
+        },
+        {
+          "value": "/planning/scenario_planning/lane_driving/motion_planning/motion_velocity_planner/debug/obstacle_cruise/planning_info.data[6]",
+          "label": "Obstacle Velocity (Filtered) [m/s]",
+          "timestampMethod": "receiveTime",
+          "visible": true
+        },
+        {
+          "value": "/planning/scenario_planning/lane_driving/motion_planning/motion_velocity_planner/debug/obstacle_cruise/planning_info.data[10]",
+          "label": "Relative Ego Velocity [m/s]",
+          "timestampMethod": "receiveTime",
+          "visible": true
+        }
+      ]
+    },
+    "Plot!cruise_accel_jerk": {
+      "title": "Accelerations & Jerks",
+      "paths": [
+        {
+          "value": "/planning/scenario_planning/lane_driving/motion_planning/motion_velocity_planner/debug/obstacle_cruise/planning_info.data[1]",
+          "label": "Ego Acceleration [m/s^2]",
+          "timestampMethod": "receiveTime",
+          "visible": true
+        },
+        {
+          "value": "/planning/scenario_planning/lane_driving/motion_planning/motion_velocity_planner/debug/obstacle_cruise/planning_info.data[13]",
+          "label": "Target Acceleration [m/s^2]",
+          "timestampMethod": "receiveTime",
+          "visible": true
+        },
+        {
+          "value": "/planning/scenario_planning/lane_driving/motion_planning/motion_velocity_planner/debug/obstacle_cruise/planning_info.data[2]",
+          "label": "Ego Jerk [m/s^3]",
+          "timestampMethod": "receiveTime",
+          "visible": true
+        },
+        {
+          "value": "/planning/scenario_planning/lane_driving/motion_planning/motion_velocity_planner/debug/obstacle_cruise/planning_info.data[14]",
+          "label": "Target Jerk Ratio",
+          "timestampMethod": "receiveTime",
+          "visible": true
+        }
+      ]
+    },
+    "Plot!cruise_distances": {
+      "title": "Distances & Errors",
+      "paths": [
+        {
+          "value": "/planning/scenario_planning/lane_driving/motion_planning/motion_velocity_planner/debug/obstacle_cruise/planning_info.data[3]",
+          "label": "Obstacle Distance (Raw) [m]",
+          "timestampMethod": "receiveTime",
+          "visible": true
+        },
+        {
+          "value": "/planning/scenario_planning/lane_driving/motion_planning/motion_velocity_planner/debug/obstacle_cruise/planning_info.data[4]",
+          "label": "Obstacle Distance (Filtered) [m]",
+          "timestampMethod": "receiveTime",
+          "visible": true
+        },
+        {
+          "value": "/planning/scenario_planning/lane_driving/motion_planning/motion_velocity_planner/debug/obstacle_cruise/planning_info.data[7]",
+          "label": "Target Obstacle Distance [m]",
+          "timestampMethod": "receiveTime",
+          "visible": true
+        },
+        {
+          "value": "/planning/scenario_planning/lane_driving/motion_planning/motion_velocity_planner/debug/obstacle_cruise/planning_info.data[9]",
+          "label": "Distance Error (Filtered) [m]",
+          "timestampMethod": "receiveTime",
+          "visible": true
+        },
+        {
+          "value": "/planning/scenario_planning/lane_driving/motion_planning/motion_velocity_planner/debug/obstacle_cruise/planning_info.data[11]",
+          "label": "Time to Collision [s]",
+          "timestampMethod": "receiveTime",
+          "visible": true
+        }
+      ]
+    },
+    "Plot!cruise_debug": {
+      "title": "Debug & Timers",
+      "paths": [
+        {
+          "value": "/planning/scenario_planning/lane_driving/motion_planning/motion_velocity_planner/debug/obstacle_cruise/processing_time_ms.data",
+          "label": "Calculation Time [ms]",
+          "timestampMethod": "receiveTime",
+          "visible": true
+        }
+      ]
+    }
+  },
+  "globalVariables": {},
+  "userNodes": {},
+  "playbackConfig": {
+    "speed": 1
+  },
+  "layout": {
+    "direction": "row",
+    "splitPercentage": 60,
+    "first": "3D!main_3d_view",
+    "second": {
+      "direction": "column",
+      "splitPercentage": 50,
+      "first": {
+        "direction": "row",
+        "splitPercentage": 50,
+        "first": "Plot!cruise_velocities",
+        "second": "Plot!cruise_accel_jerk"
+      },
+      "second": {
+        "direction": "row",
+        "splitPercentage": 50,
+        "first": "Plot!cruise_distances",
+        "second": "Plot!cruise_debug"
+      }
+    }
+  }
+}
