@@ -34,27 +34,47 @@ UNIVERSE = "autoware_default_adapi_universe"
 # executable). Composed like any other node under ENABLE_AGNOCAST=0, where that base is backed by
 # rclcpp; run as their own process under =1, where they need an AgnocastOnly executor that a shared
 # component container cannot provide.
-AGNOCAST_WRAPPER_NODES = [
-    (CORE, "interface", "InterfaceNode", "interface_node"),
-    (CORE, "localization", "LocalizationNode", "localization_node"),
-    (CORE, "routing", "RoutingNode", "routing_node"),
-    (UNIVERSE, "autoware_state", "AutowareStateNode", "autoware_state_node"),
-    (UNIVERSE, "diagnostics", "DiagnosticsNode", "diagnostics_node"),
-    (UNIVERSE, "fail_safe", "FailSafeNode", "fail_safe_node"),
-    (UNIVERSE, "heartbeat", "HeartbeatNode", "heartbeat_node"),
-    (UNIVERSE, "manual/local", "ManualControlNode", "manual_control_node"),
-    (UNIVERSE, "manual/remote", "ManualControlNode", "manual_control_node"),
-    (UNIVERSE, "motion", "MotionNode", "motion_node"),
-    (UNIVERSE, "mrm_request", "MrmRequestNode", "mrm_request_node"),
-    (UNIVERSE, "operation_mode", "OperationModeNode", "operation_mode_node"),
-    (UNIVERSE, "perception", "PerceptionNode", "perception_node"),
-    (UNIVERSE, "planning", "PlanningNode", "planning_node"),
-    (UNIVERSE, "vehicle_command", "VehicleCommandNode", "vehicle_command_node"),
-    (UNIVERSE, "vehicle_door", "VehicleDoorNode", "vehicle_door_node"),
-    (UNIVERSE, "vehicle_info", "VehicleInfoNode", "vehicle_info_node"),
-    (UNIVERSE, "vehicle_metrics", "VehicleMetricsNode", "vehicle_metrics_node"),
-    (UNIVERSE, "vehicle_status", "VehicleStatusNode", "vehicle_status_node"),
-]
+AGNOCAST_WRAPPER_NODES = {
+    "interface": (CORE, "interface", "InterfaceNode", "interface_node"),
+    "localization": (CORE, "localization", "LocalizationNode", "localization_node"),
+    "routing": (CORE, "routing", "RoutingNode", "routing_node"),
+    "autoware_state": (
+        UNIVERSE,
+        "autoware_state",
+        "AutowareStateNode",
+        "autoware_state_node",
+    ),
+    "diagnostics": (UNIVERSE, "diagnostics", "DiagnosticsNode", "diagnostics_node"),
+    "fail_safe": (UNIVERSE, "fail_safe", "FailSafeNode", "fail_safe_node"),
+    "heartbeat": (UNIVERSE, "heartbeat", "HeartbeatNode", "heartbeat_node"),
+    "manual_local": (UNIVERSE, "manual/local", "ManualControlNode", "manual_control_node"),
+    "manual_remote": (UNIVERSE, "manual/remote", "ManualControlNode", "manual_control_node"),
+    "motion": (UNIVERSE, "motion", "MotionNode", "motion_node"),
+    "mrm_request": (UNIVERSE, "mrm_request", "MrmRequestNode", "mrm_request_node"),
+    "operation_mode": (
+        UNIVERSE,
+        "operation_mode",
+        "OperationModeNode",
+        "operation_mode_node",
+    ),
+    "perception": (UNIVERSE, "perception", "PerceptionNode", "perception_node"),
+    "planning": (UNIVERSE, "planning", "PlanningNode", "planning_node"),
+    "vehicle_command": (
+        UNIVERSE,
+        "vehicle_command",
+        "VehicleCommandNode",
+        "vehicle_command_node",
+    ),
+    "vehicle_door": (UNIVERSE, "vehicle_door", "VehicleDoorNode", "vehicle_door_node"),
+    "vehicle_info": (UNIVERSE, "vehicle_info", "VehicleInfoNode", "vehicle_info_node"),
+    "vehicle_metrics": (
+        UNIVERSE,
+        "vehicle_metrics",
+        "VehicleMetricsNode",
+        "vehicle_metrics_node",
+    ),
+    "vehicle_status": (UNIVERSE, "vehicle_status", "VehicleStatusNode", "vehicle_status_node"),
+}
 
 
 def create_api_node(package_name, node_name, class_name):
@@ -107,17 +127,39 @@ def get_default_config():
 
 
 def launch_setup(context, *args, **kwargs):
-    use_agnocast = context.perform_substitution(LaunchConfiguration("use_agnocast")) == "1"
+    # construct a list of entries to launch (simple parse without dependencies)
+    node_keys = LaunchConfiguration("default_adapi_node_keys").perform(context)
+    if (
+        not isinstance(node_keys, str)
+        or len(node_keys) == 0
+        or node_keys[0] != "["
+        or node_keys[-1] != "]"
+    ):
+        raise ValueError(
+            "default_adapi_node_keys should be a string representing a list of strings."
+        )
+
+    node_keys = [key.strip() for key in node_keys[1:-1].split(",") if key.strip()]
+
+    unknown_keys = set(node_keys) - AGNOCAST_WRAPPER_NODES.keys()
+    if unknown_keys:
+        raise ValueError(
+            f"Unknown node keys: {', '.join(sorted(unknown_keys))}. "
+            f"Available keys: {', '.join(AGNOCAST_WRAPPER_NODES.keys())}"
+        )
+    entries_to_launch = [AGNOCAST_WRAPPER_NODES[key] for key in node_keys]
+
+    use_agnocast = LaunchConfiguration("use_agnocast").perform(context) == "1"
 
     if use_agnocast:
         return [
             create_standalone_api_node(package_name, node_name, executable)
-            for package_name, node_name, _, executable in AGNOCAST_WRAPPER_NODES
+            for package_name, node_name, _, executable in entries_to_launch
         ]
 
     components = [
         create_api_node(package_name, node_name, class_name)
-        for package_name, node_name, class_name, _ in AGNOCAST_WRAPPER_NODES
+        for package_name, node_name, class_name, _ in entries_to_launch
     ]
     container = ComposableNodeContainer(
         namespace="adapi",
@@ -131,7 +173,12 @@ def launch_setup(context, *args, **kwargs):
 
 
 def generate_launch_description():
-    argument = DeclareLaunchArgument("config", default_value=get_default_config())
+    arg_config = DeclareLaunchArgument("config", default_value=get_default_config())
+    arg_node_keys = DeclareLaunchArgument(
+        "default_adapi_node_keys",
+        default_value=f"[{', '.join(AGNOCAST_WRAPPER_NODES.keys())}]",
+        description="a string representing a list of node keys to launch",
+    )
     return launch.LaunchDescription(
-        [argument, get_agnocast_env(), OpaqueFunction(function=launch_setup)]
+        [arg_config, arg_node_keys, get_agnocast_env(), OpaqueFunction(function=launch_setup)]
     )
