@@ -42,6 +42,12 @@ private:
   using DiagnosticArray = diagnostic_msgs::msg::DiagnosticArray;
   void on_timer();
   InputData take_data();
+  bool has_all_data() const;
+  // Every retained input must also be recent: once a publisher stalls or exits its
+  // last message keeps sitting in input_data_, so has_all_data() alone would keep
+  // reporting the transition available/completed forever. Reject the cached values
+  // once their timestamps age past input_timeout_.
+  bool inputs_are_fresh(const rclcpp::Time & now) const;
 
   rclcpp::TimerBase::SharedPtr timer_;
   rclcpp::Publisher<ModeChangeAvailable>::SharedPtr pub_transition_available_;
@@ -55,6 +61,21 @@ private:
   PollingSubscriber<Control> sub_control_cmd_{this, "control_cmd"};
   PollingSubscriber<Control> sub_trajectory_follower_control_cmd_{
     this, "trajectory_follower_control_cmd"};
+
+  // The timer runs at frequency_hz, which can outpace the inputs (a simulator that
+  // ticks the world at a few Hz publishes odometry and trajectories slower than
+  // that). Holding the last message keeps a tick without new data from evaluating
+  // the transition checks against default-constructed input.
+  InputData input_data_;
+  double input_timeout_;  // [s] retained inputs older than this are treated as missing
+  // Cached so the throttled staleness warning can fire from the const inputs_are_fresh:
+  // on Humble Node::get_clock() const returns a ConstSharedPtr, but dereferencing this
+  // (non-const) shared_ptr still yields the mutable Clock& that RCLCPP_*_THROTTLE needs.
+  rclcpp::Clock::SharedPtr clock_{get_clock()};
+  bool has_kinematics_{false};
+  bool has_trajectory_{false};
+  bool has_control_cmd_{false};
+  bool has_trajectory_follower_control_cmd_{false};
 
   std::unique_ptr<ModeChangeBase> autonomous_mode_;
 
