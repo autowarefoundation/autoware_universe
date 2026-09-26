@@ -25,6 +25,7 @@
 #include <autoware_perception_msgs/msg/shape.hpp>
 #include <autoware_perception_msgs/msg/tracked_object.hpp>
 #include <autoware_perception_msgs/msg/tracked_object_kinematics.hpp>
+#include <autoware_perception_msgs/msg/tracked_objects.hpp>
 #include <geometry_msgs/msg/point.hpp>
 #include <geometry_msgs/msg/polygon.hpp>
 #include <geometry_msgs/msg/pose_with_covariance.hpp>
@@ -209,10 +210,16 @@ inline constexpr std::array<ShapeType, 3> ALL_SHAPE_TYPES = {
 // constants
 constexpr float default_existence_probability = 0.75;
 
-// Association algorithm selection per input channel
+// Input message type per channel
+enum class InputType {
+  DETECTED_OBJECTS,  // standard DetectedObjects input (default)
+  TRACKED_OBJECTS,   // TrackedObjects input, association by UUID
+};
+
+// Geometric association algorithm selection per input channel.
 enum class AssociationType {
-  BEV,   // BevAssociation: bird's-eye-view area scoring + GNN linear assignment
-  POLAR  // PolarAssociation: polar-coordinate (range-bearing) based scoring
+  BEV,    // BevAssociation: bird's-eye-view area scoring + GNN linear assignment
+  POLAR,  // PolarAssociation: polar-coordinate (range-bearing) based scoring
 };
 
 // channel configuration
@@ -227,6 +234,7 @@ struct InputChannel
   bool trust_extension = true;                             // trust object extension
   bool trust_classification = true;                        // trust object classification
   bool trust_orientation = true;                           // trust object orientation(yaw)
+  InputType input_type = InputType::DETECTED_OBJECTS;      // input message type
   AssociationType associator_type = AssociationType::BEV;  // which associator to use
 };
 
@@ -428,6 +436,14 @@ DynamicObject toDynamicObject(
 
 DynamicObjectList toDynamicObjectList(
   const autoware_perception_msgs::msg::DetectedObjects & det_objects, const uint channel_index = 0);
+
+DynamicObject toDynamicObject(
+  const autoware_perception_msgs::msg::TrackedObject & tracked_object,
+  const uint channel_index = 0);
+
+DynamicObjectList toDynamicObjectList(
+  const autoware_perception_msgs::msg::TrackedObjects & tracked_objects,
+  const uint channel_index = 0);
 
 autoware_perception_msgs::msg::TrackedObject toTrackedObjectMsg(const DynamicObject & dyn_object);
 autoware_perception_msgs::msg::DetectedObject toDetectedObjectMsg(const DynamicObject & dyn_object);
