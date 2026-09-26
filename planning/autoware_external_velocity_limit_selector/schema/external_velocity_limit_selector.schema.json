@@ -1,0 +1,33 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "autoware_external_velocity_limit_selector parameter",
+  "type": "object",
+  "definitions": {
+    "external_velocity_limit_selector": {
+      "type": "object",
+      "properties": {
+        "max_velocity": {
+          "type": "number",
+          "description": "Default max velocity [m/s]",
+          "default": "20.0"
+        }
+      },
+      "required": ["max_velocity"],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/external_velocity_limit_selector"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}
