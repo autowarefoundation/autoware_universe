@@ -160,6 +160,7 @@ All the key parameters can be configured in `autoware_carla_interface.launch.xml
 | `tick_follower`                   | bool   | False                                                                             | If True, the bridge does not tick the CARLA world and instead follows the frames ticked by another client. See [Multi-client co-simulation](#multi-client-co-simulation).                                                                                                                                                                                                           |
 | `carla_map`                       | string | ""                                                                                | Explicit CARLA level name. When non-empty it overrides the name derived from `map_path`; useful for CARLA 0.10 levels whose name differs from the Autoware map directory. Empty reproduces the current behavior.                                                                                                                                                                    |
 | `no_rendering_mode`               | bool   | False                                                                             | Disable CARLA scene rendering via world settings for headless/faster simulation. Applied unconditionally on world load, so the default `False` (re-)enables rendering even if the server was started headless; set `True` to keep rendering off.                                                                                                                                    |
+| `max_substep_delta_time`          | double | 0.002                                                                             | Longest physics substep [s] CARLA may take inside one simulation step. See [Physics substepping](#physics-substepping). 0 or negative leaves CARLA's own substepping settings untouched.                                                                                                                                                                                            |
 | `force_load_world`                | bool   | False                                                                             | Always reload the world with `client.load_world()` instead of `load_world_if_different()`. Default False reproduces the current call (with a version-tolerant fallback).                                                                                                                                                                                                            |
 | `map_origin_x`                    | double | 0.0                                                                               | X offset from the CARLA world origin to the Autoware map frame origin, for levels authored with their own local origin. Default 0.0 is the identity (no change).                                                                                                                                                                                                                    |
 | `map_origin_y`                    | double | 0.0                                                                               | Y offset from the CARLA world origin to the Autoware map frame origin. Default 0.0 is the identity (no change).                                                                                                                                                                                                                                                                     |
@@ -212,6 +213,27 @@ On a CARLA API without `ground_projection`, snapping is skipped and the previous
 fixed z-offset is used, so enabling the flag never raises. The spawn-point path
 logs a warning when it falls back; the RViz initial-pose fallback is silent (and
 with the default random spawn the spawn-point path is not exercised at all).
+
+### Physics substepping
+
+CARLA integrates the vehicle physics in substeps of at most
+`max_substep_delta_time`, which CARLA itself defaults to 0.01 s. At that
+resolution the angular velocity a vehicle reports stops integrating to the
+rotation its own transform performs: driving straight for 27.8 s at a 1/60 s
+step, the reported yaw rate integrated to 9.41 deg against the 0.03 deg the
+vehicle actually turned. The IMU is faithful to the body -- its gyroscope
+matches `get_angular_velocity()` to seven significant figures -- so the error
+is in the rigid body's own state, and both the IMU and the velocity report
+carry a phantom yaw rate of up to 0.9 deg/s. It is deterministic and depends on
+where the vehicle is, which is why some runs carry it and others do not.
+
+At the default 2 ms substep the same drive mismatches by 0.005 deg, and across
+an eleven-drive bench set the worst phantom rate went from 0.90212 to
+0.00348 deg/s. Only the substep changes; `fixed_delta_seconds` is untouched, so
+the pacing of a run stays as it was, at the cost of more physics iterations
+inside each step. CARLA requires
+`fixed_delta_seconds <= max_substep_delta_time * max_substeps`, so the substep
+count is derived from the step length rather than configured separately.
 
 ### Multi-client co-simulation
 
