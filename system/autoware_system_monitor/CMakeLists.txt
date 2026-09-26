@@ -236,6 +236,16 @@ if(BUILD_TESTING)
 
   target_link_libraries(test_mem_monitor mem_monitor_lib  ${Boost_LIBRARIES} ${LIBRARIES})
 
+  ament_add_ros_isolated_gtest(test_hdd_reader
+    test/src/hdd_reader/test_hdd_reader.cpp
+  )
+
+  target_include_directories(test_hdd_reader
+    PRIVATE "include"
+  )
+
+  target_link_libraries(test_hdd_reader ${Boost_LIBRARIES} ${LIBRARIES})
+
   # helper free command to failed free command.
   add_executable(free1 test/src/mem_monitor/free1.cpp)
 
