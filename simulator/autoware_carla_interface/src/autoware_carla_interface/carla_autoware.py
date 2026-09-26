@@ -44,6 +44,8 @@ class SensorLoop(object):
         self.timestamp_last_run = 0.0
         self.timeout = 20.0
         self.tick_follower = False
+        # False when another client owns the ego and drives it itself.
+        self.apply_ego_control = True
 
     def _stop_loop(self):
         self.running = False
@@ -57,7 +59,8 @@ class SensorLoop(object):
                 ego_action = self.sensor()
             except SensorReceivedNoData as e:
                 raise RuntimeError(e)
-            self.ego_actor.apply_control(ego_action)
+            if self.apply_ego_control:
+                self.ego_actor.apply_control(ego_action)
         if self.running and not self.tick_follower:
             CarlaDataProvider.get_world().tick()
 
@@ -86,6 +89,7 @@ class InitializeInterface(object):
         self.use_traffic_manager = self.param_["use_traffic_manager"]
         self.max_real_delta_seconds = self.param_["max_real_delta_seconds"]
         self.tick_follower = self.param_["tick_follower"]
+        self.attach_to_existing_ego = self.param_["attach_to_existing_ego"]
         self.spawn_point_ground_snap = self.param_["spawn_point_ground_snap"]
         self.spawn_point_ground_offset_z = self.param_["spawn_point_ground_offset_z"]
         self.force_load_world = self.param_["force_load_world"]
@@ -384,6 +388,54 @@ class InitializeInterface(object):
         settings.no_rendering_mode = self.no_rendering_mode
         self.world.apply_settings(settings)
 
+    def _vehicles(self):
+        """Return every vehicle actor currently in the world."""
+        return self.world.get_actors().filter("vehicle.*")
+
+    def _ego_with_role_name(self):
+        """Return the vehicle carrying the configured ego role name, or None."""
+        for actor in self._vehicles():
+            if actor.attributes.get("role_name") == self.agent_role_name:
+                return actor
+        return None
+
+    def _wait_for_external_spawn(self):
+        """Give the client that owns the ego a chance to spawn it.
+
+        In synchronous mode a spawn from another client lands on a tick, so the
+        world is ticked while this bridge owns the clock. In tick_follower mode
+        the owner ticks, and doing it here would take a frame that is not this
+        bridge's to take.
+        """
+        if self.sync_mode and not self.tick_follower:
+            self.world.tick()
+        else:
+            time.sleep(0.1)
+
+    def _find_existing_ego(self):
+        """Return the vehicle another client spawned under the configured role name.
+
+        That client may still be starting up, so the role name is looked for
+        until the client timeout expires.
+        """
+        deadline = time.time() + self.timeout
+        while True:
+            ego_actor = self._ego_with_role_name()
+            if ego_actor is not None:
+                self.logger.info(
+                    f"Attached to existing ego vehicle: "
+                    f"id={ego_actor.id} type={ego_actor.type_id}"
+                )
+                return ego_actor
+            if time.time() > deadline:
+                seen = sorted({actor.attributes.get("role_name", "") for actor in self._vehicles()})
+                raise RuntimeError(
+                    f"attach_to_existing_ego is set, but no vehicle carries role_name "
+                    f"'{self.agent_role_name}' after {self.timeout} s. "
+                    f"Role names present: {seen if seen else 'none'}"
+                )
+            self._wait_for_external_spawn()
+
     def _spawn_ego_actor(self):
         """Spawn the ego vehicle at the configured (optionally ground-snapped) spawn point."""
         spawn_point, randomize = self._parse_spawn_point()
@@ -403,7 +455,9 @@ class InitializeInterface(object):
 
     def load_world(self):
         client = self._connect_client()
-        map_verified = self._load_carla_world(client)
+        # Loading an episode destroys every actor in it, so a bridge attaching
+        # to an ego another client spawned takes the world as it finds it.
+        map_verified = True if self.attach_to_existing_ego else self._load_carla_world(client)
         if not map_verified:
             # After a failed OpenDRIVE parse, libcarla keeps serving the previous
             # episode's cached map through this client, so world.get_map() would
@@ -425,7 +479,10 @@ class InitializeInterface(object):
         # angle is reported) from the server version.
         self.interface.set_carla_version(client.get_server_version())
 
-        self.ego_actor = self._spawn_ego_actor()
+        if self.attach_to_existing_ego:
+            self.ego_actor = self._find_existing_ego()
+        else:
+            self.ego_actor = self._spawn_ego_actor()
         self.interface.ego_actor = self.ego_actor  # TODO improve design
         self.interface.physics_control = self.ego_actor.get_physics_control()
         if self.interface.param_values.get("flatten_steering_curve", False):
@@ -452,6 +509,7 @@ class InitializeInterface(object):
         self.bridge_loop.start_system_time = time.time()
         self.bridge_loop.start_game_time = GameTime.get_time()
         self.bridge_loop.tick_follower = self.tick_follower
+        self.bridge_loop.apply_ego_control = not self.attach_to_existing_ego
         self.bridge_loop.running = True
         if self.tick_follower:
             self._run_bridge_follower()
@@ -556,6 +614,10 @@ class InitializeInterface(object):
     def _cleanup_ego_actor(self):
         """Destroy ego vehicle, continuing on error."""
         if not self.ego_actor:
+            return
+        if self.attach_to_existing_ego:
+            # Spawned by another client, so not this bridge's to destroy.
+            self.ego_actor = None
             return
         try:
             self.ego_actor.destroy()
