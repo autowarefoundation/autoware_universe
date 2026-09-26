@@ -15,6 +15,7 @@
 from collections import namedtuple
 import math
 import threading
+import time
 
 from autoware_perception_msgs.msg import DetectedObject
 from autoware_perception_msgs.msg import DetectedObjectKinematics
@@ -42,6 +43,10 @@ from geometry_msgs.msg import TransformStamped
 from nav_msgs.msg import Odometry
 import numpy
 import rclpy
+from rclpy.qos import QoSDurabilityPolicy
+from rclpy.qos import QoSHistoryPolicy
+from rclpy.qos import QoSProfile
+from rclpy.qos import QoSReliabilityPolicy
 from rosgraph_msgs.msg import Clock
 from sensor_msgs.msg import CameraInfo
 from sensor_msgs.msg import Imu
@@ -142,6 +147,11 @@ class carla_ros2_interface(object):
             "spawn_point_ground_snap": (rclpy.Parameter.Type.BOOL, False),
             "spawn_point_ground_offset_z": (rclpy.Parameter.Type.DOUBLE, 0.5),
             "initial_pose_ground_offset_z": (rclpy.Parameter.Type.DOUBLE, 1.0),
+            # Place the ego where the initial pose says by waiting for that pose
+            # before spawning, instead of spawning at spawn_point and moving the
+            # ego when one arrives.
+            "wait_for_initialpose": (rclpy.Parameter.Type.BOOL, False),
+            "initialpose_wait_timeout": (rclpy.Parameter.Type.DOUBLE, 60.0),
             "force_load_world": (rclpy.Parameter.Type.BOOL, False),
             # Minimum throttle applied while accelerating from (near) standstill.
             # Heavy CARLA vehicles (e.g. vehicle.taxi.ford) do not creep and
@@ -285,6 +295,32 @@ class carla_ros2_interface(object):
         )
         self.sub_vehicle_initialpose = self.ros2_node.create_subscription(
             PoseWithCovarianceStamped, "initialpose", self.initialpose_callback, 1
+        )
+        # A publisher that latches its initial pose (TRANSIENT_LOCAL) and sends
+        # it once -- a scenario runner placing the ego, a replay script, a
+        # `ros2 topic pub --qos-durability transient_local` -- typically does so
+        # long before this node has a world to put an ego in. The volatile
+        # subscription above is compatible with such a publisher, so the two
+        # connect; but a volatile reader is not given the sample that was
+        # latched before it arrived, and a publisher that sends it once never
+        # sends it again. The pose is then lost and the ego stays wherever
+        # `spawn_point` put it, which defaults to a random point on the map.
+        #
+        # A second subscription asking for TRANSIENT_LOCAL is given that sample
+        # when it connects, whenever this node comes up. Both are needed: RViz's
+        # "2D Pose Estimate" publishes volatile, which a TRANSIENT_LOCAL reader
+        # is incompatible with and would never receive at all.
+        # https://design.ros2.org/articles/qos.html
+        self.sub_vehicle_initialpose_latched = self.ros2_node.create_subscription(
+            PoseWithCovarianceStamped,
+            "initialpose",
+            self.initialpose_callback,
+            QoSProfile(
+                depth=1,
+                history=QoSHistoryPolicy.KEEP_LAST,
+                reliability=QoSReliabilityPolicy.RELIABLE,
+                durability=QoSDurabilityPolicy.TRANSIENT_LOCAL,
+            ),
         )
         self.sub_turn_indicators = self.ros2_node.create_subscription(
             TurnIndicatorsCommand,
@@ -469,6 +505,9 @@ class carla_ros2_interface(object):
         # before that is buffered here and applied on_world_ready.
         self._map_origin = None
         self._pending_initialpose = None
+        # The most recent initial pose, kept whatever the startup state, so the
+        # spawn can be placed on it when wait_for_initialpose is set.
+        self._latest_initialpose = None
         # Per-actor constants for ground truth objects: (label, dimensions), None for non-vehicles
         self.ground_truth_world = None
         self.ground_truth_tick_id = None
@@ -694,12 +733,18 @@ class carla_ros2_interface(object):
         initialpose that arrived during startup is applied now instead of being
         transformed with a not-yet-known origin.
         """
-        origin = self._derive_map_origin()  # reads CARLA; do it outside the lock
         with self._state_lock:
-            self._map_origin = origin
+            resolved = self._map_origin is not None
+        if not resolved:
+            # wait_for_initialpose resolves it before the spawn; re-deriving it
+            # here would read the same map for the same answer.
+            origin = self._derive_map_origin()  # reads CARLA; do it outside the lock
+            with self._state_lock:
+                self._map_origin = origin
+            self.logger.info(f"map origin resolved: ({origin[0]:.3f}, {origin[1]:.3f})")
+        with self._state_lock:
             pending = self._pending_initialpose
             self._pending_initialpose = None
-        self.logger.info(f"map origin resolved: ({origin[0]:.3f}, {origin[1]:.3f})")
         if pending is not None:
             self.logger.info("Applying the initial pose buffered during startup")
             self._apply_initialpose(pending)
@@ -712,6 +757,7 @@ class carla_ros2_interface(object):
         the latest pose and apply it then; otherwise apply immediately.
         """
         with self._state_lock:
+            self._latest_initialpose = data
             ready = self._map_origin is not None
             if not ready:
                 self._pending_initialpose = data
@@ -720,8 +766,13 @@ class carla_ros2_interface(object):
             return
         self._apply_initialpose(data)
 
-    def _apply_initialpose(self, data):
-        """Convert a map-frame initial pose to CARLA and teleport the ego."""
+    def initialpose_to_carla_transform(self, data):
+        """Convert a map-frame initial pose to the CARLA transform to place on.
+
+        Shared by the teleport below and, when ``wait_for_initialpose`` is set,
+        by the spawn itself, so the ego lands in the same place either way.
+        The map origin must already be resolved.
+        """
         pose = data.pose.pose
         origin_x, origin_y = self._current_map_origin()
         carla_pose_transform = ros_pose_to_carla_transform(
@@ -748,6 +799,50 @@ class carla_ros2_interface(object):
             )
         else:
             carla_pose_transform.location.z += 2.0
+        return carla_pose_transform
+
+    def wait_for_initialpose(self):
+        """Block until an initial pose arrives, and return where to spawn on it.
+
+        Only called when ``wait_for_initialpose`` is set.  The map origin is
+        resolved here rather than in :meth:`on_world_ready` because the answer
+        is needed before there is an ego to place; it reads the loaded map,
+        which the caller has already waited for.
+
+        Returns:
+            The ``carla.Transform`` to spawn the ego on, or ``None`` if no pose
+            arrived within ``initialpose_wait_timeout``.
+        """
+        timeout = float(self.param_values["initialpose_wait_timeout"])
+        deadline = time.monotonic() + timeout
+        self.logger.info(f"Waiting up to {timeout:.0f}s for an initial pose to spawn the ego on")
+        while True:
+            with self._state_lock:
+                data = self._latest_initialpose
+            if data is not None:
+                break
+            if time.monotonic() >= deadline:
+                self.logger.error(
+                    f"No initial pose within {timeout:.0f}s, so there is nowhere to "
+                    "place the ego. Publish one on /initialpose, or unset "
+                    "wait_for_initialpose to spawn at spawn_point instead."
+                )
+                return None
+            time.sleep(0.1)
+
+        origin = self._derive_map_origin()  # reads CARLA; do it outside the lock
+        with self._state_lock:
+            self._map_origin = origin
+            # Spawning on the pose is how it gets applied here. Leaving it
+            # pending would have on_world_ready move the ego onto where it
+            # already stands.
+            self._pending_initialpose = None
+        self.logger.info(f"map origin resolved: ({origin[0]:.3f}, {origin[1]:.3f})")
+        return self.initialpose_to_carla_transform(data)
+
+    def _apply_initialpose(self, data):
+        """Convert a map-frame initial pose to CARLA and teleport the ego."""
+        carla_pose_transform = self.initialpose_to_carla_transform(data)
 
         with self._state_lock:
             if self.ego_actor is not None:

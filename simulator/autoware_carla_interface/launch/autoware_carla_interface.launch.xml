@@ -23,6 +23,12 @@
     />
     <arg name="spawn_point_ground_snap" default="False" description="Snap the ego spawn point and RViz initial pose onto CARLA map geometry via ground_projection"/>
     <arg name="spawn_point_ground_offset_z" default="0.5" description="Z offset added above the projected ground when ground-snapping the spawn point"/>
+    <arg
+      name="wait_for_initialpose"
+      default="false"
+      description="Spawn the ego on the first pose received on /initialpose instead of at spawn_point. Off spawns at spawn_point and moves the ego when a pose arrives"
+    />
+    <arg name="initialpose_wait_timeout" default="60.0" description="Seconds to wait for that pose before giving up (wait_for_initialpose only)"/>
     <arg name="initial_pose_ground_offset_z" default="1.0" description="Z offset added above the projected ground when ground-snapping the RViz initial pose"/>
     <arg name="force_load_world" default="False" description="Always reload the CARLA world with client.load_world() instead of load_world_if_different()"/>
     <arg name="min_positive_throttle" default="0.0" description="Minimum throttle applied while accelerating from (near) standstill; heavy CARLA vehicles never start on small actuation-map throttle"/>
@@ -99,6 +105,8 @@
       <param name="tick_follower" value="$(var tick_follower)"/>
       <param name="spawn_point_ground_snap" value="$(var spawn_point_ground_snap)"/>
       <param name="spawn_point_ground_offset_z" value="$(var spawn_point_ground_offset_z)"/>
+      <param name="wait_for_initialpose" value="$(var wait_for_initialpose)"/>
+      <param name="initialpose_wait_timeout" value="$(var initialpose_wait_timeout)"/>
       <param name="initial_pose_ground_offset_z" value="$(var initial_pose_ground_offset_z)"/>
       <param name="force_load_world" value="$(var force_load_world)"/>
       <param name="min_positive_throttle" value="$(var min_positive_throttle)"/>
