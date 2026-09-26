@@ -29,29 +29,29 @@
  * limitations under the License.
  */
 
+#ifndef AUTOWARE__CAMERA_STREAMPETR__NETWORK__MEMORY_CUH_
+#define AUTOWARE__CAMERA_STREAMPETR__NETWORK__MEMORY_CUH_
+
 #include <NvInferRuntime.h>
 #include <cuda_fp16.h>
 #include <cuda_runtime_api.h>
 
 struct Memory
 {
-  int mem_len;     // Length of the updated memory buffer output from the model (post_memory_length)
-  int pre_len;     // Length of the  memory buffer input to the model (pre_memory_length)
-  void * mem_buf;  // GPU memory buffer for temporal data storage (size: pre_len)
-  float * pre_buf;   // Pointer to pre-memory timestamp buffer [1, pre_len, 1] - stores timestamps
-                     // from previous frames
-  float * post_buf;  // Pointer to post-memory timestamp buffer [1, mem_len, 1] - stores current
-                     // frame timestamps
+  int mem_len = 0;             // post_memory_length
+  int pre_len = 0;             // pre_memory_length
+  void * mem_buf = nullptr;    // temporal storage (size: mem_len)
+  float * pre_buf = nullptr;   // pre-memory timestamps [1, pre_len, 1]
+  float * post_buf = nullptr;  // post-memory timestamps [1, mem_len, 1]
 
-  cudaStream_t mem_stream;  // CUDA stream for asynchronous memory operations
+  cudaStream_t mem_stream = nullptr;
 
-  void init(cudaStream_t stream, const int pre_length, const int post_length)
-  {
-    mem_len = post_length;
-    pre_len = pre_length;
-    mem_stream = stream;
-    cudaMallocAsync(&mem_buf, sizeof(float) * mem_len, mem_stream);
-  }
+  // Allocates and zeroes mem_buf; step_pre reads it on the very first frame.
+  void init(cudaStream_t stream, const int pre_length, const int post_length);
+  void release();
+
+  // Zeroes mem_buf; use whenever the temporal state has to be dropped.
+  void clear();
 
   void step_reset();
   void step_pre(float ts);
@@ -59,3 +59,5 @@ struct Memory
 
   void debug_print();
 };  // struct Memory
+
+#endif  // AUTOWARE__CAMERA_STREAMPETR__NETWORK__MEMORY_CUH_

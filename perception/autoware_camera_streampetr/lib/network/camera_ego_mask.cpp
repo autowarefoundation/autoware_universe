@@ -118,9 +118,7 @@ EgoMaskPolygon parse_polygon_node(
   bool normalized = !normalized_parallel.empty() && normalized_parallel[polygon_index];
   YAML::Node points_node = polygon_node;
 
-  if (polygon_node.IsSequence()) {
-    points_node = polygon_node;
-  } else if (polygon_node.IsMap()) {
+  if (polygon_node.IsMap()) {
     points_node = polygon_node["points"];
     if (!points_node || !points_node.IsSequence()) {
       throw std::runtime_error("polygons YAML: each map entry must have a 'points' sequence.");
@@ -128,7 +126,7 @@ EgoMaskPolygon parse_polygon_node(
     if (polygon_node["normalized"]) {
       normalized = polygon_node["normalized"].as<bool>();
     }
-  } else {
+  } else if (!polygon_node.IsSequence()) {
     throw std::runtime_error(
       "polygons YAML: each polygon must be a number sequence or a map with 'points'.");
   }
@@ -218,12 +216,12 @@ std::vector<std::optional<EgoMaskRoiConfig>> load_ego_mask_roi_configs(
 {
   std::vector<std::optional<EgoMaskRoiConfig>> configs(rois_number, std::nullopt);
 
-  for (std::size_t i = 0; i < rois_number && i < params.roi_mask_configs.size(); ++i) {
-    configs[i] = params.roi_mask_configs[i];
-  }
-
   if (!params.enabled) {
     return configs;
+  }
+
+  for (std::size_t i = 0; i < rois_number && i < params.roi_mask_configs.size(); ++i) {
+    configs[i] = params.roi_mask_configs[i];
   }
 
   const auto & fill = params.fill_rgb;
@@ -256,7 +254,8 @@ std::vector<std::uint8_t> build_ego_mask_raster(
   }
 
   cv::Mat mask = cv::Mat::zeros(height, width, CV_8UC1);
-  cv::fillPoly(mask, to_cv_polygons(polygons, width, height), cv::Scalar(255), cv::LINE_AA);
+  // LINE_8, not LINE_AA: antialiased edges would dilate the mask.
+  cv::fillPoly(mask, to_cv_polygons(polygons, width, height), cv::Scalar(255), cv::LINE_8);
 
   return copy_mask_to_raster(mask);
 }
