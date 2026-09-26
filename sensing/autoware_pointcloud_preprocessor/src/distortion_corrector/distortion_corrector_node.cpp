@@ -17,6 +17,7 @@
 #include "autoware/pointcloud_preprocessor/diagnostics/distortion_corrector_diagnostics.hpp"
 #include "autoware/pointcloud_preprocessor/diagnostics/latency_diagnostics.hpp"
 #include "autoware/pointcloud_preprocessor/distortion_corrector/distortion_corrector.hpp"
+#include "autoware/pointcloud_preprocessor/utility/memory.hpp"
 
 #include <algorithm>
 #include <memory>
@@ -76,10 +77,13 @@ DistortionCorrectorComponent::DistortionCorrectorComponent(const rclcpp::NodeOpt
   // Setup the distortion corrector
 
   if (use_3d_distortion_correction_) {
-    distortion_corrector_ = std::make_unique<DistortionCorrector3D>(*this);
+    distortion_corrector_ = std::make_unique<DistortionCorrector3D>();
   } else {
-    distortion_corrector_ = std::make_unique<DistortionCorrector2D>(*this);
+    distortion_corrector_ = std::make_unique<DistortionCorrector2D>();
   }
+
+  // Transform buffer used to look up the sensor/IMU extrinsics injected into the corrector.
+  managed_tf_buffer_ = std::make_unique<managed_transform_buffer::ManagedTransformBuffer>();
 
   // Diagnostic
   diagnostics_interface_ =
@@ -99,35 +103,55 @@ void DistortionCorrectorComponent::pointcloud_callback(PointCloud2::UniquePtr po
   std::vector<geometry_msgs::msg::TwistWithCovarianceStamped::ConstSharedPtr> twist_msgs =
     twist_sub_->take_data();
   for (const auto & msg : twist_msgs) {
-    distortion_corrector_->process_twist_message(msg);
+    distortion_corrector_->insert_twist(msg);
   }
 
   if (use_imu_) {
     std::vector<sensor_msgs::msg::Imu::ConstSharedPtr> imu_msgs = imu_sub_->take_data();
     for (const auto & msg : imu_msgs) {
-      distortion_corrector_->process_imu_message(base_frame_, msg);
+      const auto imu_to_base_link =
+        managed_tf_buffer_->getTransform<geometry_msgs::msg::TransformStamped>(
+          base_frame_, msg->header.frame_id, this->now(), rclcpp::Duration::from_seconds(1.0),
+          this->get_logger());
+      if (!imu_to_base_link.has_value()) {
+        continue;
+      }
+      distortion_corrector_->set_imu_transform(*imu_to_base_link);
+      distortion_corrector_->insert_imu(msg);
     }
   }
 
-  distortion_corrector_->set_pointcloud_transform(base_frame_, pointcloud_msg->header.frame_id);
-  distortion_corrector_->initialize();
-
-  if (update_azimuth_and_distance_ && !angle_conversion_opt_.has_value()) {
-    angle_conversion_opt_ = distortion_corrector_->try_compute_angle_conversion(*pointcloud_msg);
-    if (angle_conversion_opt_.has_value()) {
-      RCLCPP_INFO(
-        this->get_logger(),
-        "Success to get the conversion formula between Cartesian coordinates and LiDAR azimuth "
-        "coordinates");
-    } else {
-      RCLCPP_ERROR_STREAM_THROTTLE(
-        this->get_logger(), *this->get_clock(), 10000 /* ms */,
-        "Failed to get the angle conversion between Cartesian coordinates and LiDAR azimuth "
-        "coordinates. This pointcloud will not update azimuth and distance");
+  const auto lidar_to_base_link =
+    managed_tf_buffer_->getTransform<geometry_msgs::msg::TransformStamped>(
+      base_frame_, pointcloud_msg->header.frame_id, this->now(),
+      rclcpp::Duration::from_seconds(1.0), this->get_logger());
+  if (lidar_to_base_link.has_value()) {
+    if (update_azimuth_and_distance_ && !angle_conversion_opt_.has_value()) {
+      angle_conversion_opt_ = distortion_corrector_->try_compute_angle_conversion(*pointcloud_msg);
+      if (angle_conversion_opt_.has_value()) {
+        RCLCPP_INFO(
+          this->get_logger(),
+          "Success to get the conversion formula between Cartesian coordinates and LiDAR azimuth "
+          "coordinates");
+      } else {
+        RCLCPP_ERROR_STREAM_THROTTLE(
+          this->get_logger(), *this->get_clock(), 10000 /* ms */,
+          "Failed to get the angle conversion between Cartesian coordinates and LiDAR azimuth "
+          "coordinates. This pointcloud will not update azimuth and distance");
+      }
     }
-  }
 
-  distortion_corrector_->undistort_pointcloud(use_imu_, angle_conversion_opt_, *pointcloud_msg);
+    const auto undistortion_result = distortion_corrector_->undistort_pointcloud(
+      use_imu_, angle_conversion_opt_, *lidar_to_base_link, *pointcloud_msg);
+    log_undistortion_result(undistortion_result, *pointcloud_msg);
+  }
+  if (!lidar_to_base_link.has_value()) {
+    RCLCPP_WARN_STREAM_THROTTLE(
+      get_logger(), *get_clock(), 10000 /* ms */,
+      "Failed to get the transform from " << pointcloud_msg->header.frame_id << " to "
+                                          << base_frame_
+                                          << ". This pointcloud will not be undistorted.");
+  }
 
   const rclcpp::Time stamp(pointcloud_msg->header.stamp);
 
@@ -156,6 +180,49 @@ void DistortionCorrectorComponent::pointcloud_callback(PointCloud2::UniquePtr po
     update_azimuth_and_distance_, timestamp_mismatch_fraction_threshold_);
 
   publish_diagnostics({latency_diagnostics, distortion_corrector_diagnostics});
+}
+
+void DistortionCorrectorComponent::log_undistortion_result(
+  const UndistortionResult & result, const PointCloud2 & pointcloud)
+{
+  switch (result.validity) {
+    case PointcloudValidity::kEmpty:
+      RCLCPP_WARN_STREAM_THROTTLE(
+        get_logger(), *get_clock(), 10000 /* ms */, "Input pointcloud is empty.");
+      break;
+    case PointcloudValidity::kMissingTimeStampField:
+      RCLCPP_WARN_STREAM_THROTTLE(
+        get_logger(), *get_clock(), 10000 /* ms */,
+        "Required field time stamp doesn't exist in the point cloud.");
+      break;
+    case PointcloudValidity::kIncompatibleLayout:
+      RCLCPP_ERROR(
+        get_logger(), "The pointcloud layout is not compatible with PointXYZIRCAEDT. Aborting");
+      if (utils::is_data_layout_compatible_with_point_xyziradrt(pointcloud)) {
+        RCLCPP_ERROR(
+          get_logger(),
+          "The pointcloud layout is compatible with PointXYZIRADRT. You may be using legacy "
+          "code/data");
+      }
+      break;
+    case PointcloudValidity::kValid:
+      break;
+  }
+
+  if (result.twist_queue_empty) {
+    RCLCPP_WARN_STREAM_THROTTLE(
+      get_logger(), *get_clock(), 10000 /* ms */, "Twist queue is empty.");
+  }
+  if (result.twist_timestamp_too_late) {
+    RCLCPP_WARN_STREAM_THROTTLE(
+      get_logger(), *get_clock(), 10000 /* ms */,
+      "Twist time_stamp is too late. Could not interpolate.");
+  }
+  if (result.imu_timestamp_too_late) {
+    RCLCPP_WARN_STREAM_THROTTLE(
+      get_logger(), *get_clock(), 10000 /* ms */,
+      "IMU time_stamp is too late. Could not interpolate.");
+  }
 }
 
 void DistortionCorrectorComponent::publish_diagnostics(
