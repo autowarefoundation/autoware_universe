@@ -31,6 +31,7 @@
 #include <boost/optional.hpp>
 
 #include <atomic>
+#include <chrono>
 #include <cmath>
 #include <limits>
 #include <list>
@@ -280,12 +281,11 @@ void FusionNode<Msg3D, Msg2D, ExportObj>::camera_info_callback(
     // valid for the whole lifetime of the thread.
     auto initializing = std::make_shared<std::atomic<bool>>(true);
     std::thread logging_thread([this, initializing, rois_id]() {
-      rclcpp::Rate rate(1.0);  // 1 Hz
-      while (rclcpp::ok() && initializing->load()) {
+      while (initializing->load()) {
         RCLCPP_WARN(
           this->get_logger(), "Still initializing camera projector for ROI %zu... please wait...",
           rois_id);
-        rate.sleep();
+        std::this_thread::sleep_for(std::chrono::seconds(1));
       }
     });
 
