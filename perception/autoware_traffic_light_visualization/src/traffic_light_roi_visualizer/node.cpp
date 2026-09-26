@@ -14,9 +14,14 @@
 
 #include "node.hpp"
 
-#include "shape_draw.hpp"
-
+#include <ament_index_cpp/get_package_share_directory.hpp>
 #include <rclcpp/rclcpp.hpp>
+
+#if __has_include(<cv_bridge/cv_bridge.hpp>)
+#include <cv_bridge/cv_bridge.hpp>  // for ROS 2 Jazzy or newer
+#else
+#include <cv_bridge/cv_bridge.h>  // for ROS 2 Humble or older
+#endif
 
 #include <memory>
 #include <string>
@@ -24,7 +29,10 @@
 namespace autoware::traffic_light
 {
 TrafficLightRoiVisualizerNode::TrafficLightRoiVisualizerNode(const rclcpp::NodeOptions & options)
-: Node("traffic_light_roi_visualizer_node", options)
+: Node("traffic_light_roi_visualizer_node", options),
+  visualizer_(
+    ament_index_cpp::get_package_share_directory("autoware_traffic_light_visualization") +
+    "/images/")
 {
   using std::placeholders::_1;
   using std::placeholders::_2;
@@ -37,16 +45,16 @@ TrafficLightRoiVisualizerNode::TrafficLightRoiVisualizerNode(const rclcpp::NodeO
     sync_with_rough_roi_.reset(new SyncWithRoughRoi(
       SyncPolicyWithRoughRoi(10), image_sub_, roi_sub_, rough_roi_sub_, traffic_signals_sub_));
     sync_with_rough_roi_->registerCallback(
-      std::bind(&TrafficLightRoiVisualizerNode::imageRoughRoiCallback, this, _1, _2, _3, _4));
+      std::bind(&TrafficLightRoiVisualizerNode::image_rough_roi_callback, this, _1, _2, _3, _4));
   } else {
     sync_.reset(new Sync(SyncPolicy(10), image_sub_, roi_sub_, traffic_signals_sub_));
     sync_->registerCallback(
-      std::bind(&TrafficLightRoiVisualizerNode::imageRoiCallback, this, _1, _2, _3));
+      std::bind(&TrafficLightRoiVisualizerNode::image_roi_callback, this, _1, _2, _3));
   }
 
   using std::chrono_literals::operator""ms;
   timer_ = rclcpp::create_timer(
-    this, get_clock(), 100ms, std::bind(&TrafficLightRoiVisualizerNode::connectCb, this));
+    this, get_clock(), 100ms, std::bind(&TrafficLightRoiVisualizerNode::connect_cb, this));
 
   if (use_image_transport_) {
     image_pub_ = image_transport::create_publisher(
@@ -57,7 +65,7 @@ TrafficLightRoiVisualizerNode::TrafficLightRoiVisualizerNode(const rclcpp::NodeO
   }
 }
 
-void TrafficLightRoiVisualizerNode::connectCb()
+void TrafficLightRoiVisualizerNode::connect_cb()
 {
   int num_subscribers = 0;
   if (use_image_transport_) {
@@ -83,156 +91,43 @@ void TrafficLightRoiVisualizerNode::connectCb()
   }
 }
 
-bool TrafficLightRoiVisualizerNode::createRect(
-  cv::Mat & image, const tier4_perception_msgs::msg::TrafficLightRoi & tl_roi,
-  const cv::Scalar & color)
+void TrafficLightRoiVisualizerNode::publish(const sensor_msgs::msg::Image::SharedPtr & drawn) const
 {
-  cv::rectangle(
-    image, cv::Point(tl_roi.roi.x_offset, tl_roi.roi.y_offset),
-    cv::Point(tl_roi.roi.x_offset + tl_roi.roi.width, tl_roi.roi.y_offset + tl_roi.roi.height),
-    color, 3);
-  cv::putText(
-    image, std::to_string(tl_roi.traffic_light_id),
-    cv::Point(tl_roi.roi.x_offset, tl_roi.roi.y_offset), cv::FONT_HERSHEY_COMPLEX, 1.0, color, 1,
-    CV_AA);
-  return true;
+  if (use_image_transport_) {
+    image_pub_.publish(drawn);
+  } else {
+    simple_image_pub_->publish(*drawn);
+  }
 }
 
-bool TrafficLightRoiVisualizerNode::createRect(
-  cv::Mat & image, const tier4_perception_msgs::msg::TrafficLightRoi & tl_roi,
-  const ClassificationResult & result)
-{
-  const auto info = extractShapeInfo(result.label);
-
-  cv::rectangle(
-    image, cv::Point(tl_roi.roi.x_offset, tl_roi.roi.y_offset),
-    cv::Point(tl_roi.roi.x_offset + tl_roi.roi.width, tl_roi.roi.y_offset + tl_roi.roi.height),
-    info.color, 2);
-
-  constexpr int shape_img_size = 16;
-  const auto position = cv::Point(tl_roi.roi.x_offset, tl_roi.roi.y_offset);
-
-  visualization::drawTrafficLightShape(
-    image, info.shapes, shape_img_size, position, info.color, result.prob);
-
-  return true;
-}
-
-void TrafficLightRoiVisualizerNode::imageRoiCallback(
+void TrafficLightRoiVisualizerNode::image_roi_callback(
   const sensor_msgs::msg::Image::ConstSharedPtr & input_image_msg,
   const tier4_perception_msgs::msg::TrafficLightRoiArray::ConstSharedPtr & input_tl_roi_msg,
   [[maybe_unused]] const tier4_perception_msgs::msg::TrafficLightArray::ConstSharedPtr &
     input_traffic_signals_msg)
 {
-  cv_bridge::CvImagePtr cv_ptr;
   try {
-    // try to convert to RGB8 from any input encoding, since createRect() only supports RGB8 based
-    // bbox drawing
-    cv_ptr = cv_bridge::toCvCopy(input_image_msg, sensor_msgs::image_encodings::RGB8);
-    for (auto tl_roi : input_tl_roi_msg->rois) {
-      ClassificationResult result;
-      bool has_correspond_traffic_signal =
-        getClassificationResult(tl_roi.traffic_light_id, *input_traffic_signals_msg, result);
-
-      if (!has_correspond_traffic_signal) {
-        // does not have classification result
-        createRect(cv_ptr->image, tl_roi, cv::Scalar(255, 255, 255));
-      } else {
-        // has classification result
-        createRect(cv_ptr->image, tl_roi, result);
-      }
-    }
+    publish(visualizer_.visualize(*input_image_msg, *input_tl_roi_msg, *input_traffic_signals_msg));
   } catch (cv_bridge::Exception & e) {
+    // Nothing was drawn, so there is nothing to publish for this image.
     RCLCPP_ERROR(
       get_logger(), "Could not convert from '%s' to 'rgb8'.", input_image_msg->encoding.c_str());
   }
-  if (use_image_transport_) {
-    image_pub_.publish(cv_ptr->toImageMsg());
-  } else {
-    simple_image_pub_->publish(*cv_ptr->toImageMsg());
-  }
 }
 
-bool TrafficLightRoiVisualizerNode::getClassificationResult(
-  int id, const tier4_perception_msgs::msg::TrafficLightArray & traffic_signals,
-  ClassificationResult & result)
-{
-  bool has_correspond_traffic_signal = false;
-  for (const auto & traffic_signal : traffic_signals.signals) {
-    if (id != traffic_signal.traffic_light_id) {
-      continue;
-    }
-    has_correspond_traffic_signal = true;
-    for (size_t i = 0; i < traffic_signal.elements.size(); i++) {
-      auto element = traffic_signal.elements.at(i);
-      // all lamp confidence are the same
-      result.prob = element.confidence;
-      result.label += (state2label_[element.color] + "-" + state2label_[element.shape]);
-      if (i < traffic_signal.elements.size() - 1) {
-        result.label += ",";
-      }
-    }
-  }
-  return has_correspond_traffic_signal;
-}
-
-bool TrafficLightRoiVisualizerNode::getRoiFromId(
-  int id, const tier4_perception_msgs::msg::TrafficLightRoiArray::ConstSharedPtr & rois,
-  tier4_perception_msgs::msg::TrafficLightRoi & correspond_roi)
-{
-  for (const auto roi : rois->rois) {
-    if (roi.traffic_light_id == id) {
-      correspond_roi = roi;
-      return true;
-    }
-  }
-  return false;
-}
-
-void TrafficLightRoiVisualizerNode::imageRoughRoiCallback(
+void TrafficLightRoiVisualizerNode::image_rough_roi_callback(
   const sensor_msgs::msg::Image::ConstSharedPtr & input_image_msg,
   const tier4_perception_msgs::msg::TrafficLightRoiArray::ConstSharedPtr & input_tl_roi_msg,
   const tier4_perception_msgs::msg::TrafficLightRoiArray::ConstSharedPtr & input_tl_rough_roi_msg,
   const tier4_perception_msgs::msg::TrafficLightArray::ConstSharedPtr & input_traffic_signals_msg)
 {
-  cv_bridge::CvImagePtr cv_ptr;
   try {
-    // try to convert to RGB8 from any input encoding, since createRect() only supports RGB8 based
-    // bbox drawing
-    cv_ptr = cv_bridge::toCvCopy(input_image_msg, sensor_msgs::image_encodings::RGB8);
-    for (auto tl_rough_roi : input_tl_rough_roi_msg->rois) {
-      // note: a signal will still be output even if it is undetected
-      // Its position and size will be set as 0 and the color will be set as unknown
-      // So a rough roi will always have correspond roi a correspond traffic signal
-      ClassificationResult result;
-      bool has_correspond_traffic_signal =
-        getClassificationResult(tl_rough_roi.traffic_light_id, *input_traffic_signals_msg, result);
-      tier4_perception_msgs::msg::TrafficLightRoi tl_roi;
-      bool has_correspond_roi =
-        getRoiFromId(tl_rough_roi.traffic_light_id, input_tl_roi_msg, tl_roi);
-
-      createRect(cv_ptr->image, tl_rough_roi, extractShapeInfo(result.label).color);
-
-      if (has_correspond_roi && has_correspond_traffic_signal) {
-        // has fine detection and classification results
-        createRect(cv_ptr->image, tl_roi, result);
-      } else if (has_correspond_roi && !has_correspond_traffic_signal) {
-        // has fine detection result and does not have classification result
-        createRect(cv_ptr->image, tl_roi, cv::Scalar(255, 255, 255));
-      } else if (!has_correspond_roi && has_correspond_traffic_signal) {
-        // does not have fine detection result and has classification result
-        createRect(cv_ptr->image, tl_rough_roi, result);
-      } else {
-      }
-    }
+    publish(visualizer_.visualize_with_rough_rois(
+      *input_image_msg, *input_tl_roi_msg, *input_tl_rough_roi_msg, *input_traffic_signals_msg));
   } catch (cv_bridge::Exception & e) {
+    // Nothing was drawn, so there is nothing to publish for this image.
     RCLCPP_ERROR(
       get_logger(), "Could not convert from '%s' to 'rgb8'.", input_image_msg->encoding.c_str());
-  }
-  if (use_image_transport_) {
-    image_pub_.publish(cv_ptr->toImageMsg());
-  } else {
-    simple_image_pub_->publish(*cv_ptr->toImageMsg());
   }
 }
 

@@ -62,7 +62,7 @@ std::string node_topic(const std::string & relative_name)
 }
 
 // The image is large enough for the label box that is drawn above a ROI (about 96 x 27 px for a
-// single shape): drawShape() returns early when that box would fall outside the image.
+// single shape): draw_shape() returns early when that box would fall outside the image.
 constexpr int image_width = 640;
 constexpr int image_height = 480;
 constexpr uint8_t background_level = 40;
@@ -87,14 +87,14 @@ constexpr Box rough_box{190, 140, 60, 110};
 // Golden colors, recorded from this node on 2026-09-10 (ROS 2 Jazzy, Ubuntu 24.04, OpenCV 4.6).
 // The published image is RGB8, so the components are red, green, blue in that order.
 constexpr Pixel background_rgb{background_level, background_level, background_level};
-constexpr Pixel red_signal_rgb{254, 149, 149};    // strToColor("red")
-constexpr Pixel amber_signal_rgb{254, 250, 149};  // strToColor("yellow")
-constexpr Pixel green_signal_rgb{149, 254, 161};  // strToColor("green")
+constexpr Pixel red_signal_rgb{254, 149, 149};    // str_to_color("red")
+constexpr Pixel amber_signal_rgb{254, 250, 149};  // str_to_color("yellow")
+constexpr Pixel green_signal_rgb{149, 254, 161};  // str_to_color("green")
 // The frame color comes from the circle element of the label only. Without a circle the color
-// stays at extractShapeInfo()'s initial value, which is also what createRect() is handed for a ROI
-// with no signal at all - the two are indistinguishable in the output.
+// stays at extract_shape_info()'s initial value, which is also what draw_roi_with_id() is handed
+// for a ROI with no signal at all - the two are indistinguishable in the output.
 constexpr Pixel no_circle_rgb{255, 255, 255};
-constexpr Pixel unknown_circle_rgb{250, 250, 250};  // strToColor() fallback, e.g. for "unknown"
+constexpr Pixel unknown_circle_rgb{250, 250, 250};  // str_to_color() fallback, e.g. for "unknown"
 
 // `pixel` fills every pixel of the image and is in the channel order implied by `encoding`, not
 // necessarily RGB. The stamp is left unset: the fixture stamps a message just before publishing it.
@@ -235,7 +235,7 @@ protected:
     node_.reset();
   }
 
-  // Time given to the node's 100 ms connectCb timer, plus topic discovery, to subscribe to the
+  // Time given to the node's 100 ms connect_cb timer, plus topic discovery, to subscribe to the
   // inputs once the output has a subscriber.
   static constexpr auto connect_budget = std::chrono::milliseconds(5000);
   // Time a published message gets to reach the node. Only the tests that assert that nothing comes
@@ -363,7 +363,7 @@ TEST_F(TrafficLightRoiVisualizerCharacterization, Construct_ImageTransportParame
 }
 
 // While nothing subscribes to the output image, the node keeps its input subscriptions closed, so
-// no upstream node has to serialize images for it. connectCb() re-checks this every 100 ms. High
+// no upstream node has to serialize images for it. connect_cb() re-checks this every 100 ms. High
 // accuracy detection is on so that the gate is observed on all four inputs, rough ROIs included.
 //
 // The reverse transition (dropping the subscriptions again once the last output subscriber goes
@@ -395,7 +395,7 @@ TEST_F(TrafficLightRoiVisualizerCharacterization, Interface_OutputSubscribed_Fin
 }
 
 // With high accuracy detection the node additionally subscribes to the rough ROIs, which selects
-// the four-input synchronizer and imageRoughRoiCallback().
+// the four-input synchronizer and image_rough_roi_callback().
 TEST_F(TrafficLightRoiVisualizerCharacterization, Interface_HighAccuracy_RoughRoiSubscribed)
 {
   start_node(/*use_high_accuracy_detection=*/true, /*use_image_transport=*/false);
@@ -467,7 +467,7 @@ TEST_F(TrafficLightRoiVisualizerCharacterization, Visualization_NoFineRois_Image
   EXPECT_EQ(count_pixels_differing_from(*output_, background_rgb), 0u);
 }
 
-// A ROI without a matching signal goes through the other createRect() overload, which draws no
+// A ROI without a matching signal goes through draw_roi_with_id(), which draws no
 // label box at all - there is no shape and no confidence to show. The frame itself is still drawn.
 //
 // The frame color is not pinned here; it belongs to the colors section further down.
@@ -558,7 +558,7 @@ TEST_F(TrafficLightRoiVisualizerCharacterization, Visualization_RoughAndFineNoSi
   ASSERT_TRUE(send_inputs_and_wait_for_output(
     background_image, fine_rois, signal_for_other_light, rough_rois));
 
-  // Both frames are drawn, and both in white: extractShapeInfo() of an empty label falls back to
+  // Both frames are drawn, and both in white: extract_shape_info() of an empty label falls back to
   // it, so even the rough frame carries no signal color.
   const auto rough_frame_corner = pixel_at(*output_, rough_box.x, rough_box.y);
   const auto fine_frame_corner = pixel_at(*output_, fine_box.x, fine_box.y);
@@ -664,9 +664,9 @@ TEST_F(TrafficLightRoiVisualizerCharacterization, Visualization_FineWithoutRough
 }
 
 // ---------------------------------------------------------------------------------------------
-// Properties shared by both callbacks. The frame color is derived by getClassificationResult() and
-// extractShapeInfo(), which both callbacks call, and measuring the rough and the fine frame side
-// by side on 2026-09-15 gave the same color in every case below - so it is pinned once, on the
+// Properties shared by both callbacks. The frame color is derived by get_classification_result()
+// and extract_shape_info(), which both callbacks call, and measuring the rough and the fine frame
+// side by side on 2026-09-15 gave the same color in every case below - so it is pinned once, on the
 // fine path. Only the circle element of a label decides the color; the other elements are drawn as
 // icons but do not change it.
 // ---------------------------------------------------------------------------------------------
@@ -685,9 +685,9 @@ TEST_F(TrafficLightRoiVisualizerCharacterization, Visualization_NoSignal_FrameWh
   EXPECT_EQ(frame_corner, no_circle_rgb);
 }
 
-// A circle whose color is known: the frame takes that color. strToColor() knows three of them, and
-// all three are pinned because they are the mapping the README documents - one case each, so that
-// a failure names the color that broke.
+// A circle whose color is known: the frame takes that color. str_to_color() knows three of them,
+// and all three are pinned because they are the mapping the README documents - one case each, so
+// that a failure names the color that broke.
 TEST_F(TrafficLightRoiVisualizerCharacterization, Visualization_RedCircleSignal_FrameRed)
 {
   start_node(/*use_high_accuracy_detection=*/false, /*use_image_transport=*/false);
@@ -729,7 +729,7 @@ TEST_F(TrafficLightRoiVisualizerCharacterization, Visualization_GreenCircleSigna
   EXPECT_EQ(frame_corner, green_signal_rgb);
 }
 
-// A circle whose color is UNKNOWN: the frame takes strToColor()'s fallback, an off-white that is
+// A circle whose color is UNKNOWN: the frame takes str_to_color()'s fallback, an off-white that is
 // five levels darker than the plain white above.
 //
 // NOTE(characterization): two whites that close together look unintended rather than designed.
@@ -741,7 +741,7 @@ TEST_F(TrafficLightRoiVisualizerCharacterization, Visualization_UnknownCircleSig
 
   ASSERT_TRUE(send_inputs_and_wait_for_output(background_image, fine_rois, unknown_signal));
 
-  // The frame takes strToColor()'s fallback, not the plain white above
+  // The frame takes str_to_color()'s fallback, not the plain white above
   const auto frame_corner = pixel_at(*output_, fine_box.x, fine_box.y);
   EXPECT_EQ(frame_corner, unknown_circle_rgb);
 }
