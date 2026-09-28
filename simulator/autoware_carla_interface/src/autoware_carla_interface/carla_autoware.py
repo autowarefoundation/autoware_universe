@@ -63,6 +63,10 @@ class SensorLoop(object):
             CarlaDataProvider.get_world().tick()
 
 
+# libcarla warns unless max_substeps is in [1-16].
+MAX_SUBSTEPS = 16
+
+
 class InitializeInterface(object):
 
     def __init__(self):
@@ -408,20 +412,32 @@ class InitializeInterface(object):
         untouched, so the wall-clock pacing of a run stays as it was, at the
         cost of more physics iterations inside each step.
 
-        CARLA requires fixed_delta_seconds <= max_substep_delta_time *
-        max_substeps and rejects the settings otherwise, so the count is
-        derived from the step rather than configured separately.
+        libcarla imposes two constraints on the settings, and warns unless both
+        hold: fixed_delta_seconds <= max_substep_delta_time * max_substeps, and
+        max_substeps in [1-16]. The count is therefore derived from the step
+        rather than configured separately, and when the requested substep would
+        need more than 16 of them to fill a step, the substep is lengthened to
+        exactly fill it with 16. Capping the count alone would break the first
+        constraint instead of the second.
         """
         if self.max_substep_delta_time <= 0.0:
             return
+        substep = self.max_substep_delta_time
+        substeps = max(1, math.ceil(self.fixed_delta_seconds / substep))
+        if substeps > MAX_SUBSTEPS:
+            substeps = MAX_SUBSTEPS
+            substep = self.fixed_delta_seconds / MAX_SUBSTEPS
+            self.logger.info(
+                f"Physics substep raised to {substep} s: "
+                f"{self.max_substep_delta_time} s would need more than "
+                f"{MAX_SUBSTEPS} substeps per {self.fixed_delta_seconds} s step"
+            )
         settings.substepping = True
-        settings.max_substep_delta_time = self.max_substep_delta_time
-        settings.max_substeps = max(
-            1, math.ceil(self.fixed_delta_seconds / self.max_substep_delta_time)
-        )
+        settings.max_substep_delta_time = substep
+        settings.max_substeps = substeps
         self.logger.info(
-            f"Physics substepping: max {settings.max_substeps} substeps of "
-            f"{self.max_substep_delta_time} s per {self.fixed_delta_seconds} s step"
+            f"Physics substepping: max {substeps} substeps of "
+            f"{substep} s per {self.fixed_delta_seconds} s step"
         )
 
     def _spawn_ego_actor(self):

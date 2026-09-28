@@ -145,7 +145,8 @@ class carla_ros2_interface(object):
             "force_load_world": (rclpy.Parameter.Type.BOOL, False),
             # Longest physics substep CARLA may take inside one simulation
             # step. 0 or negative leaves CARLA's own substepping settings
-            # untouched.
+            # untouched, which is what a 0.10 (Chaos) server wants; see the
+            # README.
             "max_substep_delta_time": (rclpy.Parameter.Type.DOUBLE, 0.002),
             # Minimum throttle applied while accelerating from (near) standstill.
             # Heavy CARLA vehicles (e.g. vehicle.taxi.ford) do not creep and
