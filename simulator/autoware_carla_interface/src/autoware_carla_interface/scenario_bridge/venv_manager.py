@@ -134,12 +134,26 @@ def _wheelhouse_install_args(source: str) -> list[str]:
     root = _extract_zip(path) if path.suffix.lower() == ".zip" else path
     wheels = _find_wheels(root)
     if not wheels:
-        raise FileNotFoundError(f"no *.whl found in wheelhouse {source}")
+        raise FileNotFoundError(
+            f"no *.whl under {source}, so there is nothing to install. A directory "
+            "or .zip given as the scenario source is taken to be a wheelhouse -- a "
+            "tree of wheels carrying the runner and its full dependency closure, "
+            "installed offline. A source checkout is not one: build it first "
+            "(`uv build --wheel`, or `pip wheel`) and point this at the wheels. "
+            "Installing from a source tree is not supported yet."
+        )
     return ["--no-index", "--no-deps", *(str(w) for w in wheels)]
 
 
 def _is_wheelhouse(source: str) -> bool:
-    """Whether *source* is a wheelhouse (a ``.zip`` or an existing directory)."""
+    """Whether *source* is a wheelhouse (a ``.zip`` or an existing directory).
+
+    Every local path is one: a wheelhouse is the only local source supported
+    today, so a directory without wheels is a mistake to report rather than a
+    second kind of source to guess at. :func:`_wheelhouse_install_args` says so
+    when it finds none. Anything that is not a local path falls through to pip,
+    which is how a PyPI name or a VCS URL reaches it.
+    """
     path = Path(source).expanduser()
     return source.lower().endswith(".zip") or path.is_dir()
 

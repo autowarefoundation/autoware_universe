@@ -25,6 +25,10 @@ from __future__ import annotations
 import time
 
 
+class ScenarioWorldNotOwned(RuntimeError):
+    """Raised when the scenario runner never took ownership of the CARLA world."""
+
+
 def _active_map(client):
     """Return ``(name_lower, could_not_read)`` for the world's active map."""
     try:
@@ -55,8 +59,8 @@ def wait_for_external_world(client, expected_map: str, timeout: float, logger):
     """Wait until the scenario runner is driving its world, then return it.
 
     The runner loads the map, destroys leftover actors (exempting the ego role),
-    enables synchronous mode, and then drives the clock while it waits for this
-    node to spawn the "Ego" actor. Adopt only once three signals hold together:
+    enables synchronous mode, spawns the "Ego" actor, and drives the clock.
+    Adopt only once three signals hold together:
     the active map is the expected one (skipped when its name cannot be read),
     synchronous mode is on (this node never enables it in scenario mode, so that
     means the runner owns the world), and an external tick is observed (the runner
@@ -64,8 +68,18 @@ def wait_for_external_world(client, expected_map: str, timeout: float, logger):
 
     Requiring synchronous mode - not just a tick - rules out the async default
     world CARLA starts on, whose free-running ticks would otherwise cause a
-    premature adopt/spawn into the wrong (soon-reloaded) world. On timeout, adopt
-    whatever world is up so the bridge still starts, surfacing it in the log.
+    premature adopt/spawn into the wrong (soon-reloaded) world.
+
+    On timeout this raises rather than adopting whatever world is up. The world
+    that is up when the runner has not claimed one is the async default CARLA
+    starts on, or the previous episode's: adopting it starts the run on the
+    wrong map, or under a clock nobody drives, and the scenario is then scored
+    against a road it never drove. A startup that fails here says so; one that
+    adopts says so only in a log line nobody reads until the result is wrong.
+
+    Raises:
+        ScenarioWorldNotOwned: If the runner has not claimed the world within
+            *timeout*.
     """
     expected = expected_map.split("/")[-1].lower()
     deadline = time.time() + max(float(timeout), 1.0)
@@ -80,11 +94,17 @@ def wait_for_external_world(client, expected_map: str, timeout: float, logger):
             logger.info(f"Adopted the scenario runner's live CARLA world (map '{current}').")
             return client.get_world()
         if time.time() >= deadline:
-            logger.warning(
-                f"Timed out after {timeout:.0f}s waiting for the scenario runner "
-                f"(active map: {current}, owned: {owned}); adopting the current world "
-                "as-is. Check that with_scenario's map matches carla_map and the runner runs."
+            message = (
+                f"The scenario runner did not take ownership of the CARLA world within "
+                f"{timeout:.0f}s (expected map '{expected}', active map: {current}, "
+                f"synchronous mode: {_sync_enabled(client.get_world())}). Refusing to "
+                "start on a world nobody claimed: it would be the async default world "
+                "or the previous episode's, so the run would drive the wrong map or a "
+                "clock nobody advances. Check that the scenario runner is running, that "
+                "its map matches carla_map, and raise scenario_world_wait_timeout if the "
+                "runner simply needs longer."
             )
-            return client.get_world()
+            logger.error(message)
+            raise ScenarioWorldNotOwned(message)
         if not owned:
             time.sleep(1.0)

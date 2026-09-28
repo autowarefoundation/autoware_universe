@@ -229,6 +229,10 @@
       <param name="auto_engage" value="$(var auto_engage)"/>
       <param name="initialize_localization" value="$(var initialize_localization)"/>
       <param name="require_localization_initialized" value="$(var require_localization_initialized)"/>
+      <!-- CARLA drives the clock in scenario mode, so the poses and routes this
+           node stamps have to carry simulation time like everything else it
+           talks to. -->
+      <param name="use_sim_time" value="$(var use_sim_time)"/>
     </node>
 
     <arg name="input_control_cmd" default="/control/command/control_cmd"/>

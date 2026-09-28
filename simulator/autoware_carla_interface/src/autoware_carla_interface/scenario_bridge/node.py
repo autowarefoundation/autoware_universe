@@ -50,6 +50,7 @@ from __future__ import annotations
 
 from functools import partial
 import threading
+import time
 from typing import Optional
 
 from autoware_adapi_v1_msgs.msg import LocalizationInitializationState
@@ -149,6 +150,10 @@ class ScenarioBridgeNode(Node):
         # only if the request is rejected: an accepted step is never re-sent, a
         # failed one retries on the next pass.
         self._lock = threading.RLock()
+        # Latch name -> (monotonic time it was issued, its future). An entry lives
+        # only while a request is in flight; _expire_stalled_steps drops the ones
+        # that were never answered.
+        self._inflight: dict = {}
         self._mission: Optional[pb2.GetMissionResponse] = None
         self._localization_requested = False
         self._route_requested = False
@@ -216,6 +221,14 @@ class ScenarioBridgeNode(Node):
         # rpc_timeout_s each poll; the retry just comes on the next tick.
         self._mission_poll_timeout_s = (
             self.declare_parameter("mission_poll_timeout_s", 1.0).get_parameter_value().double_value
+        )
+        # An AD API call that is never answered -- the service went away between
+        # the client finding it and the request landing -- leaves its future
+        # pending forever. Its step is latched, so without this the startup stops
+        # there silently. Past this many seconds the step is given up on and
+        # retried on the next pass.
+        self._step_timeout_s = (
+            self.declare_parameter("step_timeout_s", 10.0).get_parameter_value().double_value
         )
         return self.declare_parameter("tick_period_s", 0.5).get_parameter_value().double_value
 
@@ -295,6 +308,7 @@ class ScenarioBridgeNode(Node):
         if self._mission is None:
             return
         with self._lock:
+            self._expire_stalled_steps()
             self._publish_ego_initialpose()
             self._ensure_localization()
             if self._localization_ready_for_routing():
@@ -364,9 +378,38 @@ class ScenarioBridgeNode(Node):
         """
         setattr(self, latch, True)
         future = client.call_async(request)
+        self._inflight[latch] = (time.monotonic(), future)
         future.add_done_callback(partial(self._on_step_response, latch=latch, label=label))
 
+    def _expire_stalled_steps(self) -> None:
+        """Un-latch any step whose request was never answered (under ``_lock``).
+
+        A rejected request clears its own latch through :meth:`_on_step_response`.
+        A request that is never answered at all does not: its future stays pending,
+        the callback never runs, and the latch that stops the step being re-issued
+        stays set for the life of the node. The startup then sits there, with
+        nothing in the log to say which step it is waiting on.
+
+        Cancelling the future first keeps a late answer from clearing a latch that
+        by then belongs to the retry.
+        """
+        if not self._inflight:
+            return
+        now = time.monotonic()
+        for latch, (issued_at, future) in list(self._inflight.items()):
+            if future.done() or now - issued_at < self._step_timeout_s:
+                continue
+            self._inflight.pop(latch, None)
+            future.cancel()
+            setattr(self, latch, False)
+            self.get_logger().warning(
+                f"{latch.lstrip('_').replace('_', ' ')} got no answer within "
+                f"{self._step_timeout_s:.0f}s; giving up on it and retrying"
+            )
+
     def _on_step_response(self, future, *, latch: str, label: str) -> None:
+        with self._lock:
+            self._inflight.pop(latch, None)
         ok, detail = _response_ok(future)
         if ok:
             self.get_logger().info(f"{label} accepted")
