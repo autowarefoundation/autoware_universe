@@ -17,7 +17,9 @@
 
 #include "main.hpp"
 
-#include <autoware_utils/ros/polling_subscriber.hpp>
+#include <autoware/agnocast_wrapper/node.hpp>
+#include <autoware/agnocast_wrapper/polling_subscriber.hpp>
+#include <autoware/agnocast_wrapper/tf2.hpp>
 #include <autoware_utils/ros/self_pose_listener.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -30,7 +32,7 @@ namespace autoware::path_distance_calculator
 
 // Thin ROS wrapper: polls map/route/pose on a timer and forwards data to
 // RouteDistanceCalculator, which holds all the lanelet2 route logic.
-class PathDistanceCalculator : public rclcpp::Node
+class PathDistanceCalculator : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit PathDistanceCalculator(const rclcpp::NodeOptions & options);
@@ -41,13 +43,18 @@ private:
 
   void on_timer();
 
-  autoware_utils::InterProcessPollingSubscriber<HADMapBin> sub_map_{
-    this, "~/input/map", rclcpp::QoS{1}.transient_local()};
-  autoware_utils::InterProcessPollingSubscriber<LaneletRoute> sub_route_{
-    this, "~/input/route", rclcpp::QoS{1}.transient_local()};
-  rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float64Stamped>::SharedPtr pub_dist_;
-  rclcpp::TimerBase::SharedPtr timer_;
-  autoware_utils::SelfPoseListener self_pose_listener_;
+  autoware::agnocast_wrapper::polling::PollingSubscriber<HADMapBin>::SharedPtr sub_map_{
+    autoware::agnocast_wrapper::polling::create_polling_subscriber<HADMapBin>(
+      this, "~/input/map", rclcpp::QoS{1}.transient_local())};
+  autoware::agnocast_wrapper::polling::PollingSubscriber<LaneletRoute>::SharedPtr sub_route_{
+    autoware::agnocast_wrapper::polling::create_polling_subscriber<LaneletRoute>(
+      this, "~/input/route", rclcpp::QoS{1}.transient_local())};
+  AUTOWARE_PUBLISHER_PTR(autoware_internal_debug_msgs::msg::Float64Stamped) pub_dist_;
+  AUTOWARE_TIMER_PTR timer_;
+  autoware_utils::SelfPoseListenerT<
+    autoware::agnocast_wrapper::Node, autoware::agnocast_wrapper::Buffer,
+    autoware::agnocast_wrapper::TransformListener>
+    self_pose_listener_{this};
 
   // Last map/route handed to the calculator, so a re-polled but unchanged message (the polling
   // subscriber keeps returning the latest sample every tick) does not trigger a redundant

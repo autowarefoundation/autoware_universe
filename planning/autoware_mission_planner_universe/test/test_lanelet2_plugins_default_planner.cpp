@@ -364,6 +364,35 @@ TEST(DefaultPlannerTest, plan)
   }
 }
 
+// Regression test: planning a route whose lanelet path ends up empty must fail gracefully instead
+// of segfaulting. An empty path (e.g. fewer than two checkpoints, or
+// planPathLaneletsBetweenCheckpoints reporting success while yielding no lanelets) used to reach
+// route_handler's createMapSegments -> getMainLanelets and refine_goal_height, both of which call
+// back() on the path and dereference an invalid lanelet.
+TEST(DefaultPlannerTest, planWithEmptyPathDoesNotCrash)
+{
+  DefaultPlanner planner(create_default_planner_parameters(), create_default_vehicle_info());
+  planner.set_default_test_map();
+
+  // A single checkpoint provides no start/goal pair, so the planned path is empty.
+  RoutePoints single_point_route;
+  Pose pose;
+  pose.position.x = 3717.239501953125;
+  pose.position.y = 73720.84375;
+  pose.position.z = 0.0;
+  pose.orientation.w = 1.0;
+  single_point_route.push_back(pose);
+
+  const auto result = planner.plan(single_point_route);  // must not segfault
+
+  // The empty-path guard must short-circuit here: an empty route plus its specific warning. If the
+  // guard is removed, the empty path instead flows into route_handler's back()-based indexing (UB),
+  // so this assertion (message text) deterministically fails even when the UB happens not to fault.
+  EXPECT_TRUE(result.route.segments.empty());
+  ASSERT_TRUE(result.warning_message.has_value());
+  EXPECT_EQ(result.warning_message.value(), "Failed to plan route: empty path.");
+}
+
 //  `visualize` function is used for user too, so it is more important than debug functions
 TEST(DefaultPlannerTest, visualize)
 {
