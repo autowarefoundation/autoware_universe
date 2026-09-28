@@ -10,6 +10,16 @@ This package implements a TensorRT powered inference node for Point Transformers
 The sparse convolution backend corresponds to [spconv](https://github.com/traveller59/spconv).
 Autoware installs it automatically in its setup script. If needed, the user can also build it and install it following the [following instructions](https://github.com/autowarefoundation/spconv_cpp).
 
+The network input is a densified point cloud: the current lidar frame is concatenated with
+ego-motion-compensated past frames (`densification_num_past_frames`), and every point carries
+five features `(x, y, z, intensity, time_lag)`, where `time_lag` is the point age in seconds
+relative to the current frame. The densified cloud is voxelized on the GPU into padded voxels
+(`max_points_per_voxel` slots holding the first points of each voxel in input order) together with
+the valid point count per voxel, and the encoder graph averages the points of every voxel itself,
+so training and inference share one voxel feature definition. Past sweeps provide geometric and
+temporal context to the network, while every segmentation output cloud describes only the
+current frame's points.
+
 ## Inputs / Outputs
 
 ### Input
@@ -105,6 +115,9 @@ supports:
 The filtered output cloud format is controlled by `filter.output_format`. When it is set to an
 empty string, the filtered output preserves the same format as the input cloud.
 
+Densification requires the transform between `densification_world_frame_id` and the lidar frame;
+frames are skipped while the transform is unavailable.
+
 ## Trained Models
 
 The model was trained on the T4Dataset using approximately 4,000 frames and is available in the Autoware artifacts.
@@ -116,6 +129,10 @@ The model was trained on the T4Dataset using approximately 4,000 frames and is a
 This error may occur when TensorRT cannot satisfy the memory requirements for building an engine. A `workspace_size` that is too small can prevent TensorRT from using the tactics needed for the configured input profiles. Conversely, a `workspace_size` that is too large can allow memory usage to exceed the GPU's available VRAM. A large maximum value in `encoder.voxels_num` also increases the size of TensorRT profiles and intermediate buffers.
 
 Adjust the `workspace_size` values and the maximum `encoder.voxels_num` value in `config/ptv3.param.yaml` to fit the available GPU memory. Finding a suitable balance between these parameters can resolve the issue.
+
+### GPU memory and `encoder.pooled_voxels_num_max`
+
+`encoder.pooled_voxels_num_max` bounds each pooled encoder level's TensorRT profile and buffers (one entry per `encoder.pooling_strides` entry). Set it from measured per-stage peaks with a margin. A frame whose level would exceed its bound is truncated: the voxels with the largest serialization codes are dropped until every level fits, and a warning is logged.
 
 ## References/External links
 

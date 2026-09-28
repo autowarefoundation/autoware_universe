@@ -29,6 +29,7 @@
   <depend>pluginlib</depend>
   <depend>range-v3</depend>
   <depend>rclcpp</depend>
+  <depend>tl_expected</depend>
   <depend>visualization_msgs</depend>
 
   <test_depend>ament_cmake_ros</test_depend>

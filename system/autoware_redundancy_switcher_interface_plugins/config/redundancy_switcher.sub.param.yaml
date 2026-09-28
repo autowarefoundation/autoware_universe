@@ -1,0 +1,10 @@
+# Sub ECU with hardware redundancy switcher (UDS).
+/**:
+  ros__parameters:
+    switcher_plugin: "autoware::redundancy_switcher::RedundancySwitcherAdapter"
+
+    uds:
+      switcher_command_path: "/tmp/autoware_state_sub_ecu"
+      switcher_status_path: "/tmp/election_status_sub_ecu"
+      election_status_timeout_milli: 500.0
+      election_request_send_interval_milli: 100.0

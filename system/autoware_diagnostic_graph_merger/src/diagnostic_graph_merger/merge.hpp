@@ -15,6 +15,7 @@
 #ifndef DIAGNOSTIC_GRAPH_MERGER__MERGE_HPP_
 #define DIAGNOSTIC_GRAPH_MERGER__MERGE_HPP_
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <tier4_system_msgs/msg/diag_graph_status.hpp>
@@ -23,7 +24,7 @@
 namespace autoware::diagnostic_graph_merger
 {
 
-class MergeNode : public rclcpp::Node
+class MergeNode : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit MergeNode(const rclcpp::NodeOptions & options);
@@ -40,13 +41,13 @@ private:
   void update_struct();
   void update_status();
 
-  rclcpp::TimerBase::SharedPtr timer_;
-  rclcpp::Publisher<DiagGraphStruct>::SharedPtr pub_merged_struct_;
-  rclcpp::Publisher<DiagGraphStatus>::SharedPtr pub_merged_status_;
-  rclcpp::Subscription<DiagGraphStruct>::SharedPtr sub_struct1_;
-  rclcpp::Subscription<DiagGraphStatus>::SharedPtr sub_status1_;
-  rclcpp::Subscription<DiagGraphStruct>::SharedPtr sub_struct2_;
-  rclcpp::Subscription<DiagGraphStatus>::SharedPtr sub_status2_;
+  AUTOWARE_TIMER_PTR timer_;
+  AUTOWARE_PUBLISHER_PTR(DiagGraphStruct) pub_merged_struct_;
+  AUTOWARE_PUBLISHER_PTR(DiagGraphStatus) pub_merged_status_;
+  AUTOWARE_SUBSCRIPTION_PTR(DiagGraphStruct) sub_struct1_;
+  AUTOWARE_SUBSCRIPTION_PTR(DiagGraphStatus) sub_status1_;
+  AUTOWARE_SUBSCRIPTION_PTR(DiagGraphStruct) sub_struct2_;
+  AUTOWARE_SUBSCRIPTION_PTR(DiagGraphStatus) sub_status2_;
 
   DiagGraphStruct::ConstSharedPtr struct1_;
   DiagGraphStatus::ConstSharedPtr status1_;
