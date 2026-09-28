@@ -289,10 +289,12 @@ sensor_mappings:
 ```
 
 `image_encoding` applies to cameras and accepts `bgra8` (default, what CARLA
-renders) or `mono8`. Publishing `mono8` converts once in the bridge and sends a
-quarter of the bytes, which is worth it when every consumer of that camera
-works on luminance alone, such as feature tracking or visual odometry. A
-1600x900 frame is 5,760,000 bytes as `bgra8` and 1,440,000 bytes as `mono8`.
+renders), `bgr8` or `mono8`. Publishing `mono8` converts once in the bridge and
+sends a quarter of the bytes, which is worth it when every consumer of that
+camera works on luminance alone, such as feature tracking or visual odometry.
+`bgr8` drops only the alpha channel, which CARLA fills with 255 and no consumer
+reads, so it costs no information at all. A 1600x900 frame is 5,760,000 bytes as
+`bgra8`, 4,320,000 bytes as `bgr8` and 1,440,000 bytes as `mono8`.
 
 For CARLA sensor parameters, see [CARLA Sensor Reference](https://carla.readthedocs.io/en/latest/ref_sensors/).
 

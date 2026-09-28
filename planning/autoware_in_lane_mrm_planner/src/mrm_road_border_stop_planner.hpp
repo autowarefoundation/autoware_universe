@@ -77,7 +77,7 @@ struct RoadBorderContact
   lanelet::Id linestring_id{lanelet::InvalId};
   autoware_utils_geometry::Segment2d segment;
   geometry_msgs::msg::Point contact_point;
-  std::optional<size_t> stop_index;  //!< index of the inserted stop point (if inserted)
+  std::optional<geometry_msgs::msg::Pose> stop_pose;  //!< pose of the inserted stop point
   double stop_arc_length{0.0};
 };
 
@@ -93,10 +93,15 @@ public:
   void set_lanelet_map(const lanelet::LaneletMapPtr & lanelet_map_ptr);
 
   /// Inserts a stop point when the footprint swept along `points` interferes with a boundary.
-  /// Returns the contact information (with `stop_index` set when a stop point was inserted).
+  /// Returns the contact information (with `stop_pose` set when a stop point was inserted).
   std::optional<RoadBorderContact> apply(TrajectoryPoints & points, const Odometry & odom);
 
   void publish_planning_factor();
+  /// While the in-lane stop trigger is latched the candidates are not re-planned, so apply() is not
+  /// called. Re-publish the contact the latched trajectory was planned with (debug markers and the
+  /// planning factor, whose distance is measured from the current ego pose) to keep the stop reason
+  /// visible until the trigger is released.
+  void publish_latched(const TrajectoryPoints & latched_points, const Odometry & odom);
 
   /// Forward sweep from `start_idx`. `ego_arc_length` is the arc length of the ego position
   /// (from the trajectory start) used as the origin of `max_check_length` and as the lower
@@ -123,7 +128,7 @@ private:
     const double arc_prev, const double arc_contact) const;
   void set_stop_point(
     TrajectoryPoints & points, RoadBorderContact & contact, const Odometry & odom);
-  void publish_debug_markers(const TrajectoryPoints & points, const Odometry & odom) const;
+  void publish_debug_markers(const Odometry & odom) const;
 
   rclcpp::Node * node_{nullptr};
   VehicleInfo vehicle_info_;

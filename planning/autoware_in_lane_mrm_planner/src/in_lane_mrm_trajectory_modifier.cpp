@@ -55,4 +55,10 @@ void InLaneMrmTrajectoryModifier::publish_planning_factor()
   road_border_stop_planner_.publish_planning_factor();
 }
 
+void InLaneMrmTrajectoryModifier::publish_latched(
+  const TrajectoryPoints & latched_points, const Odometry & odom)
+{
+  road_border_stop_planner_.publish_latched(latched_points, odom);
+}
+
 }  // namespace autoware::in_lane_mrm_planner

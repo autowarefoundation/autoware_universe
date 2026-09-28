@@ -252,6 +252,12 @@ void InLaneMrmPlannerNode::on_timer()
                            : static_cast<int>(StatusReasonCode::PLAN_FAILED_NO_OUTPUT);
   }
 
+  // Candidates (and their stop reasons) are not re-planned while latched; keep publishing the stop
+  // reasons of the latched trajectory so that they stay visible until the trigger is released.
+  if (trajectory_latcher_.is_latched() && !need_plan && trajectory_to_publish) {
+    trajectory_modifier_.publish_latched(trajectory_to_publish->points, odom);
+  }
+
   if (trajectory_to_publish) {
     status.published_points = trajectory_to_publish->points.size();
     auto published = *trajectory_to_publish;

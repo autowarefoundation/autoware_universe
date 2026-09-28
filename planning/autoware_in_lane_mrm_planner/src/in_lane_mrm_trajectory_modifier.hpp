@@ -34,6 +34,8 @@ public:
   void apply(
     TrajectoryPoints & points, const Odometry & odom, const AccelWithCovarianceStamped & accel);
   void publish_planning_factor();
+  /// Re-publish the stop reasons of the latched trajectory (see MrmRoadBorderStopPlanner).
+  void publish_latched(const TrajectoryPoints & latched_points, const Odometry & odom);
 
 private:
   MrmObstacleStopPlanner obstacle_stop_planner_;
