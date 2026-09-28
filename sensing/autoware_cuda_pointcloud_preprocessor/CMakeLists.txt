@@ -181,6 +181,7 @@ if(BUILD_TESTING)
   )
   target_link_libraries(test_cuda_pointcloud_preprocessor
     cuda_pointcloud_preprocessor_lib
+    autoware_cuda_utils::autoware_cuda_utils
     ${CUDA_LIBRARIES}
   )
   target_include_directories(test_cuda_pointcloud_preprocessor SYSTEM PRIVATE
