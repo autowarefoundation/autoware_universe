@@ -26,6 +26,7 @@ from launch_ros.actions import Node
 from launch_ros.descriptions import ComposableNode
 from launch_ros.parameter_descriptions import ParameterFile
 from launch_ros.substitutions import FindPackageShare
+import yaml
 
 CORE = "autoware_default_adapi"
 UNIVERSE = "autoware_default_adapi_universe"
@@ -126,26 +127,26 @@ def get_default_config():
     return path
 
 
+def get_node_keys(path):
+    with pathlib.Path(path).open() as fp:
+        data = yaml.safe_load(fp)
+    return {} if data is None else data
+
+
 def launch_setup(context, *args, **kwargs):
     # construct a list of entries to launch (simple parse without dependencies)
-    node_keys = LaunchConfiguration("default_adapi_node_keys").perform(context)
-    if (
-        not isinstance(node_keys, str)
-        or len(node_keys) == 0
-        or node_keys[0] != "["
-        or node_keys[-1] != "]"
-    ):
-        raise ValueError(
-            "default_adapi_node_keys should be a string representing a list of strings."
-        )
+    node_path = LaunchConfiguration("node_keys_file").perform(context)
+    node_data = get_node_keys(node_path) if node_path else {}
+    node_keys_all = set(AGNOCAST_WRAPPER_NODES.keys())
+    node_includes = set(node_data.get("includes", node_keys_all))
+    node_excludes = set(node_data.get("excludes", []))
 
-    node_keys = [key.strip() for key in node_keys[1:-1].split(",") if key.strip()]
-
-    unknown_keys = set(node_keys) - AGNOCAST_WRAPPER_NODES.keys()
+    node_keys = set(node_includes) - set(node_excludes)
+    unknown_keys = node_keys - node_keys_all
     if unknown_keys:
         raise ValueError(
             f"Unknown node keys: {', '.join(sorted(unknown_keys))}. "
-            f"Available keys: {', '.join(AGNOCAST_WRAPPER_NODES.keys())}"
+            f"Available keys: {', '.join(sorted(node_keys_all))}"
         )
     entries_to_launch = [AGNOCAST_WRAPPER_NODES[key] for key in node_keys]
 
@@ -174,11 +175,11 @@ def launch_setup(context, *args, **kwargs):
 
 def generate_launch_description():
     arg_config = DeclareLaunchArgument("config", default_value=get_default_config())
-    arg_node_keys = DeclareLaunchArgument(
-        "default_adapi_node_keys",
-        default_value=f"[{', '.join(AGNOCAST_WRAPPER_NODES.keys())}]",
-        description="a string representing a list of node keys to launch",
+    arg_keys_file = DeclareLaunchArgument(
+        "node_keys_file",
+        default_value="",
+        description="path to the file containing the node keys to launch",
     )
     return launch.LaunchDescription(
-        [arg_config, arg_node_keys, get_agnocast_env(), OpaqueFunction(function=launch_setup)]
+        [arg_config, arg_keys_file, get_agnocast_env(), OpaqueFunction(function=launch_setup)]
     )
