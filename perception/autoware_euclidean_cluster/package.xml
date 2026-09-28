@@ -20,13 +20,13 @@
   <depend>autoware_shape_estimation</depend>
   <depend>autoware_utils</depend>
   <depend>geometry_msgs</depend>
+  <depend>libexpected-dev</depend>
   <depend>libpcl-all-dev</depend>
   <depend>pcl_conversions</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
   <depend>sensor_msgs</depend>
   <depend>tier4_perception_msgs</depend>
-  <depend>tl_expected</depend>
 
   <test_depend>ament_cmake_gtest</test_depend>
   <test_depend>ament_lint_auto</test_depend>
