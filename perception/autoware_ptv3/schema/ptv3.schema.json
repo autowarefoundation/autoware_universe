@@ -107,13 +107,28 @@
             "type": "integer",
             "minimum": 1
           },
-          "description": "Voxel ranges used during inference [min, opt, max].",
+          "description": "Voxel ranges used during inference [min, opt, max]. Deeper encoder stages are bounded by their grid capacity, with opt scaled accordingly.",
           "default": [16000, 128000, 192000],
           "minItems": 3,
           "maxItems": 3
+        },
+        "pooled_voxels_num_max": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "description": "Voxel-count maximum per pooled encoder stage (one per pooling stride), non-increasing. Bounds the stage's TensorRT profile and buffers; the input is truncated to fit it.",
+          "default": [214000, 100000, 40000, 17000]
         }
       },
-      "required": ["onnx_path", "engine_path", "workspace_size", "voxels_num"],
+      "required": [
+        "onnx_path",
+        "engine_path",
+        "workspace_size",
+        "voxels_num",
+        "pooled_voxels_num_max"
+      ],
       "additionalProperties": false
     },
     "segmentation3d": {
@@ -134,7 +149,7 @@
         },
         "source_reconstruction": {
           "type": "string",
-          "description": "Controls mapping of voxel predictions back to source points. 'none': voxel representative points; 'partial': cropped source points inside point_cloud_range; 'full': full input cloud with unknown label 255 for out-of-range points.",
+          "description": "Controls mapping of voxel predictions back to source points. 'none': one representative per voxel occupied by the current frame; 'partial': cropped source points inside point_cloud_range; 'full': full input cloud with unknown label 255 for out-of-range points.",
           "enum": ["none", "partial", "full"]
         },
         "class_mapping": {
@@ -291,6 +306,15 @@
           "description": "Point cloud buffer capacity. Must be at least the maximum expected number of points per frame.",
           "minimum": 1
         },
+        "densification_world_frame_id": {
+          "type": "string",
+          "description": "World frame used to compensate the ego motion of cached sweeps."
+        },
+        "densification_num_past_frames": {
+          "type": "integer",
+          "description": "Number of past lidar frames concatenated with the current frame as network input.",
+          "minimum": 0
+        },
         "encoder": {
           "$ref": "#/definitions/encoder"
         },
@@ -305,6 +329,8 @@
         "plugins_path",
         "trt_precision",
         "cloud_capacity",
+        "densification_world_frame_id",
+        "densification_num_past_frames",
         "encoder",
         "segmentation3d",
         "detection3d"
