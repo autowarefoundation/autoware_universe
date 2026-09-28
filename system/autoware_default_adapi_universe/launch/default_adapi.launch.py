@@ -186,7 +186,7 @@ def generate_launch_description():
 
 
 # The node_keys_file is in the following format:
-# By specifying `exclude` instead of `include`, you can specify only the nodes that will not be launched.
+# By specifying `excludes` instead of `includes`, you can specify only the nodes that will not be launched.
 #
 # includes:
 #   - interface
