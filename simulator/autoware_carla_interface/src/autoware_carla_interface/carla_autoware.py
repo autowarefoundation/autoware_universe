@@ -30,6 +30,9 @@ from .modules.carla_utils import project_point_to_ground
 from .modules.carla_wrapper import SensorReceivedNoData
 from .modules.carla_wrapper import SensorWrapper
 
+#: How often to look for the scenario's ego while waiting to attach to it.
+_EGO_ATTACH_POLL_INTERVAL_S = 0.5
+
 
 class CarlaWorldLoadError(RuntimeError):
     """Raised when CARLA is not running the map the bridge was asked to load."""
@@ -95,6 +98,9 @@ class InitializeInterface(object):
         # of loading its own (see load_world / _wait_for_external_world).
         self.scenario_mode = self.param_["scenario_mode"]
         self.scenario_world_wait_timeout = self.param_["scenario_world_wait_timeout"]
+        self.ego_attach_timeout = self.param_["ego_attach_timeout"]
+        # Set once an actor is adopted, so the cleanup leaves it to its owner.
+        self.attached_to_existing_ego = False
 
     def _parse_spawn_point(self):
         """Parse spawn point string and return transform with randomize flag."""
@@ -523,7 +529,24 @@ class InitializeInterface(object):
         )
 
     def _spawn_ego_actor(self):
-        """Spawn the ego vehicle at the configured (optionally ground-snapped) spawn point."""
+        """Obtain the ego vehicle: attach to the scenario's, or spawn our own.
+
+        A scenario knows where its run starts -- it is what placed the ego, at
+        the pose it also hands over as the mission's initial pose -- so in
+        scenario mode this node takes that actor rather than making a second
+        one. Spawning here as well would put two actors under the same
+        ``role_name``, and the sensors would be attached to whichever the
+        lookup happened to return.
+
+        Outside scenario mode, and for a scenario runner old enough to leave
+        the spawn to this node, the ego is spawned at the configured
+        (optionally ground-snapped) spawn point as before.
+        """
+        if self.scenario_mode:
+            existing = self._attach_to_existing_ego_actor()
+            if existing is not None:
+                return existing
+
         spawn_point, randomize = self._parse_spawn_point()
         if not randomize:
             spawn_point = self._snap_spawn_point_to_ground(spawn_point)
@@ -538,6 +561,42 @@ class InitializeInterface(object):
                 "or invalid for this map"
             )
         return ego_actor
+
+    def _attach_to_existing_ego_actor(self):
+        """Wait for the scenario's ego and adopt it, or give up and spawn one.
+
+        The wait is bounded: a scenario runner that never places an ego, or one
+        that leaves the spawn to this node, must not hang the startup. Giving up
+        returns ``None`` and the caller spawns as it always did, which is also
+        what keeps this safe to have on by default in scenario mode.
+
+        Returns:
+            The scenario's ego actor, or ``None`` if none appeared in time.
+        """
+        deadline = time.time() + self.ego_attach_timeout
+        while True:
+            actor = self._find_ego_actor()
+            if actor is not None:
+                self.logger.info(
+                    f"Attached to the scenario's ego: id={actor.id} "
+                    f"role_name='{self.agent_role_name}'"
+                )
+                self.attached_to_existing_ego = True
+                return actor
+            if time.time() >= deadline:
+                self.logger.warning(
+                    f"No actor with role_name='{self.agent_role_name}' appeared within "
+                    f"{self.ego_attach_timeout:.1f}s; spawning the ego here instead"
+                )
+                return None
+            time.sleep(_EGO_ATTACH_POLL_INTERVAL_S)
+
+    def _find_ego_actor(self):
+        """Return the vehicle carrying the ego role name, if one is in the world."""
+        for actor in self.world.get_actors().filter("vehicle.*"):
+            if actor.attributes.get("role_name") == self.agent_role_name:
+                return actor
+        return None
 
     def load_world(self):
         client = self._connect_client()
@@ -709,8 +768,13 @@ class InitializeInterface(object):
             print(f"Warning: ROS interface shutdown failed: {e}")
 
     def _cleanup_ego_actor(self):
-        """Destroy ego vehicle, continuing on error."""
+        """Destroy the ego vehicle, unless it belongs to the scenario."""
         if not self.ego_actor:
+            return
+        if self.attached_to_existing_ego:
+            # The scenario spawned it and destroys it; doing so here too would
+            # race its cleanup for the same actor.
+            self.ego_actor = None
             return
         try:
             self.ego_actor.destroy()

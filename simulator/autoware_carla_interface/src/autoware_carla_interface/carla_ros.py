@@ -165,6 +165,9 @@ class carla_ros2_interface(object):
             # Seconds to wait for the scenario runner to (re)load its world
             # before spawning the ego into it (scenario_mode only).
             "scenario_world_wait_timeout": (rclpy.Parameter.Type.DOUBLE, 300.0),
+            # How long to wait for the ego the scenario places before spawning
+            # one here instead (scenario_mode only; see _spawn_ego_actor).
+            "ego_attach_timeout": (rclpy.Parameter.Type.DOUBLE, 60.0),
             # Minimum throttle applied while accelerating from (near) standstill.
             # Heavy CARLA vehicles (e.g. vehicle.taxi.ford) do not creep and
             # never start moving on the small throttle the actuation map yields
