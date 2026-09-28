@@ -166,9 +166,6 @@ class ScenarioBridgeNode(Node):
         self._engage_requested = False
         self._readiness_inflight = False
         self._readiness_reported = False
-        # Whether the mission's initial pose has been published on /initialpose yet
-        # (published once; see _publish_ego_initialpose).
-        self._ego_pose_published = False
 
         group = ReentrantCallbackGroup()
         self._create_ad_api_clients(group)
@@ -243,14 +240,6 @@ class ScenarioBridgeNode(Node):
         self._engage_cli = self.create_client(
             ChangeOperationMode, OPERATION_MODE_CHANGE_TO_AUTONOMOUS_SERVICE, callback_group=group
         )
-        # Publishes the mission's initial pose on /initialpose. The interface node
-        # teleports the ego it spawned to this pose (so the physical ego matches the
-        # scenario start it localizes at), and Autoware's initial_pose_adaptor also
-        # initializes localization from it. Latched so a subscriber that joins after
-        # the mission arrives still receives it.
-        self._initialpose_pub = self.create_publisher(
-            PoseWithCovarianceStamped, "/initialpose", _latched_state_qos()
-        )
 
     def _subscribe_ad_api_states(self, group: ReentrantCallbackGroup) -> None:
         """Subscribe to the latched AD API state topics that feed the aggregator."""
@@ -309,32 +298,10 @@ class ScenarioBridgeNode(Node):
             return
         with self._lock:
             self._expire_stalled_steps()
-            self._publish_ego_initialpose()
             self._ensure_localization()
             if self._localization_ready_for_routing():
                 self._ensure_route()
                 self._maybe_engage()
-
-    def _publish_ego_initialpose(self) -> None:
-        """Publish the mission's initial pose on /initialpose once (under _lock).
-
-        This is what places the ego at the scenario's start: the interface node,
-        which spawned the "Ego" actor, teleports it to this pose, and Autoware's
-        initial_pose_adaptor initializes localization from the same pose - so the
-        physical ego and the localized pose agree before routing/engage.
-        """
-        if self._ego_pose_published or self._mission is None:
-            return
-        stamped = PoseWithCovarianceStamped()
-        stamped.header.frame_id = self._map_frame
-        stamped.header.stamp = self.get_clock().now().to_msg()
-        stamped.pose.pose = _to_ros_pose(self._mission.initial_pose)
-        stamped.pose.covariance = _INITIAL_POSE_COVARIANCE
-        self._initialpose_pub.publish(stamped)
-        self._ego_pose_published = True
-        self.get_logger().info(
-            "Published scenario initial pose on /initialpose (ego placement + localization)"
-        )
 
     def _stop_tick(self) -> None:
         """Cancel the reconciliation tick once startup is complete.  Idempotent."""
@@ -432,6 +399,17 @@ class ScenarioBridgeNode(Node):
         outside the AD API).  Retries only until the request is accepted; once
         accepted it waits for ``LocalizationInitializationState`` to reach
         INITIALIZED rather than re-sending the pose (which would reset NDT).
+
+        This service call is the only path.  The mission's pose used to be
+        published on ``/initialpose`` as well, which ``initial_pose_adaptor``
+        forwards to this same service -- so localization was initialized twice
+        from one pose, and not with the same one: the adaptor fits the position
+        to the map and overwrites the covariance with RViz's, while this sends
+        the pose and covariance as given.  Which landed last was down to
+        arrival order.  The topic was there to place the ego as well as localize
+        it; the scenario spawns the ego at that pose now, so localizing is all
+        that was left, and this is the call that does it -- synchronously
+        answered, so a rejection can be retried.
         """
         if not self._init_localization:
             return
