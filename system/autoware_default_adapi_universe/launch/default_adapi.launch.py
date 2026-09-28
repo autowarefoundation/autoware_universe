@@ -183,3 +183,12 @@ def generate_launch_description():
     return launch.LaunchDescription(
         [arg_config, arg_keys_file, get_agnocast_env(), OpaqueFunction(function=launch_setup)]
     )
+
+
+# The node_keys_file is in the following format:
+# By specifying `exclude` instead of `include`, you can specify only the nodes that will not be launched.
+#
+# includes:
+#   - interface
+#   - routing
+#   - ...
