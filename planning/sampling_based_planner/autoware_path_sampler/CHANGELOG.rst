@@ -2,8 +2,8 @@
 Changelog for package autoware_path_sampler
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * fix(design): align the planning node designs with the packages they describe (`#13342 <https://github.com/autowarefoundation/autoware_universe/issues/13342>`_)
   * fix(design): align the planning node designs with the packages they describe

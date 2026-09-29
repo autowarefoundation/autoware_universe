@@ -2,8 +2,8 @@
 Changelog for package autoware_generic_service_divider
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * feat: add autoware generic service divider (`#12745 <https://github.com/autowarefoundation/autoware_universe/issues/12745>`_)
   * feat: add node

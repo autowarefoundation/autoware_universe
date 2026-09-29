@@ -2,8 +2,8 @@
 Changelog for package autoware_geo_pose_projector
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * fix(autoware_geo_pose_projector): declare the map projector info input as a remap target (`#13334 <https://github.com/autowarefoundation/autoware_universe/issues/13334>`_)
   The map_projector_info subscriber is pinned to /map/map_projector_info with

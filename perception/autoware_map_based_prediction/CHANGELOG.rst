@@ -2,8 +2,8 @@
 Changelog for package autoware_map_based_prediction
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * perf(map_based_prediction): vru path-cut follow-up optimizations (`#13238 <https://github.com/autowarefoundation/autoware_universe/issues/13238>`_)
   * fix(map_based_prediction): cut at the earliest fence crossing

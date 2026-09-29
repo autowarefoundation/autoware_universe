@@ -2,8 +2,8 @@
 Changelog for package autoware_mrm_emergency_stop_operator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * feat(mrm_operator): add driving mode active flag (`#13249 <https://github.com/autowarefoundation/autoware_universe/issues/13249>`_)
   * feat(mrm_operator): add driving mode active flag

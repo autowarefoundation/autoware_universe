@@ -2,8 +2,8 @@
 Changelog for package tier4_dummy_object_rviz_plugin
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * feat(autoware_diffusion_planner): remap unsupported objects to pedestrian (`#13352 <https://github.com/autowarefoundation/autoware_universe/issues/13352>`_)
   * feat(autoware_diffusion_planner): treat HAZARD objects as pedestrians

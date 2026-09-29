@@ -2,8 +2,8 @@
 Changelog for package autoware_lidar_centerpoint
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * fix(autoware_lidar_centerpoint): reject point clouds with an unexpected point_step (`#13313 <https://github.com/autowarefoundation/autoware_universe/issues/13313>`_)
   The voxel generator reinterpret_casts the cloud to a 16-byte InputPointType but

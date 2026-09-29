@@ -2,8 +2,8 @@
 Changelog for package autoware_pid_longitudinal_controller
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * fix(pid_long): fix slope sign (`#13247 <https://github.com/autowarefoundation/autoware_universe/issues/13247>`_)
 * refactor(pid_logitudinal_controller): cleanup core logic (`#13071 <https://github.com/autowarefoundation/autoware_universe/issues/13071>`_)

@@ -2,8 +2,8 @@
 Changelog for package autoware_redundancy_switcher_interface_plugins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * feat(autoware_redundancy_switcher_interface): add packages (`#13350 <https://github.com/autowarefoundation/autoware_universe/issues/13350>`_)
   * feat: add packages

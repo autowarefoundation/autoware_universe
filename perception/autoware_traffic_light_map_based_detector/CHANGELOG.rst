@@ -2,8 +2,8 @@
 Changelog for package autoware_traffic_light_map_based_detector
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * feat(autoware_traffic_light_pipeline): add traffic_light_recognition node (`#13367 <https://github.com/autowarefoundation/autoware_universe/issues/13367>`_)
   * feat(autoware_traffic_light_pipeline): add traffic_light_recognition node

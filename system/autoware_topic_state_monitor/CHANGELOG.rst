@@ -2,8 +2,8 @@
 Changelog for package autoware_topic_state_monitor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * feat(autoware_topic_state_monitor): apply `agnocast_wrapper::Node` to `topic_state_monitor` (`#13382 <https://github.com/autowarefoundation/autoware_universe/issues/13382>`_)
   * feat(autoware_topic_state_monitor): apply `agnocast_wrapper::Node` to `topic_state_monitor`

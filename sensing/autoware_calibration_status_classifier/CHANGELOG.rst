@@ -2,8 +2,8 @@
 Changelog for package autoware_calibration_status_classifier
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * fix(design): align the sensing node designs with the packages they describe (`#13337 <https://github.com/autowarefoundation/autoware_universe/issues/13337>`_)
   CalibrationStatusClassifier declares a preview_image publisher on a hardcoded

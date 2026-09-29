@@ -2,8 +2,8 @@
 Changelog for package autoware_carla_interface
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * feat(autoware_carla_interface): allow cameras to publish bgr8 (`#13411 <https://github.com/autowarefoundation/autoware_universe/issues/13411>`_)
   CARLA renders BGRA and fills the alpha channel with 255. Nothing

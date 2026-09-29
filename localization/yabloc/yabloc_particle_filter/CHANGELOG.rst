@@ -2,8 +2,8 @@
 Changelog for package yabloc_particle_filter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * fix(yabloc): declare the actual service names and shared topics in the node designs (`#13292 <https://github.com/autowarefoundation/autoware_universe/issues/13292>`_)
   The align, trigger and switch services are created as ~/<name>, not

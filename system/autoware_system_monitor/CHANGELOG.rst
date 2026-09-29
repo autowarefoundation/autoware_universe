@@ -2,8 +2,8 @@
 Changelog for package autoware_system_monitor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * fix(autoware_system_monitor): migrate deprecated NVML APIs for CUDA 13 (`#12742 <https://github.com/autowarefoundation/autoware_universe/issues/12742>`_)
   * fix(autoware_system_monitor): migrate deprecated NVML APIs for CUDA 13

@@ -2,8 +2,8 @@
 Changelog for package autoware_traffic_light_classifier
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * build(autoware_traffic_light_classifier): move classifier headers to public include directory (`#13361 <https://github.com/autowarefoundation/autoware_universe/issues/13361>`_)
   refactor(autoware_traffic_light_classifier): publicize CNNClassifier headers

@@ -2,8 +2,8 @@
 Changelog for package autoware_dummy_traffic_light_publisher
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * feat(simulator): add node design file for dummy traffic light publisher (`#13254 <https://github.com/autowarefoundation/autoware_universe/issues/13254>`_)
   feat(DummyTrafficLightPublisher): add new node design for traffic light publishing

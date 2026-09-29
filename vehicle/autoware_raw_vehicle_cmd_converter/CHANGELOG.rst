@@ -2,8 +2,8 @@
 Changelog for package autoware_raw_vehicle_cmd_converter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * fix(design): align the vehicle node designs with the packages they build (`#13336 <https://github.com/autowarefoundation/autoware_universe/issues/13336>`_)
   AccelBrakeMapCalibrator is built with ament_auto_add_executable and registers

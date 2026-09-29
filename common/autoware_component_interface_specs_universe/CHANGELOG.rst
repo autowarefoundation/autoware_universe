@@ -2,8 +2,8 @@
 Changelog for package autoware_component_interface_specs_universe
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * refactor(autoware_component_interface_specs_universe): re-export the core interface specs as the single version authority (`#13115 <https://github.com/autowarefoundation/autoware_universe/issues/13115>`_)
   * refactor(autoware_component_interface_specs_universe): re-export the core interface specs (single version authority)

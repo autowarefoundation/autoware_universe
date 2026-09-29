@@ -2,8 +2,8 @@
 Changelog for package autoware_localization_evaluator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * fix(evaluator): declare the dependencies these packages use (`#13218 <https://github.com/autowarefoundation/autoware_universe/issues/13218>`_)
   Six packages use headers or symbols of packages that they never declare. Add the 26 missing entries: 25 <depend> and 1 <test_depend>.

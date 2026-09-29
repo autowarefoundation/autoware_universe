@@ -2,8 +2,8 @@
 Changelog for package autoware_pipeline_latency_monitor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * feat(pipeline_latency_monitor): apply `agnocast_wrapper::Node` to `pipeline_latency_monitor` (`#13362 <https://github.com/autowarefoundation/autoware_universe/issues/13362>`_)
 * fix(autoware_pipeline_latency_monitor): update config following pipeline restructure (`#13282 <https://github.com/autowarefoundation/autoware_universe/issues/13282>`_)

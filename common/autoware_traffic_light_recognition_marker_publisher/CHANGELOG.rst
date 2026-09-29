@@ -2,8 +2,8 @@
 Changelog for package autoware_traffic_light_recognition_marker_publisher
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * refactor(common): move node design files into each package (`#13097 <https://github.com/autowarefoundation/autoware_universe/issues/13097>`_)
   Co-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>

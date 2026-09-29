@@ -2,8 +2,8 @@
 Changelog for package autoware_detected_object_feature_remover
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * fix(perception): complete node design files for label-based euclidean cluster and PTv3 (`#13253 <https://github.com/autowarefoundation/autoware_universe/issues/13253>`_)
   * refactor(ptv3.node.yaml): update parameter definitions and add new model paths

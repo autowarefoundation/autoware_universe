@@ -2,8 +2,8 @@
 Changelog for package autoware_mrm_reset_manager
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * feat: add mrm reset manager (`#12746 <https://github.com/autowarefoundation/autoware_universe/issues/12746>`_)
   * feat(autoware_mrm_reset_manager): add MRM reset manager node

@@ -2,8 +2,8 @@
 Changelog for package autoware_radar_objects_adapter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * test(autoware_radar_objects_adapter): add characterization test for RadarObjectsAdapter startup and radar info gate (`#13405 <https://github.com/autowarefoundation/autoware_universe/issues/13405>`_)
   * test(autoware_radar_objects_adapter): add a characterization test harness for RadarObjectsAdapter

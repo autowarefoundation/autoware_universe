@@ -2,8 +2,8 @@
 Changelog for package autoware_image_projection_based_fusion
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * fix(autoware_image_projection_based_fusion): use runtime-agnostic wait and shutdown (`#13399 <https://github.com/autowarefoundation/autoware_universe/issues/13399>`_)
   * fix(autoware_image_projection_based_fusion): use runtime-agnostic wait and shutdown

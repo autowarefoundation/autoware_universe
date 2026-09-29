@@ -2,8 +2,8 @@
 Changelog for package autoware_probabilistic_occupancy_grid_map
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * feat(probabilistic_occupancy_grid_map): apply `agnocast_wrapper::Node` to `pointcloud_based_occupancy_grid_map` (`#13387 <https://github.com/autowarefoundation/autoware_universe/issues/13387>`_)
   * feat(probabilistic_occupancy_grid_map): apply `agnocast_wrapper::Node` to `pointcloud_based_occupancy_grid_map`

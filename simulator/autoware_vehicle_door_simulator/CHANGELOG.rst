@@ -2,8 +2,8 @@
 Changelog for package autoware_vehicle_door_simulator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * fix(design): align the simulator node designs with the packages they describe (`#13335 <https://github.com/autowarefoundation/autoware_universe/issues/13335>`_)
   * fix(autoware_vehicle_door_simulator): drop the plugin field from the node design

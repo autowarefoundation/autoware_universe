@@ -2,8 +2,8 @@
 Changelog for package autoware_redundancy_command_selector
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * feat(autoware_redundancy_command_selector): apply agnocast redundancy command selector (`#13414 <https://github.com/autowarefoundation/autoware_universe/issues/13414>`_)
   * refactor(autoware_redundancy_command_selector): migrate to agnocast_wrapper::Node

@@ -2,8 +2,8 @@
 Changelog for package tier4_api_utils
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * feat(tier4_api_utils): let non-rclcpp node types supply the service and client handles (`#13380 <https://github.com/autowarefoundation/autoware_universe/issues/13380>`_)
   Service and Client fixed their handles to rclcpp::Service and rclcpp::Client, so a node

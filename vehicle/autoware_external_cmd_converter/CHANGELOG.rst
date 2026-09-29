@@ -2,8 +2,8 @@
 Changelog for package autoware_external_cmd_converter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * feat(external_cmd_converter): apply agnocast_wrapper::Node to external_cmd_converter (`#13014 <https://github.com/autowarefoundation/autoware_universe/issues/13014>`_)
   * feat(external_cmd_converter): apply agnocast_wrapper::Node to external_cmd_converter

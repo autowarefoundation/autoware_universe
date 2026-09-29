@@ -2,8 +2,8 @@
 Changelog for package autoware_tensorrt_common
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * feat(autoware_tensorrt_common): let a caller offer IO the model may omit (`#13347 <https://github.com/autowarefoundation/autoware_universe/issues/13347>`_)
   * feat(autoware_tensorrt_common): let a caller offer IO the model may omit

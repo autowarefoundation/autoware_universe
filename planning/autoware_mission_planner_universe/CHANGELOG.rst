@@ -2,8 +2,8 @@
 Changelog for package autoware_mission_planner_universe
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * fix(mission_planner): guard against empty planned path to prevent SIGSEGV (`#13396 <https://github.com/autowarefoundation/autoware_universe/issues/13396>`_)
   * test(mission_planner): add regression test for empty-path route planning

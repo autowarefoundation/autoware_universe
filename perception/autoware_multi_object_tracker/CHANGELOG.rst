@@ -2,8 +2,8 @@
 Changelog for package autoware_multi_object_tracker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * feat(multi_object_tracker): tracker batch trigger on stale target stream (`#13181 <https://github.com/autowarefoundation/autoware_universe/issues/13181>`_)
   * Fix tracker batch trigger on stale target stream

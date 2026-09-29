@@ -2,8 +2,8 @@
 Changelog for package autoware_euclidean_cluster
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * fix: missing dependencies for tl_expected and libexpected-dev (`#13438 <https://github.com/autowarefoundation/autoware_universe/issues/13438>`_)
 * feat(euclidean_cluster): add support of filtering clusters regarding size (`#13248 <https://github.com/autowarefoundation/autoware_universe/issues/13248>`_)

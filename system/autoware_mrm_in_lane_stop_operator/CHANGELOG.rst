@@ -2,8 +2,8 @@
 Changelog for package autoware_mrm_in_lane_stop_operator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * feat(autoware_mrm_in_lane_stop_operator): add node (`#13332 <https://github.com/autowarefoundation/autoware_universe/issues/13332>`_)
   * feat: add node

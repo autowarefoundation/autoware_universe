@@ -2,8 +2,8 @@
 Changelog for package autoware_behavior_path_lane_change_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * chore: update planning param.yaml comments (`#13061 <https://github.com/autowarefoundation/autoware_universe/issues/13061>`_)
   update planning param.yaml comments

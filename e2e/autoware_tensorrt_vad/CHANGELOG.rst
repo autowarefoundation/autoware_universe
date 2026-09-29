@@ -2,8 +2,8 @@
 Changelog for package autoware_tensorrt_vad
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * fix: declare the dependencies the simulator, e2e and map packages use (`#13209 <https://github.com/autowarefoundation/autoware_universe/issues/13209>`_)
   * fix: declare the dependencies the simulator, e2e and map packages use

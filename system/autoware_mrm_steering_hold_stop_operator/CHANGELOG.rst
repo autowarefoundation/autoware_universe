@@ -2,8 +2,8 @@
 Changelog for package autoware_mrm_steering_hold_stop_operator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * feat(autoware_mrm_steering_hold_stop_operator): add package (`#13423 <https://github.com/autowarefoundation/autoware_universe/issues/13423>`_)
   * feat(autoware_mrm_steering_hold_stop_operator): add package

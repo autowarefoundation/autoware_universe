@@ -2,8 +2,8 @@
 Changelog for package autoware_cuda_utils
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * fix(autoware_cuda_utils): export CCCL for host compilation with CUDA 13 (`#13302 <https://github.com/autowarefoundation/autoware_universe/issues/13302>`_)
   * fix(autoware_cuda_utils): export CCCL for host compilation with CUDA 13

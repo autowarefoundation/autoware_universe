@@ -2,8 +2,8 @@
 Changelog for package autoware_cuda_pointcloud_preprocessor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * fix(cuda_pointcloud_preprocessor): link CUDA utilities in test (`#13435 <https://github.com/autowarefoundation/autoware_universe/issues/13435>`_)
   The test compiles CUDA utility headers with the host compiler. Link the exported target so CUDA 13 CCCL headers are available.

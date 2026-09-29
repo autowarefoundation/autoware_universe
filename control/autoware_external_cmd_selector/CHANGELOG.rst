@@ -2,8 +2,8 @@
 Changelog for package autoware_external_cmd_selector
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * fix(control): declare the fixed-name compatibility interfaces in the control node designs (`#13281 <https://github.com/autowarefoundation/autoware_universe/issues/13281>`_)
   * fix(control): declare the fixed-name compatibility interfaces in the control node designs

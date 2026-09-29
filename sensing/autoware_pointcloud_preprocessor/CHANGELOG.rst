@@ -2,8 +2,8 @@
 Changelog for package autoware_pointcloud_preprocessor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * feat(autoware_pointcloud_preprocessor): apply agnocast_wrapper::Node to crop_box_filter (`#13384 <https://github.com/autowarefoundation/autoware_universe/issues/13384>`_)
   * feat(autoware_pointcloud_preprocessor): apply agnocast_wrapper::Node to crop_box_filter

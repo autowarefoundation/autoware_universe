@@ -2,8 +2,8 @@
 Changelog for package autoware_planning_validator_rear_collision_checker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * feat(planning_validator): apply `agnocast_wrapper::Node` to `planning_validator` (`#12964 <https://github.com/autowarefoundation/autoware_universe/issues/12964>`_)
   * apply agnocast_wrapper::node

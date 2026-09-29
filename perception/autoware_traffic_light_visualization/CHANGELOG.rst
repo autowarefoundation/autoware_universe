@@ -2,8 +2,8 @@
 Changelog for package autoware_traffic_light_visualization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * test(autoware_traffic_light_visualization): add characterization test for TrafficLightRoiVisualizerNode (`#13392 <https://github.com/autowarefoundation/autoware_universe/issues/13392>`_)
   * test(autoware_traffic_light_visualization): add characterization test for TrafficLightRoiVisualizerNode

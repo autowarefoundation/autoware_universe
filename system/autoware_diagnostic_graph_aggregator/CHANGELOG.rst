@@ -2,8 +2,8 @@
 Changelog for package autoware_diagnostic_graph_aggregator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * docs(diagnostic_graph_aggregator): fix evaluation description (`#13441 <https://github.com/autowarefoundation/autoware_universe/issues/13441>`_)
   docs(autoware_diagnostic_graph_aggregator): fix evaluation description for `or` object

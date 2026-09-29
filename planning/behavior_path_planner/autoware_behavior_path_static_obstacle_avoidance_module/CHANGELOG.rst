@@ -2,8 +2,8 @@
 Changelog for package autoware_behavior_path_static_obstacle_avoidance_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * fix(autoware_behavior_path_static_obstacle_avoidance_module): stop extending lanes forever on a looping road (`#13330 <https://github.com/autowarefoundation/autoware_universe/issues/13330>`_)
   * fix(autoware_behavior_path_static_obstacle_avoidance_module): stop extending lanes forever on a looping road

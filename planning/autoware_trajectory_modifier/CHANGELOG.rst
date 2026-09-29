@@ -2,8 +2,8 @@
 Changelog for package autoware_trajectory_modifier
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * fix: missing dependencies for tl_expected and libexpected-dev (`#13438 <https://github.com/autowarefoundation/autoware_universe/issues/13438>`_)
 * chore(autoware_trajectory_processor)!: rename to autoware_trajectory_modifier (`#13389 <https://github.com/autowarefoundation/autoware_universe/issues/13389>`_)

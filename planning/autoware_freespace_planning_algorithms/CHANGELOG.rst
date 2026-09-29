@@ -2,8 +2,8 @@
 Changelog for package autoware_freespace_planning_algorithms
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * perf(autoware_freespace_planning_algorithms): update the RRT* goal link incrementally when no rewire occurs (`#13245 <https://github.com/autowarefoundation/autoware_universe/issues/13245>`_)
   * perf(autoware_freespace_planning_algorithms): update the RRT* goal link incrementally when no rewire occurs

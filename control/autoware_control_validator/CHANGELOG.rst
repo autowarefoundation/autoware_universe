@@ -2,8 +2,8 @@
 Changelog for package autoware_control_validator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * feat(control_validator): improve roll back detection logic (`#13373 <https://github.com/autowarefoundation/autoware_universe/issues/13373>`_)
   * feat(control_validator): improve roll back detection logic (`#3315 <https://github.com/autowarefoundation/autoware_universe/issues/3315>`_)

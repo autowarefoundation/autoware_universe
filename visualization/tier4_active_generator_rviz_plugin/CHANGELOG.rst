@@ -2,8 +2,8 @@
 Changelog for package tier4_active_generator_rviz_plugin
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * chore(visualization): update package maintainers (`#13188 <https://github.com/autowarefoundation/autoware_universe/issues/13188>`_)
 * feat(tier4_active_generator_rviz_plugin): add rviz panel for active trajectory generator (`#13043 <https://github.com/autowarefoundation/autoware_universe/issues/13043>`_)

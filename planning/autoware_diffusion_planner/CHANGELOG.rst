@@ -2,8 +2,8 @@
 Changelog for package autoware_diffusion_planner
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * docs(autoware_diffusion_planner): fix arXiv link of reference paper (`#13417 <https://github.com/autowarefoundation/autoware_universe/issues/13417>`_)
 * feat(autoware_diffusion_planner): remap unsupported objects to pedestrian (`#13352 <https://github.com/autowarefoundation/autoware_universe/issues/13352>`_)

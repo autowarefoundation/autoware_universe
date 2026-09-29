@@ -2,8 +2,8 @@
 Changelog for package autoware_trajectory_validator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * feat(traffic_light_compliance_checker): improve compliance checker stability and amber handling (`#13371 <https://github.com/autowarefoundation/autoware_universe/issues/13371>`_)
   * modify tl compliance checker to detect stop attempts at amber light and (optionally) add tl id to force rejection buffer

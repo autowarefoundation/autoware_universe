@@ -2,8 +2,8 @@
 Changelog for package autoware_lidar_transfusion
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * fix(design): align the perception node designs with the packages they describe (`#13339 <https://github.com/autowarefoundation/autoware_universe/issues/13339>`_)
   The lanelet filter components register under the lanelet_filter:: namespace,

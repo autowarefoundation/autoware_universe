@@ -2,8 +2,8 @@
 Changelog for package autoware_behavior_velocity_intersection_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * docs(intersection): remove dangling params in readme already removed in `#11438 <https://github.com/autowarefoundation/autoware_universe/issues/11438>`_ (`#12814 <https://github.com/autowarefoundation/autoware_universe/issues/12814>`_)
   docs: remove dangling params in readme already removed in `#11438 <https://github.com/autowarefoundation/autoware_universe/issues/11438>`_

@@ -2,8 +2,8 @@
 Changelog for package autoware_steer_offset_estimator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * fix(vehicle): declare the dependencies these packages use (`#13208 <https://github.com/autowarefoundation/autoware_universe/issues/13208>`_)
   * fix(vehicle): declare the dependencies these packages use

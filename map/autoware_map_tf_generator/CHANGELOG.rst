@@ -2,8 +2,8 @@
 Changelog for package autoware_map_tf_generator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * feat(autoware_map_tf_generator): add a node design for vector_map_tf_generator (`#13297 <https://github.com/autowarefoundation/autoware_universe/issues/13297>`_)
   * feat(autoware_map_tf_generator): add a node design for vector_map_tf_generator

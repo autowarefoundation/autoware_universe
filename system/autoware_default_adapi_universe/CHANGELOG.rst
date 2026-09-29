@@ -2,8 +2,8 @@
 Changelog for package autoware_default_adapi
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * feat(default_adapi_universe): make default_adapi.launch.py configurable by node_keys_file (`#13444 <https://github.com/autowarefoundation/autoware_universe/issues/13444>`_)
   * feat: make default_adapi_launch configurable by node_keys

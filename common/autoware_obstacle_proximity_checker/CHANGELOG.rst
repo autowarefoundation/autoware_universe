@@ -2,8 +2,8 @@
 Changelog for package autoware_obstacle_proximity_checker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * feat(trajectory_modifier, minimum_rule_based_planner): improve obstacle stop feature (`#13255 <https://github.com/autowarefoundation/autoware_universe/issues/13255>`_)
   * fix(trajectory_modifier): fix obstacle stop unstable stop wall (`#3196 <https://github.com/autowarefoundation/autoware_universe/issues/3196>`_)

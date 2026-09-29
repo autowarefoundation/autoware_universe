@@ -2,8 +2,8 @@
 Changelog for package autoware_tensorrt_plugins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * feat(autoware_ptv3): support multisweep densification with time-lag features (`#13300 <https://github.com/autowarefoundation/autoware_universe/issues/13300>`_)
   * feat(autoware_ptv3): support multisweep densification with time-lag features

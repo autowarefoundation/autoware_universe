@@ -2,8 +2,8 @@
 Changelog for package autoware_path_distance_calculator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.53.0 (2026-09-29)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
 * feat(autoware_path_distance_calculator): move the node to agnocast_wrapper::Node (`#13381 <https://github.com/autowarefoundation/autoware_universe/issues/13381>`_)
   The map and route polling subscribers move to the wrapper's polling API and the outgoing
