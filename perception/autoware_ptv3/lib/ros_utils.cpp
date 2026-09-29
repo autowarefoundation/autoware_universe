@@ -101,6 +101,13 @@ std::uint8_t get_classification_type(const std::string & class_name)
   if (class_name == "BARRIER") {
     return Label::HAZARD;
   }
+  if (class_name == "DEBRIS") {
+    return Label::HAZARD;
+  }
+  // Autoware has no train label, a train is published as an unknown object with its box.
+  if (class_name == "TRAIN") {
+    return Label::UNKNOWN;
+  }
   return Label::UNKNOWN;
 }
 

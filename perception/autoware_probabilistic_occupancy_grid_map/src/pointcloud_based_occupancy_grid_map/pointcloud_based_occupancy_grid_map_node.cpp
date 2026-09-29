@@ -46,7 +46,7 @@ using geometry_msgs::msg::Pose;
 
 PointcloudBasedOccupancyGridMapNode::PointcloudBasedOccupancyGridMapNode(
   const rclcpp::NodeOptions & node_options)
-: Node("pointcloud_based_occupancy_grid_map_node", node_options)
+: autoware::agnocast_wrapper::Node("pointcloud_based_occupancy_grid_map_node", node_options)
 {
   using std::placeholders::_1;
   using std::placeholders::_2;
@@ -120,12 +120,12 @@ PointcloudBasedOccupancyGridMapNode::PointcloudBasedOccupancyGridMapNode(
   device_rotation_ = autoware::cuda_utils::make_unique<Eigen::Matrix3f>();
   device_translation_ = autoware::cuda_utils::make_unique<Eigen::Vector3f>();
 
-  occupancy_grid_map_ptr_->initRosParam(*this);
-  occupancy_grid_map_updater_ptr_->initRosParam(*this);
+  occupancy_grid_map_ptr_->initRosParam(*this->get_node_parameters_interface());
+  occupancy_grid_map_updater_ptr_->initRosParam(*this->get_node_parameters_interface());
 
   // initialize debug tool
   {
-    using autoware_utils::DebugPublisher;
+    using DebugPublisher = autoware_utils::BasicDebugPublisher<autoware::agnocast_wrapper::Node>;
     using autoware_utils::StopWatch;
     stop_watch_ptr_ = std::make_unique<StopWatch<std::chrono::milliseconds>>();
     debug_publisher_ptr_ =
@@ -147,8 +147,9 @@ PointcloudBasedOccupancyGridMapNode::PointcloudBasedOccupancyGridMapNode(
   processing_time_tolerance_ms_ = this->declare_parameter<double>("processing_time_tolerance_ms");
   processing_time_consecutive_excess_tolerance_ms_ =
     this->declare_parameter<double>("processing_time_consecutive_excess_tolerance_ms");
-  diagnostics_interface_ptr_ = std::make_unique<autoware_utils::DiagnosticsInterface>(
-    this, "pointcloud_based_probabilistic_occupancy_grid_map");
+  diagnostics_interface_ptr_ =
+    std::make_unique<autoware_utils::BasicDiagnosticsInterface<autoware::agnocast_wrapper::Node>>(
+      this, "pointcloud_based_probabilistic_occupancy_grid_map");
 }
 
 void PointcloudBasedOccupancyGridMapNode::obstaclePointcloudCallback(
@@ -240,13 +241,13 @@ void PointcloudBasedOccupancyGridMapNode::onPointcloudWithObstacleAndRaw()
     // Make sure that the frame is base_link
     if (raw_pointcloud_.header.frame_id != base_link_frame_) {
       if (!utils::transformPointcloudAsync(
-            raw_pointcloud_, *tf2_, base_link_frame_, device_rotation_, device_translation_)) {
+            raw_pointcloud_, tf2_, base_link_frame_, device_rotation_, device_translation_)) {
         return;
       }
     }
     if (obstacle_pointcloud_.header.frame_id != base_link_frame_) {
       if (!utils::transformPointcloudAsync(
-            obstacle_pointcloud_, *tf2_, base_link_frame_, device_rotation_, device_translation_)) {
+            obstacle_pointcloud_, tf2_, base_link_frame_, device_rotation_, device_translation_)) {
         return;
       }
     }
@@ -261,11 +262,11 @@ void PointcloudBasedOccupancyGridMapNode::onPointcloudWithObstacleAndRaw()
   Pose gridmap_origin{};
   Pose scan_origin{};
   try {
-    robot_pose = utils::getPose(raw_pointcloud_.header.stamp, *tf2_, base_link_frame_, map_frame_);
+    robot_pose = utils::getPose(raw_pointcloud_.header.stamp, tf2_, base_link_frame_, map_frame_);
     gridmap_origin =
-      utils::getPose(raw_pointcloud_.header.stamp, *tf2_, gridmap_origin_frame_, map_frame_);
+      utils::getPose(raw_pointcloud_.header.stamp, tf2_, gridmap_origin_frame_, map_frame_);
     scan_origin =
-      utils::getPose(raw_pointcloud_.header.stamp, *tf2_, scan_origin_frame_, map_frame_);
+      utils::getPose(raw_pointcloud_.header.stamp, tf2_, scan_origin_frame_, map_frame_);
   } catch (tf2::TransformException & ex) {
     RCLCPP_WARN_STREAM(get_logger(), ex.what());
     return;
@@ -331,14 +332,15 @@ void PointcloudBasedOccupancyGridMapNode::onPointcloudWithObstacleAndRaw()
   }
 }
 
-OccupancyGrid::UniquePtr PointcloudBasedOccupancyGridMapNode::OccupancyGridMapToMsgPtr(
+AUTOWARE_MESSAGE_UNIQUE_PTR(OccupancyGrid)
+PointcloudBasedOccupancyGridMapNode::OccupancyGridMapToMsgPtr(
   const std::string & frame_id, const Time & stamp, const float & robot_pose_z,
   const Costmap2D & occupancy_grid_map)
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
-  auto msg_ptr = std::make_unique<OccupancyGrid>();
+  auto msg_ptr = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(occupancy_grid_map_pub_);
 
   msg_ptr->header.frame_id = frame_id;
   msg_ptr->header.stamp = stamp;

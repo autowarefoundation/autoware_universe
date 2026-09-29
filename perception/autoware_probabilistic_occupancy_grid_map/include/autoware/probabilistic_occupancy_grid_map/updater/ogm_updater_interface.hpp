@@ -39,7 +39,7 @@ public:
   }
   virtual ~OccupancyGridMapUpdaterInterface() = default;
   virtual bool update(const OccupancyGridMapInterface & single_frame_occupancy_grid_map) = 0;
-  virtual void initRosParam(rclcpp::Node & node) = 0;
+  virtual void initRosParam(rclcpp::node_interfaces::NodeParametersInterface & parameters) = 0;
 };
 
 }  // namespace costmap_2d

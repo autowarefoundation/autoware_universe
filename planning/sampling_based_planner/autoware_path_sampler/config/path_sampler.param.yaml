@@ -1,0 +1,44 @@
+/**:
+  ros__parameters:
+    common:
+      output_delta_arc_length: 0.5  #  [m] delta arc length for output trajectory
+
+    debug:
+      enable_calculation_time_info: false  # flag to print calculation times
+      id: 0  # id of the candidate paths for which to print/show details (e.g., footprint in rviz)
+
+    preprocessing:
+      force_zero_initial_deviation: False # if true, initial planning starts from the reference path
+      force_zero_initial_heading: False # if true, initial planning starts with a heading aligned with the reference path
+      smooth_reference_trajectory: False # if true, the reference trajectory is smoothed before being used for planning
+    constraints:
+      hard:
+        max_curvature: 0.1  # [m⁻¹] maximum curvature of a sampled path
+        min_curvature: -0.1  # [m⁻¹] minimum curvature of a sampled path
+        min_distance_from_obstacles: 0.5  # [m] min allowed distance from obstacles
+        limit_footprint_inside_drivable_area: false # if true, paths where the ego footprint exits the drivable area are rejected
+      soft:
+        lateral_deviation_weight: 1.0  # cost weight for lateral deviation between the end of a sampled path and the reference path
+        length_weight: 1.0  # cost weight for the length of a sampled path
+        curvature_weight: 1.0  # cost weight for the curvature of a sampled path
+    path_reuse:
+      maximum_lateral_deviation: 1.0  # [m] reset the previous path if ego deviates from it by more than this value
+      direct_reuse_distance: 2.0 # [m] a new path is generated only after ego travels this distance along the previously calculated path, or if it has become invalid
+    sampling:
+      enable_frenet: True
+      enable_bezier: True
+      resolution: 0.5  # [m] target distance between sampled path points
+      previous_path_reuse_points_nb: 2  # number of points reused from the previously generated path (0:no reuse, 1:replan from end of prev path, 2: end and mid of prev path, etc)
+      target_lengths: [10.0, 20.0]  # [m] target lengths of the sampled paths
+      nb_target_lateral_positions: 0 # number of lateral positions to use for sampling (in addition to 0.0 and the current lateral deviation)
+      target_lateral_positions: [-2.0, -1.5, -1.0, -0.5, 0.0, 0.5, 1.0, 1.5, 2.0]  # manual values that are only used if nb_target_lateral_positions = 0
+      frenet:  # target values for the sampled "lateral deviation over longitudinal position" polynomial
+        target_lateral_velocities: [-0.1, 0.0, 0.1]
+        target_lateral_accelerations: [0.0]
+      bezier:
+        nb_k: 3  # number of sampled curvature values
+        mk_min: 0.0  # minimum curvature value
+        mk_max: 10.0  # maximum curvature value
+        nb_t: 5  # number of sampled acceleration values
+        mt_min: 0.3  # minimum acceleration value
+        mt_max: 1.7  # maximum acceleration value

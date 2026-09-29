@@ -14,7 +14,7 @@
 
 #include "surround_obstacle_stop.hpp"
 
-#include "autoware/trajectory_processor/trajectory_modifier_utils/utils.hpp"
+#include "autoware/trajectory_modifier/trajectory_modifier_utils/utils.hpp"
 
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <tf2_eigen/tf2_eigen.hpp>
@@ -113,7 +113,7 @@ Parameters to_proximity_checker_parameters(const SurroundObstacleStopParams & pa
 
 namespace autoware::minimum_rule_based_planner::plugin
 {
-namespace utils = autoware::trajectory_processor::utils;
+namespace utils = autoware::trajectory_modifier::utils;
 
 void SurroundObstacleStop::on_initialize(const MinimumRuleBasedPlannerParams & params)
 {
@@ -127,7 +127,7 @@ void SurroundObstacleStop::on_initialize(const MinimumRuleBasedPlannerParams & p
     get_node_ptr()->create_publisher<StringStamped>("~/surround_obstacle_stop/debug/text", 1);
 
   pointcloud_filter_ =
-    std::make_unique<trajectory_processor::utils::obstacle_stop::PointCloudFilter>(
+    std::make_unique<trajectory_modifier::utils::obstacle_stop::PointCloudFilter>(
       params_.target_objects.pointcloud);
 
   proximity_checker_ = std::make_unique<obstacle_proximity_checker::ProximityChecker>(

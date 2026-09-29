@@ -16,7 +16,6 @@
 
 #include <algorithm>
 #include <memory>
-#include <stdexcept>
 #include <string>
 
 namespace autoware::traffic_light
@@ -40,11 +39,6 @@ MapBasedDetector::MapBasedDetector(const rclcpp::NodeOptions & node_options)
     this->declare_parameter<double>("pedestrian_traffic_light_max_angle_range"),
     this->declare_parameter<double>("min_timestamp_offset"),
     this->declare_parameter<double>("max_timestamp_offset")};
-
-  if (detector_config_.max_timestamp_offset < detector_config_.min_timestamp_offset) {
-    throw std::invalid_argument(
-      "max_timestamp_offset must be greater than or equal to min_timestamp_offset");
-  }
 
   // subscribers
   map_sub_ = create_subscription<autoware_map_msgs::msg::LaneletMapBin>(

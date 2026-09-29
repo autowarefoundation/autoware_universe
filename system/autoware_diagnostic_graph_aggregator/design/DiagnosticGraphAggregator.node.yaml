@@ -1,0 +1,90 @@
+autoware_system_design_format: 0.4.0
+
+# node information
+name: DiagnosticGraphAggregator.node
+
+description: Aggregates /diagnostics into the diagnostic graph and publishes its structure, status, and the command and driving mode availability derived from the graph units.
+
+package:
+  name: autoware_diagnostic_graph_aggregator
+  provider: autoware
+
+launch:
+  plugin: autoware::diagnostic_graph_aggregator::AggregatorNode
+  executable: aggregator_node
+  node_output: screen
+
+# interfaces
+subscribers:
+  - name: diagnostics
+    message_type: diagnostic_msgs/msg/DiagnosticArray
+    description: Diagnostic status of every node; the graph leaves are matched by status name.
+    global: /diagnostics
+    remap_target: ~/diagnostics
+
+publishers:
+  - name: struct
+    message_type: tier4_system_msgs/msg/DiagGraphStruct
+    description: Graph structure, published once per graph id.
+    remap_target: ~/struct
+    qos:
+      reliability: reliable
+      durability: transient_local
+  - name: status
+    message_type: tier4_system_msgs/msg/DiagGraphStatus
+    description: Level of every graph unit at the aggregation rate.
+    remap_target: ~/status
+  - name: unknowns
+    message_type: diagnostic_msgs/msg/DiagnosticArray
+    description: Diagnostic statuses that match no graph leaf.
+    remap_target: ~/unknowns
+  - name: command_mode_availability
+    message_type: tier4_system_msgs/msg/CommandModeAvailability
+    description: Availability of each command mode mapped from the graph units (use_command_mode_mappings).
+    remap_target: ~/availability
+  - name: driving_mode_available
+    message_type: tier4_system_msgs/msg/DrivingModeFlag
+    description: Availability flag of each driving mode mapped from the graph units (use_driving_mode_mappings).
+    remap_target: /system/driving_mode/available
+  - name: driving_mode_continuable
+    message_type: tier4_system_msgs/msg/DrivingModeFlag
+    description: Continuable flag of each driving mode mapped from the graph units (use_driving_mode_mappings).
+    remap_target: /system/driving_mode/continuable
+
+servers:
+  - name: reset
+    message_type: tier4_system_msgs/srv/ResetDiagGraph
+    description: Resets the latched graph levels.
+    remap_target: ~/reset
+  - name: set_initializing
+    message_type: tier4_system_msgs/srv/SetInitializing
+    description: Sets the initializing state that suppresses latching.
+    remap_target: ~/set_initializing
+  - name: set_override
+    message_type: tier4_system_msgs/srv/SetOverride
+    description: Overrides a graph unit level for debugging (allow_override_for_debugging).
+    remap_target: ~/set_override
+
+# parameters
+param_files:
+  - name: param_file
+    default: config/default.param.yaml
+
+param_values:
+  - name: graph_file
+    default: $(find-pkg-share autoware_diagnostic_graph_aggregator)/example/graph/main.yaml
+  - name: graph_vars
+    default: ""
+
+# processes
+processes:
+  - name: aggregate
+    description: Updates the graph unit levels from the received statuses and the timeouts, then publishes the status and availability.
+    trigger_conditions:
+      - periodic: 10.0
+    outcomes:
+      - to_output: status
+      - to_output: unknowns
+      - to_output: command_mode_availability
+      - to_output: driving_mode_available
+      - to_output: driving_mode_continuable

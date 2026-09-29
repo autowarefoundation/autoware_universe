@@ -15,8 +15,8 @@
 #include "obstacle_stop.hpp"
 
 #include <autoware/planning_factor_interface/planning_factor_interface.hpp>
-#include <autoware/trajectory_processor/trajectory_modifier_utils/obstacle_stop_utils.hpp>
-#include <autoware/trajectory_processor/trajectory_modifier_utils/utils.hpp>
+#include <autoware/trajectory_modifier/trajectory_modifier_utils/obstacle_stop_utils.hpp>
+#include <autoware/trajectory_modifier/trajectory_modifier_utils/utils.hpp>
 #include <autoware_utils/ros/marker_helper.hpp>
 #include <autoware_utils/transform/transforms.hpp>
 #include <tf2_eigen/tf2_eigen.hpp>
@@ -31,13 +31,13 @@
 
 namespace autoware::minimum_rule_based_planner::plugin
 {
-using autoware::trajectory_processor::utils::clamp_stop_point_arc_length;
-using autoware::trajectory_processor::utils::insert_stop_point;
-using autoware::trajectory_processor::utils::replace_trajectory_with_stop_point;
-using autoware::trajectory_processor::utils::obstacle_stop::get_nearest_object_collision;
-using autoware::trajectory_processor::utils::obstacle_stop::get_nearest_pcd_collision;
-using autoware::trajectory_processor::utils::obstacle_stop::get_trajectory_shape;
-using autoware::trajectory_processor::utils::obstacle_stop::PointCloud;
+using autoware::trajectory_modifier::utils::clamp_stop_point_arc_length;
+using autoware::trajectory_modifier::utils::insert_stop_point;
+using autoware::trajectory_modifier::utils::replace_trajectory_with_stop_point;
+using autoware::trajectory_modifier::utils::obstacle_stop::get_nearest_object_collision;
+using autoware::trajectory_modifier::utils::obstacle_stop::get_nearest_pcd_collision;
+using autoware::trajectory_modifier::utils::obstacle_stop::get_trajectory_shape;
+using autoware::trajectory_modifier::utils::obstacle_stop::PointCloud;
 
 void ObstacleStop::on_initialize(const MinimumRuleBasedPlannerParams & params)
 {
@@ -48,10 +48,10 @@ void ObstacleStop::on_initialize(const MinimumRuleBasedPlannerParams & params)
       autoware::agnocast_wrapper::Node>>(get_node_ptr(), "backup_planner_obstacle_stop");
 
   pointcloud_filter_ =
-    std::make_unique<trajectory_processor::utils::obstacle_stop::PointCloudFilter>(
+    std::make_unique<trajectory_modifier::utils::obstacle_stop::PointCloudFilter>(
       params_.pointcloud.target_types);
 
-  object_filter_ = std::make_unique<trajectory_processor::utils::obstacle_stop::ObjectFilter>(
+  object_filter_ = std::make_unique<trajectory_modifier::utils::obstacle_stop::ObjectFilter>(
     params_.objects.target_objects.bbox, params_.objects.target_objects.polygon,
     params_.objects.stopped_velocity_th, params_.objects.max_lateral_velocity_th,
     params_.objects.safety_buffer);

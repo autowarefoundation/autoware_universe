@@ -92,7 +92,7 @@ public:
 
   void resetMaps() override;
 
-  virtual void initRosParam(rclcpp::Node & node) = 0;
+  virtual void initRosParam(rclcpp::node_interfaces::NodeParametersInterface & parameters) = 0;
 
   void setHeightLimit(const double min_height, const double max_height);
 

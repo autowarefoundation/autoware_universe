@@ -1,0 +1,81 @@
+autoware_system_design_format: 0.4.0
+
+# node information
+name: AdapiVehicleDoor.node
+
+description: Bridges the API door interfaces to the vehicle door services, gating open commands by the operation mode, and diagnoses the door state.
+
+package:
+  name: autoware_default_adapi_universe
+  provider: autoware
+
+launch:
+  plugin: autoware::default_adapi::VehicleDoorNode
+  node_output: screen
+
+# interfaces
+subscribers:
+  - name: door_status
+    message_type: autoware_adapi_v1_msgs/msg/DoorStatusArray
+    description: Door status from the vehicle.
+    remap_target: /vehicle/doors/status
+  - name: operation_mode_state
+    message_type: autoware_adapi_v1_msgs/msg/OperationModeState
+    description: Operation mode state, gates the door command.
+    remap_target: /system/operation_mode/state
+
+publishers:
+  - name: status
+    message_type: autoware_adapi_v1_msgs/msg/DoorStatusArray
+    description: Door status for the API.
+    remap_target: /api/vehicle/doors/status
+
+servers:
+  - name: command
+    message_type: autoware_adapi_v1_msgs/srv/SetDoorCommand
+    description: Door command request from the API.
+    remap_target: /api/vehicle/doors/command
+  - name: layout
+    message_type: autoware_adapi_v1_msgs/srv/GetDoorLayout
+    description: Door layout request from the API.
+    remap_target: /api/vehicle/doors/layout
+
+clients:
+  - name: command
+    message_type: autoware_adapi_v1_msgs/srv/SetDoorCommand
+    description: Door command of the vehicle interface.
+    remap_target: /vehicle/doors/command
+  - name: layout
+    message_type: autoware_adapi_v1_msgs/srv/GetDoorLayout
+    description: Door layout of the vehicle interface.
+    remap_target: /vehicle/doors/layout
+
+# parameters
+param_files: []
+
+param_values:
+  - name: check_autoware_control
+    type: bool
+    default: true
+    description: If true, door commands are accepted only while autoware control is enabled.
+  - name: diagnostic_updater.period
+    type: double
+    default: 1.0
+    description: Diagnostic updater publish period [s].
+  - name: diagnostic_updater.use_fqn
+    type: bool
+    default: true
+    description: Uses the fully-qualified node name for diagnostic hardware ID.
+
+# processes
+processes:
+  - name: relay_status
+    description: Notifies the API of door status changes.
+    trigger_conditions:
+      - on_input: door_status
+    outcomes:
+      - to_output: status
+  - name: handle_command
+    description: Checks the operation mode and forwards accepted door commands to the vehicle interface.
+    trigger_conditions: []
+    outcomes: []

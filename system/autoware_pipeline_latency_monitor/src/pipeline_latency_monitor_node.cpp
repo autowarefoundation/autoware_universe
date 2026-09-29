@@ -124,14 +124,15 @@ PipelineLatencyMonitorNode::PipelineLatencyMonitorNode(const rclcpp::NodeOptions
 
   // Create debug publisher
   debug_publisher_ =
-    std::make_unique<autoware_utils_debug::DebugPublisher>(this, "pipeline_latency_monitor");
+    std::make_unique<autoware_utils_debug::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>(
+      this, "pipeline_latency_monitor");
 
   // Setup diagnostic updater
   diagnostic_updater_.setHardwareID("pipeline_latency_monitor");
   diagnostic_updater_.add("Total Latency", this, &PipelineLatencyMonitorNode::check_total_latency);
 
   // Create timer
-  timer_ = rclcpp::create_timer(
+  timer_ = autoware::agnocast_wrapper::create_timer(
     this, this->get_clock(), std::chrono::milliseconds(static_cast<int>(1000.0 / update_rate_)),
     std::bind(&PipelineLatencyMonitorNode::on_timer, this));
 
@@ -228,7 +229,7 @@ void PipelineLatencyMonitorNode::calculate_total_latency()
 void PipelineLatencyMonitorNode::publish_total_latency()
 {
   // Publish total latency
-  auto total_latency_msg = std::make_unique<autoware_internal_debug_msgs::msg::Float64Stamped>();
+  auto total_latency_msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(total_latency_pub_);
   total_latency_msg->stamp = now();
   total_latency_msg->data = total_latency_ms_;
   total_latency_pub_->publish(std::move(total_latency_msg));
