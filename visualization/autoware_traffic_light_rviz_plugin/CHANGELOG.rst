@@ -2,6 +2,9 @@
 Changelog for package autoware_traffic_light_rviz_plugin
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 0.52.0 (2026-06-30)
 -------------------
 

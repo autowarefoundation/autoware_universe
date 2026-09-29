@@ -2,6 +2,9 @@
 Changelog for package autoware_cuda_dependency_meta
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 0.52.0 (2026-06-30)
 -------------------
 
