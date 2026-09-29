@@ -25,10 +25,10 @@ namespace autoware::pointcloud_preprocessor
 {
 
 template <typename NodeT = rclcpp::Node>
-class BasicLatencyDiagnostics : public BasicDiagnosticsBase<NodeT>
+class GenericLatencyDiagnostics : public GenericDiagnosticsBase<NodeT>
 {
 public:
-  BasicLatencyDiagnostics(
+  GenericLatencyDiagnostics(
     const rclcpp::Time & cloud_header_timestamp, double processing_time_ms,
     double pipeline_latency_ms, double processing_time_threshold_ms)
   : cloud_header_timestamp_(cloud_header_timestamp),
@@ -39,7 +39,7 @@ public:
   }
 
   void add_to_interface(
-    typename BasicDiagnosticsBase<NodeT>::DiagnosticsInterfaceT & interface) const override
+    typename GenericDiagnosticsBase<NodeT>::DiagnosticsInterfaceT & interface) const override
   {
     interface.add_key_value(
       "Pointcloud header timestamp", format_timestamp(cloud_header_timestamp_.seconds()));
@@ -65,6 +65,6 @@ private:
   double processing_time_threshold_ms_;
 };
 
-using LatencyDiagnostics = BasicLatencyDiagnostics<rclcpp::Node>;
+using LatencyDiagnostics = GenericLatencyDiagnostics<rclcpp::Node>;
 
 }  // namespace autoware::pointcloud_preprocessor

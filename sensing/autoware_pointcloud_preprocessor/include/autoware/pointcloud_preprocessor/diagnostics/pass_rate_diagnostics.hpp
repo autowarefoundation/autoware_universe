@@ -22,10 +22,10 @@ namespace autoware::pointcloud_preprocessor
 {
 
 template <typename NodeT = rclcpp::Node>
-class BasicPassRateDiagnostics : public BasicDiagnosticsBase<NodeT>
+class GenericPassRateDiagnostics : public GenericDiagnosticsBase<NodeT>
 {
 public:
-  BasicPassRateDiagnostics(int input_point_count, int output_point_count)
+  GenericPassRateDiagnostics(int input_point_count, int output_point_count)
   : input_point_count_(input_point_count),
     output_point_count_(output_point_count),
     pass_rate_(
@@ -34,7 +34,7 @@ public:
   }
 
   void add_to_interface(
-    typename BasicDiagnosticsBase<NodeT>::DiagnosticsInterfaceT & interface) const override
+    typename GenericDiagnosticsBase<NodeT>::DiagnosticsInterfaceT & interface) const override
   {
     interface.add_key_value("Input point count", input_point_count_);
     interface.add_key_value("Output point count", output_point_count_);
@@ -56,6 +56,6 @@ private:
   double pass_rate_;
 };
 
-using PassRateDiagnostics = BasicPassRateDiagnostics<rclcpp::Node>;
+using PassRateDiagnostics = GenericPassRateDiagnostics<rclcpp::Node>;
 
 }  // namespace autoware::pointcloud_preprocessor

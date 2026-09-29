@@ -106,7 +106,7 @@ private:
   /** \brief Parameter service callback */
   rcl_interfaces::msg::SetParametersResult param_callback(const std::vector<rclcpp::Parameter> & p);
   void publish_diagnostics(
-    const std::vector<std::shared_ptr<const BasicDiagnosticsBase<NodeType>>> & diagnostics);
+    const std::vector<std::shared_ptr<const GenericDiagnosticsBase<NodeType>>> & diagnostics);
 
 public:
   PCL_MAKE_ALIGNED_OPERATOR_NEW

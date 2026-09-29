@@ -218,18 +218,18 @@ void CropBoxFilterComponent::faster_filter(
       "debug/pipeline_latency_ms", pipeline_latency_ms);
   }
 
-  auto latency_diagnostics = std::make_shared<BasicLatencyDiagnostics<NodeType>>(
+  auto latency_diagnostics = std::make_shared<GenericLatencyDiagnostics<NodeType>>(
     input->header.stamp, processing_time_ms, pipeline_latency_ms,
     param_.processing_time_threshold_sec * 1000.0);
-  auto pass_rate_diagnostics = std::make_shared<BasicPassRateDiagnostics<NodeType>>(
+  auto pass_rate_diagnostics = std::make_shared<GenericPassRateDiagnostics<NodeType>>(
     static_cast<int>(input->width * input->height), static_cast<int>(output.width * output.height));
-  auto crop_box_diagnostics = std::make_shared<BasicCropBoxDiagnostics<NodeType>>(skipped_count);
+  auto crop_box_diagnostics = std::make_shared<GenericCropBoxDiagnostics<NodeType>>(skipped_count);
 
   publish_diagnostics({latency_diagnostics, pass_rate_diagnostics, crop_box_diagnostics});
 }
 
 void CropBoxFilterComponent::publish_diagnostics(
-  const std::vector<std::shared_ptr<const BasicDiagnosticsBase<NodeType>>> & diagnostics)
+  const std::vector<std::shared_ptr<const GenericDiagnosticsBase<NodeType>>> & diagnostics)
 {
   diagnostics_interface_->clear();
 
