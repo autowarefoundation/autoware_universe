@@ -119,12 +119,7 @@ autoware::pointcloud_preprocessor::FilterBase<NodeT>::FilterBase(
 template <typename NodeT>
 void autoware::pointcloud_preprocessor::FilterBase<NodeT>::setup_tf()
 {
-  if constexpr (kUseWrapperTf) {
-    tf_buffer_ = std::make_unique<autoware::agnocast_wrapper::Buffer>(this->get_clock());
-    tf_listener_ = std::make_unique<autoware::agnocast_wrapper::TransformListener>(*tf_buffer_);
-  } else {
-    managed_tf_buffer_ = std::make_unique<managed_transform_buffer::ManagedTransformBuffer>();
-  }
+  managed_tf_buffer_ = std::make_unique<managed_transform_buffer::ManagedTransformBuffer>();
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -354,20 +349,9 @@ bool autoware::pointcloud_preprocessor::FilterBase<NodeT>::transform_pointcloud(
   const std::string & target_frame, const sensor_msgs::msg::PointCloud2 & in,
   sensor_msgs::msg::PointCloud2 & out)
 {
-  if constexpr (!kUseWrapperTf) {
-    return managed_tf_buffer_->transformPointcloud(
-      target_frame, in, out, in.header.stamp, rclcpp::Duration::from_seconds(1.0),
-      this->get_logger());
-  } else {
-    const auto eigen_transform_opt =
-      lookup_transform_matrix(target_frame, in.header.frame_id, in.header.stamp);
-    if (!eigen_transform_opt) {
-      return false;
-    }
-    pcl_ros::transformPointCloud(*eigen_transform_opt, in, out);
-    out.header.frame_id = target_frame;
-    return true;
-  }
+  return managed_tf_buffer_->transformPointcloud(
+    target_frame, in, out, in.header.stamp, rclcpp::Duration::from_seconds(1.0),
+    this->get_logger());
 }
 
 template <typename NodeT>
@@ -375,23 +359,8 @@ std::optional<Eigen::Matrix4f>
 autoware::pointcloud_preprocessor::FilterBase<NodeT>::lookup_transform_matrix(
   const std::string & target_frame, const std::string & source_frame, const rclcpp::Time & stamp)
 {
-  if constexpr (!kUseWrapperTf) {
-    return managed_tf_buffer_->getTransform<Eigen::Matrix4f>(
-      target_frame, source_frame, stamp, rclcpp::Duration::from_seconds(1.0), this->get_logger());
-  } else {
-    try {
-      const auto transform = tf_buffer_->lookupTransform(
-        target_frame, source_frame, stamp, rclcpp::Duration::from_seconds(1.0));
-      Eigen::Matrix4f matrix;
-      pcl_ros::transformAsMatrix(transform, matrix);
-      return matrix;
-    } catch (const tf2::TransformException & e) {
-      RCLCPP_WARN_THROTTLE(
-        this->get_logger(), *this->get_clock(), 5000, "Failed to look up %s <- %s: %s",
-        target_frame.c_str(), source_frame.c_str(), e.what());
-      return std::nullopt;
-    }
-  }
+  return managed_tf_buffer_->getTransform<Eigen::Matrix4f>(
+    target_frame, source_frame, stamp, rclcpp::Duration::from_seconds(1.0), this->get_logger());
 }
 
 // Returns false in error cases
