@@ -14,29 +14,13 @@
 
 // Characterization test for the distortion corrector node.
 //
-// This file is a safety net for refactoring the distortion_corrector module. It does not say
-// what the node should do; it records what the node currently does, as seen from outside.
-// While every assertion here keeps passing, an arbitrary rewrite of the internals is invisible
-// to any other node in the system.
+// Records what the node currently does, seen from outside, so a rewrite of the internals is
+// provably invisible to the rest of the system. The core classes are already unit-tested by
+// test_distortion_corrector_node.cpp; this file covers the ROS node layer instead.
 //
-// The companion file test_distortion_corrector_node.cpp is, despite its name, a unit test of
-// the DistortionCorrector* core classes. It covers the undistortion arithmetic well and is not
-// duplicated here. What it cannot see is everything the ROS node layer owns: topic and QoS
-// contracts, TF lookups, the order in which sensor samples reach the core, what is published
-// when an input is rejected, and what the diagnostics say about the cloud just processed. That
-// is the surface this file pins down.
-//
-// Two conventions worth knowing before changing anything here:
-//
-//   * A test named "...KnownIssue..." pins behavior that is arguably wrong. It is recorded so
-//     that a refactor which changes it fails loudly and the change is reviewed on purpose,
-//     rather than slipping through as an unnoticed side effect. Such a test is expected to be
-//     updated -- with a note in the commit message -- by the change that fixes the issue.
-//
-//   * One case is deliberately NOT pinned: when the IMU-to-base transform cannot be looked up,
-//     the current core reads an uninitialized Eigen matrix (see get_imu_transformation()). The
-//     resulting angular velocities are indeterminate, so only the absence of a crash is
-//     asserted. See StillPublishesWhenTheImuTransformIsMissing.
+// A "...KnownIssue..." test pins behavior that is arguably wrong, so that fixing it is a
+// deliberate change. One case is deliberately not pinned -- see
+// StillPublishesWhenTheImuTransformIsMissing.
 
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp_components/component_manager.hpp>
@@ -97,10 +81,8 @@ constexpr double base_stamp_sec = 100.0;
 constexpr double point_interval_sec = 0.01;
 constexpr size_t num_points = 10;
 
-// The undistortion of a purely linear twist is exact arithmetic on the point's own time
-// offset, so it is held to float precision. Anything involving a rotation goes through
-// autoware_utils::sin_and_cos(), a 131072-entry lookup table whose quantization is worth
-// ~2.4e-5 rad, i.e. ~2.4e-4 of displacement at this cloud's 10 m radius.
+// Tight where the arithmetic is exact; looser for rotations, which go through the
+// sin_and_cos() lookup table (~2.4e-4 of displacement at this cloud's 10 m radius).
 constexpr float exact_tolerance = 1e-4F;
 constexpr float rotation_tolerance = 1e-3F;
 // opencv_fast_atan2(), used for the azimuth update, is accurate to a fraction of a degree.
@@ -140,9 +122,8 @@ rclcpp::Time to_time(double seconds)
   return rclcpp::Time(sec, nanosec, RCL_ROS_TIME);
 }
 
-// The velodyne convention: x-axis is 0, angle grows clockwise. Written out here rather than
-// taken from the node, so that the azimuth assertions test the node against the sensor
-// convention instead of against itself.
+// Velodyne convention: x-axis is 0, angle grows clockwise. Written out here so the azimuth
+// assertions test the node against the sensor convention rather than against itself.
 float velodyne_azimuth_of(float x, float y)
 {
   float cartesian = std::atan2(y, x);
@@ -193,8 +174,7 @@ uint32_t point_time_offset_ns(size_t index)
 }
 
 // ---------------------------------------------------------------------------------------
-// Node parameters. Every one of them is declared without a default, so all six must be
-// supplied or construction throws.
+// Node parameters. All six are declared without a default, so all must be supplied.
 // ---------------------------------------------------------------------------------------
 
 struct NodeParams
@@ -224,9 +204,8 @@ struct NodeParams
   }
 };
 
-// Loads the component library once for the whole test binary; nullptr if the plugin is not
-// registered. The manager and factory are leaked on purpose: class_loader unloads the library
-// in its destructor, which runs after rclcpp::shutdown() and aborts the process.
+// Loaded once per test binary; nullptr if the plugin is not registered. Leaked on purpose:
+// class_loader would otherwise unload the library after rclcpp::shutdown() and abort.
 std::shared_ptr<rclcpp_components::NodeFactory> get_component_factory()
 {
   static auto * factory = [] {
@@ -255,8 +234,7 @@ const std::string * get_value_of(const DiagnosticStatus & status, const std::str
 }  // namespace
 
 // ---------------------------------------------------------------------------------------
-// Test fixture: loads the node under test by plugin name, wires the topics, and offers one
-// verb per thing a test needs to do. Every loop lives here so the tests stay flat.
+// Test fixture: one verb per thing a test needs to do, so the tests stay flat.
 // ---------------------------------------------------------------------------------------
 
 class DistortionCorrectorCharacterizationTest : public ::testing::Test
@@ -300,9 +278,8 @@ protected:
 
   // -- driving ------------------------------------------------------------------------
 
-  // Twist and IMU reach the node through polling subscribers, which are drained only from
-  // inside the pointcloud callback. Publishing them therefore has to happen -- and be given
-  // time to land in the middleware queue -- before the cloud that should consume them.
+  // Twist and IMU are drained by polling from inside the pointcloud callback, so they must be
+  // published -- and given time to land in the middleware queue -- before the cloud.
   void publish_twist(double stamp_sec, double linear_x, double angular_z)
   {
     TwistWithCovarianceStamped msg;
@@ -376,9 +353,8 @@ protected:
     return predicate();
   }
 
-  // Waits for the n-th output cloud (1-based), then spins briefly so that an unexpected extra
-  // publication is recorded too. The timeout is generous because a cloud whose frame is absent
-  // from TF costs the node a full one-second lookup timeout first.
+  // Waits for the n-th output cloud (1-based), then spins briefly so an unexpected extra
+  // publication is recorded too. Generous timeout: a missing TF costs the node a full second.
   PointCloud2 await_output_cloud(
     size_t count = 1, std::chrono::nanoseconds timeout = std::chrono::seconds(6))
   {
@@ -433,10 +409,8 @@ protected:
     }
   }
 
-  // Rotating every source point about base_link's z by `rate` rad/s, each by its own elapsed
-  // time. This is the closed form of the 2D corrector's accumulated heading for a twist with
-  // no linear component; it is written out here so the expectation does not come from the
-  // code under test.
+  // Closed form of the 2D corrector's accumulated heading for a twist with no linear
+  // component, written out here so the expectation does not come from the code under test.
   static std::vector<std::array<float, 3>> rotation_shifts(double rate)
   {
     std::vector<std::array<float, 3>> shifts;
@@ -475,9 +449,8 @@ protected:
 
   // -- topic names ---------------------------------------------------------------------
   //
-  // The node's own topics are private ("~/input/twist"), so they sit under
-  // <namespace>/<node name>. The debug publisher uses a relative name instead, so its topics
-  // sit directly under <namespace>.
+  // The node's topics are private ("~/input/twist") so they sit under <ns>/<node name>; the
+  // debug publisher uses a relative name, so its topics sit directly under <ns>.
 
   std::string test_namespace() const
   {
@@ -767,8 +740,7 @@ TEST_F(DistortionCorrectorCharacterizationTest, AdvertisesDebugTopicsAndPublishe
 }
 
 // ---------------------------------------------------------------------------------------
-// Inputs the node declines to undistort. In every one of these cases the cloud is still
-// republished, byte for byte: downstream nodes see a pass-through, not a gap.
+// Inputs the node declines to undistort. Each is still republished byte for byte.
 // ---------------------------------------------------------------------------------------
 
 TEST_F(DistortionCorrectorCharacterizationTest, RepublishesCloudUnchangedWhenNoTwistHasArrived)
@@ -928,9 +900,7 @@ TEST_F(DistortionCorrectorCharacterizationTest, UndistortsCloudGivenInTheLidarFr
   const auto output = await_output_cloud();
 
   // Assert
-  // The correction happens in base_link and the result is rotated back into the lidar frame.
-  // char_lidar_top is yawed +90 degrees relative to base_link, so base_link's +x arrives as
-  // the lidar frame's -y.
+  // char_lidar_top is yawed +90 deg, so a correction of +x in base_link lands as -y here.
   std::vector<std::array<float, 3>> shifts;
   for (size_t i = 0; i < num_points; ++i) {
     const auto travelled = static_cast<float>(speed * point_interval_sec * static_cast<double>(i));
@@ -1041,12 +1011,8 @@ TEST_F(
   publish_twist(base_stamp_sec, 10.0, 0.0);
 
   // Act & Assert
-  // Fused, because the act is what throws: the assertion has to wrap the call rather than
-  // inspect its result.
-  //
-  // A cloud that is already in base_link cannot have a sensor azimuth, so the core throws
-  // rather than writing a meaningless one. The exception is not caught anywhere in the node,
-  // so it escapes the subscription callback into whoever is spinning -- here, the fixture.
+  // Fused because the act is what throws. A base_link cloud has no sensor azimuth, so the
+  // core throws, and nothing in the node catches it before it reaches the spinning fixture.
   EXPECT_THROW(
     {
       publish_cloud(base_frame, base_stamp_sec);
@@ -1075,11 +1041,8 @@ TEST_F(DistortionCorrectorCharacterizationTest, PublishesDiagnosticsForEveryClou
   // Assert
   EXPECT_EQ(status.hardware_id, node_name_);
   EXPECT_EQ(status.level, DiagnosticStatus::OK);
-  // Not "Distortion correction successful": the node composes that string and hands it to
-  // DiagnosticsInterface, which drops it twice over -- update_level_and_message() only
-  // appends a message above OK level, and create_diagnostics_array() overwrites the message
-  // with "OK" for an OK status. The node's success string therefore never reaches a
-  // subscriber. Recorded as-is; the dead string is not this module's to fix.
+  // Not "Distortion correction successful": DiagnosticsInterface overwrites the message of an
+  // OK status with "OK", so the node's success string never reaches a subscriber.
   EXPECT_EQ(status.message, "OK");
   for (const auto * key :
        {"Pointcloud header timestamp", "Processing time (ms)", "Pipeline latency (ms)",
@@ -1147,22 +1110,15 @@ TEST_F(
 }
 
 // ---------------------------------------------------------------------------------------
-// Sensor queue hygiene.
-//
-// The core keeps twist and IMU samples in deques that it binary-searches by timestamp, so it
-// depends on those deques staying ordered and bounded. Two behaviors enforce that on insert,
-// and both are observable from outside: if a stale or out-of-order sample survives in the
-// queue, the nearest-sample search lands on it, every point of the cloud falls outside the
-// association window, and the cloud comes out uncorrected with a mismatch count equal to its
-// point count.
+// Sensor queue hygiene. The core binary-searches its twist/IMU deques, so they must stay
+// ordered and bounded. A surviving stale sample leaves the cloud uncorrected.
 // ---------------------------------------------------------------------------------------
 
 TEST_F(DistortionCorrectorCharacterizationTest, BackwardTimeJumpDiscardsTheTwistQueue)
 {
   // Arrange
-  // A rosbag restart: the first twist is 10 s ahead of everything that follows it. Driving a
-  // cloud through it is part of the arrangement -- it is what gets the pre-jump sample into
-  // the core's queue in the first place.
+  // A rosbag restart: the first twist is 10 s ahead. Driving a cloud through it is what puts
+  // the pre-jump sample into the core's queue.
   constexpr double speed = 10.0;
   constexpr double rewound_speed = 1.0;
   start(NodeParams{});
@@ -1177,9 +1133,8 @@ TEST_F(DistortionCorrectorCharacterizationTest, BackwardTimeJumpDiscardsTheTwist
   const auto status = await_diagnostic(2);
 
   // Assert
-  // Only reachable if the pre-jump sample was dropped. Had it survived, the queue would be
-  // out of order, the search would settle on the 10 s old sample, and the cloud would come
-  // back untouched.
+  // Only reachable if the pre-jump sample was dropped; had it survived, the search would
+  // settle on the 10 s old sample and the cloud would come back untouched.
   expect_points_shifted_by(output, linear_shifts(rewound_speed), exact_tolerance);
   ASSERT_NE(get_value_of(status, "Timestamp mismatch count"), nullptr);
   EXPECT_EQ(*get_value_of(status, "Timestamp mismatch count"), "0");
@@ -1233,9 +1188,8 @@ TEST_F(
   DiagnosticsDescribeTheCloudJustProcessedWhenItsTransformIsMissing)
 {
   // Arrange
-  // A first cloud with a matching twist, so that nothing mismatches on it. Asserted here as
-  // a precondition rather than as the subject of the test: if this half is already wrong,
-  // the second half proves nothing.
+  // A first cloud with a matching twist. Asserted as a precondition: if this half is already
+  // wrong, the second half proves nothing.
   start(NodeParams{});
   publish_twist(base_stamp_sec, 10.0, 0.0);
   publish_cloud(unmapped_frame, base_stamp_sec);
@@ -1270,10 +1224,8 @@ TEST_F(DistortionCorrectorCharacterizationTest, StillPublishesWhenTheImuTransfor
   const auto output = await_output_cloud();
 
   // Assert
-  // Only the absence of a crash is asserted. The current core leaves its
-  // imu-to-base-link matrix uninitialized when the lookup fails and rotates the angular
-  // velocity by it regardless, so the corrected positions are indeterminate. Do not pin
-  // them; fix the uninitialized read instead.
+  // Only the absence of a crash. The core rotates by an uninitialized matrix when the lookup
+  // fails, so the positions are indeterminate -- fix that rather than pinning them.
   EXPECT_EQ(output.width, static_cast<uint32_t>(num_points));
   EXPECT_EQ(output.header.frame_id, base_frame);
 }
@@ -1283,9 +1235,8 @@ TEST_F(
   KnownIssueFirstResolvedCloudTransformIsReusedForEveryLaterFrame)
 {
   // Arrange
-  // A cloud already in base_link resolves an identity transform and latches it. Asserted
-  // here as a precondition: the latch only means something if the first cloud was itself
-  // corrected normally.
+  // A base_link cloud resolves an identity transform and latches it. Asserted as a
+  // precondition: the latch only means something if this cloud was corrected normally.
   constexpr double speed = 10.0;
   start(NodeParams{});
   publish_twist(base_stamp_sec, speed, 0.0);
@@ -1300,13 +1251,10 @@ TEST_F(
   const auto second = await_output_cloud(2);
 
   // Assert
-  // The lookup is skipped because a transform is already cached, so this cloud is corrected
-  // as though it too were in base_link: the shift stays along x instead of becoming the
-  // lidar frame's -y.
-  //
-  // This is a bug, recorded so that fixing it is a deliberate, reviewed change. Compare with
-  // UndistortsCloudGivenInTheLidarFrame, which gets the transform right because the lidar
-  // cloud is the first one the node sees.
+  // This is a bug:
+  // The lookup is skipped because a transform is cached, so this cloud is corrected as though
+  // it too were in base_link: the shift stays along x instead of becoming -y. Recorded as a
+  // bug so fixing it is deliberate; compare UndistortsCloudGivenInTheLidarFrame.
   expect_points_shifted_by(second, linear_shifts(speed), exact_tolerance);
 }
 
