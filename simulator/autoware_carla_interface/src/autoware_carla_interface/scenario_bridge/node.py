@@ -448,12 +448,19 @@ class ScenarioBridgeNode(Node):
         while it is still settling; an unsuccessful response leaves ``_route_requested``
         clear so the next pass retries.
 
-        Deliberately not gated on the observed ``route_set``: a pre-existing route
-        from an earlier run already reads SET, and skipping on it would leave the new
-        mission's goal unset. The ``_route_requested`` latch alone stops re-sending an
-        in-flight or already-accepted request.
+        Held until the AD API reports UNSET. ``RoutingNode::on_set_route_points``
+        takes a route in no other state, and its own starts at UNKNOWN, so a
+        request made before the mission planner has published its first
+        ``RouteState`` is refused with "The route is already set." against a stack
+        that has no route -- hundreds of rejections and minutes of startup while
+        the bridge retried into it. Waiting for UNSET is not the same as skipping
+        on a SET route: a pre-existing route from an earlier run is not this
+        mission's, which is what ``_route_accepted`` keeps the rest of the startup
+        from mistaking it for.
         """
         if self._route_requested:
+            return
+        if not self._aggregator.route_acceptable:
             return
         if not self._route_cli.service_is_ready():
             return

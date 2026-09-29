@@ -50,6 +50,10 @@ OPERATION_MODE_CHANGE_TO_AUTONOMOUS_SERVICE = "/api/operation_mode/change_to_aut
 LOCALIZATION_STATE_INITIALIZED = LocalizationInitializationState.INITIALIZED
 #: RouteState.SET.
 ROUTE_STATE_SET = RouteState.SET
+#: RouteState.UNSET -- the only state the AD API accepts a route in.
+ROUTE_STATE_UNSET = RouteState.UNSET
+#: RouteState.UNKNOWN -- what the AD API reports before the planner is up.
+ROUTE_STATE_UNKNOWN = RouteState.UNKNOWN
 #: OperationModeState.AUTONOMOUS.
 OPERATION_MODE_AUTONOMOUS = OperationModeState.AUTONOMOUS
 
@@ -74,7 +78,8 @@ class ReadinessAggregator:
 
     require_localization: bool = True
     localization_initialized: bool = False
-    route_set: bool = False
+    #: The last observed ``RouteState.state``; UNKNOWN until one is received.
+    route_state: int = ROUTE_STATE_UNKNOWN
     autonomous_available: bool = False
     autonomous_engaged: bool = False
 
@@ -84,7 +89,22 @@ class ReadinessAggregator:
 
     def update_routing(self, state: int) -> None:
         """Update from ``RouteState.state``."""
-        self.route_set = state == ROUTE_STATE_SET
+        self.route_state = state
+
+    @property
+    def route_set(self) -> bool:
+        return self.route_state == ROUTE_STATE_SET
+
+    @property
+    def route_acceptable(self) -> bool:
+        """Whether the AD API would take a route now.
+
+        ``RoutingNode::on_set_route_points`` refuses anything but UNSET, and it
+        starts at UNKNOWN -- so before the mission planner has published its
+        first ``RouteState`` the API answers "The route is already set." for a
+        stack that has no route at all.
+        """
+        return self.route_state == ROUTE_STATE_UNSET
 
     def update_operation_mode(
         self, mode: int, is_control_enabled: bool, is_autonomous_available: bool
