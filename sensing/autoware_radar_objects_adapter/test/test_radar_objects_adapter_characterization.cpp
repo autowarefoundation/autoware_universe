@@ -396,6 +396,11 @@ TEST_F(RadarObjectsAdapterCharacterization, Gate_ObjectsBeforeRadarInfo_DroppedN
 // incompatible, and radar objects keep being dropped.
 //
 // Which field is missing makes no difference to the node, so only one is tried.
+//
+// What this case tells apart is a gate that looks at the content of a radar info from one that
+// opens on any radar info. Whether the node rejected the message or merely ignored it is not
+// observable over the topics, and neither is which of the eight fields is required; both belong
+// to the unit tests of the separated logic.
 TEST_F(RadarObjectsAdapterCharacterization, Gate_RadarInfoMissingRequiredField_ObjectsDropped)
 {
   start_node();
