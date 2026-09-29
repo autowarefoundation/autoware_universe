@@ -121,8 +121,7 @@ void autoware::pointcloud_preprocessor::FilterBase<NodeT>::setup_tf()
 {
   if constexpr (kUseWrapperTf) {
     tf_buffer_ = std::make_unique<autoware::agnocast_wrapper::Buffer>(this->get_clock());
-    tf_listener_ =
-      std::make_unique<autoware::agnocast_wrapper::TransformListener>(*tf_buffer_, *this);
+    tf_listener_ = std::make_unique<autoware::agnocast_wrapper::TransformListener>(*tf_buffer_);
   } else {
     managed_tf_buffer_ = std::make_unique<managed_transform_buffer::ManagedTransformBuffer>();
   }
