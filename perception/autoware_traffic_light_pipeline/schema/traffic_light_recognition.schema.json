@@ -1,0 +1,203 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "autoware_traffic_light_recognition parameter",
+  "type": "object",
+  "definitions": {
+    "whole_image_detector": {
+      "type": "object",
+      "description": "Whole-image yolox traffic light detector. model_path / label_path are relative to ml_model_path; roi_remap_path is injected by the launch file (it ships in autoware_tensorrt_yolox's share directory, not under ml_model_path) and so is absent here.",
+      "properties": {
+        "model_path": {
+          "type": "string",
+          "description": "Path to the detector's ONNX model, relative to ml_model_path."
+        },
+        "label_path": {
+          "type": "string",
+          "description": "Path to the detector's class label file, relative to ml_model_path."
+        },
+        "score_threshold": {
+          "type": "number",
+          "description": "Detection score threshold for the whole-image yolox detector.",
+          "default": 0.35
+        },
+        "nms_threshold": {
+          "type": "number",
+          "description": "NMS threshold for the whole-image yolox detector.",
+          "default": 0.7
+        },
+        "precision": {
+          "type": "string",
+          "enum": ["fp32", "fp16", "int8"],
+          "description": "TensorRT engine precision. int8 is calibrated with the Entropy algorithm and a fixed clip value, so it needs no calibration image list.",
+          "default": "fp16"
+        }
+      },
+      "required": ["model_path", "label_path", "score_threshold", "nms_threshold", "precision"],
+      "additionalProperties": false
+    },
+    "map_based_detector": {
+      "type": "object",
+      "properties": {
+        "min_timestamp_offset": {
+          "type": "number",
+          "description": "Minimum timestamp offset when searching for the corresponding map->camera tf sample.",
+          "default": -0.04
+        },
+        "max_timestamp_offset": {
+          "type": "number",
+          "description": "Maximum timestamp offset when searching for the corresponding map->camera tf sample.",
+          "default": 0.0
+        }
+      },
+      "required": ["min_timestamp_offset", "max_timestamp_offset"],
+      "additionalProperties": false
+    },
+    "car_classifier": {
+      "type": "object",
+      "description": "Vehicle traffic light CNN classifier.",
+      "properties": {
+        "model_path": {
+          "type": "string",
+          "description": "Path to the classifier's ONNX model, relative to ml_model_path."
+        },
+        "label_path": {
+          "type": "string",
+          "description": "Path to the classifier's lamp label file, relative to ml_model_path."
+        },
+        "precision": {
+          "type": "string",
+          "enum": ["fp32", "fp16", "int8"],
+          "description": "TensorRT engine precision for this classifier.",
+          "default": "fp16"
+        },
+        "mean": {
+          "type": "array",
+          "items": { "type": "number" },
+          "minItems": 3,
+          "maxItems": 3,
+          "description": "Per-channel mean subtracted from the input image. Must match the normalization the model at model_path was trained with, so change it together with model_path.",
+          "default": [123.675, 116.28, 103.53]
+        },
+        "std": {
+          "type": "array",
+          "items": { "type": "number" },
+          "minItems": 3,
+          "maxItems": 3,
+          "description": "Per-channel standard deviation the input image is divided by. Must match the normalization the model at model_path was trained with, so change it together with model_path.",
+          "default": [58.395, 57.12, 57.375]
+        }
+      },
+      "required": ["model_path", "label_path", "precision", "mean", "std"],
+      "additionalProperties": false
+    },
+    "pedestrian_classifier": {
+      "type": "object",
+      "description": "Pedestrian traffic light CNN classifier.",
+      "properties": {
+        "model_path": {
+          "type": "string",
+          "description": "Path to the classifier's ONNX model, relative to ml_model_path."
+        },
+        "label_path": {
+          "type": "string",
+          "description": "Path to the classifier's lamp label file, relative to ml_model_path."
+        },
+        "precision": {
+          "type": "string",
+          "enum": ["fp32", "fp16", "int8"],
+          "description": "TensorRT engine precision for this classifier.",
+          "default": "fp16"
+        },
+        "mean": {
+          "type": "array",
+          "items": { "type": "number" },
+          "minItems": 3,
+          "maxItems": 3,
+          "description": "Per-channel mean subtracted from the input image. Must match the normalization the model at model_path was trained with, so change it together with model_path.",
+          "default": [123.675, 116.28, 103.53]
+        },
+        "std": {
+          "type": "array",
+          "items": { "type": "number" },
+          "minItems": 3,
+          "maxItems": 3,
+          "description": "Per-channel standard deviation the input image is divided by. Must match the normalization the model at model_path was trained with, so change it together with model_path.",
+          "default": [58.395, 57.12, 57.375]
+        }
+      },
+      "required": ["model_path", "label_path", "precision", "mean", "std"],
+      "additionalProperties": false
+    },
+    "classifier": {
+      "type": "object",
+      "properties": {
+        "over_exposure_threshold": {
+          "type": "number",
+          "description": "ROI mean-intensity threshold above which the ROI is treated as over-exposed and classified as UNKNOWN. Shared by car_classifier and pedestrian_classifier: both classify ROIs cropped from the same camera image, so this is a property of the camera, not of either classifier individually.",
+          "default": 0.85
+        },
+        "under_exposure_threshold": {
+          "type": "number",
+          "description": "ROI mean-intensity threshold below which the ROI is treated as under-exposed and classified as UNKNOWN. Shared by car_classifier and pedestrian_classifier for the same reason as over_exposure_threshold.",
+          "default": -0.83
+        }
+      },
+      "required": ["over_exposure_threshold", "under_exposure_threshold"],
+      "additionalProperties": false
+    },
+    "traffic_light_recognition": {
+      "type": "object",
+      "properties": {
+        "build_only": {
+          "type": "boolean",
+          "description": "Build the TensorRT engines for the whole-image detector and the classifiers and exit, without waiting for the vector map.",
+          "default": false
+        },
+        "ml_model_path": {
+          "type": "string",
+          "description": "Directory holding the ML artifacts the model_path / label_path values below are relative to. Supplied by the launch file, so this package's config file names no user-specific path.",
+          "default": ""
+        },
+        "whole_image_detector": {
+          "$ref": "#/definitions/whole_image_detector"
+        },
+        "map_based_detector": {
+          "$ref": "#/definitions/map_based_detector"
+        },
+        "car_classifier": {
+          "$ref": "#/definitions/car_classifier"
+        },
+        "pedestrian_classifier": {
+          "$ref": "#/definitions/pedestrian_classifier"
+        },
+        "classifier": {
+          "$ref": "#/definitions/classifier"
+        }
+      },
+      "required": [
+        "build_only",
+        "ml_model_path",
+        "whole_image_detector",
+        "map_based_detector",
+        "car_classifier",
+        "pedestrian_classifier",
+        "classifier"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/traffic_light_recognition"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}

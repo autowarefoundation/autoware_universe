@@ -15,5 +15,6 @@ rclcpp_components_register_node(autoware_path_sampler
 )
 
 ament_auto_package(
-#   INSTALL_TO_SHARE
+  INSTALL_TO_SHARE
+  config
 )

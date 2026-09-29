@@ -1,0 +1,87 @@
+autoware_system_design_format: 0.4.0
+
+# node information
+name: AdapiOperationMode.node
+
+description: Serves the operation mode API; publishes the operation mode state filtered by the system availability and forwards mode and control change requests to the system.
+
+package:
+  name: autoware_default_adapi_universe
+  provider: autoware
+
+launch:
+  plugin: autoware::default_adapi::OperationModeNode
+  node_output: screen
+
+# interfaces
+subscribers:
+  - name: operation_mode_state
+    message_type: autoware_adapi_v1_msgs/msg/OperationModeState
+    description: Operation mode state from the operation mode transition manager.
+    remap_target: /system/operation_mode/state
+  - name: availability
+    message_type: tier4_system_msgs/msg/OperationModeAvailability
+    description: Availability of each operation mode from the system.
+    remap_target: /system/operation_mode/availability
+
+publishers:
+  - name: state
+    message_type: autoware_adapi_v1_msgs/msg/OperationModeState
+    description: Operation mode state for the API, availability flags masked by the system availability.
+    remap_target: /api/operation_mode/state
+
+servers:
+  - name: change_to_stop
+    message_type: autoware_adapi_v1_msgs/srv/ChangeOperationMode
+    description: Changes the operation mode to stop.
+    remap_target: /api/operation_mode/change_to_stop
+  - name: change_to_autonomous
+    message_type: autoware_adapi_v1_msgs/srv/ChangeOperationMode
+    description: Changes the operation mode to autonomous.
+    remap_target: /api/operation_mode/change_to_autonomous
+  - name: change_to_local
+    message_type: autoware_adapi_v1_msgs/srv/ChangeOperationMode
+    description: Changes the operation mode to local.
+    remap_target: /api/operation_mode/change_to_local
+  - name: change_to_remote
+    message_type: autoware_adapi_v1_msgs/srv/ChangeOperationMode
+    description: Changes the operation mode to remote.
+    remap_target: /api/operation_mode/change_to_remote
+  - name: enable_autoware_control
+    message_type: autoware_adapi_v1_msgs/srv/ChangeOperationMode
+    description: Enables the vehicle control by Autoware.
+    remap_target: /api/operation_mode/enable_autoware_control
+  - name: disable_autoware_control
+    message_type: autoware_adapi_v1_msgs/srv/ChangeOperationMode
+    description: Disables the vehicle control by Autoware.
+    remap_target: /api/operation_mode/disable_autoware_control
+
+clients:
+  - name: change_operation_mode
+    message_type: autoware_system_msgs/srv/ChangeOperationMode
+    description: Operation mode change of the operation mode transition manager.
+    remap_target: /system/operation_mode/change_operation_mode
+  - name: change_autoware_control
+    message_type: autoware_system_msgs/srv/ChangeAutowareControl
+    description: Autoware control change of the operation mode transition manager.
+    remap_target: /system/operation_mode/change_autoware_control
+
+# parameters
+param_files: []
+
+param_values: []
+
+# processes
+processes:
+  - name: publish_state
+    description: Masks the operation mode state with the system availability and publishes it on change.
+    trigger_conditions:
+      - on_input: operation_mode_state
+      - on_input: availability
+    outcomes:
+      - to_output: state
+  - name: change_mode
+    description: Handles a mode or control change request; rejects unavailable modes and forwards the request to the system.
+    trigger_conditions: []
+    outcomes:
+      - terminal: null

@@ -9,9 +9,11 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   src/redundancy_command_selector.cpp
 )
 
-rclcpp_components_register_node(${PROJECT_NAME}
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   PLUGIN "autoware::simulator::redundancy_command_selector::RedundancyCommandSelector"
   EXECUTABLE redundancy_command_selector_node
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
+  ROS2_EXECUTOR MultiThreadedExecutor
 )
 
 ament_auto_package(INSTALL_TO_SHARE launch)

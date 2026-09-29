@@ -1,0 +1,63 @@
+autoware_system_design_format: 0.4.0
+
+# node information
+name: AdapiFailSafe.node
+
+description: Relays the MRM state to the API and serves the list of MRM descriptions configured by parameters.
+
+package:
+  name: autoware_default_adapi_universe
+  provider: autoware
+
+launch:
+  plugin: autoware::default_adapi::FailSafeNode
+  node_output: screen
+
+# interfaces
+subscribers:
+  - name: mrm_state
+    message_type: autoware_adapi_v1_msgs/msg/MrmState
+    description: MRM state from the MRM handler.
+    remap_target: /system/fail_safe/mrm_state
+
+publishers:
+  - name: mrm_state
+    message_type: autoware_adapi_v1_msgs/msg/MrmState
+    description: MRM state for the API.
+    remap_target: /api/fail_safe/mrm_state
+
+servers:
+  - name: list_mrm_description
+    message_type: autoware_adapi_v1_msgs/srv/ListMrmDescription
+    description: Lists the configured MRM descriptions.
+    remap_target: /api/fail_safe/list_mrm_description
+
+# parameters
+param_files: []
+
+param_values:
+  - name: mrm_descriptions.emergency_stop.behavior
+    type: int
+    default: 2
+    description: MRM state behavior value of the emergency stop.
+  - name: mrm_descriptions.emergency_stop.description
+    type: string
+    default: Emergency stop
+    description: Human readable description of the emergency stop.
+  - name: mrm_descriptions.comfortable_stop.behavior
+    type: int
+    default: 3
+    description: MRM state behavior value of the comfortable stop.
+  - name: mrm_descriptions.comfortable_stop.description
+    type: string
+    default: Comfortable stop
+    description: Human readable description of the comfortable stop.
+
+# processes
+processes:
+  - name: relay_mrm_state
+    description: Publishes the MRM state to the API when it changes.
+    trigger_conditions:
+      - on_input: mrm_state
+    outcomes:
+      - to_output: mrm_state

@@ -1,0 +1,50 @@
+autoware_system_design_format: 0.4.0
+
+# node information
+name: AdapiMrmRequest.node
+
+description: Accepts MRM requests from the API, publishes the current request list, and reports the delegate requests to the diagnostics.
+
+package:
+  name: autoware_default_adapi_universe
+  provider: autoware
+
+launch:
+  plugin: autoware::default_adapi::MrmRequestNode
+  node_output: screen
+
+# interfaces
+subscribers: []
+
+publishers:
+  - name: mrm_request/list
+    message_type: autoware_adapi_v1_msgs/msg/MrmRequestList
+    description: Current MRM requests for the API.
+    remap_target: /api/fail_safe/mrm_request/list
+
+servers:
+  - name: mrm_request/send
+    message_type: autoware_adapi_v1_msgs/srv/SendMrmRequest
+    description: Registers or cancels an MRM request per sender.
+    remap_target: /api/fail_safe/mrm_request/send
+
+# parameters
+param_files: []
+
+param_values:
+  - name: diagnostic_updater.period
+    type: double
+    default: 1.0
+    description: Diagnostic updater publish period [s].
+  - name: diagnostic_updater.use_fqn
+    type: bool
+    default: true
+    description: Uses the fully-qualified node name for diagnostic hardware ID.
+
+# processes
+processes:
+  - name: handle_request
+    description: Handles an MRM request; updates the request map, refreshes the delegate diagnostics, and publishes the request list.
+    trigger_conditions: []
+    outcomes:
+      - to_output: mrm_request/list
