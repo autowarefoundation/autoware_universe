@@ -18,6 +18,7 @@
 from autoware_carla_interface.scenario_bridge.ad_api import LOCALIZATION_STATE_INITIALIZED
 from autoware_carla_interface.scenario_bridge.ad_api import OPERATION_MODE_AUTONOMOUS
 from autoware_carla_interface.scenario_bridge.ad_api import ROUTE_STATE_SET
+from autoware_carla_interface.scenario_bridge.ad_api import ROUTE_STATE_UNSET
 from autoware_carla_interface.scenario_bridge.ad_api import ReadinessAggregator
 
 
@@ -26,6 +27,21 @@ def _initialized_and_routed() -> ReadinessAggregator:
     agg.update_localization(LOCALIZATION_STATE_INITIALIZED)
     agg.update_routing(ROUTE_STATE_SET)
     return agg
+
+
+def test_a_route_is_only_offered_in_the_state_the_ad_api_takes_one():
+    """``RoutingNode::on_set_route_points`` refuses every state but UNSET.
+
+    Including its own starting UNKNOWN, which it answers with "The route is
+    already set." -- so a bridge that asks before the mission planner has
+    published a RouteState is refused against a stack that has no route.
+    """
+    agg = ReadinessAggregator()
+    assert agg.route_acceptable is False  # UNKNOWN: the planner is not up yet
+    agg.update_routing(ROUTE_STATE_SET)
+    assert agg.route_acceptable is False
+    agg.update_routing(ROUTE_STATE_UNSET)
+    assert agg.route_acceptable is True
 
 
 def test_not_ready_or_engageable_when_empty():
