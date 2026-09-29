@@ -307,48 +307,8 @@ bool TrtCommon::setup(ProfileDimsPtr profile_dims, NetworkIOPtr network_io)
     }
   }
 
-  auto build_engine_with_log = [this]() -> bool {
-    logger_->log(nvinfer1::ILogger::Severity::kINFO, "Starting to build engine");
-    auto log_thread = logger_->log_throttle(
-      nvinfer1::ILogger::Severity::kINFO,
-      "Applying optimizations and building TensorRT CUDA engine. Please wait for a few minutes...",
-      5);
-    auto success = buildEngineFromOnnx();
-    logger_->stop_throttle(log_thread);
-    logger_->log(nvinfer1::ILogger::Severity::kINFO, "Engine build completed");
-    return success;
-  };
-
-  // Load engine file if it exists
-  if (fs::exists(trt_config_->engine_path)) {
-    logger_->log(nvinfer1::ILogger::Severity::kINFO, "Loading engine");
-    if (!validateEngine()) {
-      logger_->log(
-        nvinfer1::ILogger::Severity::kWARNING,
-        "Validation failed for the existing engine file. Rebuilding");
-      // Rebuild engine if version mismatch occurred
-      if (!build_engine_with_log()) {
-        return false;
-      }
-    } else if (!loadEngine()) {
-      return false;
-    }
-    logger_->log(nvinfer1::ILogger::Severity::kINFO, "Network validation");
-    // Validate engine tensor shapes and optimization profile
-    if (!validateNetworkIO() || !validateProfileDims()) {
-      logger_->log(
-        nvinfer1::ILogger::Severity::kWARNING,
-        "Network validation failed for loaded engine from file. Rebuilding engine");
-      // Rebuild engine if the tensor shapes or optimization profile mismatch
-      if (!build_engine_with_log()) {
-        return false;
-      }
-    }
-  } else {
-    // Build engine if engine has not been cached
-    if (!build_engine_with_log()) {
-      return false;
-    }
+  if (!prepareEngine()) {
+    return false;
   }
 
   // Validate engine nevertheless is loaded or rebuilt
@@ -795,6 +755,55 @@ bool TrtCommon::buildEngineFromOnnx()
   os << ret << std::flush;
   os.close();
 
+  return true;
+}
+
+bool TrtCommon::prepareEngine()
+{
+  auto build_engine_with_log = [this]() -> bool {
+    logger_->log(nvinfer1::ILogger::Severity::kINFO, "Starting to build engine");
+    auto log_thread = logger_->log_throttle(
+      nvinfer1::ILogger::Severity::kINFO,
+      "Applying optimizations and building TensorRT CUDA engine. Please wait for a few minutes...",
+      5);
+    auto success = buildEngineFromOnnx();
+    logger_->stop_throttle(log_thread);
+    logger_->log(nvinfer1::ILogger::Severity::kINFO, "Engine build completed");
+    return success;
+  };
+
+  // Build engine if engine has not been cached
+  if (!fs::exists(trt_config_->engine_path)) {
+    return build_engine_with_log();
+  }
+
+  logger_->log(nvinfer1::ILogger::Severity::kINFO, "Loading engine");
+  // Rebuild engine if version mismatch occurred
+  if (!validateEngine()) {
+    logger_->log(
+      nvinfer1::ILogger::Severity::kWARNING,
+      "Validation failed for the existing engine file. Rebuilding");
+    return build_engine_with_log();
+  }
+  // A plan only loads on the compute capability that built it, so an engine
+  // cache that reaches this machine from another one lands here. Rebuilding is
+  // the same recovery the other two failures take; giving up instead leaves the
+  // node with no engine, and inference disabled, for the rest of the run.
+  if (!loadEngine()) {
+    logger_->log(
+      nvinfer1::ILogger::Severity::kWARNING,
+      "The cached engine could not be deserialized on this device. Rebuilding");
+    return build_engine_with_log();
+  }
+
+  logger_->log(nvinfer1::ILogger::Severity::kINFO, "Network validation");
+  // Rebuild engine if the tensor shapes or optimization profile mismatch
+  if (!validateNetworkIO() || !validateProfileDims()) {
+    logger_->log(
+      nvinfer1::ILogger::Severity::kWARNING,
+      "Network validation failed for loaded engine from file. Rebuilding engine");
+    return build_engine_with_log();
+  }
   return true;
 }
 
