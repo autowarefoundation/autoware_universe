@@ -28,6 +28,7 @@ if(BUILD_TESTING)
     test/test_mpc.cpp
     test/test_mpc_lateral_controller.cpp
     test/test_mpc_utils.cpp
+    test/test_steering_predictor.cpp
     test/test_lowpass_filter.cpp
   )
   set(TEST_LATERAL_CONTROLLER_EXE test_lateral_controller)

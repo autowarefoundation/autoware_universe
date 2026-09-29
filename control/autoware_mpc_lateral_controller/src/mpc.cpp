@@ -161,7 +161,8 @@ MpcResult MPC::calculateMPC(
     applyVelocityDynamicsFilter(m_reference_trajectory, current_kinematics);
 
   // get the necessary data
-  const auto get_data_result = getData(reference_trajectory, current_steer, current_kinematics);
+  const auto get_data_result =
+    getData(reference_trajectory, current_steer, current_kinematics, rclcpp::Time(stamp));
   if (!get_data_result) {
     MpcResult failure_result{false, fmt::format("getting MPC Data ({}).", get_data_result.error())};
     setHeader(failure_result, stamp, m_reference_trajectory_frame_id);
@@ -258,7 +259,7 @@ MpcResult MPC::calculateMPC(
     mpc_matrix, x0_delayed, Uex, u_filtered, current_steer.steering_tire_angle, prediction_dt));
 
   // save the control command for the steering prediction
-  m_steering_predictor->storeSteerCmd(u_filtered);
+  m_steering_predictor->storeSteerCmd(u_filtered, rclcpp::Time(stamp));
 
   // save input to buffer for delay compensation
   m_input_buffer.push_back(ctrl_cmd.steering_tire_angle);
@@ -469,7 +470,7 @@ void MPC::resetPrevResult(const SteeringReport & current_steer)
 
 tl::expected<MPCData, std::string> MPC::getData(
   const MPCTrajectory & traj, const SteeringReport & current_steer,
-  const Odometry & current_kinematics)
+  const Odometry & current_kinematics, const rclcpp::Time & stamp)
 {
   const auto current_pose = current_kinematics.pose.pose;
 
@@ -479,7 +480,7 @@ tl::expected<MPCData, std::string> MPC::getData(
     const double traj_end_time = traj.relative_time.back();
 
     const rclcpp::Time traj_stamp(traj.stamp);
-    const double elapsed_time = (m_clock->now() - traj_stamp).seconds();
+    const double elapsed_time = (stamp - traj_stamp).seconds();
     const double fused_time = std::clamp(elapsed_time, traj_start_time, traj_end_time);
     data.temporal_predicted_time = fused_time;
     data.temporal_fused_time = fused_time;
@@ -505,7 +506,7 @@ tl::expected<MPCData, std::string> MPC::getData(
     tf2::getYaw(current_pose.orientation) - tf2::getYaw(data.nearest_pose.orientation));
 
   // get predicted steer
-  data.predicted_steer = m_steering_predictor->calcSteerPrediction();
+  data.predicted_steer = m_steering_predictor->calcSteerPrediction(stamp);
 
   if (m_publish_debug_trajectories) {
     const auto autoware_traj = MPCUtils::convertToAutowareTrajectory(traj);
