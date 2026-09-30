@@ -352,6 +352,11 @@ Float32MultiArrayStamped MPC::generateDiagData(
   append_diag(mpc_data.temporal_observation_used ? 1.0 : 0.0);  // [24] observation used
   append_diag(mpc_data.temporal_window_min);                    // [25] temporal window min
   append_diag(mpc_data.temporal_window_max);                    // [26] temporal window max
+  append_diag(m_dlat_before_lpf);   // [27] lateral error derivative before the low pass filter
+  append_diag(m_dyaw_before_lpf);   // [28] yaw error derivative before the low pass filter
+  append_diag(m_dlat);              // [29] lateral error derivative
+  append_diag(m_dyaw);              // [30] yaw error derivative
+  append_diag(m_qp_solve_time_ms);  // [31] wall time the solver call took [ms]
 
   return diagnostic;
 }
@@ -609,11 +614,13 @@ VectorXd MPC::getInitialState(const MPCData & data)
     double dyaw = (yaw_err - m_yaw_error_prev) / m_ctrl_period;
     m_lateral_error_prev = lat_err;
     m_yaw_error_prev = yaw_err;
+    m_dlat_before_lpf = dlat;
+    m_dyaw_before_lpf = dyaw;
     dlat = m_lpf_lateral_error.filter(dlat);
     dyaw = m_lpf_yaw_error.filter(dyaw);
+    m_dlat = dlat;
+    m_dyaw = dyaw;
     x0 << lat_err, dlat, yaw_err, dyaw;
-    RCLCPP_DEBUG(m_logger, "(before lpf) dot_lat_err = %f, dot_yaw_err = %f", dlat, dyaw);
-    RCLCPP_DEBUG(m_logger, "(after lpf) dot_lat_err = %f, dot_yaw_err = %f", dlat, dyaw);
   } else {
     RCLCPP_ERROR(m_logger, "vehicle_model_type is undefined");
   }
@@ -871,10 +878,8 @@ tl::expected<VectorXd, std::string> MPC::executeOptimization(
     RCLCPP_WARN_THROTTLE(m_logger, *m_clock, 1000, "%s", solve_result.warning_message.c_str());
   }
 
-  {
-    auto t = std::chrono::duration_cast<std::chrono::milliseconds>(t_end - t_start).count();
-    RCLCPP_DEBUG(m_logger, "qp solver calculation time = %ld [ms]", t);
-  }
+  m_qp_solve_time_ms = static_cast<double>(
+    std::chrono::duration_cast<std::chrono::milliseconds>(t_end - t_start).count());
 
   if (Uex.array().isNaN().any()) {
     return tl::make_unexpected("model Uex including NaN");

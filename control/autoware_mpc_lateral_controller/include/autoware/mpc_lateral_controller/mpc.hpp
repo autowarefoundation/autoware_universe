@@ -245,6 +245,15 @@ private:
   rclcpp::Logger m_logger = rclcpp::get_logger("mpc_logger");  // ROS logger used for debug logging.
   rclcpp::Clock::SharedPtr m_clock = std::make_shared<rclcpp::Clock>(RCL_ROS_TIME);  // ROS clock.
 
+  // Error derivatives of the latest cycle, published as debug values.
+  double m_dlat_before_lpf = 0.0;
+  double m_dyaw_before_lpf = 0.0;
+  double m_dlat = 0.0;
+  double m_dyaw = 0.0;
+
+  // Wall time the latest call of the solver took [ms].
+  double m_qp_solve_time_ms = 0.0;
+
   // Vehicle model used for MPC.
   std::shared_ptr<VehicleModelInterface> m_vehicle_model_ptr;
 
