@@ -1351,8 +1351,8 @@ class carla_ros2_interface(object):
         https://www.ros.org/reps/rep-0103.html
         https://github.com/carla-simulator/ros-bridge/blob/master/carla_common/src/carla_common/transforms.py
 
-        Before that conversion, the linear velocity is moved wheelbase/2 back to
-        base_link as v + omega x r.
+        Before that conversion, the linear velocity is shifted wheelbase/2 back
+        with the pose, as v + omega x r.
 
         No-op unless publish_ground_truth_localization is enabled (the
         publishers only exist when it is).
