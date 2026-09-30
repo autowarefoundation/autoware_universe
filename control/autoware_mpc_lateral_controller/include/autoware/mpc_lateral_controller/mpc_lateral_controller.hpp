@@ -58,6 +58,175 @@ class MpcLateralController : public trajectory_follower::LateralControllerBase
 {
 public:
 private:
+  std::shared_ptr<Butterworth2dFilter> lpf_steer_offset_;
+  double m_steering_offset_{0.0};
+  double m_steering_offset_target_{0.0};
+  double m_steering_offset_filtered_{0.0};
+
+  //!< @brief parameters for path smoothing
+  TrajectoryFilteringParam m_trajectory_filtering_param;
+
+  // Ego vehicle speed threshold to enter the stop state.
+  double m_stop_state_entry_ego_speed;
+
+  // Target vehicle speed threshold to enter the stop state.
+  double m_stop_state_entry_target_speed;
+
+  // Convergence threshold for steering control.
+  double m_converged_steer_rad;
+
+  // max mpc output change threshold for 1 sec
+  double m_mpc_converged_threshold_rps;
+
+  // Time duration threshold to check if the trajectory shape has changed.
+  double m_new_traj_duration_time;
+
+  // Distance threshold to check if the trajectory shape has changed.
+  double m_new_traj_end_dist;
+
+  // Flag indicating whether to keep the steering control until it converges.
+  bool m_keep_steer_control_until_converged;
+
+  // MPC solver checker.
+  MpcResult m_mpc_solved_status{true};
+
+  // trajectory buffer for detecting new trajectory
+  std::deque<Trajectory> m_trajectory_buffer;
+
+  std::unique_ptr<MPC> m_mpc;  // MPC object for trajectory following.
+
+  // Check is mpc output converged
+  bool m_is_mpc_history_filled{false};
+
+  // store the last mpc outputs for 1 sec
+  std::vector<std::pair<Lateral, rclcpp::Time>> m_mpc_steering_history{};
+
+  // set the mpc steering output to history
+  void setSteeringToHistory(const Lateral & steering);
+
+  // check if the mpc steering output is converged
+  bool isMpcConverged();
+
+  // measured kinematic state
+  Odometry m_current_kinematic_state;
+
+  SteeringReport m_current_steering;  // Measured steering information.
+
+  Trajectory m_current_trajectory;  // Current reference trajectory for path following.
+
+  double m_steer_cmd_prev = 0.0;  // MPC output in the previous period.
+
+  // Flag indicating whether the previous control command is initialized.
+  bool m_is_ctrl_cmd_prev_initialized = false;
+
+  // Previous control command for path following.
+  Lateral m_ctrl_cmd_prev;
+
+  //  Flag indicating whether the first trajectory has been received.
+  bool m_has_received_first_trajectory = false;
+
+  // Threshold distance for the ego vehicle in nearest index search.
+  double m_ego_nearest_dist_threshold;
+
+  // Threshold yaw for the ego vehicle in nearest index search.
+  double m_ego_nearest_yaw_threshold;
+
+  // Flag indicating whether auto steering offset removal is enabled.
+  bool enable_auto_steering_offset_removal_;
+
+  // Threshold for maximum change in steering offset to prevent large updates.
+  double m_steer_offset_max_update_th_;
+
+  /**
+   * @brief Initialize the timer
+   * @param period_s Control period in seconds.
+   */
+  void initTimer(double period_s);
+
+  /**
+   * @brief Create the vehicle model based on the provided parameters.
+   * @param wheelbase Vehicle's wheelbase.
+   * @param steer_lim Steering command limit.
+   * @param steer_tau Steering time constant.
+   * @param node Reference to the node.
+   * @return Pointer to the created vehicle model.
+   */
+  std::shared_ptr<VehicleModelInterface> createVehicleModel(
+    const double wheelbase, const double steer_lim, const double steer_tau, rclcpp::Node & node);
+
+  /**
+   * @brief Create the quadratic problem solver interface.
+   * @param node Reference to the node.
+   * @return Pointer to the created QP solver interface.
+   */
+  std::shared_ptr<QPSolverInterface> createQPSolverInterface(rclcpp::Node & node);
+
+  /**
+   * @brief Set the current trajectory using the received message.
+   * @param msg Received trajectory message.
+   */
+  void setTrajectory(const Trajectory & msg, const Odometry & current_kinematics);
+
+  /**
+   * @brief Check if the received data is valid.
+   * @return True if the data is valid, false otherwise.
+   */
+  [[nodiscard]] bool checkData() const;
+
+  /**
+   * @brief Create the control command.
+   * @param ctrl_cmd Control command to be created.
+   * @param stamp Timestamp of this control cycle.
+   * @return Created control command.
+   */
+  Lateral createCtrlCmdMsg(const Lateral & ctrl_cmd, const builtin_interfaces::msg::Time & stamp);
+
+  /**
+   * @brief Create the control command horizon message.
+   * @param ctrl_cmd_horizon Control command horizon to be created.
+   * @param stamp Timestamp of this control cycle.
+   * @return Created control command horizon.
+   */
+  [[nodiscard]] LateralHorizon createCtrlCmdHorizonMsg(
+    const LateralHorizon & ctrl_cmd_horizon, const builtin_interfaces::msg::Time & stamp) const;
+
+  /**
+   * @brief Get the stop control command.
+   * @return Stop control command.
+   */
+  [[nodiscard]] Lateral getStopControlCommand() const;
+
+  /**
+   * @brief Get the control command applied before initialization.
+   * @return Initial control command.
+   */
+  [[nodiscard]] Lateral getInitialControlCommand() const;
+
+  /**
+   * @brief Check if the ego car is in a stopped state.
+   * @return True if the ego car is stopped, false otherwise.
+   */
+  [[nodiscard]] bool isStoppedState() const;
+
+  /**
+   * @brief Check if the trajectory has a valid value.
+   * @param traj Trajectory to be checked.
+   * @return True if the trajectory is valid, false otherwise.
+   */
+  [[nodiscard]] bool isValidTrajectory(const Trajectory & traj) const;
+
+  /**
+   * @brief Check if the trajectory shape has changed.
+   * @return True if the trajectory shape has changed, false otherwise.
+   */
+  [[nodiscard]] bool isTrajectoryShapeChanged() const;
+
+  /**
+   * @brief Check if the steering control is converged and stable now.
+   * @param cmd Steering control command to be checked.
+   * @return True if the steering control is converged and stable, false otherwise.
+   */
+  [[nodiscard]] bool isSteerConverged(const Lateral & cmd) const;
 };
 }  // namespace autoware::motion::control::mpc_lateral_controller
 
