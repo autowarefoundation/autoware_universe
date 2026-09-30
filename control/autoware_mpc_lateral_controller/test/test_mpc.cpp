@@ -360,8 +360,8 @@ TEST_F(MPCTest, DynamicCalculate)
   auto mpc = std::make_unique<MPC>();
   initializeMPC(*mpc);
 
-  std::shared_ptr<VehicleModelInterface> vehicle_model_ptr =
-    std::make_shared<DynamicsBicycleModel>(wheelbase, mass_fl, mass_fr, mass_rl, mass_rr, cf, cr);
+  std::shared_ptr<VehicleModelInterface> vehicle_model_ptr = std::make_shared<DynamicsBicycleModel>(
+    wheelbase, mass_fl, mass_fr, mass_rl, mass_rr, cf, cr, no_log);
   mpc->setVehicleModel(vehicle_model_ptr);
   ASSERT_TRUE(mpc->hasVehicleModel());
 

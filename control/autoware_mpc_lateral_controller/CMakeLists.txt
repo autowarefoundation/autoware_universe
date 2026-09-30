@@ -9,6 +9,7 @@ find_package(fmt REQUIRED)
 set(MPC_LAT_CON_LIB ${PROJECT_NAME}_lib)
 ament_auto_add_library(${MPC_LAT_CON_LIB} SHARED
   src/mpc_lateral_controller.cpp
+  src/ros_log_writer.cpp
   src/lowpass_filter.cpp
   src/steering_predictor.cpp
   src/mpc.cpp
