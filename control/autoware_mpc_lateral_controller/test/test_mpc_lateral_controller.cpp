@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/mpc_lateral_controller/mpc_lateral_controller.hpp"
+#include "autoware/mpc_lateral_controller/mpc_lateral_controller_node.hpp"
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
@@ -33,7 +33,7 @@
 
 namespace
 {
-using autoware::motion::control::mpc_lateral_controller::MpcLateralController;
+using autoware::motion::control::mpc_lateral_controller::MpcLateralControllerNode;
 using autoware::motion::control::trajectory_follower::InputData;
 using autoware::motion::control::trajectory_follower::LateralControllerBase;
 using autoware::motion::control::trajectory_follower::LateralOutput;
@@ -398,7 +398,7 @@ protected:
     // The trajectory follower node declares this one before building the controller.
     node_->declare_parameter<double>("ctrl_period", ctrl_period);
     auto diag_updater = std::make_shared<diagnostic_updater::Updater>(node_.get());
-    return std::make_unique<MpcLateralController>(*node_, diag_updater);
+    return std::make_unique<MpcLateralControllerNode>(*node_, diag_updater);
   }
 
   /// Some of the behaviours below only appear after the controller has run for a while,

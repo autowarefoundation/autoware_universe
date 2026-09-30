@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__MPC_LATERAL_CONTROLLER__MPC_LATERAL_CONTROLLER_HPP_
-#define AUTOWARE__MPC_LATERAL_CONTROLLER__MPC_LATERAL_CONTROLLER_HPP_
+#ifndef AUTOWARE__MPC_LATERAL_CONTROLLER__MPC_LATERAL_CONTROLLER_NODE_HPP_
+#define AUTOWARE__MPC_LATERAL_CONTROLLER__MPC_LATERAL_CONTROLLER_NODE_HPP_
 
 #include "autoware/mpc_lateral_controller/lowpass_filter.hpp"
 #include "autoware/mpc_lateral_controller/mpc.hpp"
@@ -54,13 +54,13 @@ using geometry_msgs::msg::PoseStamped;
 using nav_msgs::msg::Odometry;
 using trajectory_follower::LateralHorizon;
 
-class MpcLateralController : public trajectory_follower::LateralControllerBase
+class MpcLateralControllerNode : public trajectory_follower::LateralControllerBase
 {
 public:
   /// \param node Reference to the node used only for the component and parameter initialization.
-  explicit MpcLateralController(
+  explicit MpcLateralControllerNode(
     rclcpp::Node & node, std::shared_ptr<diagnostic_updater::Updater> diag_updater);
-  virtual ~MpcLateralController();
+  virtual ~MpcLateralControllerNode();
 
   void set_steering_offset(double offset) override { m_steering_offset_ = offset; }
 
@@ -307,4 +307,4 @@ private:
 };
 }  // namespace autoware::motion::control::mpc_lateral_controller
 
-#endif  // AUTOWARE__MPC_LATERAL_CONTROLLER__MPC_LATERAL_CONTROLLER_HPP_
+#endif  // AUTOWARE__MPC_LATERAL_CONTROLLER__MPC_LATERAL_CONTROLLER_NODE_HPP_

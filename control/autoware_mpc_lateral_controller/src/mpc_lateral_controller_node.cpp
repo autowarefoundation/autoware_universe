@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/mpc_lateral_controller/mpc_lateral_controller.hpp"
+#include "autoware/mpc_lateral_controller/mpc_lateral_controller_node.hpp"
 
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
 #include "autoware/mpc_lateral_controller/qp_solver/qp_solver_osqp.hpp"
@@ -38,7 +38,7 @@
 namespace autoware::motion::control::mpc_lateral_controller
 {
 
-MpcLateralController::MpcLateralController(
+MpcLateralControllerNode::MpcLateralControllerNode(
   rclcpp::Node & node, std::shared_ptr<diagnostic_updater::Updater> diag_updater)
 : clock_(node.get_clock()),
   logger_(node.get_logger().get_child("lateral_controller")),
@@ -184,7 +184,7 @@ MpcLateralController::MpcLateralController(
   /* get parameter updates */
   using std::placeholders::_1;
   m_set_param_res =
-    node.add_on_set_parameters_callback(std::bind(&MpcLateralController::paramCallback, this, _1));
+    node.add_on_set_parameters_callback(std::bind(&MpcLateralControllerNode::paramCallback, this, _1));
 
   m_mpc->initializeSteeringPredictor();
 
@@ -193,11 +193,11 @@ MpcLateralController::MpcLateralController(
   setupDiag();
 }
 
-MpcLateralController::~MpcLateralController()
+MpcLateralControllerNode::~MpcLateralControllerNode()
 {
 }
 
-std::shared_ptr<VehicleModelInterface> MpcLateralController::createVehicleModel(
+std::shared_ptr<VehicleModelInterface> MpcLateralControllerNode::createVehicleModel(
   const double wheelbase, const double steer_lim, const double steer_tau, rclcpp::Node & node)
 {
   std::shared_ptr<VehicleModelInterface> vehicle_model_ptr;
@@ -232,7 +232,7 @@ std::shared_ptr<VehicleModelInterface> MpcLateralController::createVehicleModel(
   return vehicle_model_ptr;
 }
 
-std::shared_ptr<QPSolverInterface> MpcLateralController::createQPSolverInterface(
+std::shared_ptr<QPSolverInterface> MpcLateralControllerNode::createQPSolverInterface(
   rclcpp::Node & node)
 {
   std::shared_ptr<QPSolverInterface> qpsolver_ptr;
@@ -253,7 +253,7 @@ std::shared_ptr<QPSolverInterface> MpcLateralController::createQPSolverInterface
   return qpsolver_ptr;
 }
 
-void MpcLateralController::setStatus(diagnostic_updater::DiagnosticStatusWrapper & stat)
+void MpcLateralControllerNode::setStatus(diagnostic_updater::DiagnosticStatusWrapper & stat)
 {
   if (m_mpc_solved_status.result) {
     stat.summary(diagnostic_msgs::msg::DiagnosticStatus::OK, "MPC succeeded.");
@@ -263,12 +263,12 @@ void MpcLateralController::setStatus(diagnostic_updater::DiagnosticStatusWrapper
   }
 }
 
-void MpcLateralController::setupDiag()
+void MpcLateralControllerNode::setupDiag()
 {
   diag_updater_->add("MPC_solve_checker", [&](auto & stat) { setStatus(stat); });
 }
 
-trajectory_follower::LateralOutput MpcLateralController::run(
+trajectory_follower::LateralOutput MpcLateralControllerNode::run(
   trajectory_follower::InputData const & input_data)
 {
   // Timestamp of this control cycle, shared by every message this call publishes.
@@ -371,7 +371,7 @@ trajectory_follower::LateralOutput MpcLateralController::run(
     ctrl_cmd, mpc_solved_status.result, mpc_solved_status.ctrl_cmd_horizon);
 }
 
-bool MpcLateralController::isSteerConverged(const Lateral & cmd) const
+bool MpcLateralControllerNode::isSteerConverged(const Lateral & cmd) const
 {
   // wait for a while to propagate the trajectory shape to the output command when the trajectory
   // shape is changed.
@@ -387,7 +387,7 @@ bool MpcLateralController::isSteerConverged(const Lateral & cmd) const
   return is_converged;
 }
 
-bool MpcLateralController::isReady(const trajectory_follower::InputData & input_data)
+bool MpcLateralControllerNode::isReady(const trajectory_follower::InputData & input_data)
 {
   setTrajectory(input_data.current_trajectory, input_data.current_odometry);
   m_current_kinematic_state = input_data.current_odometry;
@@ -409,7 +409,7 @@ bool MpcLateralController::isReady(const trajectory_follower::InputData & input_
   return true;
 }
 
-void MpcLateralController::setTrajectory(
+void MpcLateralControllerNode::setTrajectory(
   const Trajectory & msg, const Odometry & current_kinematics)
 {
   m_current_trajectory = msg;
@@ -443,7 +443,7 @@ void MpcLateralController::setTrajectory(
   }
 }
 
-Lateral MpcLateralController::getStopControlCommand() const
+Lateral MpcLateralControllerNode::getStopControlCommand() const
 {
   Lateral cmd;
   cmd.steering_tire_angle = static_cast<decltype(cmd.steering_tire_angle)>(m_steer_cmd_prev);
@@ -451,7 +451,7 @@ Lateral MpcLateralController::getStopControlCommand() const
   return cmd;
 }
 
-Lateral MpcLateralController::getInitialControlCommand() const
+Lateral MpcLateralControllerNode::getInitialControlCommand() const
 {
   Lateral cmd;
   cmd.steering_tire_angle = m_current_steering.steering_tire_angle;
@@ -459,7 +459,7 @@ Lateral MpcLateralController::getInitialControlCommand() const
   return cmd;
 }
 
-bool MpcLateralController::isStoppedState() const
+bool MpcLateralControllerNode::isStoppedState() const
 {
   const double current_vel = m_current_kinematic_state.twist.twist.linear.x;
   // If the nearest index is not found, return false
@@ -501,7 +501,7 @@ bool MpcLateralController::isStoppedState() const
   return std::fabs(target_vel) < m_stop_state_entry_target_speed;
 }
 
-Lateral MpcLateralController::createCtrlCmdMsg(
+Lateral MpcLateralControllerNode::createCtrlCmdMsg(
   const Lateral & ctrl_cmd, const builtin_interfaces::msg::Time & stamp)
 {
   auto out = ctrl_cmd;
@@ -510,7 +510,7 @@ Lateral MpcLateralController::createCtrlCmdMsg(
   return out;
 }
 
-LateralHorizon MpcLateralController::createCtrlCmdHorizonMsg(
+LateralHorizon MpcLateralControllerNode::createCtrlCmdHorizonMsg(
   const LateralHorizon & ctrl_cmd_horizon, const builtin_interfaces::msg::Time & stamp) const
 {
   auto out = ctrl_cmd_horizon;
@@ -520,12 +520,12 @@ LateralHorizon MpcLateralController::createCtrlCmdHorizonMsg(
   return out;
 }
 
-void MpcLateralController::publishPredictedTraj(Trajectory & predicted_traj) const
+void MpcLateralControllerNode::publishPredictedTraj(Trajectory & predicted_traj) const
 {
   m_pub_predicted_traj->publish(predicted_traj);
 }
 
-void MpcLateralController::publishDebugMessages(
+void MpcLateralControllerNode::publishDebugMessages(
   std::optional<MpcDebugTopicMessage> & debug_msgs) const
 {
   if (!debug_msgs) {
@@ -539,7 +539,7 @@ void MpcLateralController::publishDebugMessages(
   m_pub_nearest_info->publish(debug_msgs->nearest_info);
 }
 
-void MpcLateralController::publishDebugValues(Float32MultiArrayStamped & debug_values) const
+void MpcLateralControllerNode::publishDebugValues(Float32MultiArrayStamped & debug_values) const
 {
   m_pub_debug_values->publish(debug_values);
 
@@ -549,7 +549,7 @@ void MpcLateralController::publishDebugValues(Float32MultiArrayStamped & debug_v
   m_pub_steer_offset->publish(offset);
 }
 
-void MpcLateralController::setSteeringToHistory(const Lateral & steering)
+void MpcLateralControllerNode::setSteeringToHistory(const Lateral & steering)
 {
   const auto time = clock_->now();
   if (m_mpc_steering_history.empty()) {
@@ -576,7 +576,7 @@ void MpcLateralController::setSteeringToHistory(const Lateral & steering)
   }
 }
 
-bool MpcLateralController::isMpcConverged()
+bool MpcLateralControllerNode::isMpcConverged()
 {
   // If the number of variable below the 2, there is no enough data so MPC is not converged.
   if (m_mpc_steering_history.size() < 2) {
@@ -603,7 +603,7 @@ bool MpcLateralController::isMpcConverged()
   return (max_steering_value - min_steering_value) < m_mpc_converged_threshold_rps;
 }
 
-void MpcLateralController::declareMPCparameters(rclcpp::Node & node)
+void MpcLateralControllerNode::declareMPCparameters(rclcpp::Node & node)
 {
   m_mpc->m_param.prediction_horizon = node.declare_parameter<int>("mpc_prediction_horizon");
   m_mpc->m_param.prediction_dt = node.declare_parameter<double>("mpc_prediction_dt");
@@ -639,7 +639,7 @@ void MpcLateralController::declareMPCparameters(rclcpp::Node & node)
   m_mpc->m_param.min_prediction_length = dp("mpc_min_prediction_length");
 }
 
-rcl_interfaces::msg::SetParametersResult MpcLateralController::paramCallback(
+rcl_interfaces::msg::SetParametersResult MpcLateralControllerNode::paramCallback(
   const std::vector<rclcpp::Parameter> & parameters)
 {
   rcl_interfaces::msg::SetParametersResult result;
@@ -706,7 +706,7 @@ rcl_interfaces::msg::SetParametersResult MpcLateralController::paramCallback(
   return result;
 }
 
-bool MpcLateralController::isTrajectoryShapeChanged() const
+bool MpcLateralControllerNode::isTrajectoryShapeChanged() const
 {
   // TODO(Horibe): update implementation to check trajectory shape around ego vehicle.
   // Now temporally check the goal position.
@@ -720,7 +720,7 @@ bool MpcLateralController::isTrajectoryShapeChanged() const
   return false;
 }
 
-bool MpcLateralController::isValidTrajectory(const Trajectory & traj) const
+bool MpcLateralControllerNode::isValidTrajectory(const Trajectory & traj) const
 {
   double prev_time_from_start = -std::numeric_limits<double>::infinity();
   for (const auto & p : traj.points) {
