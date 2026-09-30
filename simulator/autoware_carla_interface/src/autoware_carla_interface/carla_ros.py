@@ -1351,6 +1351,9 @@ class carla_ros2_interface(object):
         https://www.ros.org/reps/rep-0103.html
         https://github.com/carla-simulator/ros-bridge/blob/master/carla_common/src/carla_common/transforms.py
 
+        Before that conversion, the linear velocity is moved wheelbase/2 back to
+        base_link as v + omega x r.
+
         No-op unless publish_ground_truth_localization is enabled (the
         publishers only exist when it is).
         """
@@ -1389,11 +1392,13 @@ class carla_ros2_interface(object):
         inv_rot_mat = trans_mat[0:3, 0:3].T
         vel_vec = numpy.array([ego_vel.x, ego_vel.y, ego_vel.z]).reshape(3, 1)
         body_vel = (inv_rot_mat @ vel_vec).T[0]
+        ang_vel_vec = numpy.array([ego_ang_vel.x, ego_ang_vel.y, ego_ang_vel.z]).reshape(3, 1)
+        body_ang_vel = (inv_rot_mat @ ang_vel_vec).T[0]
+        lever_arm = (-self.sensor_loader.wheelbase / 2.0, 0.0, 0.0)
+        body_vel += numpy.cross(numpy.radians(body_ang_vel), lever_arm)
         odom.twist.twist.linear.x = float(body_vel[0])
         odom.twist.twist.linear.y = float(-body_vel[1])
         odom.twist.twist.linear.z = float(body_vel[2])
-        ang_vel_vec = numpy.array([ego_ang_vel.x, ego_ang_vel.y, ego_ang_vel.z]).reshape(3, 1)
-        body_ang_vel = (inv_rot_mat @ ang_vel_vec).T[0]
         odom.twist.twist.angular.x = math.radians(float(body_ang_vel[0]))
         odom.twist.twist.angular.y = -math.radians(float(body_ang_vel[1]))
         odom.twist.twist.angular.z = -math.radians(float(body_ang_vel[2]))
