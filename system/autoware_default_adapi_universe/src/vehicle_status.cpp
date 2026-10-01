@@ -64,9 +64,9 @@ std::unordered_map<uint8_t, uint8_t> hazard_light_type_ = {
 };
 
 VehicleStatusNode::VehicleStatusNode(const rclcpp::NodeOptions & options)
-: Node("vehicle_status", options)
+: autoware::agnocast_wrapper::Node("vehicle_status", options)
 {
-  const auto adaptor = autoware::component_interface_utils::NodeAdaptor(this);
+  const auto adaptor = autoware::component_interface_utils::NodeAdaptor<NodeT>(this);
   group_cli_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
   adaptor.init_pub(pub_kinematics_);
   adaptor.init_pub(pub_status_);
@@ -80,7 +80,8 @@ VehicleStatusNode::VehicleStatusNode(const rclcpp::NodeOptions & options)
   adaptor.init_sub(sub_energy_level_, nullptr);
 
   const auto rate = rclcpp::Rate(10);
-  timer_ = rclcpp::create_timer(this, get_clock(), rate.period(), [this]() { on_timer(); });
+  timer_ = autoware::agnocast_wrapper::create_timer(
+    this, get_clock(), rate.period(), [this]() { on_timer(); });
 }
 
 uint8_t VehicleStatusNode::mapping(

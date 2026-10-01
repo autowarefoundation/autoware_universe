@@ -25,6 +25,7 @@
         start_time_s: 2.0
     planning_frequency_hz: 10.0
     ignore_neighbors: false
+    remap_unsupported_objects_to_pedestrian: false
     traffic_light_group_msg_timeout_seconds: 0.2
     batch_size: 1
     temperature: [0.0]

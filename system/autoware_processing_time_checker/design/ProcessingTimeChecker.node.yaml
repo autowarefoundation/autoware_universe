@@ -30,7 +30,9 @@ param_files:
   - name: param_file
     default: config/processing_time_checker.param.yaml
 
-param_values: []
+param_values:
+  - name: output_metrics
+    default: false
 
 # processes
 processes:

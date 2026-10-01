@@ -16,6 +16,7 @@
 #define VEHICLE_COMMAND_HPP_
 
 #include <autoware/adapi_specs/control.hpp>
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware/component_interface_specs/control.hpp>
 #include <autoware/component_interface_specs_universe/control.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -26,7 +27,7 @@
 namespace autoware::default_adapi
 {
 
-class VehicleCommandNode : public rclcpp::Node
+class VehicleCommandNode : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit VehicleCommandNode(const rclcpp::NodeOptions & options);
@@ -42,12 +43,12 @@ private:
   void on_control(const InternalControl::Message & msg);
   void on_actuation(const InternalActuation::Message & msg);
 
-  Pub<ExternalPedals> pub_pedals_;
-  Pub<ExternalAcceleration> pub_acceleration_;
-  Pub<ExternalVelocity> pub_velocity_;
-  Pub<ExternalSteering> pub_steering_;
-  Sub<InternalControl> sub_control_;
-  Sub<InternalActuation> sub_actuation_;
+  Pub<ExternalPedals, NodeT> pub_pedals_;
+  Pub<ExternalAcceleration, NodeT> pub_acceleration_;
+  Pub<ExternalVelocity, NodeT> pub_velocity_;
+  Pub<ExternalSteering, NodeT> pub_steering_;
+  Sub<InternalControl, NodeT> sub_control_;
+  Sub<InternalActuation, NodeT> sub_actuation_;
 };
 
 }  // namespace autoware::default_adapi

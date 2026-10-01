@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_minimum_rule_based_planner</name>
-  <version>0.48.0</version>
+  <version>0.53.0</version>
   <description>The minimum_rule_based_planner package</description>
 
   <maintainer email="takumi.odashima@tier4.jp">Takumi Odashima</maintainer>
@@ -31,7 +31,7 @@
   <depend>autoware_planning_test_manager</depend>
   <depend>autoware_qp_interface</depend>
   <depend>autoware_trajectory</depend>
-  <depend>autoware_trajectory_processor</depend>
+  <depend>autoware_trajectory_modifier</depend>
   <depend>autoware_utils</depend>
   <depend>autoware_utils_debug</depend>
   <depend>autoware_utils_uuid</depend>

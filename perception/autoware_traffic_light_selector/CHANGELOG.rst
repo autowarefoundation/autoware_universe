@@ -2,6 +2,108 @@
 Changelog for package autoware_traffic_light_selector
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* build(traffic_light_perception): split core/node CMake targets and expose public core headers (`#13325 <https://github.com/autowarefoundation/autoware_universe/issues/13325>`_)
+  * refactor(autoware_traffic_light_category_merger): expose core header, split core/node CMake targets
+  Move traffic_light_category_merger.hpp into
+  include/autoware/traffic_light_category_merger/, and split the CMake
+  target into ${PROJECT_NAME} (core) and ${PROJECT_NAME}_node (Node
+  adapter linking the core). The Node header stays in src/.
+  No behavior change; colcon build + colcon test pass (7 tests, 0
+  failures).
+  * refactor(autoware_traffic_light_selector): expose core header, split core/node CMake targets
+  Move traffic_light_selector.hpp into
+  include/autoware/traffic_light_selector/, keeping
+  traffic_light_selector_utils.hpp private in src/ (not part of the
+  public API). Split the CMake target into ${PROJECT_NAME} (core:
+  selector + utils) and ${PROJECT_NAME}_node (Node adapter linking the
+  core).
+  No behavior change; colcon build + colcon test pass (7 tests, 0
+  failures).
+  * refactor(autoware_traffic_light_map_based_detector): expose core header, split core/node CMake targets
+  Move traffic_light_map_based_detector.hpp into
+  include/autoware/traffic_light_map_based_detector/, keeping
+  traffic_light_map_based_detector_process.hpp private in src/ (not
+  part of the public API). Since the public header declares functions
+  taking image_geometry::PinholeCameraModel, add that include directly
+  to the header instead of pulling it in transitively via the private
+  process header. Split the CMake target into ${PROJECT_NAME} (core:
+  detector + process) and ${PROJECT_NAME}_node (Node adapter linking
+  the core).
+  No behavior change; colcon build + colcon test pass (7 tests, 0
+  failures).
+  * refactor(autoware_tensorrt_yolox): build TrtYoloXDetector as part of the core library
+  tensorrt_yolox_detector.cpp implements core detection logic and was
+  being compiled into ${PROJECT_NAME}_node (the Node adapter target)
+  instead of ${PROJECT_NAME} (the core library). Move it to the core
+  target so the core library does not depend on the node target for
+  its own logic.
+  * refactor(autoware_traffic_light_classifier): expose TrafficLightClassifier as the sole public header
+  - Move traffic_light_classifier.hpp to include/autoware/traffic_light_classifier/
+  and forward-declare ClassifierInterface instead of including
+  classifier/classifier_interface.hpp, so the classifier/*.hpp backends and
+  classifier_params.hpp / traffic_light_classifier_node.hpp stay private under src/.
+  - Split the CMake library target into ${PROJECT_NAME} (ROS-free classification
+  core) and ${PROJECT_NAME}_node (rclcpp::Node adapter layer), mirroring the
+  core/node separation already present in src/.
+  - single_image_debug_inference_node and the node-level integration test now
+  link against both libraries instead of recompiling every source file.
+  * refactor(autoware_traffic_light_multi_camera_fusion): move headers under include/, split core/node CMake targets
+  * refactor(autoware_traffic_light_arbiter): split core/node CMake targets
+  * refactor(autoware_image_transport_decompressor): move core logic header to include, node header to src
+  * refactor(autoware_crosswalk_traffic_light_estimator): move core logic header to include, node header to src, split core/node CMake targets
+  ---------
+* refactor(autoware_traffic_light_selector): shrink node characterization test (`#12928 <https://github.com/autowarefoundation/autoware_universe/issues/12928>`_)
+  refactor(autoware_traffic_light_selector): shrink node characterization test to simple integration test
+  The selection logic is now fully covered by TrafficLightSelector unit
+  tests, so the node-level test only needs to verify that the node's
+  subscribers, synchronizer and publisher are wired correctly. Replaced
+  the four IoU-selection scenarios with a single empty-inputs case and
+  removed the now-unused ROI-building helpers.
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+* refacotr(traffic_light_selector): extract core logic (`#12924 <https://github.com/autowarefoundation/autoware_universe/issues/12924>`_)
+  * refactor(autoware_traffic_light_selector): extract TrafficLightSelector logic
+  * refactor(autoware_traffic_light_selector): pass CameraInfo directly to TrafficLightSelector::select
+  * test(traffic_light_selector): add unit test
+  * refactor(autoware_traffic_light_selector): convert TrafficLightSelector to free function
+  select() has no member state, so the class wrapper was unnecessary. Convert
+  it to a free function in the autoware::traffic_light namespace and add a
+  docstring, updating the node and unit test call sites accordingly.
+  * test(traffic_light_selector): wire up selector unit test and simplify assertions
+  Register test_traffic_light_selector.cpp as a gtest target so it actually
+  runs, and assert against a full TrafficLightRoiArray with expect_same
+  instead of checking individual fields.
+  * test(autoware_traffic_light_selector): simplify test setup with select_helper
+  Introduce a select_helper that wraps the detected/rough/expected ROI
+  array construction and the select() call, and pre-build TrafficLightRoi
+  fixtures so each test case reads as plain data instead of nested
+  make\_* calls.
+  * test(autoware_traffic_light_selector): compare rois vectors directly
+  Have select_helper() return the plain rois vector and expect_same()
+  take vectors, dropping the TrafficLightRoiArray wrapping that was only
+  needed to satisfy the message type at comparison call sites.
+  * test(autoware_traffic_light_selector): use more descriptive variable names
+  * test(autoware_traffic_light_selector): split make_traffic_light_roi into make_car_traffic_light_roi and make_pedestrian_traffic_light_roi
+  * test(traffic_light_selector): reduce test case
+  * test(traffic_light_selector): use distinct detected/expected ROIs in MultipleExpectedRoisEachAssigned
+  ---------
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+* test(traffic_light_selector): add integration test (`#12892 <https://github.com/autowarefoundation/autoware_universe/issues/12892>`_)
+  * test(traffic_light_selector): add integration test
+  * style(pre-commit): autofix
+  * test(autoware_traffic_light_selector): add multi-candidate highest-IoU selection case
+  * test(autoware_traffic_light_selector): extract single-output-roi assertion helper
+  * refactor(autoware_traffic_light_selector): simplify publish_inputs to accept element vectors
+  Accept std::vector<RegionOfInterest> and std::vector<TrafficLightRoi> directly so callers
+  can pass brace-enclosed lists instead of constructing intermediate wrapper objects.
+  * test(traffic_light_selector): improve readability
+  ---------
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Ryohsuke Mitsudome, Takahisa Ishikawa
+
 0.52.0 (2026-06-30)
 -------------------
 

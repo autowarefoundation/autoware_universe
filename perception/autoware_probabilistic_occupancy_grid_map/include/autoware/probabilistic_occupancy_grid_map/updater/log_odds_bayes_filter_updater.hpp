@@ -40,7 +40,7 @@ public:
   {
   }
   bool update(const OccupancyGridMapInterface & single_frame_occupancy_grid_map) override;
-  void initRosParam(rclcpp::Node & node) override;
+  void initRosParam(rclcpp::node_interfaces::NodeParametersInterface & parameters) override;
 
 private:
   inline unsigned char applyLOBF(const unsigned char & z, const unsigned char & o);

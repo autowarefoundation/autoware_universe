@@ -1,0 +1,13 @@
+# Base configuration for autoware_redundancy_switcher_interface.
+# Contains parameters for subsystem_adapter, diag_adapter, and log_adapter.
+# Plugin-specific parameters (UDS paths, etc.) are in the plugin package config.
+/**:
+  ros__parameters:
+    # Class name of the IAdapterPlugin to load. Resolved by pluginlib at runtime, so the
+    # implementation may live in any package. Override via the plugin config file.
+    switcher_plugin: "autoware::redundancy_switcher::SimpleSwitcherAdapter"
+
+    diag:
+      # A transitional switcher state that persists longer than this threshold is reported
+      # as DiagStatus::ERROR. (unit: ms)
+      transitional_timeout_milli: 2000.0

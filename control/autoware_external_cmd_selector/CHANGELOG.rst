@@ -2,6 +2,31 @@
 Changelog for package autoware_external_cmd_selector
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* fix(control): declare the fixed-name compatibility interfaces in the control node designs (`#13281 <https://github.com/autowarefoundation/autoware_universe/issues/13281>`_)
+  * fix(control): declare the fixed-name compatibility interfaces in the control node designs
+  operation_mode_transition_manager subscribes /control/current_gate_mode and
+  /control/external_cmd_selector/current_selector_mode and calls
+  /control/external_cmd_selector/select_external_command by fixed name; the
+  gate serves the ADAPI pause/stop interfaces under /control/vehicle_cmd_gate.
+  Declaring these ports with their remap_target lets a system design connect
+  them and keep the fixed names when the module hierarchy nests the nodes.
+  * fix(control): declare the multi-publisher gate_mode_cmd and engage topics as global
+  ---------
+* chore(control): update package maintainers (`#13183 <https://github.com/autowarefoundation/autoware_universe/issues/13183>`_)
+* refactor(control): move node design files into each package (`#13100 <https://github.com/autowarefoundation/autoware_universe/issues/13100>`_)
+  Co-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>
+* feat(external_cmd_selector): apply agnocast_wrapper::Node to external_cmd_selector (`#13013 <https://github.com/autowarefoundation/autoware_universe/issues/13013>`_)
+  * feat(external_cmd_selector): apply agnocast_wrapper::Node to external_cmd_selector
+  Co-authored-by: Koichi Imai <koichi.imai.2@tier4.jp>
+  * refactor: revert comment
+  * refactor: revert comment
+  ---------
+  Co-authored-by: Koichi Imai <koichi.imai.2@tier4.jp>
+* Contributors: Ryohsuke Mitsudome, Satoshi OTA, Taekjin LEE, Yutaro Kobayashi
+
 0.52.0 (2026-06-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

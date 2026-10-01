@@ -2,6 +2,19 @@
 Changelog for package autoware_geo_pose_projector
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* fix(autoware_geo_pose_projector): declare the map projector info input as a remap target (`#13334 <https://github.com/autowarefoundation/autoware_universe/issues/13334>`_)
+  The map_projector_info subscriber is pinned to /map/map_projector_info with
+  global:, which keeps the port out of the design graph: link_manager skips any
+  connection whose target is a global input port and the exporter emits no remap.
+  remap_target: keeps the same fixed topic name while letting the port take part
+  in the graph.
+* refactor(localization): move node design files into each package (`#13101 <https://github.com/autowarefoundation/autoware_universe/issues/13101>`_)
+  Co-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>
+* Contributors: Ryohsuke Mitsudome, Taekjin LEE
+
 0.52.0 (2026-06-30)
 -------------------
 

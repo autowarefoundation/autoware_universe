@@ -8,7 +8,7 @@ package:
   provider: autoware
 
 launch:
-  plugin: autoware::raw_vehicle_cmd_converter::RawVehicleCmdConverterNode
+  plugin: autoware::raw_vehicle_cmd_converter::RawVehicleCommandConverterNode
   executable: autoware_raw_vehicle_cmd_converter_node
   node_output: screen
 

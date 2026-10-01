@@ -18,17 +18,27 @@ launch:
 subscribers:
   - name: diag_graph_struct
     message_type: tier4_system_msgs/msg/DiagGraphStruct
-    global: /diagnostics_graph/struct
+    remap_target: /diagnostics_graph/struct
   - name: diag_graph_status
     message_type: tier4_system_msgs/msg/DiagGraphStatus
-    global: /diagnostics_graph/status
+    remap_target: /diagnostics_graph/status
 
 publishers: []
 
 # parameters
 param_files: []
 
-param_values: []
+param_values:
+  - name: root_path
+    default: /autoware/modes/autonomous
+  - name: max_depth
+    default: 3
+  - name: show_rate
+    default: 1.0
+  - name: enable_terminal_log
+    default: false
+  - name: ignore_dependent_error
+    default: false
 
 # processes
 processes:

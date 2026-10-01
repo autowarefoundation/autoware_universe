@@ -113,6 +113,11 @@
           "default": false,
           "description": "Ignore neighbor agents"
         },
+        "remap_unsupported_objects_to_pedestrian": {
+          "type": "boolean",
+          "default": false,
+          "description": "Treat UNKNOWN and HAZARD tracked objects as PEDESTRIAN, the most conservative supported class, so the planner reacts to them instead of dropping them. Non-BOX shapes are replaced with a 0.5 m bounding box. ANIMAL, OVER_DRIVABLE and UNDER_DRIVABLE remain ignored."
+        },
         "traffic_light_group_msg_timeout_seconds": {
           "type": "number",
           "default": 0.2,

@@ -8,9 +8,11 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   src/pipeline_latency_monitor_node.cpp
 )
 
-rclcpp_components_register_node(${PROJECT_NAME}
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   PLUGIN "autoware::system::pipeline_latency_monitor::PipelineLatencyMonitorNode"
   EXECUTABLE ${PROJECT_NAME}_node
+  ROS2_EXECUTOR SingleThreadedExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
 )
 
 if(BUILD_TESTING)

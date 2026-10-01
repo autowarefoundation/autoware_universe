@@ -2,6 +2,87 @@
 Changelog for package autoware_behavior_path_planner
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* fix(design): align the planning node designs with the packages they describe (`#13342 <https://github.com/autowarefoundation/autoware_universe/issues/13342>`_)
+  * fix(design): align the planning node designs with the packages they describe
+  HazardLightsSelector registers as HazardLightsSelector, and its second input
+  maps to input/system/hazard_lights_command and carries the MRM command, so the
+  port is named system_hazard_lights_cmd.
+  SurroundObstacleChecker publishes the migrated autoware_internal_planning_msgs
+  velocity limit types, and creates neither stop_reasons nor no_start_reason.
+  RemainingDistanceTimeCalculator takes its velocity limit input through the
+  design graph; global: keeps a port out of it, since link_manager skips any
+  connection whose target is a global input port and the exporter emits no remap.
+  ExternalVelocityLimitSelector's api_limit is the reverse case: it is published
+  only by AD API adaptors outside the design graph, so it keeps global: alongside
+  its remap_target.
+  `#13165 <https://github.com/autowarefoundation/autoware_universe/issues/13165>`_ unified the Modifier and Optimizer nodes into TrajectoryProcessor but
+  left both old designs in place, naming plugins, executables and param files
+  that no longer exist, and put the new design in common/autoware_universe_designs,
+  a bare directory that is not a ROS package. The design moves into
+  autoware_trajectory_processor per the convention set by `#13102 <https://github.com/autowarefoundation/autoware_universe/issues/13102>`_, and its
+  processing_time_detail publisher carries ProcessingTimeTree.
+  * feat(autoware_path_sampler): add the packaged path sampler parameter file
+  The package had no config/ directory and its INSTALL_TO_SHARE was commented
+  out, so the parameter file the node design points at lived only in
+  autoware_launch. The file is copied into the package and installed, and the
+  design declares the three shared param files the launcher also passes, which is
+  where ego_nearest_dist_threshold and ego_nearest_yaw_threshold come from.
+  * feat(design): add the planning factor publishers to the BehaviorPathPlanner node design
+  The node publishes nine planning factor arrays under
+  /planning/planning_factors that the design did not declare, so nothing could
+  connect them to the evaluator.
+  ---------
+* fix(planning, control): point design param_files at the packages that install them (`#13219 <https://github.com/autowarefoundation/autoware_universe/issues/13219>`_)
+  BehaviorPathPlanner listed its plugin modules' param files as relative
+  paths, resolving against the host node package; each module package
+  installs its own config. PlanningValidator referenced its checker
+  plugins' param files under the host package with a planning_validator\_
+  filename prefix the plugins do not use. TrajectoryFollower referenced
+  config/ where the package installs param/, and controller files that
+  exist per controller type (mpc, pid). ManualLaneChangeHandler declared
+  a param file that does not exist; the node declares no parameters.
+  The run_out module ships a config directory that ament_auto_package()
+  did not install.
+  Co-authored-by: Claude Fable 5 <noreply@anthropic.com>
+* chore: update planning param.yaml comments (`#13061 <https://github.com/autowarefoundation/autoware_universe/issues/13061>`_)
+  update planning param.yaml comments
+* refactor(planning): move node design files into each package (`#13102 <https://github.com/autowarefoundation/autoware_universe/issues/13102>`_)
+  Co-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>
+* chore(pre-commit): update clang-format to v22.1.5 (`#13126 <https://github.com/autowarefoundation/autoware_universe/issues/13126>`_)
+  * chore(pre-commit): update clang-format to v22.1.5
+  * style(pre-commit): autofix
+  ---------
+* fix(pre-commit): update pre-commit-hooks-ros to v0.10.3 and adapt include guards (`#13083 <https://github.com/autowarefoundation/autoware_universe/issues/13083>`_)
+  * chore: sync files
+  * fix(pre-commit): adapt include guards to pre-commit-hooks-ros v0.10.3
+  ros-include-guard v0.10.3 only recognises an include guard when #endif is the
+  last non-empty line of the file, so that feature test macros are no longer
+  mistaken for guards. 29 headers failed that check.
+  25 headers wrap the guard in "// clang-format off" / "// clang-format on"
+  because the #endif comment plus its // NOLINT exceeds the 100 column limit.
+  Drop only the trailing "on" marker; the "off" marker then runs to end of file
+  and still protects the line from being wrapped.
+  3 CUDA headers ended with "/* *INDENT-ON* */". Move it above the #endif so it
+  stays paired with the "/* *INDENT-OFF* */" near the top of the file.
+  autoware_behavior_path_planner/test/input.hpp closed its guard immediately after
+  opening it, leaving the entire body unguarded. Move the #endif to the end.
+  Also hold clang-format at v21.1.8. clang-format 22 migrates
+  "AlignAfterOpenBracket: AlwaysBreak" to "BreakAfterOpenBracketIf: true", which
+  forces a break after every "if (" whose condition does not fit on one line and
+  reformats 88 files.
+  ---------
+  Co-authored-by: github-actions <github-actions@github.com>
+  Co-authored-by: Mete Fatih Cırıt <mfc@autoware.org>
+* chore: update master `scene_module_manager.param.yaml` to match autoware_launch (`#12817 <https://github.com/autowarefoundation/autoware_universe/issues/12817>`_)
+  * chore: update master scene_module_manager.param.yaml to match autoware_launch
+  * remove old architecture mention (see `autowarefoundation/autoware_launch#1845 <https://github.com/autowarefoundation/autoware_launch/issues/1845>`_
+  * deduplicate
+  ---------
+* Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome, Taekjin LEE, Taeseung Sohn, awf-autoware-bot[bot]
+
 0.52.0 (2026-06-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

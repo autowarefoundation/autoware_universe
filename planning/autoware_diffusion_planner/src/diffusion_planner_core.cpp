@@ -377,11 +377,14 @@ std::optional<FrameContext> DiffusionPlannerCore::create_frame_context(
   // frame time); otherwise the legacy buffered histories are used directly.
   std::vector<AgentHistory> processed_neighbor_histories;
   if (params_.object_motion_resampling.enable) {
-    agent_data_.update_histories(*effective_objects, params_.object_motion_resampling);
+    agent_data_.update_histories(
+      *effective_objects, params_.object_motion_resampling,
+      params_.remap_unsupported_objects_to_pedestrian);
     processed_neighbor_histories = agent_data_.resampled_transformed_and_trimmed_histories(
       frame_time, map_to_ego_transform, NEIGHBOR_SHAPE[1], params_.object_motion_resampling);
   } else {
-    agent_data_.update_histories(*effective_objects);
+    agent_data_.update_histories(
+      *effective_objects, params_.remap_unsupported_objects_to_pedestrian);
     processed_neighbor_histories =
       agent_data_.transformed_and_trimmed_histories(map_to_ego_transform, NEIGHBOR_SHAPE[1]);
   }

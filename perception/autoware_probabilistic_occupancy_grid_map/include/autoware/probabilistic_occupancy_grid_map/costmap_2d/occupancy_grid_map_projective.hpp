@@ -39,7 +39,7 @@ public:
     const CudaPointCloud2 & raw_pointcloud, const CudaPointCloud2 & obstacle_pointcloud,
     const Pose & robot_pose, const Pose & scan_origin) override;
 
-  void initRosParam(rclcpp::Node & node) override;
+  void initRosParam(rclcpp::node_interfaces::NodeParametersInterface & parameters) override;
 
 private:
   float projection_dz_threshold_;
