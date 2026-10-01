@@ -24261,7 +24261,7 @@ This ros package enables communication between Autoware and CARLA for autonomous
 <td><code>no_rendering_mode</code></td>
 <td>bool</td>
 <td>False</td>
-<td>Disable CARLA scene rendering via world settings for headless/faster simulation. Applied unconditionally on world load, so the default <code>False</code> (re-)enables rendering even if the server was started headless; set <code>True</code> to keep rendering off.</td>
+<td>Disable CARLA scene rendering via world settings for headless/faster simulation. Applied unconditionally on world load, so the default <code>False</code> (re-)enables rendering even if the server was started headless; set <code>True</code> to keep rendering off. Camera sensors are not spawned while this is set, see <a href="#rendering-less-carla-servers">Rendering-less CARLA servers</a>.</td>
 </tr>
 <tr>
 <td><code>force_load_world</code></td>
@@ -24541,6 +24541,18 @@ and <code>noise_gyro_bias_{x,y,z}</code> for the IMU, and <code>noise_{alt,lat,l
 <span class="w">    </span>use_light_weight_sensor_mapping:<span class="o">=</span>True
 </code></pre></div>
 <p>Note that with this configuration, features that depend on the surround cameras (such as the multi-camera RViz view) are unavailable.</p>
+<h5 id="rendering-less-carla-servers">Rendering-less CARLA servers<a class="headerlink" href="#rendering-less-carla-servers" title="Permanent link">#</a></h5>
+<p>A CARLA server started without a renderer (<code>CarlaUnreal.sh -nullrhi</code>) <strong>crashes as soon as a camera sensor is spawned on it</strong>. Everything the bridge asks of CARLA afterwards fails with an opaque <code>RuntimeError: std::exception</code>, which makes the original cause hard to recognise in the logs. The ray-cast LiDAR, by contrast, needs no renderer and keeps producing points, so such a server is a practical way to run LiDAR-only closed-loop tests without a display.</p>
+<p>A client cannot detect a renderer-less server: its world settings, blueprint library and sensor attributes are identical to a rendering one. Say so with <code>no_rendering_mode</code>, which already means "this run does not render":</p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>launch<span class="w"> </span>autoware_launch<span class="w"> </span>e2e_simulator.launch.xml<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>map_path:<span class="o">=</span><span class="nv">$HOME</span>/autoware_map/Town01<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>vehicle_model:<span class="o">=</span>sample_vehicle<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>sensor_model:<span class="o">=</span>carla_sensor_kit<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>simulator_type:<span class="o">=</span>carla<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>no_rendering_mode:<span class="o">=</span>True
+</code></pre></div>
+<p>With <code>no_rendering_mode:=True</code> the cameras in the sensor mapping are <strong>not spawned in CARLA</strong>, and the sensors that work without rendering (LiDAR, IMU, GNSS) are spawned as usual. The skipped cameras are named in a warning, and their topics stay advertised but silent. No separate camera-free sensor mapping is needed: the same mapping works with and without rendering.</p>
+<p>This also fixes the plain <code>no_rendering_mode:=True</code> case on a rendering server, where cameras used to be spawned only to return empty images.</p>
 <h3 id="world-loading">World Loading<a class="headerlink" href="#world-loading" title="Permanent link">#</a></h3>
 <p>The <code>carla_ros.py</code> sets up the CARLA world:</p>
 <ol>
