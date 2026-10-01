@@ -24,7 +24,8 @@ launched process *becomes* the runner.  The venv keeps the runner's dependencies
 Python environment -- which may even be a different Python version -- so the two
 never clash, and it is built with ``python3-venv`` + ``python3-pip`` (both
 rosdep-resolvable), so ``autoware_carla_interface`` stays declarable through
-``package.xml``.
+``package.xml``.  The *interpreter* the venv is built with is the one thing rosdep
+cannot supply -- see :meth:`ScenarioVenvRunner._check_python`.
 
 Two source kinds are accepted (``with_scenario:=<source>#<scenario-name>``):
 
@@ -219,17 +220,48 @@ class ScenarioVenvRunner:
 
     # -- lifecycle -------------------------------------------------------------
 
+    def _check_python(self) -> None:
+        """Fail with an actionable message when the interpreter is not installed.
+
+        ``python3 -m venv`` does not provide an interpreter, it links the one running
+        it, so the venv's Python version is whatever *python* already is on this
+        system. That is why ``python3-venv`` (rosdep-resolvable) is necessary but not
+        sufficient here: on Ubuntu 24.04 / Jazzy it pulls ``python3.12-venv`` and the
+        default is exactly the interpreter the wheelhouse needs, while on Ubuntu 22.04
+        it pulls ``python3.10-venv`` and no ``python3.12`` package exists in the
+        archive at all. rosdep cannot express a versioned interpreter (no
+        ``python3.X`` keys exist in rosdistro) and cannot add the PPA that would carry
+        one, so this prerequisite is declared here and in the README instead of
+        ``package.xml``.
+
+        Without this check the failure is a bare ``FileNotFoundError: [Errno 2] ...
+        'python3.12'`` from ``subprocess.run``, which says nothing about what to
+        install.
+        """
+        if shutil.which(self._python) is not None:
+            return
+        raise RuntimeError(
+            f"Interpreter '{self._python}' not found, so the scenario runner's venv cannot be "
+            "built. It must match the ABI of the wheelhouse's CARLA 0.10 wheel (cp312). On "
+            "Ubuntu 24.04 / ROS 2 Jazzy that is the system python3, which 'python3-venv' "
+            "already installs. On Ubuntu 22.04 / Humble no python3.12 package exists in the "
+            "archive: install one out of band (e.g. the deadsnakes PPA: python3.12 "
+            "python3.12-venv), or point scenario_python:= at an interpreter matching your "
+            "wheelhouse."
+        )
+
     def provision(self) -> None:
         """Create the venv and install the runner, unless already provisioned.
 
         Raises:
+            RuntimeError: If *python* is not installed (see :meth:`_check_python`).
             subprocess.CalledProcessError: If creating the venv or installing the
                 wheels fails.
-            FileNotFoundError: If *python* is not on the system.
         """
         if self._bin(_ENTRYPOINT).exists():
             logger.info("Reusing scenario venv at %s", self._venv_dir)
             return
+        self._check_python()
         self._venv_dir.parent.mkdir(parents=True, exist_ok=True)
         logger.info("Creating scenario venv at %s (python=%s)", self._venv_dir, self._python)
         subprocess.run(self._venv_cmd(), check=True)

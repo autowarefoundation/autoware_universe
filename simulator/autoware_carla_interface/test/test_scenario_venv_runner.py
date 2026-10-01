@@ -23,6 +23,7 @@ import argparse
 from pathlib import Path
 import zipfile
 
+from autoware_carla_interface.scenario_bridge import venv_manager
 from autoware_carla_interface.scenario_bridge.venv_manager import ScenarioVenvRunner
 from autoware_carla_interface.scenario_bridge.venv_manager import _extract_zip
 from autoware_carla_interface.scenario_bridge.venv_manager import _find_wheels
@@ -199,3 +200,58 @@ def test_make_runner_pip_source_keeps_source_and_pip_args(tmp_path):
 def test_make_runner_shlex_splits_overrides(tmp_path):
     runner = _make_runner("some-pip-pkg", "s", _args(overrides="map=town10hd_opt server.port=2010"))
     assert runner._overrides == ["map=town10hd_opt", "server.port=2010"]
+
+
+def test_missing_interpreter_is_reported_with_what_to_install(tmp_path, monkeypatch):
+    # rosdep cannot supply a versioned interpreter, so a missing one must say so
+    # rather than surface as a bare FileNotFoundError from subprocess.
+    runner = _runner(tmp_path, ["pkg"])
+    monkeypatch.setattr(venv_manager.shutil, "which", lambda _name: None)
+
+    with pytest.raises(RuntimeError) as caught:
+        runner.provision()
+    message = str(caught.value)
+    assert "python3.12" in message
+    assert "python3-venv" in message
+    assert "deadsnakes" in message
+
+
+def test_provision_does_not_touch_the_system_when_the_interpreter_is_missing(tmp_path, monkeypatch):
+    runner = _runner(tmp_path, ["pkg"])
+    monkeypatch.setattr(venv_manager.shutil, "which", lambda _name: None)
+    monkeypatch.setattr(
+        venv_manager.subprocess,
+        "run",
+        lambda *a, **k: pytest.fail("provision ran a command for a missing interpreter"),
+    )
+
+    with pytest.raises(RuntimeError):
+        runner.provision()
+    assert not (tmp_path / "venv").exists()
+
+
+def test_present_interpreter_provisions(tmp_path, monkeypatch):
+    runner = _runner(tmp_path, ["pkg"])
+    monkeypatch.setattr(venv_manager.shutil, "which", lambda name: f"/usr/bin/{name}")
+    commands = []
+    monkeypatch.setattr(venv_manager.subprocess, "run", lambda cmd, **k: commands.append(cmd))
+
+    runner.provision()
+    assert commands == [runner._venv_cmd(), runner._pip_cmd()]
+
+
+def test_provisioned_venv_is_reused_without_checking_the_interpreter(tmp_path, monkeypatch):
+    # The interpreter is only needed to build the venv; an existing one is reused
+    # even if the interpreter has since gone away.
+    runner = _runner(tmp_path, ["pkg"])
+    entrypoint = tmp_path / "venv" / "bin" / "scenario"
+    entrypoint.parent.mkdir(parents=True)
+    entrypoint.touch()
+    monkeypatch.setattr(
+        venv_manager.shutil, "which", lambda _name: pytest.fail("checked a reused venv")
+    )
+    monkeypatch.setattr(
+        venv_manager.subprocess, "run", lambda *a, **k: pytest.fail("reprovisioned a reused venv")
+    )
+
+    runner.provision()
