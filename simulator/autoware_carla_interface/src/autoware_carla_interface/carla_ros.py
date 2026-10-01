@@ -15,6 +15,7 @@
 from collections import namedtuple
 import math
 import threading
+import time
 
 from autoware_perception_msgs.msg import DetectedObject
 from autoware_perception_msgs.msg import DetectedObjectKinematics
@@ -101,6 +102,11 @@ def _parse_geo_reference(xodr_xml: str):
 # UE5) samples it in mph, PhysX (CARLA 0.9.x, UE4) in km/h.
 MPS_TO_MPH = 2.2369362920544
 MPS_TO_KMH = 3.6
+
+# Back-off between retries after CARLA rejects a vehicle light-state call. Light state is
+# cosmetic, so a failure is never worth a busy retry loop, but failures are usually transient
+# (a stalled server, an ego actor being respawned) and must not disable the lights for good.
+LIGHT_STATE_RETRY_PERIOD_S = 5.0
 
 # One consistent snapshot of the ego actor, read under a single lock so that the
 # published status reports all describe the same simulation step.
@@ -476,10 +482,12 @@ class carla_ros2_interface(object):
         self.current_control = carla.VehicleControl()
         self.current_turn_indicator = TurnIndicatorsCommand.DISABLE
         self.current_hazard_lights = HazardLightsCommand.DISABLE
-        # Vehicle light state is unavailable in renderer-less CARLA modes (e.g. -nullrhi), where
-        # get_light_state()/set_light_state() raise. Track that so we warn once and degrade
-        # gracefully instead of crashing the bridge on every tick.
-        self._light_state_unsupported = False
+        # Vehicle light state is cosmetic and unused by the control loop, so a CARLA-side
+        # failure on get_light_state()/set_light_state() must not take the whole bridge down.
+        # Track availability so such a failure degrades to reporting the commanded state, and
+        # is retried instead of latching for the rest of the run.
+        self._light_state_available = True
+        self._light_state_retry_at = 0.0
 
         # Thread synchronization (protects: current_control, ego_actor, timestamp, physics_control)
         self._state_lock = threading.Lock()
@@ -1217,7 +1225,7 @@ class carla_ros2_interface(object):
 
         """
         with self._state_lock:
-            if not self.ego_actor or self._light_state_unsupported:
+            if not self.ego_actor or not self._light_state_call_due():
                 return
             turn_cmd = self.current_turn_indicator
             hazard_cmd = self.current_hazard_lights
@@ -1228,29 +1236,63 @@ class carla_ros2_interface(object):
                 right_bit = int(carla.VehicleLightState.RightBlinker)
 
                 new_state = current_state & ~left_bit & ~right_bit
-                if hazard_cmd == HazardLightsCommand.ENABLE:
-                    new_state |= left_bit | right_bit
-                elif turn_cmd == TurnIndicatorsCommand.ENABLE_LEFT:
-                    new_state |= left_bit
-                elif turn_cmd == TurnIndicatorsCommand.ENABLE_RIGHT:
-                    new_state |= right_bit
+                new_state |= self._commanded_blinker_bits(turn_cmd, hazard_cmd)
 
                 self.ego_actor.set_light_state(carla.VehicleLightState(new_state))
             except RuntimeError as exc:
-                self._mark_light_state_unsupported(exc)
+                self._mark_light_state_failed(exc)
+            else:
+                self._mark_light_state_recovered()
 
-    def _mark_light_state_unsupported(self, exc):
-        """Disable vehicle light handling after CARLA rejects a light-state call.
+    @staticmethod
+    def _commanded_blinker_bits(turn_cmd, hazard_cmd):
+        """CARLA blinker bits implied by the latest Autoware commands (hazard wins)."""
+        left_bit = int(carla.VehicleLightState.LeftBlinker)
+        right_bit = int(carla.VehicleLightState.RightBlinker)
+        if hazard_cmd == HazardLightsCommand.ENABLE:
+            return left_bit | right_bit
+        if turn_cmd == TurnIndicatorsCommand.ENABLE_LEFT:
+            return left_bit
+        if turn_cmd == TurnIndicatorsCommand.ENABLE_RIGHT:
+            return right_bit
+        return 0
 
-        Renderer-less CARLA servers (e.g. launched with -nullrhi) raise on
-        get_light_state()/set_light_state(). Vehicle light state is cosmetic and unused by
-        the control loop, so warn once and stop touching it instead of crashing the bridge.
+    def _light_state_call_due(self):
+        """Whether a light-state call may be attempted on this tick.
+
+        Always, unless the previous call failed and we are still backing off.
+        Must be called with self._state_lock held.
         """
-        if not self._light_state_unsupported:
-            self._light_state_unsupported = True
+        return self._light_state_available or time.monotonic() >= self._light_state_retry_at
+
+    def _mark_light_state_failed(self, exc):
+        """Suspend vehicle light handling after CARLA rejected a light-state call.
+
+        Light state is cosmetic and unused by the control loop, so a failure degrades to
+        reporting the commanded state (see _read_ego_light_state) and is retried every
+        LIGHT_STATE_RETRY_PERIOD_S instead of crashing the bridge.
+        Must be called with self._state_lock held.
+        """
+        self._light_state_retry_at = time.monotonic() + LIGHT_STATE_RETRY_PERIOD_S
+        if self._light_state_available:
+            self._light_state_available = False
             self.logger.warning(
-                f"CARLA vehicle light state is unavailable ({exc}); disabling turn/hazard "
-                "light output (the server is likely running without a renderer)."
+                f"CARLA rejected a vehicle light-state call ({exc}); reporting the commanded "
+                f"turn/hazard state and retrying every {LIGHT_STATE_RETRY_PERIOD_S:.0f} s. "
+                "libcarla surfaces every RPC failure as 'std::exception', so this usually means "
+                "the ego actor or the CARLA server went away, not anything about lights."
+            )
+
+    def _mark_light_state_recovered(self):
+        """Resume vehicle light handling after a light-state call succeeds again.
+
+        Must be called with self._state_lock held.
+        """
+        if not self._light_state_available:
+            self._light_state_available = True
+            self.logger.info(
+                "CARLA accepted a vehicle light-state call again; resuming turn/hazard "
+                "light output."
             )
 
     def _read_ego_state(self):
@@ -1270,19 +1312,27 @@ class carla_ros2_interface(object):
             )
 
     def _read_ego_light_state(self):
-        """Ego vehicle light bitmask, or 0 when CARLA cannot provide it.
+        """Ego vehicle light bitmask: CARLA's when it answers, the commanded one otherwise.
 
-        Renderer-less CARLA servers (e.g. -nullrhi) raise on get_light_state(); light state is
-        cosmetic, so degrade to 0 and warn once (see _mark_light_state_unsupported) instead of
-        crashing the bridge. Must be called with self._state_lock held (ego_actor access).
+        get_light_state() raises whenever CARLA cannot serve the call (see
+        _mark_light_state_failed); light state is cosmetic, so fall back to the blinker bits
+        Autoware last commanded rather than crashing the bridge. Echoing the command keeps
+        /vehicle/status/{turn_indicators,hazard_lights}_status consistent with what was asked
+        for, instead of reporting DISABLE while the commands are still being accepted.
+        Must be called with self._state_lock held (ego_actor access).
         """
-        if self._light_state_unsupported:
-            return 0
+        commanded = self._commanded_blinker_bits(
+            self.current_turn_indicator, self.current_hazard_lights
+        )
+        if not self._light_state_call_due():
+            return commanded
         try:
-            return int(self.ego_actor.get_light_state())
+            light_state = int(self.ego_actor.get_light_state())
         except RuntimeError as exc:
-            self._mark_light_state_unsupported(exc)
-            return 0
+            self._mark_light_state_failed(exc)
+            return commanded
+        self._mark_light_state_recovered()
+        return light_state
 
     @staticmethod
     def _velocity_in_ego_frame(ego_transform, ego_velocity_carla):
