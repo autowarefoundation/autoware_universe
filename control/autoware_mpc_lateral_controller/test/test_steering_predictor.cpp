@@ -53,6 +53,13 @@ double hold_command_until(SteeringPredictor & predictor, const double seconds)
   }
   return predicted;
 }
+
+/// The response of a first order lag to a step command: y(t) = u * (1 - exp(-t / tau)).
+double first_order_step_response(const double command, const double time, const double tau)
+{
+  return command * (1.0 - std::exp(-time / tau));
+}
+
 }  // namespace
 
 /// A first order lag reaches 63.2 per cent of the command after one time constant.
@@ -60,9 +67,11 @@ TEST(SteeringPredictorTest, ReachesSixtyThreePerCentAfterOneTimeConstant)
 {
   SteeringPredictor predictor(steer_tau, steer_delay);
 
-  const double predicted = hold_command_until(predictor, steer_tau);
+  const double predicted = hold_command_until(predictor, 1.0 * steer_tau);
 
-  EXPECT_NEAR(predicted, commanded_angle * (1.0 - std::exp(-1.0)), 0.01 * commanded_angle);
+  EXPECT_NEAR(
+    predicted, first_order_step_response(commanded_angle, 1.0 * steer_tau, steer_tau),
+    0.01 * commanded_angle);
 }
 
 /// The same lag reaches 95 per cent after three time constants.
@@ -72,5 +81,7 @@ TEST(SteeringPredictorTest, ReachesNinetyFivePerCentAfterThreeTimeConstants)
 
   const double predicted = hold_command_until(predictor, 3.0 * steer_tau);
 
-  EXPECT_NEAR(predicted, commanded_angle * (1.0 - std::exp(-3.0)), 0.01 * commanded_angle);
+  EXPECT_NEAR(
+    predicted, first_order_step_response(commanded_angle, 3.0 * steer_tau, steer_tau),
+    0.01 * commanded_angle);
 }
