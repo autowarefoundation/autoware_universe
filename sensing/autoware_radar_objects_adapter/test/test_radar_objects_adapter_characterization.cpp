@@ -33,16 +33,30 @@
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
+#include <array>
 #include <chrono>
+#include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <functional>
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace
 {
 using autoware::RadarObjectsAdapter;
+using autoware_perception_msgs::msg::DetectedObject;
+using autoware_perception_msgs::msg::DetectedObjectKinematics;
 using autoware_perception_msgs::msg::DetectedObjects;
+using autoware_perception_msgs::msg::ObjectClassification;
+using autoware_perception_msgs::msg::Shape;
+using autoware_perception_msgs::msg::TrackedObject;
+using autoware_perception_msgs::msg::TrackedObjectKinematics;
 using autoware_perception_msgs::msg::TrackedObjects;
 using autoware_sensing_msgs::msg::RadarClassification;
 using autoware_sensing_msgs::msg::RadarFieldInfo;
@@ -212,6 +226,40 @@ RadarObjects make_radar_objects(
   return msg;
 }
 
+// A quarter turn puts the object's x axis along the radar's y axis, which makes every rotation the
+// node applies come out as a swap of components - checkable by hand.
+constexpr double quarter_turn = 1.5707963267948966;
+
+RadarObject facing(RadarObject object, double yaw)
+{
+  object.orientation = static_cast<float>(yaw);
+  return object;
+}
+
+// Indices into the 6x6 row-major covariance matrices (x, y, z, roll, pitch, yaw) of the perception
+// messages. The radar covariances are 3x3 upper triangles: XX, XY, XZ, YY, YZ, ZZ.
+constexpr size_t cov_x_x = 0;
+constexpr size_t cov_x_y = 1;
+constexpr size_t cov_x_z = 2;
+constexpr size_t cov_y_x = 6;
+constexpr size_t cov_y_y = 7;
+constexpr size_t cov_z_z = 14;
+constexpr size_t cov_yaw_yaw = 35;
+constexpr double covariance_tolerance = 1e-6;
+
+// Every entry of a 6x6 covariance other than the ones named is zero.
+bool only_these_entries_set(
+  const std::array<double, 36> & covariance, const std::vector<size_t> & set_indices)
+{
+  for (size_t i = 0; i < covariance.size(); ++i) {
+    const bool is_set = std::find(set_indices.begin(), set_indices.end(), i) != set_indices.end();
+    if (!is_set && covariance[i] != 0.0) {
+      return false;
+    }
+  }
+  return true;
+}
+
 }  // namespace
 
 // Drives the node over its real topics from the test thread. There is no background spin: the
@@ -326,6 +374,41 @@ protected:
     pump(delivery_budget);
   }
 
+  // What the node published for one radar objects message.
+  struct Outputs
+  {
+    DetectedObjects detections;
+    TrackedObjects tracks;
+  };
+
+  // Starts the node with `options`, opens the gate with `info`, publishes `objects` once and
+  // collects what came out on both outputs - or nothing, if the node did not publish in time.
+  std::optional<Outputs> run_node_and_collect_outputs(
+    const RadarInfo & info, const std::vector<RadarObject> & objects,
+    const rclcpp::NodeOptions & options = DefaultParameters{}.to_options())
+  {
+    start_node(options);
+    if (!wait_for_discovery()) {
+      return std::nullopt;
+    }
+    send_radar_info(info);
+    if (!send_objects_and_wait_for_outputs(make_radar_objects(objects))) {
+      return std::nullopt;
+    }
+    return Outputs{*detections_.back(), *tracks_.back()};
+  }
+
+  // Parameter overrides that remap the given radar labels, on top of the six required parameters.
+  static rclcpp::NodeOptions remap_options(
+    const std::vector<std::pair<std::string, std::string>> & radar_to_perception_labels)
+  {
+    rclcpp::NodeOptions options = DefaultParameters{}.to_options();
+    for (const auto & [radar_label, perception_label] : radar_to_perception_labels) {
+      options.append_parameter_override("classification_remap." + radar_label, perception_label);
+    }
+    return options;
+  }
+
   std::shared_ptr<RadarObjectsAdapter> node_;
   std::shared_ptr<rclcpp::Node> peer_;
   rclcpp::Publisher<RadarObjects>::SharedPtr objects_pub_;
@@ -345,9 +428,11 @@ TEST_F(RadarObjectsAdapterCharacterization, Construct_DefaultParameterMissing_Th
 {
   for (const auto & name : DefaultParameters::names()) {
     SCOPED_TRACE(name);
-    EXPECT_THROW(
-      std::make_shared<RadarObjectsAdapter>(DefaultParameters{}.to_options_without(name)),
-      std::exception);
+    // Arrange
+    const rclcpp::NodeOptions options = DefaultParameters{}.to_options_without(name);
+
+    // Act and assert
+    EXPECT_THROW(std::make_shared<RadarObjectsAdapter>(options), std::exception);
   }
 }
 
@@ -356,7 +441,11 @@ TEST_F(RadarObjectsAdapterCharacterization, Construct_DefaultParameterMissing_Th
 // defaults map to is pinned with the classification tests.
 TEST_F(RadarObjectsAdapterCharacterization, Construct_RemapParametersOmitted_Constructs)
 {
-  EXPECT_NO_THROW(std::make_shared<RadarObjectsAdapter>(DefaultParameters{}.to_options()));
+  // Arrange
+  const rclcpp::NodeOptions options = DefaultParameters{}.to_options();
+
+  // Act and assert
+  EXPECT_NO_THROW(std::make_shared<RadarObjectsAdapter>(options));
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -374,18 +463,25 @@ TEST_F(RadarObjectsAdapterCharacterization, Construct_RemapParametersOmitted_Con
 // The warning logged while the gate is closed is not pinned.
 TEST_F(RadarObjectsAdapterCharacterization, Gate_ObjectsBeforeRadarInfo_DroppedNotReplayed)
 {
+  // Arrange
+  const RadarObjects before_info = make_radar_objects({make_radar_object()}, first_stamp);
+  const RadarInfo info = make_radar_info(ars548_fields);
+  const RadarObjects after_info = make_radar_objects({make_radar_object()}, second_stamp);
   start_node();
   ASSERT_TRUE(wait_for_discovery());
 
-  send_objects_expecting_no_output(make_radar_objects({make_radar_object()}, first_stamp));
+  // Act: radar objects before any radar info ...
+  send_objects_expecting_no_output(before_info);
+
+  // Assert: ... produce nothing
   EXPECT_TRUE(detections_.empty());
   EXPECT_TRUE(tracks_.empty());
 
-  send_radar_info(make_radar_info(ars548_fields));
-  ASSERT_TRUE(
-    send_objects_and_wait_for_outputs(make_radar_objects({make_radar_object()}, second_stamp)));
+  // Act: the radar info arrives, then more radar objects
+  send_radar_info(info);
+  ASSERT_TRUE(send_objects_and_wait_for_outputs(after_info));
 
-  // Only the message published after the radar info came through
+  // Assert: only the message published after the radar info came through
   ASSERT_EQ(detections_.size(), 1u);
   EXPECT_EQ(detections_[0]->header.stamp, second_stamp);
   ASSERT_EQ(tracks_.size(), 1u);
@@ -403,12 +499,17 @@ TEST_F(RadarObjectsAdapterCharacterization, Gate_ObjectsBeforeRadarInfo_DroppedN
 // to the unit tests of the separated logic.
 TEST_F(RadarObjectsAdapterCharacterization, Gate_RadarInfoMissingRequiredField_ObjectsDropped)
 {
+  // Arrange: the only radar info the node has seen lacks a required field
+  const RadarInfo incomplete_info = make_radar_info(without(required_fields, "orientation"));
+  const RadarObjects objects = make_radar_objects({make_radar_object()});
   start_node();
   ASSERT_TRUE(wait_for_discovery());
-  send_radar_info(make_radar_info(without(required_fields, "orientation")));
+  send_radar_info(incomplete_info);
 
-  send_objects_expecting_no_output(make_radar_objects({make_radar_object()}));
+  // Act
+  send_objects_expecting_no_output(objects);
 
+  // Assert
   EXPECT_TRUE(detections_.empty());
   EXPECT_TRUE(tracks_.empty());
 }
@@ -419,12 +520,17 @@ TEST_F(RadarObjectsAdapterCharacterization, Gate_RadarInfoMissingRequiredField_O
 // The contents of the objects are pinned by the conversion tests, not here.
 TEST_F(RadarObjectsAdapterCharacterization, Gate_ValidRadarInfo_ObjectsConverted)
 {
+  // Arrange: the node has seen a radar info that declares every required field
+  const RadarInfo info = make_radar_info(ars548_fields);
+  const RadarObjects objects = make_radar_objects({make_radar_object()});
   start_node();
   ASSERT_TRUE(wait_for_discovery());
-  send_radar_info(make_radar_info(ars548_fields));
+  send_radar_info(info);
 
-  ASSERT_TRUE(send_objects_and_wait_for_outputs(make_radar_objects({make_radar_object()})));
+  // Act
+  ASSERT_TRUE(send_objects_and_wait_for_outputs(objects));
 
+  // Assert
   ASSERT_EQ(detections_.size(), 1u);
   EXPECT_EQ(detections_[0]->header.stamp, first_stamp);
   EXPECT_EQ(detections_[0]->header.frame_id, "base_link");
