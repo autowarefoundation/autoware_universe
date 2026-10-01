@@ -132,7 +132,11 @@
       default="300.0"
       description="Seconds the interface waits for the scenario runner to (re)load its world before spawning the ego into it (scenario mode only). Generous by default to cover the runner's first-run venv install"
     />
-    <arg name="ego_attach_timeout" default="60.0" description="Seconds to wait for the scenario's ego before spawning one here instead (scenario_mode only)"/>
+    <arg
+      name="ego_attach_timeout"
+      default="60.0"
+      description="Seconds to wait for the scenario's ego before giving up and failing (scenario_mode only; the scenario places the ego and this node attaches to it)"
+    />
 
     <!-- Scenario-mode gates. When with_scenario is set, the CARLA scenario
          runner owns the world (it loads/reloads the map - its Hydra map=... - and
