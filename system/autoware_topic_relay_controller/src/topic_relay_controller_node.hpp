@@ -42,6 +42,8 @@ struct NodeParam
   std::string srv_name;
   bool enable_keep_publishing;
   int update_rate;
+  bool enable_throttle;
+  double msgs_per_sec;
 };
 
 class TopicRelayController : public autoware::agnocast_wrapper::Node
@@ -50,6 +52,9 @@ public:
   explicit TopicRelayController(const rclcpp::NodeOptions & options);
 
 private:
+  /// True once the throttle period has elapsed since the last relayed message.
+  bool is_throttle_period_elapsed();
+
   // Parameter
   NodeParam node_param_;
 
@@ -69,6 +74,8 @@ private:
 
   // State
   bool is_relaying_;
+  rclcpp::Duration throttle_period_;
+  rclcpp::Time last_relayed_time_;
   tf2_msgs::msg::TFMessage::ConstSharedPtr last_tf_topic_;
   std::shared_ptr<const rclcpp::SerializedMessage> last_topic_;
 };

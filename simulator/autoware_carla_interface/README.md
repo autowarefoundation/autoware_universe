@@ -289,12 +289,46 @@ sensor_mappings:
 ```
 
 `image_encoding` applies to cameras and accepts `bgra8` (default, what CARLA
-renders) or `mono8`. Publishing `mono8` converts once in the bridge and sends a
-quarter of the bytes, which is worth it when every consumer of that camera
-works on luminance alone, such as feature tracking or visual odometry. A
-1600x900 frame is 5,760,000 bytes as `bgra8` and 1,440,000 bytes as `mono8`.
+renders), `bgr8` or `mono8`. Publishing `mono8` converts once in the bridge and
+sends a quarter of the bytes, which is worth it when every consumer of that
+camera works on luminance alone, such as feature tracking or visual odometry.
+`bgr8` drops only the alpha channel, which CARLA fills with 255 and no consumer
+reads, so it costs no information at all. A 1600x900 frame is 5,760,000 bytes as
+`bgra8`, 4,320,000 bytes as `bgr8` and 1,440,000 bytes as `mono8`.
 
 For CARLA sensor parameters, see [CARLA Sensor Reference](https://carla.readthedocs.io/en/latest/ref_sensors/).
+
+##### Capture Rate
+
+`frequency_hz` throttles what the bridge publishes; it does not change how often
+CARLA captures. A sensor left at CARLA's default captures on every simulation
+step, so at a 1/600 s step a camera renders 600 frames a second and the bridge
+discards all but a few. The throttle can also only drop whole frames, so a
+mapping asking for 60 Hz at that step publishes at 85.7 Hz and a 200 Hz IMU at
+300 Hz.
+
+Set `sensor_tick` (seconds between captures) under the sensor's `parameters` to
+have CARLA generate at the rate the mapping wants:
+
+```yaml
+parameters:
+  image_size_x: 1600
+  image_size_y: 900
+  fov: 70.0
+  sensor_tick: 0.0166667
+```
+
+Sensors without a `sensor_tick` keep capturing every step, as before. Avoid a
+`sensor_tick` exactly equal to `fixed_delta_seconds`: CARLA compares the tick
+interval against the elapsed time with a float, and a sensor whose tick equals
+the step can miss frames
+([carla#3653](https://github.com/carla-simulator/carla/issues/3653)).
+
+CARLA cannot capture between steps, so it holds the requested average by
+alternating shorter and longer gaps -- a 0.04 s tick at a 1/60 s step arrives
+after two steps and then three. The publish throttle allows a frame of such a
+sensor to be up to half its own tick early, so those arrivals are published
+instead of dropped.
 
 ##### Sensor Noise
 

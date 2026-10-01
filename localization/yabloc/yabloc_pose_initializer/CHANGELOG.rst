@@ -2,6 +2,52 @@
 Changelog for package yabloc_pose_initializer
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* fix(yabloc): declare the actual service names and shared topics in the node designs (`#13292 <https://github.com/autowarefoundation/autoware_universe/issues/13292>`_)
+  The align, trigger and switch services are created as ~/<name>, not
+  ~/service/<name>; CameraPoseInitializer also subscribes ~/input/camera_info.
+  weighted_particles is published by both correctors and consumed by the
+  predictor, so it is pinned with global: on all three ports.
+* fix(yabloc_pose_initializer): load the ONNX model to survive OpenCV 4.9 (`#13206 <https://github.com/autowarefoundation/autoware_universe/issues/13206>`_)
+  From OpenCV 4.9 the TensorFlow importer applies the final softmax of
+  model_float32.pb along the width axis, so the node returns an empty
+  mask with no error. The ONNX export of the same network is correct on
+  every version tested, but it declares an NHWC input, so the node needs
+  an NHWC blob and an NHWC output conversion for it.
+  The launch default moves to the ONNX. The .pb path stays for an
+  explicit model_path override.
+* docs: replace retired model hosting URLs with Hugging Face links (`#13204 <https://github.com/autowarefoundation/autoware_universe/issues/13204>`_)
+  * docs: replace retired model hosting URLs with Hugging Face links
+  The model artifacts moved from awf.ml.dev.web.auto and the
+  autoware-files S3 bucket to Hugging Face repositories under the
+  AutowareFoundation org (`autowarefoundation/autoware#7223 <https://github.com/autowarefoundation/autoware/issues/7223>`_). The READMEs
+  still pointed manual downloads at the old hosts, and the yabloc README
+  still gave wget instructions for the retired archive.
+  The two dataset links on the S3 bucket stay: the bucket keeps serving
+  datasets, maps and rosbags. Only the model objects are retired.
+  The centerpoint v0 and v1 files were never migrated and stop being
+  distributed, so their changelog rows lose the download links.
+  * docs: name the ML package configs in the model download notes
+  The launch files read transfusion_ml_package.param.yaml and
+  ml_package_camera_streampetr.param.yaml from the model directory. The
+  download notes did not name them, so a manual download missed two
+  required files.
+  ---------
+* refactor(localization): move node design files into each package (`#13101 <https://github.com/autowarefoundation/autoware_universe/issues/13101>`_)
+  Co-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>
+* chore(pre-commit): update clang-format to v22.1.5 (`#13126 <https://github.com/autowarefoundation/autoware_universe/issues/13126>`_)
+  * chore(pre-commit): update clang-format to v22.1.5
+  * style(pre-commit): autofix
+  ---------
+* docs(yabloc_pose_initializer): fix output topic name in README.md (`#13037 <https://github.com/autowarefoundation/autoware_universe/issues/13037>`_)
+  * update README
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Kento Yabuuchi, Mete Fatih Cırıt, Ryohsuke Mitsudome, Taekjin LEE
+
 0.52.0 (2026-06-30)
 -------------------
 
