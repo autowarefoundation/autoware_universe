@@ -149,6 +149,10 @@ class carla_ros2_interface(object):
             # at low target accelerations.
             "min_positive_throttle": (rclpy.Parameter.Type.DOUBLE, 0.0),
             "min_positive_throttle_speed_threshold": (rclpy.Parameter.Type.DOUBLE, 0.8),
+            # Also decides whether camera sensors are spawned at all: without rendering
+            # they can produce no image, and on a server started without a renderer
+            # (CarlaUnreal.sh -nullrhi) spawning one takes the server down. See
+            # _skip_cameras_in_no_rendering_mode.
             "no_rendering_mode": (rclpy.Parameter.Type.BOOL, False),
             # Publish the CARLA ground-truth localization (kinematic_state and
             # the map->base_link TF) directly from the ego transform. Used by
@@ -331,7 +335,10 @@ class carla_ros2_interface(object):
 
         self._register_sensor_configs(self.sensor_configs)
         self._create_sensor_publishers_from_registry()
-        self.sensors = {"sensors": self._build_sensor_specs(self.sensor_configs)}
+        sensor_specs = self._skip_cameras_in_no_rendering_mode(
+            self._build_sensor_specs(self.sensor_configs)
+        )
+        self.sensors = {"sensors": sensor_specs}
 
         self.logger.info(f"Configured {len(self.sensor_configs)} sensors from mapping")
 
@@ -395,6 +402,35 @@ class carla_ros2_interface(object):
             sensor_specs.append(spec)
 
         return sensor_specs
+
+    def _skip_cameras_in_no_rendering_mode(self, sensor_specs):
+        """Drop cameras from the CARLA spawn list while rendering is off.
+
+        no_rendering_mode turns the scene rendering off, so a camera could only ever return
+        an empty image. Worse, the same flag is what a renderer-less server
+        (CarlaUnreal.sh -nullrhi) is run with, and there spawning a camera **segfaults the
+        server**; every call after that fails with an opaque ``RuntimeError: std::exception``,
+        which buries the real cause. A client cannot detect such a server - its world settings,
+        blueprint library and sensor attributes are identical to a rendering one - so follow
+        no_rendering_mode and leave the cameras out of the spawn list. Their topics stay
+        advertised but silent; every other sensor is unaffected.
+
+        Only the sensors still bound for CARLA reach this point, so cameras handed to an
+        external renderer earlier are untouched.
+        """
+        if not self.param_values["no_rendering_mode"]:
+            return sensor_specs
+        kept = [spec for spec in sensor_specs if not spec["type"].startswith("sensor.camera")]
+        skipped = [spec["id"] for spec in sensor_specs if spec["type"].startswith("sensor.camera")]
+        if skipped:
+            self.logger.warning(
+                f"no_rendering_mode is set, so the camera sensors in the mapping "
+                f"({', '.join(skipped)}) are not spawned in CARLA: without rendering they can "
+                "produce no image, and on a server started without a renderer "
+                "(CarlaUnreal.sh -nullrhi) spawning one crashes the server. Their topics stay "
+                "silent."
+            )
+        return kept
 
     def __init__(self):
         # Initialize instance variables
