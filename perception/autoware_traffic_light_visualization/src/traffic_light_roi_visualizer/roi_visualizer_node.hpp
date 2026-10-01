@@ -11,8 +11,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#ifndef TRAFFIC_LIGHT_ROI_VISUALIZER__NODE_HPP_
-#define TRAFFIC_LIGHT_ROI_VISUALIZER__NODE_HPP_
+#ifndef TRAFFIC_LIGHT_ROI_VISUALIZER__ROI_VISUALIZER_NODE_HPP_
+#define TRAFFIC_LIGHT_ROI_VISUALIZER__ROI_VISUALIZER_NODE_HPP_
 
 #include "roi_visualizer.hpp"
 
@@ -86,4 +86,4 @@ private:
 
 }  // namespace autoware::traffic_light
 
-#endif  // TRAFFIC_LIGHT_ROI_VISUALIZER__NODE_HPP_
+#endif  // TRAFFIC_LIGHT_ROI_VISUALIZER__ROI_VISUALIZER_NODE_HPP_

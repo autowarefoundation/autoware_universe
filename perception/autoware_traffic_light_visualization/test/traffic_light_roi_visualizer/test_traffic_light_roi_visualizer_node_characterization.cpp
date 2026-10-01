@@ -22,7 +22,7 @@
 // not to specify every corner of the node's behavior. Once the logic is covered by unit tests,
 // this file is replaced by a small integration test.
 
-#include "traffic_light_roi_visualizer/node.hpp"
+#include "traffic_light_roi_visualizer/roi_visualizer_node.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 
