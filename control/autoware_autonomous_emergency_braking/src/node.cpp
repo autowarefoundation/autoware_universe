@@ -647,20 +647,23 @@ bool AEB::hasCollision(const double current_v, const ObjectData & closest_object
     const double obj_braking_distance = (obj_v > 0.0)
                                           ? -(obj_v * obj_v) / (2 * std::fabs(a_obj_min_))
                                           : (obj_v * obj_v) / (2 * std::fabs(a_obj_min_));
-    double closing_distance = ego_stopping_distance + obj_braking_distance;
-    const double A = std::fabs(a_ego_min_);
-    const double B = std::fabs(a_obj_min_);
-    // Also check the closest approach while both vehicles are still braking.
-    if (obj_v > 0.0 && A > B) {
-      const double v = std::abs(current_v);
-      const double closing_speed = v - obj_v + B * t;
-      const double peak_dt = closing_speed / (A - B);
-      if (0.0 <= peak_dt && peak_dt <= std::min(v / A, obj_v / B - t)) {
-        closing_distance =
-          std::max(closing_distance, (v - obj_v) * t + B * t * t / 2 + closing_speed * peak_dt / 2);
-      }
+    const double closing_distance = ego_stopping_distance + obj_braking_distance;
+    const double abs_a_ego_min = std::fabs(a_ego_min_);
+    const double abs_a_obj_min = std::fabs(a_obj_min_);
+    if (obj_v <= 0.0 || abs_a_ego_min <= abs_a_obj_min) {
+      return std::max(0.0, closing_distance) + longitudinal_offset_margin_;
     }
-    return std::max(0.0, closing_distance) + longitudinal_offset_margin_;
+    // Also check the closest approach while both vehicles are still braking.
+    const double v = std::abs(current_v);
+    const double closing_speed = v - obj_v + abs_a_obj_min * t;
+    const double peak_dt = closing_speed / (abs_a_ego_min - abs_a_obj_min);
+    const double braking_overlap_end = std::min(v / abs_a_ego_min, obj_v / abs_a_obj_min - t);
+    if (peak_dt < 0.0 || peak_dt > braking_overlap_end) {
+      return std::max(0.0, closing_distance) + longitudinal_offset_margin_;
+    }
+    const double peak_closing_distance =
+      (v - obj_v) * t + abs_a_obj_min * t * t / 2 + closing_speed * peak_dt / 2;
+    return std::max({0.0, closing_distance, peak_closing_distance}) + longitudinal_offset_margin_;
   });
 
   tier4_debug_msgs::msg::Float32Stamped rss_distance_msg;
