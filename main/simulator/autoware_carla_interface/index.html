@@ -24470,6 +24470,10 @@ camera works on luminance alone, such as feature tracking or visual odometry.
 reads, so it costs no information at all. A 1600x900 frame is 5,760,000 bytes as
 <code>bgra8</code>, 4,320,000 bytes as <code>bgr8</code> and 1,440,000 bytes as <code>mono8</code>.</p>
 <p>For CARLA sensor parameters, see <a href="https://carla.readthedocs.io/en/latest/ref_sensors/">CARLA Sensor Reference</a>.</p>
+<p>A <code>carla_type</code> of any <code>sensor.camera.*</code> is published as a camera: CARLA's depth
+and semantic segmentation cameras deliver the same BGRA frame through the same
+callback as the RGB one, and are published on the mapping's <code>topic_image</code> and
+<code>topic_info</code> with the encoded values untouched.</p>
 <h5 id="capture-rate">Capture Rate<a class="headerlink" href="#capture-rate" title="Permanent link">#</a></h5>
 <p><code>frequency_hz</code> throttles what the bridge publishes; it does not change how often
 CARLA captures. A sensor left at CARLA's default captures on every simulation
