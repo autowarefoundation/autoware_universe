@@ -298,6 +298,11 @@ reads, so it costs no information at all. A 1600x900 frame is 5,760,000 bytes as
 
 For CARLA sensor parameters, see [CARLA Sensor Reference](https://carla.readthedocs.io/en/latest/ref_sensors/).
 
+A `carla_type` of any `sensor.camera.*` is published as a camera: CARLA's depth
+and semantic segmentation cameras deliver the same BGRA frame through the same
+callback as the RGB one, and are published on the mapping's `topic_image` and
+`topic_info` with the encoded values untouched.
+
 ##### Capture Rate
 
 `frequency_hz` throttles what the bridge publishes; it does not change how often

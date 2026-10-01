@@ -2,6 +2,12 @@
 Changelog for package tier4_planning_factor_rviz_plugin
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* chore(visualization): update package maintainers (`#13188 <https://github.com/autowarefoundation/autoware_universe/issues/13188>`_)
+* Contributors: Ryohsuke Mitsudome, Satoshi OTA
+
 0.52.0 (2026-06-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

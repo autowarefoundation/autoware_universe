@@ -2,6 +2,36 @@
 Changelog for package autoware_system_monitor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* fix(autoware_system_monitor): migrate deprecated NVML APIs for CUDA 13 (`#12742 <https://github.com/autowarefoundation/autoware_universe/issues/12742>`_)
+  * fix(autoware_system_monitor): migrate deprecated NVML APIs for CUDA 13
+  CUDA 13 (NVML API v13) deprecates nvmlDeviceGetTemperature() and
+  nvmlDeviceGetCurrentClocksThrottleReasons(); with -Werror=deprecated-declarations
+  this breaks the build. Switch to nvmlDeviceGetTemperatureV() and
+  nvmlDeviceGetCurrentClocksEventReasons() behind an NVML_API_VERSION>=13 guard so
+  autoware_system_monitor keeps building on both CUDA 13+ and older toolkits.
+  The throttle/event reason bitmask and the macro-based reason constants are
+  unchanged (only the deprecated function calls are replaced).
+  * fix(autoware_system_monitor): handle future NVML clock reason APIs
+  * fix(autoware_system_monitor): avoid duplicate NVML reason formatting
+  * fix(autoware_system_monitor): define all NVML clock event reasons
+  Use file-local constants for all nine clock event reasons so the reason formatter does not directly reference raw NVML identifiers. Keep the hardware slowdown constants in the compatibility layer alongside the SDK-specific event and throttle aliases.
+  ---------
+  Co-authored-by: nishikawa-masaki <195264944+nishikawa-masaki@users.noreply.github.com>
+* fix(system): declare the dependencies these packages use (`#13217 <https://github.com/autowarefoundation/autoware_universe/issues/13217>`_)
+* refactor(system): move node design files into each package (`#13103 <https://github.com/autowarefoundation/autoware_universe/issues/13103>`_)
+  Co-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>
+* feat(autoware_system_monitor): add argument to override hdd_mount_point (`#13129 <https://github.com/autowarefoundation/autoware_universe/issues/13129>`_)
+  * feat(autoware_system_monitor): add argument to override hdd_mount_point
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* fix(autoware_system_monitor): add missing dependency to edac-utils (`#13127 <https://github.com/autowarefoundation/autoware_universe/issues/13127>`_)
+  fix(autoware_system_monitor): add missing dependency to edac_utils
+* Contributors: Max-Bin, Mete Fatih Cırıt, Ryohsuke Mitsudome, Taekjin LEE
+
 0.52.0 (2026-06-30)
 -------------------
 

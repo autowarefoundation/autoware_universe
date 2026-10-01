@@ -1,4 +1,5 @@
 <launch>
+  <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
   <arg name="input/camera_number" default="1"/>
   <arg name="input/mask0" default="/perception/object_recognition/detection/mask0"/>
   <arg name="input/camera_info0" default="/sensing/camera/camera0/camera_info"/>
@@ -34,6 +35,7 @@
   <arg name="input/image8" default="/image_raw8"/>
   <group>
     <node pkg="autoware_image_projection_based_fusion" exec="segmentation_pointcloud_fusion_node" name="segmentation_pointcloud_fusion" output="screen">
+      <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
       <param name="rois_number" value="$(var input/camera_number)"/>
       <param from="$(var semantic_segmentation_based_filter_param_path)"/>
       <param from="$(var sync_param_path)"/>

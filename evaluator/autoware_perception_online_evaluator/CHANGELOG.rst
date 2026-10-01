@@ -2,6 +2,36 @@
 Changelog for package autoware_perception_online_evaluator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* fix(design): align the evaluator node designs with the packages they describe (`#13341 <https://github.com/autowarefoundation/autoware_universe/issues/13341>`_)
+  The fixed-name ports of the evaluation adapters, the online perception
+  evaluator and the metric converter are pinned with global:, which keeps them
+  out of the design graph: link_manager skips any connection whose target is a
+  global input port and the exporter emits no remap. remap_target: keeps the same
+  topic and service names while letting the ports take part in the graph.
+  /diagnostics stays global:.
+  ControlEvaluator names a plugin class in the wrong namespace, publishes
+  tier4_metric_msgs/MetricArray rather than the non-existent
+  autoware_control_msgs/ControlEvaluation, and subscribes to eleven planning
+  factor topics under /planning/planning_factors, two of which were missing.
+  PlanningEvaluator publishes the same metric type.
+  The evaluation adapter nodes are components with no executable of their own.
+* fix(evaluator): declare the dependencies these packages use (`#13218 <https://github.com/autowarefoundation/autoware_universe/issues/13218>`_)
+  Six packages use headers or symbols of packages that they never declare. Add the 26 missing entries: 25 <depend> and 1 <test_depend>.
+  A per-package sweep of the first commit found four more missing entries.
+  autoware_kinematic_evaluator and autoware_localization_evaluator call find_package(ament_cmake_ros REQUIRED) under BUILD_TESTING and declare it nowhere. Both get <test_depend>ament_cmake_ros</test_depend>.
+  autoware_planning_evaluator uses lanelet::ConstLanelet in the library code, and the header arrives only through autoware_lanelet2_utils. It gets <depend>lanelet2_core</depend>. Its test loads two parameter files from the share directory of autoware_test_utils, so it gets <test_depend>autoware_test_utils</test_depend>.
+* refactor(evaluator): move node design files into each package (`#13099 <https://github.com/autowarefoundation/autoware_universe/issues/13099>`_)
+  Co-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>
+* feat(perception_analytics_publisher): apply `agnocast_wrapper::Node` to `perception_analytics_publisher` (`#12929 <https://github.com/autowarefoundation/autoware_universe/issues/12929>`_)
+  * apply agnocast_wrapper::Node
+  * fix for get_or_declare_parameter
+  * fix
+  ---------
+* Contributors: Koichi Imai, Mete Fatih Cırıt, Ryohsuke Mitsudome, Taekjin LEE
+
 0.52.0 (2026-06-30)
 -------------------
 
