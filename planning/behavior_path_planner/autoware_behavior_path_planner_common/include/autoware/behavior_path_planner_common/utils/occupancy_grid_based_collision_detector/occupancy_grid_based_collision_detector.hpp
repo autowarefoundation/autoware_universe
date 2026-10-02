@@ -16,6 +16,7 @@
 #define AUTOWARE__BEHAVIOR_PATH_PLANNER_COMMON__UTILS__OCCUPANCY_GRID_BASED_COLLISION_DETECTOR__OCCUPANCY_GRID_BASED_COLLISION_DETECTOR_HPP_
 
 #include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 
 #include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 #include <geometry_msgs/msg/pose_array.hpp>
@@ -76,17 +77,10 @@ geometry_msgs::msg::Pose index2pose(
 geometry_msgs::msg::Pose global2local(
   const nav_msgs::msg::OccupancyGrid & costmap, const geometry_msgs::msg::Pose & pose_global);
 
-struct VehicleShape
-{
-  double length;     // X [m]
-  double width;      // Y [m]
-  double base2back;  // base_link to rear [m]
-};
-
 struct OccupancyGridMapParam
 {
   // robot configs
-  VehicleShape vehicle_shape;
+  autoware::vehicle_info_utils::VehicleInfo vehicle_info;
 
   // costmap configs
   int theta_size{0};          // discretized angle table size [-]
