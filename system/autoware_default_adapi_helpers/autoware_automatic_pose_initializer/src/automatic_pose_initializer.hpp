@@ -16,13 +16,14 @@
 #define AUTOMATIC_POSE_INITIALIZER_HPP_
 
 #include <autoware/adapi_specs/localization.hpp>
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware/component_interface_utils/rclcpp.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 namespace autoware::automatic_pose_initializer
 {
 
-class AutomaticPoseInitializer : public rclcpp::Node
+class AutomaticPoseInitializer : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit AutomaticPoseInitializer(const rclcpp::NodeOptions & options);
@@ -31,10 +32,11 @@ private:
   void on_timer();
   using Initialize = autoware::adapi_specs::localization::Initialize;
   using State = autoware::adapi_specs::localization::InitializationState;
+  using NodeT = autoware::agnocast_wrapper::Node;
   rclcpp::CallbackGroup::SharedPtr group_cli_;
-  rclcpp::TimerBase::SharedPtr timer_;
-  autoware::component_interface_utils::Client<Initialize>::SharedPtr cli_initialize_;
-  autoware::component_interface_utils::Subscription<State>::SharedPtr sub_state_;
+  AUTOWARE_TIMER_PTR timer_;
+  autoware::component_interface_utils::Client<Initialize, NodeT>::SharedPtr cli_initialize_;
+  autoware::component_interface_utils::Subscription<State, NodeT>::SharedPtr sub_state_;
   State::Message state_;
 };
 

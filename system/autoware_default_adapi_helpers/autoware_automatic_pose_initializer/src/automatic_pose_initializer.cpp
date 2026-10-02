@@ -20,15 +20,16 @@ namespace autoware::automatic_pose_initializer
 {
 
 AutomaticPoseInitializer::AutomaticPoseInitializer(const rclcpp::NodeOptions & options)
-: Node("autoware_automatic_pose_initializer", options)
+: autoware::agnocast_wrapper::Node("autoware_automatic_pose_initializer", options)
 {
-  const auto adaptor = autoware::component_interface_utils::NodeAdaptor(this);
+  const auto adaptor = autoware::component_interface_utils::NodeAdaptor<NodeT>(this);
   group_cli_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
   adaptor.init_cli(cli_initialize_, group_cli_);
   adaptor.init_sub(sub_state_, [this](const State::Message::ConstSharedPtr msg) { state_ = *msg; });
 
   const auto period = rclcpp::Rate(1.0).period();
-  timer_ = rclcpp::create_timer(this, get_clock(), period, [this]() { on_timer(); });
+  timer_ =
+    autoware::agnocast_wrapper::create_timer(this, get_clock(), period, [this]() { on_timer(); });
 
   state_.stamp = now();
   state_.state = State::Message::UNKNOWN;
