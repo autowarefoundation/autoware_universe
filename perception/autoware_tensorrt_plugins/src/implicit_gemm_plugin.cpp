@@ -285,12 +285,17 @@ std::int32_t ImplicitGemmPlugin::getOutputShapes(
 }
 
 std::int32_t ImplicitGemmPlugin::enqueue(
-  PluginTensorDesc const * input_desc, [[maybe_unused]] PluginTensorDesc const * output_desc,
+  PluginTensorDesc const * input_desc, PluginTensorDesc const * output_desc,
   void const * const * inputs, void * const * outputs, [[maybe_unused]] void * workspace,
   cudaStream_t stream) noexcept
 {
   using StaticAllocator = spconvlib::spconv::csrc::sparse::alloc::StaticAllocator;
   using ConvGemmOps = spconvlib::spconv::csrc::sparse::convops::spops::ConvGemmOps;
+
+  if (isStreamCapturing(stream)) {
+    warnOnceStreamCaptureUnsupported(kIMPLICIT_GEMM_PLUGIN_NAME, stream_capture_warned_);
+    return zeroPluginOutputs(output_desc, getNbOutputs(), outputs, stream) == cudaSuccess ? 0 : -1;
+  }
 
   PLUGIN_ASSERT(
     num_plugin_inputs_ == NUM_PLUGIN_INPUTS_NO_BIAS ||
