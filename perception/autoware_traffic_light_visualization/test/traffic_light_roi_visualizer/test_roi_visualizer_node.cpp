@@ -12,15 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// Characterization tests for TrafficLightRoiVisualizerNode.
+// Integration tests for TrafficLightRoiVisualizerNode.
 //
-// These tests pin the behavior of the node as it is today, before the core logic is separated
-// from rclcpp::Node. They drive the node through its real topics: inputs are published, the
-// output image is subscribed, and the drawing is checked by reading pixels out of the published
-// image. They are deliberately not exhaustive - the goal is to catch a fatal regression during
-// the refactoring (does not build, does not start, publishes nothing, drawing no longer runs),
-// not to specify every corner of the node's behavior. Once the logic is covered by unit tests,
-// this file is replaced by a small integration test.
+// The drawing is covered by test_roi_visualizer.cpp, which calls it directly. What is left for
+// the node is everything a unit test cannot reach, because it is a property of the node and not
+// of the drawing: that it starts, or refuses to; that it subscribes to its inputs only while
+// something watches its output, and picks the fourth input from a parameter; that the
+// synchronizer will not fire while one of its topics is silent; and that either publisher
+// delivers.
+//
+// Two cases drive the node end to end, one per synchronizer, to show that a synchronized set of
+// messages reaches the drawing and comes back out. They check that something was drawn in the
+// signal color, not what - that is the unit tests' job.
+//
+// Every case that publishes anything arranges the same way, so the per-case Arrange says nothing
+// about it: start the node, subscribe to its output, and wait until it has subscribed to its
+// inputs. The last step is not optional - the node unsubscribes while nothing watches its output,
+// so anything published before it has subscribed is simply not received.
 
 #include "traffic_light_roi_visualizer/roi_visualizer_node.hpp"
 
@@ -68,7 +76,6 @@ constexpr int image_height = 480;
 constexpr uint8_t background_level = 40;
 
 constexpr int64_t signal_id = 42;
-constexpr int64_t other_signal_id = 43;
 
 struct Box
 {
@@ -87,14 +94,7 @@ constexpr Box rough_box{190, 140, 60, 110};
 // Golden colors, recorded from this node on 2026-09-10 (ROS 2 Jazzy, Ubuntu 24.04, OpenCV 4.6).
 // The published image is RGB8, so the components are red, green, blue in that order.
 constexpr Pixel background_rgb{background_level, background_level, background_level};
-constexpr Pixel red_signal_rgb{254, 149, 149};    // str_to_color("red")
-constexpr Pixel amber_signal_rgb{254, 250, 149};  // str_to_color("yellow")
 constexpr Pixel green_signal_rgb{149, 254, 161};  // str_to_color("green")
-// The frame color comes from the circle element of the label only. Without a circle the color
-// stays at extract_shape_info()'s initial value, which is also what draw_roi_with_id() is handed
-// for a ROI with no signal at all - the two are indistinguishable in the output.
-constexpr Pixel no_circle_rgb{255, 255, 255};
-constexpr Pixel unknown_circle_rgb{250, 250, 250};  // str_to_color() fallback, e.g. for "unknown"
 
 // `pixel` fills every pixel of the image and is in the channel order implied by `encoding`, not
 // necessarily RGB. The stamp is left unset: the fixture stamps a message just before publishing it.
@@ -153,27 +153,8 @@ TrafficLightArray make_signal_array(
 const Image background_image = make_uniform_image("rgb8", background_rgb);
 const TrafficLightRoiArray fine_rois = make_roi_array(signal_id, {fine_box});
 const TrafficLightRoiArray rough_rois = make_roi_array(signal_id, {rough_box});
-const TrafficLightRoiArray no_rois = make_roi_array(signal_id, {});
-// A fine ROI for a traffic light that the rough ROIs do not mention.
-const TrafficLightRoiArray fine_rois_for_other_light = make_roi_array(other_signal_id, {fine_box});
 const TrafficLightArray green_signal =
   make_signal_array(signal_id, TrafficLightElement::GREEN, TrafficLightElement::CIRCLE);
-const TrafficLightArray unknown_signal =
-  make_signal_array(signal_id, TrafficLightElement::UNKNOWN, TrafficLightElement::CIRCLE);
-// A green arrow, i.e. a classified signal whose only element is not a circle.
-const TrafficLightArray arrow_signal =
-  make_signal_array(signal_id, TrafficLightElement::GREEN, TrafficLightElement::LEFT_ARROW);
-// A green signal reported for a different traffic light than the one the ROI belongs to.
-const TrafficLightArray signal_for_other_light =
-  make_signal_array(other_signal_id, TrafficLightElement::GREEN, TrafficLightElement::CIRCLE);
-
-TrafficLightArray merge(TrafficLightArray first, const TrafficLightArray & second)
-{
-  first.signals.insert(first.signals.end(), second.signals.begin(), second.signals.end());
-  return first;
-}
-
-const TrafficLightArray signals_for_both_lights = merge(green_signal, signal_for_other_light);
 
 Pixel pixel_at(const Image & image, int x, int y);
 
@@ -199,22 +180,9 @@ Pixel pixel_at(const Image & image, int x, int y)
   return {image.data.at(offset), image.data.at(offset + 1), image.data.at(offset + 2)};
 }
 
-size_t count_pixels_differing_from(const Image & image, const Pixel & reference)
-{
-  size_t count = 0;
-  for (int y = 0; y < static_cast<int>(image.height); ++y) {
-    for (int x = 0; x < static_cast<int>(image.width); ++x) {
-      if (pixel_at(image, x, y) != reference) {
-        ++count;
-      }
-    }
-  }
-  return count;
-}
-
 }  // namespace
 
-class TrafficLightRoiVisualizerCharacterization : public ::testing::Test
+class TrafficLightRoiVisualizerNodeTest : public ::testing::Test
 {
 protected:
   // rclcpp::init() may only be called once per process, so it is done per suite rather than per
@@ -346,19 +314,24 @@ protected:
 // explicitly. Leaving out both is not tested separately, because these two cover it.
 //
 // The exception type is not pinned: it comes from rclcpp, not from this node.
-TEST_F(TrafficLightRoiVisualizerCharacterization, Construct_HighAccuracyParameterMissing_Throws)
+TEST_F(TrafficLightRoiVisualizerNodeTest, Construct_HighAccuracyParameterMissing_Throws)
 {
+  // Arrange: both parameters are declared without a default, so both are required. Only
+  // use_image_transport is given here; use_high_accuracy_detection is left out on purpose.
   rclcpp::NodeOptions options;
   options.parameter_overrides({{"use_image_transport", false}});
 
+  // Act and Assert
   EXPECT_THROW(std::make_shared<TrafficLightRoiVisualizerNode>(options), std::exception);
 }
 
-TEST_F(TrafficLightRoiVisualizerCharacterization, Construct_ImageTransportParameterMissing_Throws)
+TEST_F(TrafficLightRoiVisualizerNodeTest, Construct_ImageTransportParameterMissing_Throws)
 {
+  // Arrange: the mirror of the case above - use_image_transport is the one left out.
   rclcpp::NodeOptions options;
   options.parameter_overrides({{"use_high_accuracy_detection", false}});
 
+  // Act and Assert
   EXPECT_THROW(std::make_shared<TrafficLightRoiVisualizerNode>(options), std::exception);
 }
 
@@ -368,12 +341,16 @@ TEST_F(TrafficLightRoiVisualizerCharacterization, Construct_ImageTransportParame
 //
 // The reverse transition (dropping the subscriptions again once the last output subscriber goes
 // away) is not pinned; only the initial state is.
-TEST_F(TrafficLightRoiVisualizerCharacterization, Interface_OutputUnsubscribed_InputsNotSubscribed)
+TEST_F(TrafficLightRoiVisualizerNodeTest, Interface_OutputUnsubscribed_InputsNotSubscribed)
 {
+  // Arrange
   start_node(/*use_high_accuracy_detection=*/true, /*use_image_transport=*/false);
 
+  // Act: run the executor so that the node's 100 ms connect timer gets a chance to fire. Nothing
+  // subscribes to the output, so this is the whole of the stimulus.
   pump(delivery_budget);
 
+  // Assert: the node leaves all four inputs alone
   EXPECT_EQ(image_pub_->get_subscription_count(), 0u);
   EXPECT_EQ(roi_pub_->get_subscription_count(), 0u);
   EXPECT_EQ(rough_roi_pub_->get_subscription_count(), 0u);
@@ -382,13 +359,17 @@ TEST_F(TrafficLightRoiVisualizerCharacterization, Interface_OutputUnsubscribed_I
 
 // Once the output image has a subscriber, the node subscribes to the image, the fine ROIs and the
 // traffic signals. Without high accuracy detection it leaves the rough ROIs alone.
-TEST_F(TrafficLightRoiVisualizerCharacterization, Interface_OutputSubscribed_FineInputsSubscribed)
+TEST_F(TrafficLightRoiVisualizerNodeTest, Interface_OutputSubscribed_FineInputsSubscribed)
 {
+  // Arrange
   start_node(/*use_high_accuracy_detection=*/false, /*use_image_transport=*/false);
-  subscribe_output();
 
+  // Act: subscribing to the output is the event the lazy subscription reacts to; the wait gives
+  // the connect timer time to notice.
+  subscribe_output();
   ASSERT_TRUE(wait_until_node_subscribes_inputs());
 
+  // Assert: the three inputs the three-input synchronizer needs, and not the rough ROIs
   EXPECT_GT(roi_pub_->get_subscription_count(), 0u);
   EXPECT_GT(signal_pub_->get_subscription_count(), 0u);
   EXPECT_EQ(rough_roi_pub_->get_subscription_count(), 0u);
@@ -396,13 +377,16 @@ TEST_F(TrafficLightRoiVisualizerCharacterization, Interface_OutputSubscribed_Fin
 
 // With high accuracy detection the node additionally subscribes to the rough ROIs, which selects
 // the four-input synchronizer and image_rough_roi_callback().
-TEST_F(TrafficLightRoiVisualizerCharacterization, Interface_HighAccuracy_RoughRoiSubscribed)
+TEST_F(TrafficLightRoiVisualizerNodeTest, Interface_HighAccuracy_RoughRoiSubscribed)
 {
+  // Arrange
   start_node(/*use_high_accuracy_detection=*/true, /*use_image_transport=*/false);
-  subscribe_output();
 
+  // Act: as above, subscribing to the output is what makes the node subscribe to its inputs
+  subscribe_output();
   ASSERT_TRUE(wait_until_node_subscribes_inputs());
 
+  // Assert: with the parameter on, the fourth input is subscribed too
   EXPECT_GT(rough_roi_pub_->get_subscription_count(), 0u);
 }
 
@@ -414,17 +398,21 @@ TEST_F(TrafficLightRoiVisualizerCharacterization, Interface_HighAccuracy_RoughRo
 // runs. An empty ROI array is a different thing - it completes the set, and the image comes back
 // unchanged (Visualization_NoFineRois_ImageUnchanged). The synchronizer's tolerance for
 // differing stamps is not pinned either; every other test publishes one stamp for the whole set.
-TEST_F(TrafficLightRoiVisualizerCharacterization, Sync_FineRoisMissing_NoOutput)
+TEST_F(TrafficLightRoiVisualizerNodeTest, Sync_FineRoisMissing_NoOutput)
 {
+  // Arrange
   start_node(/*use_high_accuracy_detection=*/false, /*use_image_transport=*/false);
   subscribe_output();
   ASSERT_TRUE(wait_until_node_subscribes_inputs());
 
+  // Act: publish every input the three-input synchronizer takes except the fine ROIs, all with
+  // the same stamp so that only the missing one keeps it from pairing them up.
   const auto now = peer_->now();
   image_pub_->publish(stamped(background_image, now));
   signal_pub_->publish(stamped(green_signal, now));
   pump(delivery_budget);
 
+  // Assert: the callback never runs, so nothing is published
   EXPECT_EQ(output_, nullptr);
 }
 
@@ -434,58 +422,22 @@ TEST_F(TrafficLightRoiVisualizerCharacterization, Sync_FineRoisMissing_NoOutput)
 // The reverse case (the rough ROIs arriving while high accuracy detection is off) needs no test of
 // its own, because the node does not even subscribe to them then - see
 // Interface_OutputSubscribed_FineInputsSubscribed.
-TEST_F(TrafficLightRoiVisualizerCharacterization, Sync_RoughRoisMissing_NoOutput)
+TEST_F(TrafficLightRoiVisualizerNodeTest, Sync_RoughRoisMissing_NoOutput)
 {
+  // Arrange
   start_node(/*use_high_accuracy_detection=*/true, /*use_image_transport=*/false);
   subscribe_output();
   ASSERT_TRUE(wait_until_node_subscribes_inputs());
 
+  // Act: the same, one synchronizer up - everything except the rough ROIs, same stamp
   const auto now = peer_->now();
   image_pub_->publish(stamped(background_image, now));
   roi_pub_->publish(stamped(fine_rois, now));
   signal_pub_->publish(stamped(green_signal, now));
   pump(delivery_budget);
 
+  // Assert: the callback never runs, so nothing is published
   EXPECT_EQ(output_, nullptr);
-}
-
-// ---------------------------------------------------------------------------------------------
-// Drawing without high accuracy detection: the callback walks the fine ROIs, so a fine ROI is the
-// subject, and the only question per ROI is whether a signal was classified for it. The tests run
-// from an empty array, through a ROI without a signal, to a ROI with one.
-// ---------------------------------------------------------------------------------------------
-// With no ROIs to draw, the node still republishes the image, unchanged apart from the conversion
-// to RGB8. This is the path that keeps the output alive while nothing is detected.
-TEST_F(TrafficLightRoiVisualizerCharacterization, Visualization_NoFineRois_ImageUnchanged)
-{
-  start_node(/*use_high_accuracy_detection=*/false, /*use_image_transport=*/false);
-  subscribe_output();
-  ASSERT_TRUE(wait_until_node_subscribes_inputs());
-
-  ASSERT_TRUE(send_inputs_and_wait_for_output(background_image, no_rois, green_signal));
-
-  EXPECT_EQ(count_pixels_differing_from(*output_, background_rgb), 0u);
-}
-
-// A ROI without a matching signal goes through draw_roi_with_id(), which draws no
-// label box at all - there is no shape and no confidence to show. The frame itself is still drawn.
-//
-// The frame color is not pinned here; it belongs to the colors section further down.
-TEST_F(TrafficLightRoiVisualizerCharacterization, Visualization_FineNoSignal_NoLabelBox)
-{
-  start_node(/*use_high_accuracy_detection=*/false, /*use_image_transport=*/false);
-  subscribe_output();
-  ASSERT_TRUE(wait_until_node_subscribes_inputs());
-
-  ASSERT_TRUE(send_inputs_and_wait_for_output(background_image, fine_rois, signal_for_other_light));
-
-  // The frame is drawn
-  const auto frame_corner = pixel_at(*output_, fine_box.x, fine_box.y);
-  EXPECT_NE(frame_corner, background_rgb);
-
-  // The label box is not drawn
-  const auto above_the_roi = label_box_pixel(*output_, fine_box);
-  EXPECT_EQ(above_the_roi, background_rgb);
 }
 
 // A ROI whose id matches a classified traffic signal is drawn in the color of that signal's
@@ -494,14 +446,17 @@ TEST_F(TrafficLightRoiVisualizerCharacterization, Visualization_FineNoSignal_NoL
 //
 // The exact shape of the label box is not pinned - only that it is drawn above the ROI in the
 // signal color and contains black text - because it is a rendering detail.
-TEST_F(TrafficLightRoiVisualizerCharacterization, Visualization_FineWithSignal_FrameAndLabelDrawn)
+TEST_F(TrafficLightRoiVisualizerNodeTest, Pipeline_FineInputs_DrawnImagePublished)
 {
+  // Arrange
   start_node(/*use_high_accuracy_detection=*/false, /*use_image_transport=*/false);
   subscribe_output();
   ASSERT_TRUE(wait_until_node_subscribes_inputs());
 
+  // Act
   ASSERT_TRUE(send_inputs_and_wait_for_output(background_image, fine_rois, green_signal));
 
+  // Assert
   EXPECT_EQ(output_->width, static_cast<uint32_t>(image_width));
   EXPECT_EQ(output_->height, static_cast<uint32_t>(image_height));
   EXPECT_EQ(output_->encoding, "rgb8");
@@ -524,84 +479,24 @@ TEST_F(TrafficLightRoiVisualizerCharacterization, Visualization_FineWithSignal_F
   EXPECT_EQ(label_icon, label_icon_rgb);
 }
 
-// ---------------------------------------------------------------------------------------------
-// Drawing with high accuracy detection: the callback walks the rough ROIs, so a rough ROI is the
-// subject, and per ROI both a fine ROI and a signal may or may not be found for its id. The tests
-// run in the same order as above, each signal case split by whether the fine ROI is there.
-// ---------------------------------------------------------------------------------------------
-// With no rough ROIs the loop body never runs, so the image is republished untouched even though
-// signals are there. This is the high accuracy counterpart of
-// Visualization_NoFineRois_ImageUnchanged.
-TEST_F(TrafficLightRoiVisualizerCharacterization, Visualization_NoRoughRois_ImageUnchanged)
-{
-  start_node(/*use_high_accuracy_detection=*/true, /*use_image_transport=*/false);
-  subscribe_output();
-  ASSERT_TRUE(wait_until_node_subscribes_inputs());
-
-  ASSERT_TRUE(send_inputs_and_wait_for_output(background_image, no_rois, green_signal, no_rois));
-
-  EXPECT_EQ(count_pixels_differing_from(*output_, background_rgb), 0u);
-}
-
-// The rough ROI callback looks up a fine ROI and a signal by id for each rough ROI and draws one of
-// four combinations. This is the one with a fine ROI but no signal: both boxes are drawn, both in
-// white, and the id is drawn twice because both go through the cv::Scalar overload.
-//
-// This test and the next three cover the whole dispatch, which is the part that moves into the
-// logic class when it is separated.
-TEST_F(TrafficLightRoiVisualizerCharacterization, Visualization_RoughAndFineNoSignal_BothWhite)
-{
-  start_node(/*use_high_accuracy_detection=*/true, /*use_image_transport=*/false);
-  subscribe_output();
-  ASSERT_TRUE(wait_until_node_subscribes_inputs());
-
-  ASSERT_TRUE(send_inputs_and_wait_for_output(
-    background_image, fine_rois, signal_for_other_light, rough_rois));
-
-  // Both frames are drawn, and both in white: extract_shape_info() of an empty label falls back to
-  // it, so even the rough frame carries no signal color.
-  const auto rough_frame_corner = pixel_at(*output_, rough_box.x, rough_box.y);
-  const auto fine_frame_corner = pixel_at(*output_, fine_box.x, fine_box.y);
-  EXPECT_EQ(rough_frame_corner, no_circle_rgb);
-  EXPECT_EQ(fine_frame_corner, no_circle_rgb);
-}
-
-// With neither a fine ROI nor a signal, only the white rough box is left: the node still shows
-// that the map expects a traffic light there.
-TEST_F(TrafficLightRoiVisualizerCharacterization, Visualization_RoughOnlyNoSignal_RoughWhite)
-{
-  start_node(/*use_high_accuracy_detection=*/true, /*use_image_transport=*/false);
-  subscribe_output();
-  ASSERT_TRUE(wait_until_node_subscribes_inputs());
-
-  ASSERT_TRUE(
-    send_inputs_and_wait_for_output(background_image, no_rois, signal_for_other_light, rough_rois));
-
-  // The rough frame is drawn, in white
-  const auto rough_frame_corner = pixel_at(*output_, rough_box.x, rough_box.y);
-  EXPECT_EQ(rough_frame_corner, no_circle_rgb);
-
-  // No label box above it, because no shape is known
-  const auto above_the_rough_roi = label_box_pixel(*output_, rough_box);
-  EXPECT_EQ(above_the_rough_roi, background_rgb);
-}
-
 // With high accuracy detection both rectangles are drawn: the rough ROI from the map based
 // detector and, inside it, the fine ROI from the fine detector.
 //
 // The two corners checked below lie on exactly one rectangle each, and the label box is checked at
 // the fine ROI - the opposite of Visualization_RoughOnlyWithSignal_RoughLabeled, where the same
 // box lands on the rough ROI instead.
-TEST_F(TrafficLightRoiVisualizerCharacterization, Visualization_RoughAndFineWithSignal_BothDrawn)
+TEST_F(TrafficLightRoiVisualizerNodeTest, Pipeline_RoughAndFineInputs_DrawnImagePublished)
 {
+  // Arrange
   start_node(/*use_high_accuracy_detection=*/true, /*use_image_transport=*/false);
   subscribe_output();
   ASSERT_TRUE(wait_until_node_subscribes_inputs());
 
+  // Act
   ASSERT_TRUE(
     send_inputs_and_wait_for_output(background_image, fine_rois, green_signal, rough_rois));
 
-  // Both frames are drawn. Each of these corners lies on one rectangle only.
+  // Assert: both frames are drawn. Each of these corners lies on one rectangle only.
   const auto rough_frame_corner = pixel_at(*output_, rough_box.x, rough_box.y);
   const auto fine_frame_bottom_left = pixel_at(*output_, fine_box.x, fine_box.y + fine_box.height);
   EXPECT_EQ(rough_frame_corner, green_signal_rgb);
@@ -612,179 +507,10 @@ TEST_F(TrafficLightRoiVisualizerCharacterization, Visualization_RoughAndFineWith
   EXPECT_EQ(icon_above_the_fine_roi, label_icon_rgb);
 }
 
-// Without a fine ROI the signal is drawn on the rough box instead, label box included, so a
-// classified traffic light is always shown somewhere.
-TEST_F(TrafficLightRoiVisualizerCharacterization, Visualization_RoughOnlyWithSignal_RoughLabeled)
-{
-  start_node(/*use_high_accuracy_detection=*/true, /*use_image_transport=*/false);
-  subscribe_output();
-  ASSERT_TRUE(wait_until_node_subscribes_inputs());
-
-  ASSERT_TRUE(send_inputs_and_wait_for_output(background_image, no_rois, green_signal, rough_rois));
-
-  // The rough frame is drawn in the signal color
-  const auto rough_frame_corner = pixel_at(*output_, rough_box.x, rough_box.y);
-  EXPECT_EQ(rough_frame_corner, green_signal_rgb);
-
-  // The label box goes above the rough ROI. The icon rather than the fill of the box, because the
-  // id text is drawn over the fill in the same color.
-  const auto icon_above_the_rough_roi = label_icon_pixel(*output_, rough_box);
-  EXPECT_EQ(icon_above_the_rough_roi, label_icon_rgb);
-
-  // Nothing is drawn where a fine ROI would have been
-  const auto where_the_fine_roi_would_be = pixel_at(*output_, fine_box.x, fine_box.y);
-  EXPECT_EQ(where_the_fine_roi_would_be, background_rgb);
-}
-
-// The loop runs over the rough ROIs only, so a traffic light that the rough ROIs do not mention is
-// dropped without a trace - even when both its fine ROI and its signal are there. Without high
-// accuracy detection the same fine ROI would be drawn. That makes every combination without a
-// rough ROI ("fine only", "signal only", "fine + signal") behave the same, which is why only this
-// one is pinned.
-//
-// NOTE(characterization): whether that asymmetry is intended is unclear. The callback assumes that
-// the rough ROIs cover every fine ROI ("a rough roi will always have correspond roi", node.cpp).
-TEST_F(TrafficLightRoiVisualizerCharacterization, Visualization_FineWithoutRoughRoi_NotDrawn)
-{
-  start_node(/*use_high_accuracy_detection=*/true, /*use_image_transport=*/false);
-  subscribe_output();
-  ASSERT_TRUE(wait_until_node_subscribes_inputs());
-
-  // Signals for both traffic lights, but a rough ROI only for the first one.
-  ASSERT_TRUE(send_inputs_and_wait_for_output(
-    background_image, fine_rois_for_other_light, signals_for_both_lights, rough_rois));
-
-  // The rough ROI that was mentioned is drawn
-  const auto rough_frame_corner = pixel_at(*output_, rough_box.x, rough_box.y);
-  EXPECT_EQ(rough_frame_corner, green_signal_rgb);
-
-  // The fine ROI of the other traffic light is not, although its signal was there too
-  const auto where_the_other_fine_roi_is = pixel_at(*output_, fine_box.x, fine_box.y);
-  EXPECT_EQ(where_the_other_fine_roi_is, background_rgb);
-}
-
 // ---------------------------------------------------------------------------------------------
-// Properties shared by both callbacks. The frame color is derived by get_classification_result()
-// and extract_shape_info(), which both callbacks call, and measuring the rough and the fine frame
-// side by side on 2026-09-15 gave the same color in every case below - so it is pinned once, on the
-// fine path. Only the circle element of a label decides the color; the other elements are drawn as
-// icons but do not change it.
+// The publisher the parameters select. Which one is used is a property of the node, so it stays
+// here even though nothing about the drawing is being checked.
 // ---------------------------------------------------------------------------------------------
-
-// No signal at all: the frame is plain white.
-TEST_F(TrafficLightRoiVisualizerCharacterization, Visualization_NoSignal_FrameWhite)
-{
-  start_node(/*use_high_accuracy_detection=*/false, /*use_image_transport=*/false);
-  subscribe_output();
-  ASSERT_TRUE(wait_until_node_subscribes_inputs());
-
-  ASSERT_TRUE(send_inputs_and_wait_for_output(background_image, fine_rois, signal_for_other_light));
-
-  // The frame falls back to plain white
-  const auto frame_corner = pixel_at(*output_, fine_box.x, fine_box.y);
-  EXPECT_EQ(frame_corner, no_circle_rgb);
-}
-
-// A circle whose color is known: the frame takes that color. str_to_color() knows three of them,
-// and all three are pinned because they are the mapping the README documents - one case each, so
-// that a failure names the color that broke.
-TEST_F(TrafficLightRoiVisualizerCharacterization, Visualization_RedCircleSignal_FrameRed)
-{
-  start_node(/*use_high_accuracy_detection=*/false, /*use_image_transport=*/false);
-  subscribe_output();
-  ASSERT_TRUE(wait_until_node_subscribes_inputs());
-
-  ASSERT_TRUE(send_inputs_and_wait_for_output(
-    background_image, fine_rois,
-    make_signal_array(signal_id, TrafficLightElement::RED, TrafficLightElement::CIRCLE)));
-
-  // The frame takes the color of the circle
-  const auto frame_corner = pixel_at(*output_, fine_box.x, fine_box.y);
-  EXPECT_EQ(frame_corner, red_signal_rgb);
-}
-
-TEST_F(TrafficLightRoiVisualizerCharacterization, Visualization_AmberCircleSignal_FrameAmber)
-{
-  start_node(/*use_high_accuracy_detection=*/false, /*use_image_transport=*/false);
-  subscribe_output();
-  ASSERT_TRUE(wait_until_node_subscribes_inputs());
-
-  ASSERT_TRUE(send_inputs_and_wait_for_output(
-    background_image, fine_rois,
-    make_signal_array(signal_id, TrafficLightElement::AMBER, TrafficLightElement::CIRCLE)));
-
-  const auto frame_corner = pixel_at(*output_, fine_box.x, fine_box.y);
-  EXPECT_EQ(frame_corner, amber_signal_rgb);
-}
-
-TEST_F(TrafficLightRoiVisualizerCharacterization, Visualization_GreenCircleSignal_FrameGreen)
-{
-  start_node(/*use_high_accuracy_detection=*/false, /*use_image_transport=*/false);
-  subscribe_output();
-  ASSERT_TRUE(wait_until_node_subscribes_inputs());
-
-  ASSERT_TRUE(send_inputs_and_wait_for_output(background_image, fine_rois, green_signal));
-
-  const auto frame_corner = pixel_at(*output_, fine_box.x, fine_box.y);
-  EXPECT_EQ(frame_corner, green_signal_rgb);
-}
-
-// A circle whose color is UNKNOWN: the frame takes str_to_color()'s fallback, an off-white that is
-// five levels darker than the plain white above.
-//
-// NOTE(characterization): two whites that close together look unintended rather than designed.
-TEST_F(TrafficLightRoiVisualizerCharacterization, Visualization_UnknownCircleSignal_FrameOffWhite)
-{
-  start_node(/*use_high_accuracy_detection=*/false, /*use_image_transport=*/false);
-  subscribe_output();
-  ASSERT_TRUE(wait_until_node_subscribes_inputs());
-
-  ASSERT_TRUE(send_inputs_and_wait_for_output(background_image, fine_rois, unknown_signal));
-
-  // The frame takes str_to_color()'s fallback, not the plain white above
-  const auto frame_corner = pixel_at(*output_, fine_box.x, fine_box.y);
-  EXPECT_EQ(frame_corner, unknown_circle_rgb);
-}
-
-// A signal with no circle element at all - a lit arrow, which is a normal state for a Japanese
-// traffic light - leaves the frame at the initial color, the same plain white as no signal at all.
-//
-// NOTE(characterization): "a green arrow" and "nothing classified" therefore look identical in the
-// output, which the README does not mention (it only says unknown shows as white).
-TEST_F(TrafficLightRoiVisualizerCharacterization, Visualization_NonCircleSignal_FrameWhite)
-{
-  start_node(/*use_high_accuracy_detection=*/false, /*use_image_transport=*/false);
-  subscribe_output();
-  ASSERT_TRUE(wait_until_node_subscribes_inputs());
-
-  ASSERT_TRUE(send_inputs_and_wait_for_output(background_image, fine_rois, arrow_signal));
-
-  // The frame stays at the initial color, the same white as no signal at all
-  const auto frame_corner = pixel_at(*output_, fine_box.x, fine_box.y);
-  EXPECT_EQ(frame_corner, no_circle_rgb);
-}
-
-// The image is converted to RGB8 whatever its input encoding is, so a BGR8 image comes out with
-// its red and blue channels swapped.
-TEST_F(TrafficLightRoiVisualizerCharacterization, Visualization_Bgr8Image_RepublishedAsRgb8)
-{
-  start_node(/*use_high_accuracy_detection=*/false, /*use_image_transport=*/false);
-  subscribe_output();
-  ASSERT_TRUE(wait_until_node_subscribes_inputs());
-
-  // Distinct channel values so that a missing conversion cannot pass unnoticed.
-  constexpr Pixel bgr_channels{10, 20, 30};
-  constexpr Pixel expected_rgb{30, 20, 10};
-
-  ASSERT_TRUE(send_inputs_and_wait_for_output(
-    make_uniform_image("bgr8", bgr_channels), no_rois, green_signal));
-
-  EXPECT_EQ(output_->encoding, "rgb8");
-
-  // Any pixel will do: the image is uniform and no ROI is drawn on it
-  const auto any_pixel = pixel_at(*output_, 0, 0);
-  EXPECT_EQ(any_pixel, expected_rgb);
-}
 
 // use_image_transport selects an image_transport publisher instead of a plain rclcpp one. Both
 // advertise ~/output/image, so a plain subscriber sees the same output either way. What this test
@@ -795,14 +521,17 @@ TEST_F(TrafficLightRoiVisualizerCharacterization, Visualization_Bgr8Image_Republ
 // that are installed, and here there are none - checked on 2026-09-15, `ros2 pkg list` lists
 // image_transport alone, and with the parameter on the node still advertises only the raw topic.
 // Where compressed_image_transport is installed, ~/output/image/compressed would tell them apart.
-TEST_F(TrafficLightRoiVisualizerCharacterization, Interface_ImageTransportEnabled_SameOutput)
+TEST_F(TrafficLightRoiVisualizerNodeTest, Interface_ImageTransportEnabled_SameOutput)
 {
+  // Arrange
   start_node(/*use_high_accuracy_detection=*/false, /*use_image_transport=*/true);
   subscribe_output();
   ASSERT_TRUE(wait_until_node_subscribes_inputs());
 
+  // Act
   ASSERT_TRUE(send_inputs_and_wait_for_output(background_image, fine_rois, green_signal));
 
+  // Assert
   EXPECT_EQ(output_->encoding, "rgb8");
 
   // One drawn pixel is enough: this case is about the publisher, not the drawing
@@ -812,15 +541,18 @@ TEST_F(TrafficLightRoiVisualizerCharacterization, Interface_ImageTransportEnable
 
 // Each callback carries its own copy of that branch, so the one that walks the rough ROIs needs a
 // case of its own - the test above only exercises the other one.
-TEST_F(TrafficLightRoiVisualizerCharacterization, Interface_ImageTransportHighAccuracy_SameOutput)
+TEST_F(TrafficLightRoiVisualizerNodeTest, Interface_ImageTransportHighAccuracy_SameOutput)
 {
+  // Arrange
   start_node(/*use_high_accuracy_detection=*/true, /*use_image_transport=*/true);
   subscribe_output();
   ASSERT_TRUE(wait_until_node_subscribes_inputs());
 
+  // Act
   ASSERT_TRUE(
     send_inputs_and_wait_for_output(background_image, fine_rois, green_signal, rough_rois));
 
+  // Assert
   EXPECT_EQ(output_->encoding, "rgb8");
 
   const auto rough_frame_corner = pixel_at(*output_, rough_box.x, rough_box.y);
