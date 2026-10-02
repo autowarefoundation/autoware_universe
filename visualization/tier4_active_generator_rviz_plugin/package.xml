@@ -2,14 +2,15 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>tier4_active_generator_rviz_plugin</name>
-  <version>0.46.0</version>
+  <version>0.53.0</version>
   <description>RViz panel that displays the trajectory generator currently selected by the trajectory ranker</description>
 
   <maintainer email="takumi.odashima@tier4.jp">Takumi Odashima</maintainer>
   <maintainer email="hayate.sugahara@tier4.jp">Hayate Sugahara</maintainer>
-  <maintainer email="satoshi.ota@tier4.jp">Satoshi Ota</maintainer>
 
   <license>Apache License 2.0</license>
+
+  <author email="satoshi.ota@tier4.jp">Satoshi Ota</author>
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
   <buildtool_depend>autoware_cmake</buildtool_depend>

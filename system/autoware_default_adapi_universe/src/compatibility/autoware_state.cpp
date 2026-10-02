@@ -15,13 +15,14 @@
 #include "autoware_state.hpp"
 
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace autoware::default_adapi
 {
 
 AutowareStateNode::AutowareStateNode(const rclcpp::NodeOptions & options)
-: Node("autoware_state", options)
+: autoware::agnocast_wrapper::Node("autoware_state", options)
 {
   const std::vector<std::string> module_names = {
     "sensing", "perception", "map", "localization", "planning", "control", "vehicle", "system",
@@ -41,13 +42,14 @@ AutowareStateNode::AutowareStateNode(const rclcpp::NodeOptions & options)
     "/autoware/shutdown",
     std::bind(&AutowareStateNode::on_shutdown, this, std::placeholders::_1, std::placeholders::_2));
 
-  const auto adaptor = autoware::component_interface_utils::NodeAdaptor(this);
+  const auto adaptor = autoware::component_interface_utils::NodeAdaptor<NodeT>(this);
   adaptor.init_sub(sub_localization_, nullptr);
   adaptor.init_sub(sub_routing_, nullptr);
   adaptor.init_sub(sub_operation_mode_, nullptr);
 
   const auto rate = rclcpp::Rate(declare_parameter<double>("update_rate"));
-  timer_ = rclcpp::create_timer(this, get_clock(), rate.period(), [this]() { on_timer(); });
+  timer_ = autoware::agnocast_wrapper::create_timer(
+    this, get_clock(), rate.period(), [this]() { on_timer(); });
 
   component_states_.resize(module_names.size());
   launch_state_ = LaunchState::Initializing;
@@ -150,10 +152,10 @@ void AutowareStateNode::on_timer()
     RCLCPP_INFO_STREAM(get_logger(), "AutowareState: " << prev_name << " => " << curr_name);
   }
 
-  AutowareState msg;
-  msg.stamp = now();
-  msg.state = state;
-  pub_autoware_state_->publish(msg);
+  auto msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_autoware_state_);
+  msg->stamp = now();
+  msg->state = state;
+  pub_autoware_state_->publish(std::move(msg));
 }
 
 }  // namespace autoware::default_adapi

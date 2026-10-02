@@ -9,7 +9,7 @@
     dynamic_expansion:
       enabled: true
       print_runtime: false
-      max_expansion_distance: 0.0 # [m] maximum distance by which the drivable area can be expended (0.0 means no limit)
+      max_expansion_distance: 0.0 # [m] maximum distance by which the drivable area can be expanded (0.0 means no limit)
       min_bound_interval: 1.0  # [m] minimum interval between two consecutive bound points (before expansion)
       smoothing:
         curvature_average_window: 3  # window size used for smoothing the curvatures using a moving window average
@@ -27,7 +27,7 @@
           front: 0.75 # [m] margin to add to the front of object footprint
           rear: 0.75 # [m] margin to add to the rear of object footprint
           left: 0.75 # [m] margin to add to the left of object footprint
-          right: 0.75 # [m] margin to add to the rear of object footprint
+          right: 0.75 # [m] margin to add to the right of object footprint
       path_preprocessing:
         max_arc_length: 100.0 # [m] maximum arc length along the path where the ego footprint is projected (0.0 means no limit)
         resample_interval: 2.0 # [m] fixed interval between resampled path points (0.0 means path points are directly used)

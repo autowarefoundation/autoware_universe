@@ -15,16 +15,15 @@
 #include "autoware/camera_streampetr/node.hpp"
 
 #include "autoware/camera_streampetr/network/camera_ego_mask.hpp"
-#include "autoware/camera_streampetr/postprocess/non_maximum_suppression.hpp"
 
 #include <Eigen/Dense>
-#include <image_transport/image_transport.hpp>
 #include <tf2/LinearMath/Transform.hpp>
 #include <tf2/convert.hpp>
 
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <cstdio>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -39,9 +38,33 @@ namespace autoware::camera_streampetr
 namespace
 {
 
-constexpr std::size_t kMaxCameraMaskId = 10;
+// DiagnosticStatusWrapper's double overload prints large values in scientific notation,
+// so format them as fixed-point strings instead.
+std::string format_timestamp(const double seconds)
+{
+  char buffer[32];
+  std::snprintf(buffer, sizeof(buffer), "%.9f", seconds);
+  return std::string(buffer);
+}
 
-std::vector<int64_t> makeDefaultCameraMaskIds(const std::size_t rois_number)
+std::string format_milliseconds(const double milliseconds)
+{
+  char buffer[32];
+  std::snprintf(buffer, sizeof(buffer), "%.3f", milliseconds);
+  return std::string(buffer);
+}
+
+constexpr std::size_t MAX_CAMERA_MASK_ID = 10;
+
+// Per-camera `cameraN/state` values published in the camera-status diagnostics; external
+// monitors match on these strings, so they are part of the node's interface.
+constexpr const char * CAMERA_STATE_REJECTED = "rejected";
+constexpr const char * CAMERA_STATE_WAITING_CAMERA_INFO = "waiting_camera_info";
+constexpr const char * CAMERA_STATE_WAITING_IMAGE = "waiting_image";
+constexpr const char * CAMERA_STATE_STALE = "stale";
+constexpr const char * CAMERA_STATE_ACTIVE = "active";
+
+std::vector<int64_t> make_default_camera_mask_ids(const std::size_t rois_number)
 {
   std::vector<int64_t> camera_ids;
   camera_ids.reserve(rois_number);
@@ -51,7 +74,7 @@ std::vector<int64_t> makeDefaultCameraMaskIds(const std::size_t rois_number)
   return camera_ids;
 }
 
-void validateMaskPoints(const std::vector<double> & mask, const std::string & parameter_name)
+void validate_mask_points(const std::vector<double> & mask, const std::string & parameter_name)
 {
   if (mask.empty()) {
     return;
@@ -62,12 +85,12 @@ void validateMaskPoints(const std::vector<double> & mask, const std::string & pa
   }
 }
 
-std::vector<std::optional<EgoMaskRoiConfig>> declareCameraMaskParams(
-  rclcpp::Node & node, const std::size_t rois_number, const std::array<std::uint8_t, 3> & fill_bgr,
+std::vector<std::optional<EgoMaskRoiConfig>> declare_camera_mask_params(
+  rclcpp::Node & node, const std::size_t rois_number, const std::array<std::uint8_t, 3> & fill_rgb,
   const std::vector<int64_t> & camera_mask_ids)
 {
-  std::vector<std::optional<EgoMaskRoiConfig>> camera_mask_configs(kMaxCameraMaskId + 1);
-  for (std::size_t camera_id = 0; camera_id <= kMaxCameraMaskId; ++camera_id) {
+  std::vector<std::optional<EgoMaskRoiConfig>> camera_mask_configs(MAX_CAMERA_MASK_ID + 1);
+  for (std::size_t camera_id = 0; camera_id <= MAX_CAMERA_MASK_ID; ++camera_id) {
     const std::string parameter_prefix = "camera_" + std::to_string(camera_id) + "_mask";
     const bool enabled = node.declare_parameter<bool>(parameter_prefix + ".enable", false);
     const auto mask = node.declare_parameter<std::vector<double>>(
@@ -77,11 +100,11 @@ std::vector<std::optional<EgoMaskRoiConfig>> declareCameraMaskParams(
     if (!enabled || mask.empty()) {
       continue;
     }
-    validateMaskPoints(mask, parameter_prefix + ".mask");
+    validate_mask_points(mask, parameter_prefix + ".mask");
 
     EgoMaskRoiConfig config;
     config.polygons.push_back(EgoMaskPolygon{mask, normalized});
-    config.fill_bgr = fill_bgr;
+    config.fill_rgb = fill_rgb;
     camera_mask_configs[camera_id] = std::move(config);
   }
 
@@ -209,6 +232,7 @@ StreamPetrNode::StreamPetrNode(const rclcpp::NodeOptions & node_options)
     camera_callback_groups_.resize(rois_number_);
   }
   const bool is_compressed_image = declare_parameter<bool>("is_compressed_image");
+  const std::string image_transport_type = is_compressed_image ? "compressed" : "raw";
   camera_image_subs_.resize(rois_number_);
   for (size_t roi_i = 0; roi_i < rois_number_; ++roi_i) {
     auto sub_options = rclcpp::SubscriptionOptions();
@@ -223,12 +247,19 @@ StreamPetrNode::StreamPetrNode(const rclcpp::NodeOptions & node_options)
       rclcpp::SensorDataQoS{}.keep_last(1), [this, roi_i](const CameraInfo::ConstSharedPtr msg) {
         this->camera_info_callback(msg, static_cast<int>(roi_i));
       });
+
+    // Explicitly resolve the topic name so remapping applies to the base topic before
+    // image_transport appends the transport suffix, please check
+    // https://github.com/ros-perception/image_transport_plugins/issues/155
+    const std::string base_topic = this->get_node_topics_interface()->resolve_topic_name(
+      "~/input/camera" + std::to_string(roi_i) + "/image");
+    camera_image_topics_.push_back(base_topic);
     camera_image_subs_.at(roi_i) = image_transport::create_subscription(
-      this, "~/input/camera" + std::to_string(roi_i) + "/image",
-      std::bind(
-        &StreamPetrNode::camera_image_callback, this, std::placeholders::_1,
-        static_cast<int>(roi_i)),
-      is_compressed_image ? "compressed" : "raw", rmw_qos_profile_sensor_data, sub_options);
+      this, base_topic,
+      [this, roi_i](const Image::ConstSharedPtr & msg) {
+        this->camera_image_callback(msg, static_cast<int>(roi_i));
+      },
+      image_transport_type, rmw_qos_profile_sensor_data, sub_options);
   }
 
   // Publishers
@@ -236,16 +267,17 @@ StreamPetrNode::StreamPetrNode(const rclcpp::NodeOptions & node_options)
 
   EgoMaskParams ego_mask_params;
   ego_mask_params.enabled = declare_parameter<bool>("ego_mask.enabled", false);
-  const auto fill_value_bgr =
-    declare_parameter<std::vector<double>>("ego_mask.fill_value_bgr", {0.0, 0.0, 0.0});
+  // RGB order, matching the model's input channel order and the online cameras' rgb8 encoding.
+  const auto fill_value_rgb =
+    declare_parameter<std::vector<double>>("ego_mask.fill_value_rgb", {0.0, 0.0, 0.0});
   for (std::size_t i = 0; i < 3; ++i) {
-    const double v = i < fill_value_bgr.size() ? fill_value_bgr[i] : 0.0;
-    ego_mask_params.fill_bgr[i] = static_cast<std::uint8_t>(std::clamp(v, 0.0, 255.0));
+    const double v = i < fill_value_rgb.size() ? fill_value_rgb[i] : 0.0;
+    ego_mask_params.fill_rgb[i] = static_cast<std::uint8_t>(std::clamp(v, 0.0, 255.0));
   }
   const auto camera_mask_ids = declare_parameter<std::vector<int64_t>>(
-    "camera_mask.camera_ids", makeDefaultCameraMaskIds(rois_number_));
+    "camera_mask.camera_ids", make_default_camera_mask_ids(rois_number_));
   ego_mask_params.roi_mask_configs =
-    declareCameraMaskParams(*this, rois_number_, ego_mask_params.fill_bgr, camera_mask_ids);
+    declare_camera_mask_params(*this, rois_number_, ego_mask_params.fill_rgb, camera_mask_ids);
   ego_mask_params.roi_polygons_yaml = declare_parameter<std::vector<std::string>>(
     "ego_mask.roi_polygons_yaml", std::vector<std::string>());
 
@@ -272,13 +304,24 @@ StreamPetrNode::StreamPetrNode(const rclcpp::NodeOptions & node_options)
     this, rois_number_, roi_height, roi_width, anchor_camera_id_,
     declare_parameter<bool>("is_distorted_image"), ego_mask_params);
 
+  stop_watch_.tic("latency/cycle_time_ms");
   if (debug_mode_) {
-    using autoware_utils::DebugPublisher;
-    using autoware_utils::StopWatch;
-    stop_watch_ptr_ = std::make_unique<StopWatch<std::chrono::milliseconds>>();
-    debug_publisher_ptr_ = std::make_unique<DebugPublisher>(this, this->get_name());
-    stop_watch_ptr_->tic("latency/cycle_time_ms");
+    debug_publisher_ptr_ = std::make_unique<autoware_utils::DebugPublisher>(this, this->get_name());
   }
+
+  max_allowed_processing_time_ms_ =
+    declare_parameter<double>("diagnostics.max_allowed_processing_time_ms");
+  max_acceptable_consecutive_delay_ms_ =
+    declare_parameter<double>("diagnostics.max_acceptable_consecutive_delay_ms");
+  max_image_age_ms_ = declare_parameter<double>("diagnostics.max_image_age_ms");
+  const double validation_callback_interval_ms =
+    declare_parameter<double>("diagnostics.validation_callback_interval_ms");
+
+  diagnostic_updater_.setHardwareID(this->get_name());
+  diagnostic_updater_.add("camera_status", this, &StreamPetrNode::diagnose_camera_status);
+  diagnostic_updater_.add(
+    "processing_time_status", this, &StreamPetrNode::diagnose_processing_time);
+  diagnostic_updater_.setPeriod(validation_callback_interval_ms / 1000.0);
 }
 
 void StreamPetrNode::camera_info_callback(
@@ -290,8 +333,8 @@ void StreamPetrNode::camera_info_callback(
 void StreamPetrNode::camera_image_callback(
   Image::ConstSharedPtr input_camera_image_msg, const int camera_id)
 {
-  if (stop_watch_ptr_ && anchor_camera_id_ == camera_id) {
-    stop_watch_ptr_->tic("latency/total");
+  if (anchor_camera_id_ == camera_id) {
+    stop_watch_.tic("latency/total");
   }
 
   const auto objects_sub_count =
@@ -325,9 +368,10 @@ void StreamPetrNode::step(const rclcpp::Time & stamp)
     return;
   }
 
-  const auto [output_objects, forward_time_ms, inference_time_ms] = inference_result.value();
-  publish_detection_results(stamp, output_objects);
-  publish_debug_metrics(forward_time_ms, inference_time_ms);
+  const auto & result = inference_result.value();
+  publish_detection_results(stamp, result.objects);
+  publish_debug_metrics(
+    result.subnetwork_timings, result.inference_time_ms, result.postprocess_time_ms);
 }
 
 bool StreamPetrNode::validate_camera_sync()
@@ -392,30 +436,25 @@ void StreamPetrNode::cleanup_on_failure()
   }
 }
 
-std::optional<std::tuple<
-  std::vector<autoware_perception_msgs::msg::DetectedObject>, std::vector<float>, double>>
-StreamPetrNode::perform_inference()
+std::optional<StreamPetrNode::InferenceResult> StreamPetrNode::perform_inference()
 {
-  if (stop_watch_ptr_) {
-    stop_watch_ptr_->tic("latency/inference");
-  }
+  InferenceResult result;
 
-  std::vector<float> forward_time_ms;
-  std::vector<autoware_perception_msgs::msg::DetectedObject> output_objects;
-
+  stop_watch_.tic("latency/inference");
   InferenceInputs inputs = create_inference_inputs();
-  network_->inference_detector(inputs, output_objects, forward_time_ms);
+  network_->inference_detector(inputs, result.subnetwork_timings);
+  result.inference_time_ms = stop_watch_.toc("latency/inference", true);
 
+  // The decode only reads the head's output bindings, so the cameras can resume before it.
   if (multithreading_) {
     data_store_->unfreeze_updates();
   }
 
-  double inference_time_ms = -1.0;
-  if (stop_watch_ptr_) {
-    inference_time_ms = stop_watch_ptr_->toc("latency/inference", true);
-  }
+  stop_watch_.tic("latency/postprocess");
+  network_->postprocess(result.objects);
+  result.postprocess_time_ms = stop_watch_.toc("latency/postprocess", true);
 
-  return std::make_tuple(output_objects, forward_time_ms, inference_time_ms);
+  return result;
 }
 
 InferenceInputs StreamPetrNode::create_inference_inputs()
@@ -440,32 +479,234 @@ void StreamPetrNode::publish_detection_results(
   output_msg.header.frame_id = "base_link";
   output_msg.header.stamp = stamp;
   pub_objects_->publish(output_msg);
+  last_output_frame_stamp_ = stamp;
+  last_publish_stamp_ = this->get_clock()->now();
 }
 
 void StreamPetrNode::publish_debug_metrics(
-  const std::vector<float> & forward_time_ms, double inference_time_ms)
+  const SubNetworkTimings & subnetwork_timings, double inference_time_ms,
+  double postprocess_time_ms)
 {
-  if (!debug_publisher_ptr_ || !stop_watch_ptr_) {
+  // Latched before the debug_mode_ gate below: the watchdog is active even without debug topics.
+  const double processing_time_ms = stop_watch_.toc("latency/total", true);
+  last_processing_time_ms_ = processing_time_ms;
+  last_preprocess_time_ms_ = data_store_->get_preprocess_time_ms();
+  last_inference_time_ms_ = inference_time_ms;
+  last_postprocess_time_ms_ = postprocess_time_ms;
+
+  if (!debug_publisher_ptr_) {
     return;
   }
 
   debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
-    "latency/total", stop_watch_ptr_->toc("latency/total", true));
+    "latency/total", processing_time_ms);
   debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
     "latency/preprocess", data_store_->get_preprocess_time_ms());
   debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
     "latency/inference", inference_time_ms);
   debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
-    "latency/inference/backbone", forward_time_ms[0]);
+    "latency/inference/backbone", subnetwork_timings.backbone_ms);
   debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
-    "latency/inference/ptshead", forward_time_ms[1]);
+    "latency/inference/ptshead", subnetwork_timings.ptshead_ms);
   debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
-    "latency/inference/pos_embed", forward_time_ms[2]);
+    "latency/inference/pos_embed", subnetwork_timings.pos_embed_ms);
   debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
-    "latency/inference/postprocess", forward_time_ms[3]);
+    "latency/postprocess", postprocess_time_ms);
   debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
-    "latency/cycle_time_ms", stop_watch_ptr_->toc("latency/cycle_time_ms", true));
-  stop_watch_ptr_->tic("latency/cycle_time_ms");
+    "latency/cycle_time_ms", stop_watch_.toc("latency/cycle_time_ms", true));
+  stop_watch_.tic("latency/cycle_time_ms");
+}
+
+void StreamPetrNode::diagnose_camera_status(diagnostic_updater::DiagnosticStatusWrapper & stat)
+{
+  const rclcpp::Time now = this->get_clock()->now();
+  const auto camera_status = data_store_->get_camera_status();
+
+  std::size_t num_waiting = 0;
+  std::size_t num_stale = 0;
+  std::size_t num_rejected = 0;
+  int oldest_image_camera_id = -1;
+  double oldest_image_age_ms = 0.0;
+
+  for (std::size_t camera_id = 0; camera_id < camera_status.size(); ++camera_id) {
+    const auto & status = camera_status[camera_id];
+    const std::string prefix = "camera" + std::to_string(camera_id) + "/";
+
+    double age_ms = 0.0;
+    if (status.image_received) {
+      // Clamp at zero: header stamps run ahead of the node clock right after a rosbag loop.
+      age_ms = std::max(0.0, (now.seconds() - status.last_image_timestamp) * 1000.0);
+      if (age_ms > oldest_image_age_ms) {
+        oldest_image_age_ms = age_ms;
+        oldest_image_camera_id = static_cast<int>(camera_id);
+      }
+    }
+
+    std::string state;
+    if (status.input_rejected) {
+      state = CAMERA_STATE_REJECTED;
+      ++num_rejected;
+    } else if (!status.camera_info_received) {
+      state = CAMERA_STATE_WAITING_CAMERA_INFO;
+      ++num_waiting;
+    } else if (!status.image_received) {
+      state = CAMERA_STATE_WAITING_IMAGE;
+      ++num_waiting;
+    } else if (age_ms > max_image_age_ms_) {
+      state = CAMERA_STATE_STALE;
+      ++num_stale;
+    } else {
+      state = CAMERA_STATE_ACTIVE;
+    }
+
+    stat.add(prefix + "topic", camera_image_topics_[camera_id]);
+    stat.add(prefix + "state", state);
+    stat.add(prefix + "image_age_ms", status.image_received ? format_milliseconds(age_ms) : "n/a");
+  }
+
+  stat.add("num_cameras", static_cast<int>(camera_status.size()));
+  stat.add("num_waiting", static_cast<int>(num_waiting));
+  stat.add("num_stale", static_cast<int>(num_stale));
+  stat.add("num_rejected", static_cast<int>(num_rejected));
+  stat.add("oldest_image_camera_id", oldest_image_camera_id);
+  stat.add(
+    "oldest_image_age_ms",
+    oldest_image_camera_id >= 0 ? format_milliseconds(oldest_image_age_ms) : "n/a");
+
+  const float inter_camera_diff_s = data_store_->check_if_all_images_synced();
+  stat.add(
+    "max_inter_camera_time_diff_ms",
+    inter_camera_diff_s >= 0.0f ? format_milliseconds(inter_camera_diff_s * 1000.0) : "n/a");
+
+  auto level = diagnostic_msgs::msg::DiagnosticStatus::OK;
+  std::stringstream message;
+
+  if (num_rejected > 0) {
+    level = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
+    message << num_rejected
+            << " camera(s) publish an encoding or buffer geometry the preprocessing cannot "
+               "consume.";
+  }
+  if (num_stale > 0) {
+    level = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
+    message << (message.tellp() > 0 ? " " : "") << num_stale << " camera(s) stale; camera"
+            << oldest_image_camera_id << " stopped publishing "
+            << format_milliseconds(oldest_image_age_ms) << " ms ago.";
+  }
+  if (level == diagnostic_msgs::msg::DiagnosticStatus::OK) {
+    if (num_waiting > 0) {
+      level = diagnostic_msgs::msg::DiagnosticStatus::WARN;
+      message << num_waiting << " camera(s) waiting for camera_info or a first image.";
+    } else if (inter_camera_diff_s > max_camera_time_diff_) {
+      level = diagnostic_msgs::msg::DiagnosticStatus::WARN;
+      message << "Inter-camera timestamp spread "
+              << format_milliseconds(inter_camera_diff_s * 1000.0)
+              << " ms exceeds max_camera_time_diff; prediction cycles are being skipped.";
+    }
+  }
+
+  const std::string summary = message.str();
+  stat.summary(level, summary.empty() ? "OK" : summary);
+}
+
+void StreamPetrNode::add_no_inference_diagnostics(
+  diagnostic_updater::DiagnosticStatusWrapper & stat, std::stringstream & message)
+{
+  stat.add("is_processing_time_ms_in_expected_range", true);
+  stat.add("processing_time_ms", "n/a");
+  stat.add("preprocess_time_ms", "n/a");
+  stat.add("inference_time_ms", "n/a");
+  stat.add("postprocess_time_ms", "n/a");
+  stat.add("is_consecutive_processing_delay_in_range", true);
+  stat.add("consecutive_processing_delay_ms", "n/a");
+  message << "Waiting for the node to perform inference.";
+}
+
+diagnostic_msgs::msg::DiagnosticStatus::_level_type StreamPetrNode::check_processing_time_status(
+  diagnostic_updater::DiagnosticStatusWrapper & stat, std::stringstream & message,
+  const rclcpp::Time & timestamp_now)
+{
+  const double processing_time_ms = last_processing_time_ms_.value();
+
+  if (processing_time_ms > max_allowed_processing_time_ms_) {
+    stat.add("is_processing_time_ms_in_expected_range", false);
+
+    message << "Processing time exceeds the acceptable limit of " << max_allowed_processing_time_ms_
+            << " ms by " << (processing_time_ms - max_allowed_processing_time_ms_) << " ms.";
+
+    if (!last_in_time_processing_timestamp_) {
+      last_in_time_processing_timestamp_ = timestamp_now;
+    }
+
+    return diagnostic_msgs::msg::DiagnosticStatus::WARN;
+  }
+
+  stat.add("is_processing_time_ms_in_expected_range", true);
+  last_in_time_processing_timestamp_ = timestamp_now;
+  return diagnostic_msgs::msg::DiagnosticStatus::OK;
+}
+
+diagnostic_msgs::msg::DiagnosticStatus::_level_type StreamPetrNode::check_consecutive_delays(
+  diagnostic_updater::DiagnosticStatusWrapper & stat, std::stringstream & message,
+  const rclcpp::Time & timestamp_now,
+  diagnostic_msgs::msg::DiagnosticStatus::_level_type current_level)
+{
+  // check_processing_time_status() ran first and set the timestamp on both of its paths.
+  const double delayed_state_duration_ms =
+    std::chrono::duration<double, std::milli>(
+      std::chrono::nanoseconds(
+        (timestamp_now - last_in_time_processing_timestamp_.value()).nanoseconds()))
+      .count();
+
+  if (delayed_state_duration_ms > max_acceptable_consecutive_delay_ms_) {
+    stat.add("is_consecutive_processing_delay_in_range", false);
+    stat.add("consecutive_processing_delay_ms", format_milliseconds(delayed_state_duration_ms));
+    message << " Processing delay has consecutively exceeded the acceptable limit continuously.";
+    return diagnostic_msgs::msg::DiagnosticStatus::ERROR;
+  }
+
+  stat.add("is_consecutive_processing_delay_in_range", true);
+  stat.add("consecutive_processing_delay_ms", format_milliseconds(delayed_state_duration_ms));
+  return current_level;
+}
+
+void StreamPetrNode::diagnose_processing_time(diagnostic_updater::DiagnosticStatusWrapper & stat)
+{
+  const rclcpp::Time timestamp_now = this->get_clock()->now();
+  diagnostic_msgs::msg::DiagnosticStatus::_level_type diag_level =
+    diagnostic_msgs::msg::DiagnosticStatus::OK;
+  // Left empty rather than seeded with "OK": the first << would overwrite a seeded string.
+  std::stringstream message;
+
+  if (!last_processing_time_ms_) {
+    add_no_inference_diagnostics(stat, message);
+  } else {
+    diag_level = check_processing_time_status(stat, message, timestamp_now);
+    stat.add("processing_time_ms", format_milliseconds(last_processing_time_ms_.value()));
+    stat.add("preprocess_time_ms", format_milliseconds(last_preprocess_time_ms_));
+    stat.add("inference_time_ms", format_milliseconds(last_inference_time_ms_));
+    stat.add("postprocess_time_ms", format_milliseconds(last_postprocess_time_ms_));
+    diag_level = check_consecutive_delays(stat, message, timestamp_now, diag_level);
+  }
+  // Clamp at zero: a rosbag loop rewinds the clock behind the latched stamps.
+  if (last_output_frame_stamp_ && last_publish_stamp_) {
+    const double output_latency_ms = std::max(
+      0.0, (last_publish_stamp_->seconds() - last_output_frame_stamp_->seconds()) * 1000.0);
+    const double time_since_last_publish_ms =
+      std::max(0.0, (timestamp_now.seconds() - last_publish_stamp_->seconds()) * 1000.0);
+    stat.add("last_frame_timestamp", format_timestamp(last_output_frame_stamp_->seconds()));
+    stat.add("last_published_timestamp", format_timestamp(last_publish_stamp_->seconds()));
+    stat.add("output_latency_ms", format_milliseconds(output_latency_ms));
+    stat.add("time_since_last_publish_ms", format_milliseconds(time_since_last_publish_ms));
+  } else {
+    stat.add("last_frame_timestamp", "never");
+    stat.add("last_published_timestamp", "never");
+    stat.add("output_latency_ms", "n/a");
+    stat.add("time_since_last_publish_ms", "n/a");
+  }
+
+  const std::string summary = message.str();
+  stat.summary(diag_level, summary.empty() ? "OK" : summary);
 }
 
 std::optional<std::vector<float>> StreamPetrNode::get_camera_extrinsics_vector()

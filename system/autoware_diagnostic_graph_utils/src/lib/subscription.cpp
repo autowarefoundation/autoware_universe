@@ -24,13 +24,13 @@ DiagGraphSubscription::DiagGraphSubscription()
   graph_ = std::make_shared<DiagGraph>();
 }
 
-DiagGraphSubscription::DiagGraphSubscription(rclcpp::Node & node, size_t depth)
+DiagGraphSubscription::DiagGraphSubscription(autoware::agnocast_wrapper::Node & node, size_t depth)
 {
   graph_ = std::make_shared<DiagGraph>();
   subscribe(node, depth);
 }
 
-void DiagGraphSubscription::subscribe(rclcpp::Node & node, size_t depth)
+void DiagGraphSubscription::subscribe(autoware::agnocast_wrapper::Node & node, size_t depth)
 {
   const auto qos_struct = rclcpp::QoS(1).transient_local();
   const auto qos_status = rclcpp::QoS(depth);

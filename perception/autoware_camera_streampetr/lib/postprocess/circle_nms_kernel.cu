@@ -41,7 +41,7 @@ __device__ inline float dist2dPow(const Box3D * a, const Box3D * b)
 }
 
 // cspell: ignore divup
-__global__ void circleNMS_Kernel(
+__global__ void circle_nms_kernel(
   const Box3D * boxes, const std::size_t num_boxes3d, const std::size_t col_blocks,
   const float dist2d_pow_threshold, std::uint64_t * mask)
 {
@@ -83,7 +83,7 @@ __global__ void circleNMS_Kernel(
   }
 }
 
-cudaError_t circleNMS_launch(
+cudaError_t circle_nms_launch(
   const thrust::device_vector<Box3D> & boxes3d, const std::size_t num_boxes3d,
   std::size_t col_blocks, const float distance_threshold,
   thrust::device_vector<std::uint64_t> & mask, cudaStream_t stream)
@@ -92,14 +92,14 @@ cudaError_t circleNMS_launch(
 
   dim3 blocks(col_blocks, col_blocks);
   dim3 threads(THREADS_PER_BLOCK_NMS);
-  circleNMS_Kernel<<<blocks, threads, 0, stream>>>(
+  circle_nms_kernel<<<blocks, threads, 0, stream>>>(
     thrust::raw_pointer_cast(boxes3d.data()), num_boxes3d, col_blocks, dist2d_pow_thres,
     thrust::raw_pointer_cast(mask.data()));
 
   return cudaGetLastError();
 }
 
-std::size_t circleNMS(
+std::size_t circle_nms(
   thrust::device_vector<Box3D> & boxes3d, const float distance_threshold,
   thrust::device_vector<bool> & keep_mask, cudaStream_t stream)
 {
@@ -108,7 +108,7 @@ std::size_t circleNMS(
   thrust::device_vector<std::uint64_t> mask_d(num_boxes3d * col_blocks);
 
   CHECK_CUDA_ERROR(
-    circleNMS_launch(boxes3d, num_boxes3d, col_blocks, distance_threshold, mask_d, stream));
+    circle_nms_launch(boxes3d, num_boxes3d, col_blocks, distance_threshold, mask_d, stream));
 
   // memcpy device to host
   thrust::host_vector<std::uint64_t> mask_h(mask_d.size());

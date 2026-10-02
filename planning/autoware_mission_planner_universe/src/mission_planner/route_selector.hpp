@@ -15,6 +15,8 @@
 #ifndef MISSION_PLANNER__ROUTE_SELECTOR_HPP_
 #define MISSION_PLANNER__ROUTE_SELECTOR_HPP_
 
+#include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -50,11 +52,11 @@ public:
   void update_state(const RouteState & state);
   void update_route(const LaneletRoute & route);
 
-  rclcpp::Service<ClearRoute>::SharedPtr srv_clear_route;
-  rclcpp::Service<SetLaneletRoute>::SharedPtr srv_set_lanelet_route;
-  rclcpp::Service<SetWaypointRoute>::SharedPtr srv_set_waypoint_route;
-  rclcpp::Publisher<RouteState>::SharedPtr pub_state_;
-  rclcpp::Publisher<LaneletRoute>::SharedPtr pub_route_;
+  AUTOWARE_SERVICE_PTR(ClearRoute) srv_clear_route;
+  AUTOWARE_SERVICE_PTR(SetLaneletRoute) srv_set_lanelet_route;
+  AUTOWARE_SERVICE_PTR(SetWaypointRoute) srv_set_waypoint_route;
+  AUTOWARE_PUBLISHER_PTR(RouteState) pub_state_;
+  AUTOWARE_PUBLISHER_PTR(LaneletRoute) pub_route_;
 
 private:
   RouteState state_;
@@ -62,7 +64,7 @@ private:
   rclcpp::Clock::SharedPtr clock_;
 };
 
-class RouteSelector : public rclcpp::Node
+class RouteSelector : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit RouteSelector(const rclcpp::NodeOptions & options);
@@ -76,20 +78,19 @@ private:
   RouteInterface mrm_;
 
   rclcpp::CallbackGroup::SharedPtr group_;
-  rclcpp::Client<ClearRoute>::SharedPtr cli_clear_route_;
-  rclcpp::Client<SetWaypointRoute>::SharedPtr cli_set_waypoint_route_;
-  rclcpp::Client<SetLaneletRoute>::SharedPtr cli_set_lanelet_route_;
-  rclcpp::Subscription<RouteState>::SharedPtr sub_state_;
-  rclcpp::Subscription<LaneletRoute>::SharedPtr sub_route_;
-  rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float64Stamped>::SharedPtr
-    pub_processing_time_;
+  AUTOWARE_CLIENT_PTR(ClearRoute) cli_clear_route_;
+  AUTOWARE_CLIENT_PTR(SetWaypointRoute) cli_set_waypoint_route_;
+  AUTOWARE_CLIENT_PTR(SetLaneletRoute) cli_set_lanelet_route_;
+  AUTOWARE_SUBSCRIPTION_PTR(RouteState) sub_state_;
+  AUTOWARE_SUBSCRIPTION_PTR(LaneletRoute) sub_route_;
+  AUTOWARE_PUBLISHER_PTR(autoware_internal_debug_msgs::msg::Float64Stamped) pub_processing_time_;
 
   bool initialized_;
   bool mrm_operating_;
   std::variant<std::monostate, WaypointRequest, LaneletRequest> main_request_;
 
-  void on_state(const RouteState::ConstSharedPtr msg);
-  void on_route(const LaneletRoute::ConstSharedPtr msg);
+  void on_state(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(RouteState) & msg);
+  void on_route(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(LaneletRoute) & msg);
 
   void on_clear_route_main(ClearRoute::Request::SharedPtr req, ClearRoute::Response::SharedPtr res);
   void on_set_waypoint_route_main(

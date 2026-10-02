@@ -2,6 +2,244 @@
 Changelog for package autoware_pointcloud_preprocessor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* feat(autoware_pointcloud_preprocessor): apply agnocast_wrapper::Node to crop_box_filter (`#13384 <https://github.com/autowarefoundation/autoware_universe/issues/13384>`_)
+  * feat(autoware_pointcloud_preprocessor): apply agnocast_wrapper::Node to crop_box_filter
+  Derive CropBoxFilterComponent from AgnocastFilter, the
+  FilterBase<autoware::agnocast_wrapper::Node> instantiation, and register it
+  through autoware_agnocast_wrapper_register_node on an agnocast-only
+  callback-isolated executor. crop_box_filter_node.launch.xml resolves
+  LD_PRELOAD through agnocast_env.launch.xml.
+  DiagnosticsBase::add_to_interface() takes an autoware_utils::DiagnosticsInterface,
+  an rclcpp-only type, and a virtual method cannot be a template. The diagnostic
+  classes are therefore templatized on the node type, with
+  `using X = BasicX<rclcpp::Node>` leaving every filter still on rclcpp unchanged.
+  * refactor(autoware_pointcloud_preprocessor): rename the Basic diagnostics templates to Generic
+  ---------
+* feat(autoware_pointcloud_preprocessor): apply agnocast_wrapper::Node to polar_voxel_outlier_filter (`#13383 <https://github.com/autowarefoundation/autoware_universe/issues/13383>`_)
+  * feat(autoware_pointcloud_preprocessor): templatize Filter into FilterBase<NodeT>
+  Turn `Filter` into `FilterBase<NodeT>` so filter nodes can be moved onto
+  `autoware::agnocast_wrapper::Node` one at a time. `Filter` stays as a class
+  deriving from `FilterBase<rclcpp::Node>`, so every node that has not been
+  migrated keeps compiling unchanged.
+  * feat(autoware_pointcloud_preprocessor): let FilterBase run on an agnocast-only executor
+  * feat(autoware_pointcloud_preprocessor): apply agnocast_wrapper::Node to polar_voxel_outlier_filter
+  * fix(autoware_pointcloud_preprocessor): use the buffer-only TransformListener in FilterBase
+  * refactor(autoware_pointcloud_preprocessor): keep ManagedTransformBuffer in FilterBase
+  ---------
+* feat(autoware_pointcloud_preprocessor): apply agnocast_wrapper::Node to voxel_grid_downsample_filter (`#13072 <https://github.com/autowarefoundation/autoware_universe/issues/13072>`_)
+  * refactor(autoware_pointcloud_preprocessor): templatize Filter into FilterBase<NodeT>
+  * feat(autoware_pointcloud_preprocessor): apply agnocast_wrapper::Node to voxel_grid_downsample_filter
+  * style(pre-commit): autofix
+  * feat(autoware_pointcloud_preprocessor): register voxel_grid_downsample_filter through the agnocast wrapper
+  The node now derives from agnocast_wrapper::Node, so under ENABLE_AGNOCAST=1 it needs the
+  generated main that calls agnocast::init(). Loaded into a component container instead, the
+  AgnocastOnly executor aborts the whole container because the agnocast signal handler is not
+  installed in that process. The macro falls back to rclcpp_components_register_node at
+  ENABLE_AGNOCAST=0, so the non-agnocast build is unchanged.
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* test(cuda_pointcloud_preprocessor): cover capacity bounds behavior (`#13137 <https://github.com/autowarefoundation/autoware_universe/issues/13137>`_)
+  * perf(cuda_pointcloud_preprocessor): avoid runtime thrust allocations
+  Thrust's algorithm calls allocate temporary device memory on every frame.
+  Replace them with explicit kernels and CUB calls running on storage that is
+  allocated once at startup:
+  - thrust_stream::fill / fill_n become a fill kernel launched on the stream
+  - thrust::inclusive_scan becomes cub::DeviceScan::InclusiveSum
+  - thrust_stream::count becomes cub::DeviceReduce::Sum over a transform
+  iterator, accumulating the three diagnostic counters into one device
+  buffer that is copied back in a single transfer
+  The CUB calls share a single scratch workspace, sized at startup to the
+  largest requirement among the sort, the scan and the reductions. The twist
+  struct counts become locals, since they are only used within process().
+  The counting iterator is thrust::transform_iterator rather than
+  cub::TransformInputIterator, since CCCL 3.0 (CUDA 13, used on jazzy) removed
+  the latter along with its header.
+  * refactor(cuda_pointcloud_preprocessor): name the processing stat indices
+  Hoist the device_processing_stats\_ layout into class-scope constants so that
+  the buffer sizing in initializeBuffers() and the readback in process() share
+  one definition instead of repeating a bare 3.
+  Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+  * refactor(cuda_pointcloud_preprocessor): clarify queue update flow
+  The twist and IMU queue bookkeeping was spread over the insertion callbacks
+  and a pair of bounding helpers, so capacity was enforced after insertion and
+  the pruning rules were duplicated per queue. Move the bookkeeping into
+  detail:: helpers in a new queue_bounds.hpp and give each queue one update
+  path:
+  - prepare_queue_update() prunes queue entries older than the current
+  pointcloud, drops and counts incoming messages beyond the free capacity,
+  and sorts the remainder, so capacity is enforced before insertion
+  - twistCallback()/imuCallback() become insertTwistMessage()/
+  insertImuMessage(), which now only insert in stamp order
+  - boundTwistQueue()/boundImuQueue() are gone, since nothing is inserted
+  beyond capacity any more
+  Backward time jump handling moves to detail::is_backward_time_jump() and now
+  tolerates jumps of up to one second: the queue is cleared only when its
+  oldest entry is more than one second ahead of the incoming stamp, rather than
+  on any backward step. The old per-entry pop for queues spanning more than a
+  second is dropped, since prepare_queue_update() already prunes everything
+  older than the current pointcloud.
+  * refactor(cuda_pointcloud_preprocessor): address queue_bounds review comments
+  - Convert builtin_interfaces/Time to nanoseconds from its own fields, which
+  drops the rclcpp dependency from queue_bounds.hpp entirely. A negative
+  `sec` throws rather than wrapping, which is what rclcpp::Time did too
+  - Document and assert that prune_old_queue_entries() takes a stamp-sorted
+  queue and leaves it sorted
+  - Document what prepare_queue_update() does and the state it leaves its two
+  containers in
+  Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+  * test(cuda_pointcloud_preprocessor): cover capacity bounds behavior
+  Add a gtest suite for the behavior introduced by the preceding commits in
+  this stack:
+  - CudaPointcloudPreprocessor accepts positive capacities and rejects
+  non-positive ones
+  - points exactly at the ring and points-per-ring capacities are processed
+  without reporting an overflow, and exceeding either reports one
+  - input clouds longer than max_input_point_count are truncated
+  - detail::prepare_queue_update() prunes, sorts, bounds and counts drops for
+  both the twist and IMU queues, and rejects an already over-capacity queue
+  - detail::is_backward_time_jump() honors the one second threshold
+  The cases that construct a CudaPointcloudPreprocessor allocate device memory,
+  so they use autoware::cuda_utils::CudaTest and self-skip where no CUDA device
+  is present; CI containers run without one. The capacity validation and queue
+  bound cases are pure host code and always run.
+  * fix(cuda_pointcloud_preprocessor): link the test dependencies properly
+  `LINKER:--no-as-needed` on the gtest target was papering over two libraries
+  that never declared the dependencies they use:
+  - `cuda_pointcloud_preprocessor_lib` calls into cuda_blackboard but did not
+  link it
+  - `concatenate_data` calls the memory utilities that live in
+  `pointcloud_preprocessor_filter_base` but did not link it
+  Both now link what they use, so `libconcatenate_data.so` and
+  `libcuda_pointcloud_preprocessor_lib.so` carry the DT_NEEDED entries they were
+  missing. The test target only has to name `cuda_pointcloud_preprocessor_lib`,
+  and the linker resolves the rest on its own with `--as-needed` left at its
+  default.
+  Also split the ring capacity boundary case into one case per capacity that
+  `ring_overflow` reports, and pass the ring of every test point explicitly, so
+  which of the two limits each case exercises is visible at the call site.
+  Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+  * chore: empty commit to nudge the pull request diff
+  * refactor(cuda_pointcloud_preprocessor): report ring organization overflow as flags
+  `organizeKernel` recorded the maximum *offending* ring index and ring offset
+  via `atomicMax`, but the magnitudes never left `process()`: the only sink is
+  the `bool ProcessingStats::ring_overflow`, so both were effectively flags
+  whose names promised observed maxima. That mismatch made the `>=` comparisons
+  against the capacities read like off-by-one errors.
+  Raise the two outputs as flags and name them accordingly. The reported
+  `ring_overflow` is unchanged for every input.
+  Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+  ---------
+  Co-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>
+  Co-authored-by: Manato Hirabayashi <3022416+manato@users.noreply.github.com>
+* feat(`autoware_pointcloud_preprocessor`): add characterization test, as safety guard for refactoring (`#13379 <https://github.com/autowarefoundation/autoware_universe/issues/13379>`_)
+  * add: characterization test, as safety guard for refactoring
+  Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+  * fix: re-write characterization tests with C++
+  Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+  * style(pre-commit): autofix
+  * fix: drop `namespace\_` for test code readability
+  * fix: wordy comments
+  * fix: initialize parameters based on default set, not via function(s)
+  * Apply the following review:
+  - https://github.com/autowarefoundation/autoware_universe/pull/13379#discussion_r4033333843
+  * fix: with `pre-commit`
+  * style(pre-commit): autofix
+  * fix: add multi-twist test cases
+  * Apply the following review proposal:
+  - https://github.com/autowarefoundation/autoware_universe/pull/13379#discussion_r4033603787
+  * style(pre-commit): autofix
+  * add: tests for some non-golden paths
+  * Apply the following review comment:
+  - https://github.com/autowarefoundation/autoware_universe/pull/13379#discussion_r4033603869
+  Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+  * fix: do not assert in helper function
+  * Apply the following review comment:
+  - https://github.com/autowarefoundation/autoware_universe/pull/13379/changes/BASE..ba2f6ccd4f3a0a9a95826861c1e135de91ac97b8#r4033603961
+  * cosmetic: add TODO comment, applying the following review comment:
+  * https://github.com/autowarefoundation/autoware_universe/pull/13379#discussion_r4033604161
+  ---------
+  Co-authored-by: Claude Opus 5 <noreply@anthropic.com>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* fix(design): align the sensing node designs with the packages they describe (`#13337 <https://github.com/autowarefoundation/autoware_universe/issues/13337>`_)
+  CalibrationStatusClassifier declares a preview_image publisher on a hardcoded
+  per-camera topic that the node no longer creates, and names it as the outcome
+  of the classify process.
+  The point cloud concatenation component is built as concatenate_pointclouds_node.
+* feat(autoware_pointcloud_preprocessor): apply agnocast_wrapper::Node to random_downsample_filter (`#13386 <https://github.com/autowarefoundation/autoware_universe/issues/13386>`_)
+  Add AgnocastFilter, the FilterBase<autoware::agnocast_wrapper::Node>
+  instantiation, and derive RandomDownsampleFilterComponent from it. Register it
+  through autoware_agnocast_wrapper_register_node and resolve LD_PRELOAD in its
+  launch file through agnocast_env.launch.xml.
+  FilterBase keeps ManagedTransformBuffer for tf in both instantiations, which
+  managed_transform_buffer`#29 <https://github.com/autowarefoundation/autoware_universe/issues/29>`_ makes usable without an rclcpp context.
+* feat(autoware_pointcloud_preprocessor): templatize Filter into FilterBase<NodeT> (`#13331 <https://github.com/autowarefoundation/autoware_universe/issues/13331>`_)
+  Turn `Filter` into `FilterBase<NodeT>` so filter nodes can be moved onto
+  `autoware::agnocast_wrapper::Node` one at a time. `Filter` stays as a class
+  deriving from `FilterBase<rclcpp::Node>`, so every node that has not been
+  migrated keeps compiling unchanged.
+* fix: disable test when agnocast in `blockage_diag` and `polar_voxel_outlier_filter` (`#12484 <https://github.com/autowarefoundation/autoware_universe/issues/12484>`_)
+  * disable test when agnocast in blockage_diag and polar_voxel_outlier_filter
+  * fix(autoware_pointcloud_preprocessor): keep polar_voxel_noise_filter_node test enabled with agnocast
+  * refactor(autoware_pointcloud_preprocessor): minimize the diff of the agnocast test guard
+  ---------
+* refactor(sensing): move node design files into each package (`#13105 <https://github.com/autowarefoundation/autoware_universe/issues/13105>`_)
+* fix(autoware_pointcloud_preprocessor): fix azimuth_diff 1deg threshold math (`#13147 <https://github.com/autowarefoundation/autoware_universe/issues/13147>`_)
+  Fixes `#13146 <https://github.com/autowarefoundation/autoware_universe/issues/13146>`_.
+  `azimuth_diff` is in radians, and a `1deg` threshold was being converted incorrectly, leading to a `3283deg` threshold instead.
+* chore(pre-commit): update clang-format to v22.1.5 (`#13126 <https://github.com/autowarefoundation/autoware_universe/issues/13126>`_)
+  * chore(pre-commit): update clang-format to v22.1.5
+  * style(pre-commit): autofix
+  ---------
+* fix(pre-commit): update pre-commit-hooks-ros to v0.10.3 and adapt include guards (`#13083 <https://github.com/autowarefoundation/autoware_universe/issues/13083>`_)
+  * chore: sync files
+  * fix(pre-commit): adapt include guards to pre-commit-hooks-ros v0.10.3
+  ros-include-guard v0.10.3 only recognises an include guard when #endif is the
+  last non-empty line of the file, so that feature test macros are no longer
+  mistaken for guards. 29 headers failed that check.
+  25 headers wrap the guard in "// clang-format off" / "// clang-format on"
+  because the #endif comment plus its // NOLINT exceeds the 100 column limit.
+  Drop only the trailing "on" marker; the "off" marker then runs to end of file
+  and still protects the line from being wrapped.
+  3 CUDA headers ended with "/* *INDENT-ON* */". Move it above the #endif so it
+  stays paired with the "/* *INDENT-OFF* */" near the top of the file.
+  autoware_behavior_path_planner/test/input.hpp closed its guard immediately after
+  opening it, leaving the entire body unguarded. Move the #endif to the end.
+  Also hold clang-format at v21.1.8. clang-format 22 migrates
+  "AlignAfterOpenBracket: AlwaysBreak" to "BreakAfterOpenBracketIf: true", which
+  forces a break after every "if (" whose condition does not fit on one line and
+  reformats 88 files.
+  ---------
+  Co-authored-by: github-actions <github-actions@github.com>
+  Co-authored-by: Mete Fatih Cırıt <mfc@autoware.org>
+* refactor(autoware_pointcloud_preprocessor): extract Filter transform/publish helpers (`#13073 <https://github.com/autowarefoundation/autoware_universe/issues/13073>`_)
+  * refactor(autoware_pointcloud_preprocessor): extract Filter transform helpers
+  * refactor(autoware_pointcloud_preprocessor): dedup exact/approximate sync setup in Filter::subscribe
+  ---------
+* refactor(autoware_pointcloud_preprocessor): extract matching policy and rename collector matcher (`#12872 <https://github.com/autowarefoundation/autoware_universe/issues/12872>`_)
+  * refactor(pointcloud_preprocessor): extract matching policy and rename collector matcher
+  Extract the pure cloud-to-collector matching logic (naive / advanced) into
+  a ROS-runtime-free MatchingPolicy operating on plain structs
+  (IncomingCloudInfo, CandidateCollectorState, CollectorReference).
+  Rename CollectorMatchingStrategy -> CollectorMatcher; the matcher classes
+  become thin wrappers that adapt the ROS-side collectors to the policy and
+  hold the node/logging dependency. Rename MatchingParams -> IncomingCloudInfo
+  at the node call sites. The CUDA package's matcher is renamed in lockstep
+  (it shares the same header).
+  No behavioral change.
+  * chore: fix variable naming
+  ---------
+* feat: visibility method now uses geometric entropy and anisotropy (`#12822 <https://github.com/autowarefoundation/autoware_universe/issues/12822>`_)
+  * new: visbility method now uses geometric entropy anisotropy
+  * new: visibility detection now uses avg intensity and includes primary return
+  * chroe adressing comments from PR
+  * chroe: fix the failing test because new min points sparse rule
+  ---------
+  Co-authored-by: Yoshi Ri <yoshiyoshidetteiu@gmail.com>
+* Contributors: Junya Sasaki, Koichi Imai, Max Schmeller, Mete Fatih Cırıt, Ryohsuke Mitsudome, SergioReyesSan, Taekjin LEE, Yi-Hsiang Fang (Vivid), awf-autoware-bot[bot]
+
 0.52.0 (2026-06-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

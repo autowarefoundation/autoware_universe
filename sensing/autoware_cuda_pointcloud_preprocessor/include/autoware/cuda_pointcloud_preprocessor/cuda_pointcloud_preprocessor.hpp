@@ -30,6 +30,7 @@
 
 #include <thrust/device_vector.h>
 
+#include <cstddef>
 #include <cstdint>
 #include <deque>
 #include <memory>
@@ -38,11 +39,18 @@
 namespace autoware::cuda_pointcloud_preprocessor
 {
 
+struct PreprocessorCapacity
+{
+  std::size_t max_input_point_count{0};
+  std::size_t max_twist_struct_count{0};
+};
+
 struct ProcessingStats
 {
   int mismatch_count{0};
   int num_crop_box_passed_points{0};
   int num_nan_points{0};
+  int max_points_per_ring{0};
 };
 
 class CudaPointcloudPreprocessor
@@ -50,7 +58,7 @@ class CudaPointcloudPreprocessor
 public:
   enum class UndistortionType { Invalid, Undistortion2D, Undistortion3D };
 
-  CudaPointcloudPreprocessor();
+  explicit CudaPointcloudPreprocessor(const PreprocessorCapacity & capacity);
 
   void setCropBoxParameters(const std::vector<CropBoxParameters> & crop_box_parameters);
   void setRingOutlierFilterParameters(const RingOutlierFilterParameters & ring_outlier_parameters);
@@ -70,7 +78,8 @@ public:
 private:
   static cudaStream_t initialize_stream();
 
-  void organizePointcloud();
+  void initializeBuffers();
+  void sortPointsByRing();
 
   CropBoxParameters self_crop_box_parameters_{};
   CropBoxParameters mirror_crop_box_parameters_{};
@@ -78,10 +87,10 @@ private:
   UndistortionType undistortion_type_{UndistortionType::Invalid};
   bool enable_ring_outlier_filter_{true};
 
-  int num_rings_{};
-  int max_points_per_ring_{};
-  size_t num_raw_points_{};
-  size_t num_organized_points_{};
+  PreprocessorCapacity capacity_{};
+  // Points of the current frame, after truncation to capacity_.max_input_point_count. Every
+  // buffer holds the capacity; every kernel and library call covers exactly this many.
+  std::size_t num_raw_points_{};
 
   std::vector<sensor_msgs::msg::PointField> point_fields_;
   std::unique_ptr<cuda_blackboard::CudaPointCloud2> output_pointcloud_ptr_;
@@ -93,18 +102,16 @@ private:
 
   ProcessingStats stats_;
 
-  // Organizing buffers
+  // Ring ordering: a stable radix sort of the point indices by ring key gives the input
+  // order within each ring, rings contiguous, without an organized layout.
   thrust::device_vector<InputPointType> device_input_points_;
-  thrust::device_vector<InputPointType> device_organized_points_;
-  thrust::device_vector<std::int32_t> device_ring_index_;
-  thrust::device_vector<std::uint32_t> device_indexes_tensor_;
-  thrust::device_vector<std::uint32_t> device_sorted_indexes_tensor_;
-  thrust::device_vector<std::int32_t> device_segment_offsets_;
-  thrust::device_vector<std::int32_t> device_max_ring_;
-  thrust::device_vector<std::int32_t> device_max_points_per_ring_;
+  thrust::device_vector<std::uint16_t> device_ring_keys_;
+  thrust::device_vector<std::uint16_t> device_sorted_ring_keys_;
+  thrust::device_vector<std::uint32_t> device_point_indices_;
+  thrust::device_vector<std::uint32_t> device_sorted_point_indices_;
 
-  thrust::device_vector<std::uint8_t> device_sort_workspace_;
-  std::size_t sort_workspace_bytes_{0};
+  thrust::device_vector<std::uint8_t> device_scratch_workspace_;
+  std::size_t workspace_bytes_{0};
 
   // Pointcloud preprocessing buffers
   thrust::device_vector<InputPointType> device_transformed_points_;
@@ -117,6 +124,13 @@ private:
   thrust::device_vector<TwistStruct2D> device_twist_2d_structs_;
   thrust::device_vector<TwistStruct3D> device_twist_3d_structs_;
   thrust::device_vector<CropBoxParameters> device_crop_box_structs_;
+  // Layout of `device_processing_stats_` and of the host buffer it is read back into
+  static constexpr std::size_t crop_box_passed_stat_index = 0U;
+  static constexpr std::size_t nan_stat_index = 1U;
+  static constexpr std::size_t mismatch_stat_index = 2U;
+  static constexpr std::size_t max_points_per_ring_stat_index = 3U;
+  static constexpr std::size_t processing_stat_count = 4U;
+  thrust::device_vector<std::uint32_t> device_processing_stats_;
 };
 
 }  // namespace autoware::cuda_pointcloud_preprocessor

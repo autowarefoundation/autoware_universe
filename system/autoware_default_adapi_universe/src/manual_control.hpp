@@ -15,9 +15,11 @@
 #ifndef MANUAL_CONTROL_HPP_
 #define MANUAL_CONTROL_HPP_
 
+#include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>
+#include <autoware/agnocast_wrapper/diagnostic_updater.hpp>
+#include <autoware/agnocast_wrapper/node.hpp>
+#include <autoware/agnocast_wrapper/polling_subscriber.hpp>
 #include <autoware_utils_diagnostics/timeout_diagnostics.hpp>
-#include <autoware_utils_rclcpp/polling_subscriber.hpp>
-#include <diagnostic_updater/diagnostic_updater.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_adapi_v1_msgs/msg/acceleration_command.hpp>
@@ -43,14 +45,14 @@
 namespace autoware::default_adapi
 {
 
-class ManualControlNode : public rclcpp::Node
+class ManualControlNode : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit ManualControlNode(const rclcpp::NodeOptions & options);
 
 private:
   template <class T>
-  using PollingSubscription = autoware_utils_rclcpp::InterProcessPollingSubscriber<T>;
+  using PollingSubscription = autoware::agnocast_wrapper::polling::PollingSubscriber<T>;
   using OperationModeState = autoware_adapi_v1_msgs::msg::OperationModeState;
   PollingSubscription<OperationModeState>::SharedPtr sub_operation_mode_;
 
@@ -61,9 +63,9 @@ private:
   void update_mode_status(uint8_t mode);
   void on_list_mode(ListMode::Request::SharedPtr req, ListMode::Response::SharedPtr res);
   void on_select_mode(SelectMode::Request::SharedPtr req, SelectMode::Response::SharedPtr res);
-  rclcpp::Service<ListMode>::SharedPtr srv_list_mode_;
-  rclcpp::Service<SelectMode>::SharedPtr srv_select_mode_;
-  rclcpp::Publisher<ManualControlModeStatus>::SharedPtr pub_mode_status_;
+  AUTOWARE_SERVICE_PTR(ListMode) srv_list_mode_;
+  AUTOWARE_SERVICE_PTR(SelectMode) srv_select_mode_;
+  AUTOWARE_PUBLISHER_PTR(ManualControlModeStatus) pub_mode_status_;
 
   using PedalsCommand = autoware_adapi_v1_msgs::msg::PedalsCommand;
   using AccelerationCommand = autoware_adapi_v1_msgs::msg::AccelerationCommand;
@@ -79,29 +81,29 @@ private:
   // TODO(isamu-takagi): These functions are reserved for future support.
   // void enable_acceleration_commands();
   // void enable_velocity_commands();
-  rclcpp::Subscription<OperatorHeartbeat>::SharedPtr sub_heartbeat_;
-  rclcpp::Subscription<PedalsCommand>::SharedPtr sub_pedals_;
-  rclcpp::Subscription<AccelerationCommand>::SharedPtr sub_acceleration_;
-  rclcpp::Subscription<VelocityCommand>::SharedPtr sub_velocity_;
-  rclcpp::Subscription<SteeringCommand>::SharedPtr sub_steering_;
-  rclcpp::Subscription<GearCommand>::SharedPtr sub_gear_;
-  rclcpp::Subscription<TurnIndicatorsCommand>::SharedPtr sub_turn_indicators_;
-  rclcpp::Subscription<HazardLightsCommand>::SharedPtr sub_hazard_lights_;
+  AUTOWARE_SUBSCRIPTION_PTR(OperatorHeartbeat) sub_heartbeat_;
+  AUTOWARE_SUBSCRIPTION_PTR(PedalsCommand) sub_pedals_;
+  AUTOWARE_SUBSCRIPTION_PTR(AccelerationCommand) sub_acceleration_;
+  AUTOWARE_SUBSCRIPTION_PTR(VelocityCommand) sub_velocity_;
+  AUTOWARE_SUBSCRIPTION_PTR(SteeringCommand) sub_steering_;
+  AUTOWARE_SUBSCRIPTION_PTR(GearCommand) sub_gear_;
+  AUTOWARE_SUBSCRIPTION_PTR(TurnIndicatorsCommand) sub_turn_indicators_;
+  AUTOWARE_SUBSCRIPTION_PTR(HazardLightsCommand) sub_hazard_lights_;
 
   using InternalGear = autoware_vehicle_msgs::msg::GearCommand;
   using InternalTurnIndicators = autoware_vehicle_msgs::msg::TurnIndicatorsCommand;
   using InternalHazardLights = autoware_vehicle_msgs::msg::HazardLightsCommand;
-  rclcpp::Publisher<OperatorHeartbeat>::SharedPtr pub_heartbeat_;
-  rclcpp::Publisher<PedalsCommand>::SharedPtr pub_pedals_;
-  rclcpp::Publisher<SteeringCommand>::SharedPtr pub_steering_;
-  rclcpp::Publisher<InternalGear>::SharedPtr pub_gear_;
-  rclcpp::Publisher<InternalTurnIndicators>::SharedPtr pub_turn_indicators_;
-  rclcpp::Publisher<InternalHazardLights>::SharedPtr pub_hazard_lights_;
+  AUTOWARE_PUBLISHER_PTR(OperatorHeartbeat) pub_heartbeat_;
+  AUTOWARE_PUBLISHER_PTR(PedalsCommand) pub_pedals_;
+  AUTOWARE_PUBLISHER_PTR(SteeringCommand) pub_steering_;
+  AUTOWARE_PUBLISHER_PTR(InternalGear) pub_gear_;
+  AUTOWARE_PUBLISHER_PTR(InternalTurnIndicators) pub_turn_indicators_;
+  AUTOWARE_PUBLISHER_PTR(InternalHazardLights) pub_hazard_lights_;
 
   uint8_t target_operation_mode_;
   std::string ns_;
   ManualControlMode current_mode_;
-  std::unique_ptr<diagnostic_updater::Updater> diag_updater_;
+  std::unique_ptr<autoware::agnocast_wrapper::diagnostic_updater::Updater> diag_updater_;
   std::unique_ptr<autoware_utils_diagnostics::TimeoutDiag> diag_heartbeat_;
 };
 

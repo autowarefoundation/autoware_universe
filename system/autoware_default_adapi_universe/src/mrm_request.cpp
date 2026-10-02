@@ -18,12 +18,12 @@ namespace autoware::default_adapi
 {
 
 MrmRequestNode::MrmRequestNode(const rclcpp::NodeOptions & options)
-: Node("mrm_request", options), diagnostics_(this)
+: autoware::agnocast_wrapper::Node("mrm_request", options), diagnostics_(this)
 {
   diagnostics_.setHardwareID("none");
   diagnostics_.add("delegate", this, &MrmRequestNode::diagnose_delegate);
 
-  const auto adaptor = autoware::component_interface_utils::NodeAdaptor(this);
+  const auto adaptor = autoware::component_interface_utils::NodeAdaptor<NodeT>(this);
   adaptor.init_pub(pub_mrm_request_list_);
   adaptor.init_srv(srv_send_mrm_request_, this, &MrmRequestNode::on_send_mrm_request);
 

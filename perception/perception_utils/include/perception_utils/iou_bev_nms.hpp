@@ -38,10 +38,6 @@ public:
     bool sort = false) const;
 
 private:
-  bool isTargetPairObject(
-    const autoware_perception_msgs::msg::DetectedObject & object1,
-    const autoware_perception_msgs::msg::DetectedObject & object2) const;
-
   IouBevNmsParams params_{};
   double search_distance_2d_sq_{};
 };

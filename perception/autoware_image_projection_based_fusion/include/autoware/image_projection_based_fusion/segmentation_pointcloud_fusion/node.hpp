@@ -18,7 +18,6 @@
 #include "autoware/image_projection_based_fusion/fusion_node.hpp"
 
 #include <autoware/image_projection_based_fusion/utils/utils.hpp>
-#include <image_transport/image_transport.hpp>
 
 #include <memory>
 #include <string>
@@ -58,7 +57,7 @@ private:
     const PointCloudMsgType & pointcloud_msg, PointCloudMsgType & output_msg) override;
 
   // debug
-  image_transport::Publisher pub_debug_mask_ptr_;
+  AUTOWARE_PUBLISHER_PTR(sensor_msgs::msg::Image) pub_debug_mask_ptr_;
 
   std::vector<bool> filter_semantic_label_target_;
   float filter_distance_threshold_;

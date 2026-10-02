@@ -54,7 +54,7 @@
           min_acc: -1.5 # min acceleration [m/ss]
           min_jerk: -1.5 # min jerk [m/sss]
 
-        stop_object_velocity_threshold: 0.25 # [m/s] velocity threshold for the module to judge whether the objects is stopped (0.28 m/s = 1.0 kmph)
+        stop_object_velocity_threshold: 0.25 # [m/s] velocity threshold for the module to judge whether the objects is stopped (0.25 m/s = 0.9 kmph)
         min_object_velocity: 1.39 # [m/s] minimum object velocity (compare the estimated velocity by perception module with this parameter and adopt the larger one to calculate TTV. 1.39 m/s = 5.0 kmph)
         ## param for yielding
         disable_yield_for_new_stopped_object: true # for the crosswalks with traffic signal

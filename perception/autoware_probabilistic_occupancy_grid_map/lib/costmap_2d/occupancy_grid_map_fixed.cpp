@@ -151,10 +151,11 @@ void OccupancyGridMapFixedBlindSpot::updateWithPointCloud(
     cost_value::LETHAL_OBSTACLE, device_costmap_.get(), stream_);
 }
 
-void OccupancyGridMapFixedBlindSpot::initRosParam(rclcpp::Node & node)
+void OccupancyGridMapFixedBlindSpot::initRosParam(
+  rclcpp::node_interfaces::NodeParametersInterface & parameters)
 {
   distance_margin_ =
-    node.declare_parameter<double>("OccupancyGridMapFixedBlindSpot.distance_margin");
+    utils::declareParameter<double>(parameters, "OccupancyGridMapFixedBlindSpot.distance_margin");
 }
 
 }  // namespace costmap_2d

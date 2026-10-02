@@ -35,7 +35,7 @@ BoundaryDepartureEvaluator::BoundaryDepartureEvaluator(
   }
 }
 
-std::optional<Side<std::optional<CriticalPointPair>>> BoundaryDepartureEvaluator::evaluate(
+std::optional<Side<std::optional<DeparturePointPair>>> BoundaryDepartureEvaluator::evaluate(
   const TrajectoryPoints & predicted_traj, const FootprintSideSegmentsArray & footprints_sides,
   const EgoDynamicState & ego_state) const
 {

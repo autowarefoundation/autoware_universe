@@ -15,7 +15,7 @@
 #ifndef RADAR_OBJECTS_ADAPTER_HPP_
 #define RADAR_OBJECTS_ADAPTER_HPP_
 
-#include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
@@ -32,7 +32,7 @@
 
 namespace autoware
 {
-class RadarObjectsAdapter : public rclcpp::Node
+class RadarObjectsAdapter : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit RadarObjectsAdapter(const rclcpp::NodeOptions & options);
@@ -65,8 +65,8 @@ private:
 
   void radar_info_callback(const autoware_sensing_msgs::msg::RadarInfo & radar_info_msg);
 
-  rclcpp::Subscription<autoware_sensing_msgs::msg::RadarObjects>::SharedPtr radar_objects_sub_;
-  rclcpp::Subscription<autoware_sensing_msgs::msg::RadarInfo>::SharedPtr radar_info_sub_;
+  AUTOWARE_SUBSCRIPTION_PTR(autoware_sensing_msgs::msg::RadarObjects) radar_objects_sub_;
+  AUTOWARE_SUBSCRIPTION_PTR(autoware_sensing_msgs::msg::RadarInfo) radar_info_sub_;
   AUTOWARE_PUBLISHER_PTR(autoware_perception_msgs::msg::DetectedObjects) detections_pub_;
   AUTOWARE_PUBLISHER_PTR(autoware_perception_msgs::msg::TrackedObjects) tracks_pub_;
 

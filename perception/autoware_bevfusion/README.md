@@ -68,16 +68,9 @@ This node assumes that the input pointcloud follows the `PointXYZIRC` layout def
 
 ## Trained Models
 
-You can download the onnx and config files in the following links.
-The files need to be placed inside `$(env HOME)/autoware_data/ml_models/bevfusion`
-
-- lidar-only model:
-  - [onnx](https://awf.ml.dev.web.auto/perception/models/bevfusion/t4base_120m/v1/bevfusion_lidar.onnx)
-  - [config](https://awf.ml.dev.web.auto/perception/models/bevfusion/t4base_120m/v1/ml_package_bevfusion_lidar.param.yaml)
-- camera-lidar model:
-  - [onnx](https://awf.ml.dev.web.auto/perception/models/bevfusion/t4base_120m/v1/bevfusion_camera_lidar.onnx)
-  - [config](https://awf.ml.dev.web.auto/perception/models/bevfusion/t4base_120m/v1/ml_package_bevfusion_camera_lidar.param.yaml)
-- [class remapper](https://awf.ml.dev.web.auto/perception/models/bevfusion/t4base_120m/v1/detection_class_remapper.param.yaml)
+The model bundle is hosted on [Hugging Face](https://huggingface.co/AutowareFoundation/bevfusion/tree/v2.0).
+The [ansible artifacts role](https://github.com/autowarefoundation/autoware/tree/main/ansible/roles/artifacts) downloads it into `$(env HOME)/autoware_data/ml_models/bevfusion`.
+It holds the ONNX files and the ML package configs for the lidar-only and the camera-lidar models, and the class remapper.
 
 The model was trained in TIER IV's internal database (~35k lidar frames) for 30 epochs.
 

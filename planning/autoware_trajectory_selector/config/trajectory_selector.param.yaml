@@ -1,0 +1,4 @@
+/**:
+  ros__parameters:
+    generator_name_prefixes: [DiffusionPlanner_, MinimumRuleBasedPlanner_Go, MinimumRuleBasedPlanner_Stop]
+    fallback_period_ms: 150 # [ms] fallback timer period

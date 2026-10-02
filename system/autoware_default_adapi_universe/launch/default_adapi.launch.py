@@ -16,12 +16,66 @@ import pathlib
 
 import launch
 from launch.actions import DeclareLaunchArgument
+from launch.actions import IncludeLaunchDescription
+from launch.actions import OpaqueFunction
+from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch.substitutions import PathJoinSubstitution
 from launch_ros.actions import ComposableNodeContainer
+from launch_ros.actions import Node
 from launch_ros.descriptions import ComposableNode
 from launch_ros.parameter_descriptions import ParameterFile
 from launch_ros.substitutions import FindPackageShare
+import yaml
+
+CORE = "autoware_default_adapi"
+UNIVERSE = "autoware_default_adapi_universe"
+
+# Nodes derived from autoware::agnocast_wrapper::Node, as (package, node name, class name,
+# executable). Composed like any other node under ENABLE_AGNOCAST=0, where that base is backed by
+# rclcpp; run as their own process under =1, where they need an AgnocastOnly executor that a shared
+# component container cannot provide.
+AGNOCAST_WRAPPER_NODES = {
+    "interface": (CORE, "interface", "InterfaceNode", "interface_node"),
+    "localization": (CORE, "localization", "LocalizationNode", "localization_node"),
+    "routing": (CORE, "routing", "RoutingNode", "routing_node"),
+    "autoware_state": (
+        UNIVERSE,
+        "autoware_state",
+        "AutowareStateNode",
+        "autoware_state_node",
+    ),
+    "diagnostics": (UNIVERSE, "diagnostics", "DiagnosticsNode", "diagnostics_node"),
+    "fail_safe": (UNIVERSE, "fail_safe", "FailSafeNode", "fail_safe_node"),
+    "heartbeat": (UNIVERSE, "heartbeat", "HeartbeatNode", "heartbeat_node"),
+    "manual_local": (UNIVERSE, "manual/local", "ManualControlNode", "manual_control_node"),
+    "manual_remote": (UNIVERSE, "manual/remote", "ManualControlNode", "manual_control_node"),
+    "motion": (UNIVERSE, "motion", "MotionNode", "motion_node"),
+    "mrm_request": (UNIVERSE, "mrm_request", "MrmRequestNode", "mrm_request_node"),
+    "operation_mode": (
+        UNIVERSE,
+        "operation_mode",
+        "OperationModeNode",
+        "operation_mode_node",
+    ),
+    "perception": (UNIVERSE, "perception", "PerceptionNode", "perception_node"),
+    "planning": (UNIVERSE, "planning", "PlanningNode", "planning_node"),
+    "vehicle_command": (
+        UNIVERSE,
+        "vehicle_command",
+        "VehicleCommandNode",
+        "vehicle_command_node",
+    ),
+    "vehicle_door": (UNIVERSE, "vehicle_door", "VehicleDoorNode", "vehicle_door_node"),
+    "vehicle_info": (UNIVERSE, "vehicle_info", "VehicleInfoNode", "vehicle_info_node"),
+    "vehicle_metrics": (
+        UNIVERSE,
+        "vehicle_metrics",
+        "VehicleMetricsNode",
+        "vehicle_metrics_node",
+    ),
+    "vehicle_status": (UNIVERSE, "vehicle_status", "VehicleStatusNode", "vehicle_status_node"),
+}
 
 
 def create_api_node(package_name, node_name, class_name):
@@ -35,33 +89,78 @@ def create_api_node(package_name, node_name, class_name):
     )
 
 
+def create_standalone_api_node(package_name, node_name, executable):
+    """Launch one AGNOCAST_WRAPPER_NODES entry as its own process.
+
+    LD_PRELOAD goes on the node process alone: the heaphook has to be in place before the node
+    allocates, and preloading it into the launch process would register a second Agnocast process.
+    """
+    fullname = pathlib.Path("adapi/node") / node_name
+    return Node(
+        namespace=str(fullname.parent),
+        name=str(fullname.name),
+        package=package_name,
+        executable=executable,
+        parameters=[ParameterFile(LaunchConfiguration("config"))],
+        additional_env={"LD_PRELOAD": LaunchConfiguration("ld_preload_value")},
+        output="screen",
+    )
+
+
+def get_agnocast_env():
+    return IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            PathJoinSubstitution(
+                [
+                    FindPackageShare("autoware_agnocast_wrapper"),
+                    "launch",
+                    "agnocast_env.launch.py",
+                ]
+            )
+        )
+    )
+
+
 def get_default_config():
     path = FindPackageShare("autoware_default_adapi_universe")
     path = PathJoinSubstitution([path, "config/default_adapi.param.yaml"])
     return path
 
 
-def generate_launch_description():
+def get_node_keys(path):
+    with pathlib.Path(path).open() as fp:
+        data = yaml.safe_load(fp)
+    return {} if data is None else data
+
+
+def launch_setup(context, *args, **kwargs):
+    # construct a list of entries to launch (simple parse without dependencies)
+    node_path = LaunchConfiguration("node_keys_file").perform(context)
+    node_data = get_node_keys(node_path) if node_path else {}
+    node_keys_all = set(AGNOCAST_WRAPPER_NODES.keys())
+    node_includes = set(node_data.get("includes", node_keys_all))
+    node_excludes = set(node_data.get("excludes", []))
+
+    node_keys = set(node_includes) - set(node_excludes)
+    unknown_keys = node_keys - node_keys_all
+    if unknown_keys:
+        raise ValueError(
+            f"Unknown node keys: {', '.join(sorted(unknown_keys))}. "
+            f"Available keys: {', '.join(sorted(node_keys_all))}"
+        )
+    entries_to_launch = [AGNOCAST_WRAPPER_NODES[key] for key in node_keys]
+
+    use_agnocast = LaunchConfiguration("use_agnocast").perform(context) == "1"
+
+    if use_agnocast:
+        return [
+            create_standalone_api_node(package_name, node_name, executable)
+            for package_name, node_name, _, executable in entries_to_launch
+        ]
+
     components = [
-        create_api_node("autoware_default_adapi", "interface", "InterfaceNode"),
-        create_api_node("autoware_default_adapi", "localization", "LocalizationNode"),
-        create_api_node("autoware_default_adapi", "routing", "RoutingNode"),
-        create_api_node("autoware_default_adapi_universe", "autoware_state", "AutowareStateNode"),
-        create_api_node("autoware_default_adapi_universe", "diagnostics", "DiagnosticsNode"),
-        create_api_node("autoware_default_adapi_universe", "fail_safe", "FailSafeNode"),
-        create_api_node("autoware_default_adapi_universe", "heartbeat", "HeartbeatNode"),
-        create_api_node("autoware_default_adapi_universe", "manual/local", "ManualControlNode"),
-        create_api_node("autoware_default_adapi_universe", "manual/remote", "ManualControlNode"),
-        create_api_node("autoware_default_adapi_universe", "motion", "MotionNode"),
-        create_api_node("autoware_default_adapi_universe", "mrm_request", "MrmRequestNode"),
-        create_api_node("autoware_default_adapi_universe", "operation_mode", "OperationModeNode"),
-        create_api_node("autoware_default_adapi_universe", "perception", "PerceptionNode"),
-        create_api_node("autoware_default_adapi_universe", "planning", "PlanningNode"),
-        create_api_node("autoware_default_adapi_universe", "vehicle_status", "VehicleStatusNode"),
-        create_api_node("autoware_default_adapi_universe", "vehicle_command", "VehicleCommandNode"),
-        create_api_node("autoware_default_adapi_universe", "vehicle_metrics", "VehicleMetricsNode"),
-        create_api_node("autoware_default_adapi_universe", "vehicle_info", "VehicleInfoNode"),
-        create_api_node("autoware_default_adapi_universe", "vehicle_door", "VehicleDoorNode"),
+        create_api_node(package_name, node_name, class_name)
+        for package_name, node_name, class_name, _ in entries_to_launch
     ]
     container = ComposableNodeContainer(
         namespace="adapi",
@@ -71,5 +170,25 @@ def generate_launch_description():
         ros_arguments=["--log-level", "adapi.container:=WARN"],
         composable_node_descriptions=components,
     )
-    argument = DeclareLaunchArgument("config", default_value=get_default_config())
-    return launch.LaunchDescription([argument, container])
+    return [container]
+
+
+def generate_launch_description():
+    arg_config = DeclareLaunchArgument("config", default_value=get_default_config())
+    arg_keys_file = DeclareLaunchArgument(
+        "node_keys_file",
+        default_value="",
+        description="path to the file containing the node keys to launch",
+    )
+    return launch.LaunchDescription(
+        [arg_config, arg_keys_file, get_agnocast_env(), OpaqueFunction(function=launch_setup)]
+    )
+
+
+# The node_keys_file is in the following format:
+# By specifying `excludes` instead of `includes`, you can specify only the nodes that will not be launched.
+#
+# includes:
+#   - interface
+#   - routing
+#   - ...

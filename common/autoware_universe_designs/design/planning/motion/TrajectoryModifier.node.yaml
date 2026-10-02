@@ -2,21 +2,44 @@ autoware_system_design_format: 0.3.0
 # node information
 name: TrajectoryModifier.node
 package:
-  name: autoware_trajectory_processor
+  name: autoware_trajectory_modifier
   provider: autoware
 launch:
   plugin: autoware::trajectory_modifier::TrajectoryModifier
   executable: autoware_trajectory_modifier_node
 # interfaces
 subscribers:
-  - name: candidate_trajectories
+  - name: trajectories
     message_type: autoware_internal_planning_msgs/msg/CandidateTrajectories
+  - name: odometry
+    message_type: nav_msgs/msg/Odometry
+  - name: acceleration
+    message_type: geometry_msgs/msg/AccelWithCovarianceStamped
+  - name: objects
+    message_type: autoware_perception_msgs/msg/PredictedObjects
+  - name: pointcloud
+    message_type: sensor_msgs/msg/PointCloud2
+  - name: route
+    message_type: autoware_planning_msgs/msg/LaneletRoute
+  - name: traffic_signals
+    message_type: autoware_perception_msgs/msg/TrafficLightGroupArray
+  - name: vector_map
+    message_type: autoware_map_msgs/msg/LaneletMapBin
+  - name: external_velocity_limit_mps
+    message_type: autoware_internal_planning_msgs/msg/VelocityLimit
 publishers:
-  - name: candidate_trajectories
+  - name: trajectory
+    message_type: autoware_planning_msgs/msg/Trajectory
+  - name: trajectories
     message_type: autoware_internal_planning_msgs/msg/CandidateTrajectories
+  - name: current_velocity_limit_mps
+    message_type: autoware_internal_planning_msgs/msg/VelocityLimit
   - name: processing_time_detail
-    message_type: autoware_internal_debug_msgs/msg/ProcessingTimeTree
-    remap_target: ~/debug/processing_time_detail
+    message_type: autoware_internal_debug_msgs/msg/ProcessingTimeDetail
+    remap_target: ~/debug/processing_time_detail_ms
+  - name: processing_time
+    message_type: autoware_internal_debug_msgs/msg/Float64Stamped
+    remap_target: ~/debug/processing_time_ms
   - name: cluster_points
     message_type: sensor_msgs/msg/PointCloud2
     remap_target: ~/obstacle_stop/debug/cluster_points
@@ -30,8 +53,9 @@ param_files:
 param_values: []
 # processes
 processes:
-  - name: modify_trajectory
+  - name: process_trajectories
     trigger_conditions:
-      - on_input: candidate_trajectories
+      - on_input: trajectories
     outcomes:
-      - to_output: candidate_trajectories
+      - to_output: trajectory
+      - to_output: trajectories

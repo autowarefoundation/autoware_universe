@@ -34,7 +34,7 @@ namespace autoware::camera_streampetr
 using autoware::tensorrt_common::TrtCommonConfig;
 using Label = autoware_perception_msgs::msg::ObjectClassification;
 
-std::uint8_t getSemanticType(const std::string & class_name)
+std::uint8_t get_semantic_type(const std::string & class_name)
 {
   static const std::unordered_map<std::string, std::uint8_t> class_mapping = {
     {"CAR", Label::CAR},
@@ -74,7 +74,7 @@ autoware_perception_msgs::msg::DetectedObject StreamPetrNetwork::bbox_to_ros_msg
 
   autoware_perception_msgs::msg::ObjectClassification classification;
   classification.probability = 1.0f;
-  classification.label = getSemanticType(config_.class_names[bbox.label]);
+  classification.label = get_semantic_type(config_.class_names[bbox.label]);
   object.classification.push_back(classification);
   return object;
 }
@@ -82,7 +82,7 @@ autoware_perception_msgs::msg::DetectedObject StreamPetrNetwork::bbox_to_ros_msg
 namespace
 {
 
-bool shouldSetLayerToFP32(nvinfer1::ILayer * layer, const std::string & layer_name_lower)
+bool should_set_layer_to_fp32(nvinfer1::ILayer * layer, const std::string & layer_name_lower)
 {
   // Check layer name for sigmoid/softmax keywords
   if (
@@ -102,7 +102,7 @@ bool shouldSetLayerToFP32(nvinfer1::ILayer * layer, const std::string & layer_na
 
 }  // anonymous namespace
 
-void setSigmoidAndSoftmaxLayersToFP32(std::shared_ptr<nvinfer1::INetworkDefinition> network)
+void set_sigmoid_and_softmax_layers_to_fp32(std::shared_ptr<nvinfer1::INetworkDefinition> network)
 {
   for (int i = 0; i < network->getNbLayers(); ++i) {
     auto * layer = network->getLayer(i);
@@ -111,7 +111,7 @@ void setSigmoidAndSoftmaxLayersToFP32(std::shared_ptr<nvinfer1::INetworkDefiniti
     // Convert to lowercase for case-insensitive comparison
     std::transform(layer_name.begin(), layer_name.end(), layer_name.begin(), ::tolower);
 
-    if (shouldSetLayerToFP32(layer, layer_name)) {
+    if (should_set_layer_to_fp32(layer, layer_name)) {
       layer->setPrecision(nvinfer1::DataType::kFLOAT);
     }
   }
@@ -121,14 +121,14 @@ StreamPetrNetwork::StreamPetrNetwork(const NetworkConfig & config) : config_(con
 {
   cudaStreamCreate(&stream_);
 
-  initializeNetworks();
-  setupEngines();
-  setupBindings();
-  initializeMemoryAndProfiling();
-  configureNMSIfNeeded();
+  initialize_networks();
+  setup_engines();
+  setup_bindings();
+  initialize_memory_and_profiling();
+  configure_nms_if_needed();
 }
 
-void StreamPetrNetwork::initializeNetworks()
+void StreamPetrNetwork::initialize_networks()
 {
   // Initialize TrtCommon configurations
   auto backbone_config = tensorrt_common::TrtCommonConfig(
@@ -150,11 +150,11 @@ void StreamPetrNetwork::initializeNetworks()
   if (config_.trt_precision == "fp16") {
     auto logger = rclcpp::get_logger(config_.logger_name.c_str());
     RCLCPP_INFO(logger, "Setting sigmoid and softmax layers to FP32 precision for stability");
-    setSigmoidAndSoftmaxLayersToFP32(pts_head_->getNetwork());
+    set_sigmoid_and_softmax_layers_to_fp32(pts_head_->getNetwork());
   }
 }
 
-void StreamPetrNetwork::setupEngines()
+void StreamPetrNetwork::setup_engines()
 {
   if (!backbone_->setup()) {
     throw std::runtime_error("Failed to setup backbone TRT engine.");
@@ -167,24 +167,24 @@ void StreamPetrNetwork::setupEngines()
   }
 }
 
-void StreamPetrNetwork::setupBindings()
+void StreamPetrNetwork::setup_bindings()
 {
   auto logger = rclcpp::get_logger(config_.logger_name.c_str());
 
-  if (!backbone_->setBindings(logger)) {
+  if (!backbone_->set_bindings(logger)) {
     throw std::runtime_error("Failed to setup backbone TRT bindings.");
   }
-  if (!pts_head_->setBindings(logger)) {
+  if (!pts_head_->set_bindings(logger)) {
     throw std::runtime_error("Failed to setup pts_head TRT bindings.");
   }
-  if (!pos_embed_->setBindings(logger)) {
+  if (!pos_embed_->set_bindings(logger)) {
     throw std::runtime_error("Failed to setup pos_embed TRT bindings.");
   }
 }
 
-void StreamPetrNetwork::initializeMemoryAndProfiling()
+void StreamPetrNetwork::initialize_memory_and_profiling()
 {
-  mem_.Init(stream_, config_.pre_memory_length, config_.post_memory_length);
+  mem_.init(stream_, config_.pre_memory_length, config_.post_memory_length);
   mem_.pre_buf = static_cast<float *>(pts_head_->bindings["pre_memory_timestamp"]->ptr);
   mem_.post_buf = static_cast<float *>(pts_head_->bindings["post_memory_timestamp"]->ptr);
 
@@ -192,7 +192,6 @@ void StreamPetrNetwork::initializeMemoryAndProfiling()
   dur_backbone_ = std::make_unique<Duration>("backbone", profiler_);
   dur_ptshead_ = std::make_unique<Duration>("ptshead", profiler_);
   dur_pos_embed_ = std::make_unique<Duration>("pos_embed", profiler_);
-  dur_postprocess_ = std::make_unique<Duration>("postprocess", profiler_);
 
   postprocess_cuda_ = std::make_unique<PostprocessCuda>(
     PostProcessingConfig(
@@ -201,12 +200,12 @@ void StreamPetrNetwork::initializeMemoryAndProfiling()
     stream_);
 }
 
-void StreamPetrNetwork::configureNMSIfNeeded()
+void StreamPetrNetwork::configure_nms_if_needed()
 {
   if (config_.iou_threshold > 0.0) {
-    NMSParams p;
-    p.search_distance_2d_ = config_.search_distance_2d;
-    p.iou_threshold_ = config_.iou_threshold;
+    perception_utils::IouBevNmsParams p;
+    p.search_distance_2d = config_.search_distance_2d;
+    p.iou_threshold = config_.iou_threshold;
     iou_bev_nms_.setParameters(p);
   }
 }
@@ -223,37 +222,33 @@ void StreamPetrNetwork::wipe_memory()
 }
 
 void StreamPetrNetwork::inference_detector(
-  const InferenceInputs & inputs,
-  std::vector<autoware_perception_msgs::msg::DetectedObject> & output_objects,
-  std::vector<float> & forward_time_ms)
+  const InferenceInputs & inputs, SubNetworkTimings & subnetwork_timings)
 {
   if (!is_inference_initialized_) {
-    initializePositionEmbedding(inputs);
+    initialize_position_embedding(inputs);
     is_inference_initialized_ = true;
   }
 
-  executeBackbone(inputs);
-  executePtsHead(inputs);
+  execute_backbone(inputs);
+  execute_pts_head(inputs);
 
+  // Without this sync the caller's inference time would only measure the enqueueing.
   cudaStreamSynchronize(stream_);
 
-  executePostprocessing(output_objects);
-
-  forward_time_ms.push_back(dur_backbone_->Elapsed());
-  forward_time_ms.push_back(dur_ptshead_->Elapsed());
-  forward_time_ms.push_back(dur_pos_embed_->Elapsed());
-  forward_time_ms.push_back(dur_postprocess_->Elapsed());
+  subnetwork_timings.backbone_ms = dur_backbone_->elapsed();
+  subnetwork_timings.ptshead_ms = dur_ptshead_->elapsed();
+  subnetwork_timings.pos_embed_ms = dur_pos_embed_->elapsed();
 }
 
-void StreamPetrNetwork::initializePositionEmbedding(const InferenceInputs & inputs)
+void StreamPetrNetwork::initialize_position_embedding(const InferenceInputs & inputs)
 {
   pos_embed_->bindings["img_metas_pad"]->load_from_vector(inputs.img_metas_pad);
   pos_embed_->bindings["intrinsics"]->load_from_vector(inputs.intrinsics);
   pos_embed_->bindings["img2lidar"]->load_from_vector(inputs.img2lidar);
 
-  dur_pos_embed_->MarkBegin(stream_);
+  dur_pos_embed_->mark_begin(stream_);
   pos_embed_->enqueueV3(stream_);
-  dur_pos_embed_->MarkEnd(stream_);
+  dur_pos_embed_->mark_end(stream_);
 
   cudaMemcpyAsync(
     pts_head_->bindings["pos_embed"]->ptr, pos_embed_->bindings["pos_embed"]->ptr,
@@ -263,31 +258,31 @@ void StreamPetrNetwork::initializePositionEmbedding(const InferenceInputs & inpu
     pos_embed_->bindings["cone"]->nbytes(), cudaMemcpyDeviceToDevice, stream_);
 }
 
-void StreamPetrNetwork::executeBackbone(const InferenceInputs & inputs)
+void StreamPetrNetwork::execute_backbone(const InferenceInputs & inputs)
 {
   cudaMemcpyAsync(
     backbone_->bindings["img"]->ptr, inputs.imgs->ptr, inputs.imgs->nbytes(),
     cudaMemcpyDeviceToDevice, stream_);
 
-  dur_backbone_->MarkBegin(stream_);
+  dur_backbone_->mark_begin(stream_);
   backbone_->enqueueV3(stream_);
 
   cudaMemcpyAsync(
     pts_head_->bindings["x"]->ptr, backbone_->bindings["img_feats"]->ptr,
     backbone_->bindings["img_feats"]->nbytes(), cudaMemcpyDeviceToDevice, stream_);
-  dur_backbone_->MarkEnd(stream_);
+  dur_backbone_->mark_end(stream_);
 }
 
-void StreamPetrNetwork::executePtsHead(const InferenceInputs & inputs)
+void StreamPetrNetwork::execute_pts_head(const InferenceInputs & inputs)
 {
   pts_head_->bindings["data_ego_pose"]->load_from_vector(inputs.ego_pose);
   pts_head_->bindings["data_ego_pose_inv"]->load_from_vector(inputs.ego_pose_inv);
 
-  dur_ptshead_->MarkBegin(stream_);
+  dur_ptshead_->mark_begin(stream_);
 
-  mem_.StepPre(inputs.stamp);
+  mem_.step_pre(inputs.stamp);
   pts_head_->enqueueV3(stream_);
-  mem_.StepPost(inputs.stamp);
+  mem_.step_post(inputs.stamp);
 
   if (config_.use_temporal) {
     pts_head_->bindings["pre_memory_embedding"]->copy(
@@ -300,15 +295,14 @@ void StreamPetrNetwork::executePtsHead(const InferenceInputs & inputs)
   } else {
     wipe_memory();
   }
-  dur_ptshead_->MarkEnd(stream_);
+  dur_ptshead_->mark_end(stream_);
 }
 
-void StreamPetrNetwork::executePostprocessing(
+void StreamPetrNetwork::postprocess(
   std::vector<autoware_perception_msgs::msg::DetectedObject> & output_objects)
 {
   std::vector<Box3D> det_boxes3d;
-  dur_postprocess_->MarkBegin(stream_);
-  postprocess_cuda_->generateDetectedBoxes3D_launch(
+  postprocess_cuda_->generate_detected_boxes3d_launch(
     static_cast<const float *>(pts_head_->bindings["all_cls_scores"]->ptr),
     static_cast<const float *>(pts_head_->bindings["all_bbox_preds"]->ptr), det_boxes3d, stream_);
   cudaStreamSynchronize(stream_);
@@ -319,11 +313,10 @@ void StreamPetrNetwork::executePostprocessing(
   }
 
   if (config_.iou_threshold > 0.0) {
-    iou_bev_nms_.apply(raw_objects, output_objects);
+    output_objects = iou_bev_nms_.apply(raw_objects);
   } else {
     output_objects = std::move(raw_objects);
   }
-  dur_postprocess_->MarkEnd(stream_);
 }
 
 StreamPetrNetwork::~StreamPetrNetwork()

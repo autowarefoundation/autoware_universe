@@ -14,8 +14,8 @@ if(NOT (CUDAToolkit_FOUND AND TENSORRT_FOUND))
   return()
 endif()
 
-if(TENSORRT_VERSION VERSION_LESS 8.5)
-  message(WARNING "Unsupported version TensorRT ${TENSORRT_VERSION} detected. This package requires TensorRT 8.5 or later.")
+if(TENSORRT_VERSION VERSION_LESS 10.0)
+  message(WARNING "Unsupported version TensorRT ${TENSORRT_VERSION} detected. This package requires TensorRT 10.0 or later.")
   return()
 endif()
 
@@ -64,6 +64,24 @@ if(BUILD_TESTING)
   set(ament_cmake_uncrustify_FOUND TRUE)
 
   ament_lint_auto_find_test_dependencies()
+
+  find_package(ament_cmake_gtest REQUIRED)
+  find_package(autoware_cuda_utils REQUIRED)
+  # Each case parses the dummy network and most build an engine from it, which TensorRT does not
+  # do quickly even for a graph this small.
+  ament_add_gtest(${PROJECT_NAME}_test
+    test/tensorrt_common_test.cpp
+    TIMEOUT 300
+  )
+  if(TARGET ${PROJECT_NAME}_test)
+    target_link_libraries(${PROJECT_NAME}_test ${PROJECT_NAME})
+    target_include_directories(${PROJECT_NAME}_test PRIVATE
+      ${autoware_cuda_utils_INCLUDE_DIRS}
+    )
+    target_compile_definitions(${PROJECT_NAME}_test PRIVATE
+      DUMMY_ONNX_PATH="${CMAKE_CURRENT_SOURCE_DIR}/test/data/dummy_network.onnx"
+    )
+  endif()
 endif()
 
 install(TARGETS ${PROJECT_NAME} EXPORT export_${PROJECT_NAME})

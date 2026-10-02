@@ -2,6 +2,97 @@
 Changelog for package autoware_component_interface_specs_universe
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* refactor(autoware_component_interface_specs_universe): re-export the core interface specs as the single version authority (`#13115 <https://github.com/autowarefoundation/autoware_universe/issues/13115>`_)
+  * refactor(autoware_component_interface_specs_universe): re-export the core interface specs (single version authority)
+  Make autoware_component_interface_specs (core) the single definition
+  and version authority for the shared component interface specs, and
+  convert autoware_component_interface_specs_universe into re-export
+  shims (using-declarations) of the core symbols.
+  Every core-authoritative struct that this package previously
+  duplicated is deleted and replaced with a using-declaration
+  that aliases the core type, so the type identity is preserved:
+  existing universe consumers keep compiling unchanged and
+  now resolve the canonical core type (proven by the per-domain
+  alias-identity static_asserts). This also picks up the new core
+  symbols per domain (perception TrafficSignals/DetectedObjects;
+  control GearCommand/TurnIndicatorsCommand/HazardLightsCommand;
+  map VectorMap/PointCloudMap/GetDifferentialPointCloudMap; vehicle
+  VelocityStatus; system HazardStatus and the promoted MrmState) plus
+  each domain's version and Specs.
+  A new sensing.hpp shim re-exports the new core sensing domain
+  (VehicleVelocityConverterTwist, version, Specs).
+  The tier4-only / vendor structs stay in this package exactly as they
+  were, unversioned: control keeps ActuationCommand, SetPause, IsPaused,
+  IsStartRequested, SetStop, IsStopped; vehicle keeps EnergyStatus,
+  DoorCommand, DoorLayout, DoorStatus. They are not registered in the
+  core Specs tuples.
+  package.xml gains a single
+  <depend>autoware_component_interface_specs</depend> so the
+  shims can see the core package. It also drops the seven
+  message-package dependencies whose only direct includes this
+  change removes (autoware_localization_msgs, autoware_map_msgs,
+  autoware_perception_msgs, autoware_planning_msgs, autoware_system_msgs,
+  autoware_vehicle_msgs, nav_msgs): nothing in this package includes
+  them directly any more, and core already depends on them and re-exports
+  that dependency to this package's consumers.
+  No behavior change: no QoS/topic/service-name change to any live wire;
+  type identities are preserved via using-declarations.
+  The existing universe unit tests are kept untouched and act as the
+  QoS/name parity oracle against the re-exported core definitions; a
+  diff of every deleted universe struct against its core copy showed no
+  field divergence. Each domain test additionally gets an alias-identity
+  static_assert, and a new test_sensing.cpp is added and registered
+  in CMakeLists.txt.
+  * refactor(autoware_component_interface_specs_universe): drop the PointCloudMap re-export
+  PointCloudMap's spec (/map/point_cloud_map) is a never-published topic,
+  it has no in-tree universe consumer, and core already excludes it from
+  the versioned Specs tuple, since it is a raw, high-bandwidth topic that
+  core deliberately keeps out of the versioned spec set. Re-exporting
+  it added a symbol nobody resolves through the universe namespace,
+  so remove the `using` and explain the deliberate exclusion in the
+  header comment. The other map re-exports (VectorMap, MapProjectorInfo,
+  GetDifferentialPointCloudMap, Specs, version) are unchanged.
+  * refactor(autoware_component_interface_specs_universe): drop the HazardStatus re-export
+  The core system domain no longer defines HazardStatus
+  (/system/emergency/hazard_status was removed from the
+  autowarefoundation-owned spec set because it has no OSS consumers),
+  so remove the alias. No universe code consumes it.
+  * docs(autoware_component_interface_specs_universe): state re-export rationale directly in comments
+  The header and test comments in this package now state the re-export
+  rationale directly, instead of pointing readers to outside documents:
+  - core is the sole definition and version authority for these specs
+  - MrmState was promoted from universe to core and keeps compiling via
+  this re-export
+  - PointCloudMap is a raw, high-bandwidth topic that core deliberately
+  excludes from its versioned spec set
+  - the tier4-only / tier4-adapi-only vendor structs stay unversioned
+  until vendor-specific specs get their own versioned registry,
+  separate from core's OSS-facing Specs tuple
+  No functional change.
+  * fix(autoware_component_interface_specs_universe): drop the DetectedObjects re-export
+  The core perception domain does not define a DetectedObjects spec; it
+  only registers ObjectRecognition, TrafficSignals, and TrackedObjects.
+  The using-declaration and its alias-identity static_assert referenced
+  a symbol that has never existed in core, so both failed to compile.
+  This package's own perception.hpp never declared a DetectedObjects
+  spec either, so no consumer can be relying on it. Remove both.
+  * fix(autoware_component_interface_specs_universe): match the core sensing QoS depth
+  The core spec declares depth 10 for VehicleVelocityConverterTwist
+  (the vehicle-velocity-converter twist topic), but this test asserted
+  a stale local value of 1. Since core is now the single version
+  authority for this spec, the test must assert core's actual value.
+  * fix(autoware_component_interface_specs_universe): alias five specs missing from the shim
+  control, map, perception, and vehicle each re-export every spec core
+  registers in that domain except for ControlModeRequest,
+  PredictedTrajectory, GetPartialPointCloudMap, TrackedObjects, and
+  ControlModeStatus. Add the missing using-declarations so the shim
+  tracks core's registered surface consistently within each header.
+  ---------
+* Contributors: Ryohsuke Mitsudome, Yutaka Kondo
+
 0.52.0 (2026-06-30)
 -------------------
 

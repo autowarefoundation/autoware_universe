@@ -18,34 +18,13 @@
 #include <autoware/cuda_utils/cuda_check_error.hpp>
 #include <autoware/cuda_utils/cuda_unique_ptr.hpp>
 #include <autoware/cuda_utils/cuda_utils.hpp>
+#include <cub/cub.cuh>
+#include <cub/device/device_radix_sort.cuh>
 
-#include <thrust/count.h>
-#include <thrust/device_vector.h>
-#include <thrust/host_vector.h>
-#include <thrust/sort.h>
+#include <cstdint>
 
 namespace autoware::bevfusion
 {
-// Keep only the boxes with score > 0.0
-struct is_score_keep
-{
-  __device__ bool operator()(const Box3D & b) { return b.score > 0.0; }
-};
-
-struct is_kept
-{
-  __device__ bool operator()(const bool keep) { return keep; }
-};
-
-struct score_greater
-{
-  __device__ bool operator()(const Box3D & lb, const Box3D & rb) { return lb.score > rb.score; }
-};
-
-__device__ inline float sigmoid(float x)
-{
-  return 1.0f / (1.0f + expf(-x));
-}
 
 __global__ void generateBoxes3D_kernel(
   const std::int64_t * __restrict__ label_pred_output, const float * __restrict__ bbox_pred_output,
@@ -53,7 +32,8 @@ __global__ void generateBoxes3D_kernel(
   const float min_x_range, const float min_y_range, const int num_proposals,
   const float out_size_factor, const float * __restrict__ yaw_norm_thresholds, const int class_size,
   const float * distance_bin_upper_limits, const float * score_thresholds,
-  const std::size_t num_distance_bin_upper_limits, Box3D * __restrict__ det_boxes3d)
+  const std::size_t num_distance_bin_upper_limits, Box3D * __restrict__ det_boxes3d,
+  float * __restrict__ bboxes_score)
 {
   int point_idx = blockIdx.x * blockDim.x + threadIdx.x;
   if (point_idx >= num_proposals) {
@@ -68,6 +48,9 @@ __global__ void generateBoxes3D_kernel(
   det_boxes3d[point_idx].label = label;
   det_boxes3d[point_idx].score =
     yaw_norm >= yaw_norm_thresholds[label] ? score_output[point_idx] : 0.f;
+
+  // Set the score for sorting, so that it doesn't need to launch another kernel
+  bboxes_score[point_idx] = det_boxes3d[point_idx].score;
 
   // Stop processing if the score is 0
   if (det_boxes3d[point_idx].score == 0.f) {
@@ -96,6 +79,8 @@ __global__ void generateBoxes3D_kernel(
   // and then we set the score to 0, and stop processing
   if (distance_bucket_index == -1) {
     det_boxes3d[point_idx].score = 0.f;
+    // Set the score for sorting, so that it doesn't need to launch another kernel
+    bboxes_score[point_idx] = 0.f;
     return;
   }
 
@@ -106,6 +91,8 @@ __global__ void generateBoxes3D_kernel(
   // processing
   if (det_boxes3d[point_idx].score < class_score_threshold) {
     det_boxes3d[point_idx].score = 0.f;
+    // Set the score for sorting, so that it doesn't need to launch another kernel
+    bboxes_score[point_idx] = 0.f;
     return;
   }
 
@@ -128,6 +115,8 @@ PostprocessCuda::PostprocessCuda(const BEVFusionConfig & config, cudaStream_t st
     autoware::cuda_utils::make_unique<float[]>(config_.score_thresholds_.size());
   distance_bin_upper_limits_d_ptr_ =
     autoware::cuda_utils::make_unique<float[]>(config_.distance_bin_upper_limits_.size());
+  yaw_norm_thresholds_d_ptr_ =
+    autoware::cuda_utils::make_unique<float[]>(config_.yaw_norm_thresholds_.size());
 
   // Move from host to device
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
@@ -136,6 +125,60 @@ PostprocessCuda::PostprocessCuda(const BEVFusionConfig & config, cudaStream_t st
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
     distance_bin_upper_limits_d_ptr_.get(), config_.distance_bin_upper_limits_.data(),
     config_.distance_bin_upper_limits_.size() * sizeof(float), cudaMemcpyHostToDevice, stream_));
+  CHECK_CUDA_ERROR(cudaMemcpyAsync(
+    yaw_norm_thresholds_d_ptr_.get(), config_.yaw_norm_thresholds_.data(),
+    config_.yaw_norm_thresholds_.size() * sizeof(float), cudaMemcpyHostToDevice, stream_));
+
+  // Allocate memory for sorted Bboxes on device using cuda::make_unique
+  bboxes_score_d_ptr_ = autoware::cuda_utils::make_unique<float[]>(config_.num_proposals_);
+  sorted_bboxes_score_d_ptr_ = autoware::cuda_utils::make_unique<float[]>(config_.num_proposals_);
+  bboxes_d_ptr_ = autoware::cuda_utils::make_unique<Box3D[]>(config_.num_proposals_);
+  sorted_bboxes_d_ptr_ = autoware::cuda_utils::make_unique<Box3D[]>(config_.num_proposals_);
+
+  // Initialize device memory for bbox scores and indices for argsort
+  CHECK_CUDA_ERROR(cudaMemsetAsync(
+    bboxes_score_d_ptr_.get(), 0.f, config_.num_proposals_ * sizeof(float), stream_));
+  CHECK_CUDA_ERROR(cudaMemsetAsync(
+    sorted_bboxes_score_d_ptr_.get(), 0.f, config_.num_proposals_ * sizeof(float), stream_));
+
+  // MemsetAsync to zero for bboxes
+  CHECK_CUDA_ERROR(
+    cudaMemsetAsync(bboxes_d_ptr_.get(), 0, config_.num_proposals_ * sizeof(Box3D), stream_));
+  CHECK_CUDA_ERROR(cudaMemsetAsync(
+    sorted_bboxes_d_ptr_.get(), 0, config_.num_proposals_ * sizeof(Box3D), stream_));
+
+  CHECK_CUDA_ERROR(
+    cub::DeviceRadixSort::SortPairsDescending(
+      nullptr, sort_workspace_size_,
+      static_cast<float *>(nullptr),  // KeyT = float
+      static_cast<float *>(nullptr),  // KeyT = float
+      static_cast<Box3D *>(nullptr),  // ValueT = Box3D
+      static_cast<Box3D *>(nullptr),  // ValueT = Box3D
+      config_.num_proposals_, 0, sizeof(float) * 8, stream_));
+  sort_workspace_d_ = autoware::cuda_utils::make_unique<std::uint8_t[]>(sort_workspace_size_);
+
+  // Initialize CircleNMS
+  circle_nms_ptr_ = std::make_unique<CircleNMS>(config_, stream_);
+  filtered_bboxes_d_ptr_ = autoware::cuda_utils::make_unique<Box3D[]>(config_.num_proposals_);
+  final_keep_mask_d_ = autoware::cuda_utils::make_unique<std::uint8_t[]>(config_.num_proposals_);
+  num_selector_d_ptr_ = autoware::cuda_utils::make_unique<std::size_t[]>(1);
+
+  CHECK_CUDA_ERROR(cudaMemsetAsync(
+    filtered_bboxes_d_ptr_.get(), 0, config_.num_proposals_ * sizeof(Box3D), stream_));
+  CHECK_CUDA_ERROR(cudaMemsetAsync(
+    final_keep_mask_d_.get(), 0, config_.num_proposals_ * sizeof(std::uint8_t), stream_));
+  CHECK_CUDA_ERROR(cudaMemsetAsync(num_selector_d_ptr_.get(), 0, sizeof(std::size_t), stream_));
+
+  // Flagged workspace for cub::DeviceSelect::Flagged
+  CHECK_CUDA_ERROR(
+    cub::DeviceSelect::Flagged(
+      nullptr, flagged_workspace_size_,
+      static_cast<Box3D *>(nullptr),         // InputIteratorT
+      static_cast<std::uint8_t *>(nullptr),  // FlagIterator
+      static_cast<Box3D *>(nullptr),         // OutputIteratorT
+      static_cast<std::size_t *>(nullptr),   // NumSelectedIteratorT
+      config_.num_proposals_, stream_));
+  flagged_workspace_d_ = autoware::cuda_utils::make_unique<std::uint8_t[]>(flagged_workspace_size_);
 }
 
 // cspell: ignore divup
@@ -146,46 +189,69 @@ cudaError_t PostprocessCuda::generateDetectedBoxes3D_launch(
   dim3 threads = {config_.threads_per_block_};
   dim3 blocks = {divup(config_.num_proposals_, threads.x)};
 
-  auto boxes3d_d = thrust::device_vector<Box3D>(config_.num_proposals_);
-  auto yaw_norm_thresholds_d = thrust::device_vector<float>(
-    config_.yaw_norm_thresholds_.begin(), config_.yaw_norm_thresholds_.end());
-
+  // Do not need to reset the bboxes_d_ptr_ and bboxes_score_d_ptr_ to zero,
+  // since it's going to overwrite them in the kernel
   generateBoxes3D_kernel<<<blocks, threads, 0, stream>>>(
     label_pred_output, bbox_pred_output, score_output, config_.voxel_x_size_, config_.voxel_y_size_,
     config_.min_x_range_, config_.min_y_range_, config_.num_proposals_, config_.out_size_factor_,
-    thrust::raw_pointer_cast(yaw_norm_thresholds_d.data()), config_.num_classes_,
-    distance_bin_upper_limits_d_ptr_.get(), score_thresholds_d_ptr_.get(),
-    config_.distance_bin_upper_limits_.size(), thrust::raw_pointer_cast(boxes3d_d.data()));
+    yaw_norm_thresholds_d_ptr_.get(), config_.num_classes_, distance_bin_upper_limits_d_ptr_.get(),
+    score_thresholds_d_ptr_.get(), config_.distance_bin_upper_limits_.size(), bboxes_d_ptr_.get(),
+    bboxes_score_d_ptr_.get());
 
-  // suppress by score
-  const auto num_det_boxes3d =
-    thrust::count_if(thrust::device, boxes3d_d.begin(), boxes3d_d.end(), is_score_keep());
+  // Sort the bboxes by score in descending order using cub::DeviceRadixSort
+  std::size_t sort_workspace_size = sort_workspace_size_;
+  CHECK_CUDA_ERROR(
+    cub::DeviceRadixSort::SortPairsDescending(
+      sort_workspace_d_.get(), sort_workspace_size, bboxes_score_d_ptr_.get(),
+      sorted_bboxes_score_d_ptr_.get(), bboxes_d_ptr_.get(), sorted_bboxes_d_ptr_.get(),
+      config_.num_proposals_, 0, sizeof(float) * 8, stream));
 
-  if (num_det_boxes3d == 0) {
+  // Get the highest score from the sorted bboxes, which is the first element in the
+  // sorted_bboxes_score_d_ptr_
+  CHECK_CUDA_ERROR(cudaMemcpyAsync(
+    &highest_bbox_score_h_, sorted_bboxes_score_d_ptr_.get(), sizeof(float), cudaMemcpyDeviceToHost,
+    stream));
+  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream));
+  if (highest_bbox_score_h_ == 0.f) {
+    // No valid bboxes, return empty vector
+    det_boxes3d.resize(0);
     return cudaGetLastError();
   }
 
-  thrust::device_vector<Box3D> det_boxes3d_d(num_det_boxes3d);
-  // Remove any boxes with score == 0.0 after distance-based and class-based filtering
-  thrust::copy_if(
-    thrust::device, boxes3d_d.begin(), boxes3d_d.end(), det_boxes3d_d.begin(), is_score_keep());
+  // suppress by NMS
+  std::vector<std::uint8_t> final_keep_mask_h =
+    circle_nms_ptr_->circleNMS(sorted_bboxes_d_ptr_.get(), stream);
+  // Copy final_keep_mask_h to device
+  CHECK_CUDA_ERROR(cudaMemcpyAsync(
+    final_keep_mask_d_.get(), final_keep_mask_h.data(),
+    config_.num_proposals_ * sizeof(std::uint8_t), cudaMemcpyHostToDevice, stream));
 
-  // sort by score
-  thrust::sort(det_boxes3d_d.begin(), det_boxes3d_d.end(), score_greater());
+  // Use cub::DeviceSelect::Flagged to select the bboxes that are kept after NMS
+  std::size_t flagged_workspace_size = flagged_workspace_size_;
+  CHECK_CUDA_ERROR(
+    cub::DeviceSelect::Flagged(
+      flagged_workspace_d_.get(), flagged_workspace_size, sorted_bboxes_d_ptr_.get(),
+      final_keep_mask_d_.get(), filtered_bboxes_d_ptr_.get(), num_selector_d_ptr_.get(),
+      config_.num_proposals_, stream));
 
-  // supress by NMS
-  thrust::device_vector<bool> final_keep_mask_d(num_det_boxes3d);
-  const auto num_final_det_boxes3d =
-    circleNMS(det_boxes3d_d, config_.circle_nms_dist_threshold_, final_keep_mask_d, stream);
-  thrust::device_vector<Box3D> final_det_boxes3d_d(num_final_det_boxes3d);
-  thrust::copy_if(
-    thrust::device, det_boxes3d_d.begin(), det_boxes3d_d.end(), final_keep_mask_d.begin(),
-    final_det_boxes3d_d.begin(), is_kept());
+  // Copy the number of selected bboxes from device to host
+  CHECK_CUDA_ERROR(cudaMemcpyAsync(
+    &num_final_det_boxes3d, num_selector_d_ptr_.get(), sizeof(std::size_t), cudaMemcpyDeviceToHost,
+    stream));
+  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream));
+
+  // Resize the vector to the number of selected bboxes
+  det_boxes3d.resize(num_final_det_boxes3d);
+  // If no bboxes are kept after NMS, return empty vector
+  if (num_final_det_boxes3d == 0) {
+    return cudaGetLastError();
+  }
 
   // memcpy device to host
-  det_boxes3d.resize(num_final_det_boxes3d);
-  thrust::copy(final_det_boxes3d_d.begin(), final_det_boxes3d_d.end(), det_boxes3d.begin());
-
+  CHECK_CUDA_ERROR(cudaMemcpyAsync(
+    det_boxes3d.data(), filtered_bboxes_d_ptr_.get(), num_final_det_boxes3d * sizeof(Box3D),
+    cudaMemcpyDeviceToHost, stream));
+  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream));
   return cudaGetLastError();
 }
 

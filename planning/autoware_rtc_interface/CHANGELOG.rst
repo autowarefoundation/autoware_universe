@@ -2,6 +2,13 @@
 Changelog for package autoware_rtc_interface
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* refactor(autoware_rtc_interface): template RTCInterface on the node type (`#13112 <https://github.com/autowarefoundation/autoware_universe/issues/13112>`_)
+* chore(planning): update package maintainers (`#13186 <https://github.com/autowarefoundation/autoware_universe/issues/13186>`_)
+* Contributors: Koichi Imai, Ryohsuke Mitsudome, Satoshi OTA
+
 0.52.0 (2026-06-30)
 -------------------
 

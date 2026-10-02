@@ -2,6 +2,143 @@
 Changelog for package autoware_trajectory_follower_node
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* fix(design): align the control node designs with the packages they describe (`#13340 <https://github.com/autowarefoundation/autoware_universe/issues/13340>`_)
+  * fix(design): align the control node designs with the packages they describe
+  ControlCommandGate and the operation mode transition manager name a plugin
+  class and pin publishers that do not match the built package: the registered
+  component is ControlCmdGate, and the transition flags belong on the design
+  graph rather than on global: pins that link_manager skips.
+  TrajectoryFollower declares three debug publishers with message types the node
+  never publishes and a stop_reason publisher it does not create at all.
+  VehicleCmdGate keeps gate_mode and engage on their official topic names through
+  remap_target: alone, so the two inputs are connected through the design.
+  * fix(autoware_operation_mode_transition_manager): declare the system and legacy interfaces as remap targets
+  The operation mode state publisher, the two operation mode change services and
+  the legacy engage and gate mode publishers are node-side fixed names. Declaring
+  them as remap targets puts them on the design graph; a port pinned with global:
+  is skipped by link_manager and the exporter emits no remap for it.
+  ---------
+* fix(planning, control): point design param_files at the packages that install them (`#13219 <https://github.com/autowarefoundation/autoware_universe/issues/13219>`_)
+  BehaviorPathPlanner listed its plugin modules' param files as relative
+  paths, resolving against the host node package; each module package
+  installs its own config. PlanningValidator referenced its checker
+  plugins' param files under the host package with a planning_validator\_
+  filename prefix the plugins do not use. TrajectoryFollower referenced
+  config/ where the package installs param/, and controller files that
+  exist per controller type (mpc, pid). ManualLaneChangeHandler declared
+  a param file that does not exist; the node declares no parameters.
+  The run_out module ships a config directory that ament_auto_package()
+  did not install.
+  Co-authored-by: Claude Fable 5 <noreply@anthropic.com>
+* refactor(control): move node design files into each package (`#13100 <https://github.com/autowarefoundation/autoware_universe/issues/13100>`_)
+  Co-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>
+* refactor(pid_logitudinal_controller): extract core logic (`#13029 <https://github.com/autowarefoundation/autoware_universe/issues/13029>`_)
+  * refactor(autoware_pid_longitudinal_controller): extract PidLongitudinalControllerConfig logic
+  Collect the scattered parameter member variables of PidLongitudinalController
+  into a single PidLongitudinalControllerConfig struct, in preparation for
+  extracting the core control logic from ROS 2 node concerns.
+  * refactor(autoware_pid_longitudinal_controller): include PID/smooth-stop/lpf gains in config
+  Move the remaining declare_parameter-based fields (PID gains and limits,
+  smooth stop params, and the vel/acc/pitch lowpass filter gains) into
+  PidLongitudinalControllerConfig so every ROS parameter feeding the
+  control algorithm lives in one struct, ahead of extracting the core
+  logic from rclcpp::Node.
+  * refactor(autoware_pid_longitudinal_controller): extract core logic from PidLongitudinalController
+  Split the ROS 2 node concerns out of PidLongitudinalController into a new
+  PidLongitudinalControllerNode wrapper (declared in
+  pid_longitudinal_controller_node.hpp, defined alongside the core logic in
+  pid_longitudinal_controller.cpp to keep the diff close to the original file).
+  The core class no longer depends on rclcpp::Node/rclcpp::Logger/publishers/
+  diagnostic_updater: it takes a PidLongitudinalControllerConfig, exposes
+  run()/setConfig()/getDebugValues(), and returns the control state and error
+  causes (control_state, received_invalid_trajectory, emergency_stop_reason)
+  via PidLongitudinalControllerResult instead of a separate getControlState()
+  getter or logging directly. The Node builds the config from parameters, owns
+  the publishers/diagnostics/parameter callback, and turns the returned causes
+  into actual RCLCPP\_* log calls.
+  autoware_trajectory_follower_node/src/controller_node.cpp now instantiates
+  PidLongitudinalControllerNode instead of the (now core-only)
+  PidLongitudinalController.
+  * refactor(autoware_pid_longitudinal_controller): move Node functions into pid_longitudinal_controller_node.cpp; drop unused includes
+  Move create_config() and all PidLongitudinalControllerNode method
+  implementations (ctor, paramCallback, isReady, run, emitLogs,
+  publishDebugData, publishVirtualWallMarker, setupDiagnosticUpdater,
+  checkControlState) out of pid_longitudinal_controller.cpp into a new
+  pid_longitudinal_controller_node.cpp, matching the extract-core-logic
+  naming convention of <package>.cpp for core logic and <package>_node.cpp
+  for the ROS 2 node wrapper.
+  Also remove autoware_utils/ros/marker_helper.hpp and autoware_utils/geometry/
+  normalization.hpp includes that were unused (pre-existing dead includes,
+  unrelated to the createStopVirtualWallMarker calls, which come from
+  autoware/motion_utils/marker/marker_helper.hpp). marker_helper.hpp
+  happened to pull in visualization_msgs/msg/marker_array.hpp as a side
+  effect, so switch the marker.hpp include to marker_array.hpp directly
+  since MarkerArray is the type actually used.
+  * refactor(autoware_pid_longitudinal_controller): expose debug and slope data as ready-to-publish messages
+  Have PidLongitudinalControllerResult carry debug_message and
+  slope_message directly so the node publishes them as-is instead of
+  reconstructing Float32MultiArrayStamped from getDebugValues() and
+  slope_angle. Also merge publishDebugData() and
+  publishVirtualWallMarker() into a single publishMessage().
+  * refactor(autoware_pid_longitudinal_controller): seed m_last_running_time on first cycle
+  The core class no longer holds a clock to read at construction, so
+  m_last_running_time starts as nullptr instead of clock\_->now(). Seed it
+  with the first control cycle's current_time so stopped_condition still
+  engages after a long standstill even if the vehicle never actually ran,
+  matching the previous construction-time-seeded behavior.
+  ---------
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+* feat(trajectory_follower, pid, mpc): introduce temporal controller (`#12886 <https://github.com/autowarefoundation/autoware_universe/issues/12886>`_)
+  * initial change
+  remove resampling
+  feat: add temporal trajectory mode to MPC follower (keep spatial default)
+  add temporal target selection to PID and stabilize nearest-time in PID/MPC
+  remove old parameter
+  fix parameter load for MPC
+  small fi
+  ake temporal nearest-point selection time-driven for PID/MPC and add tests
+  fix: align temporal nearest-point handling in MPC and PID, and use input yaw fallback for short segment
+  stabilize temporal reference tracking in PID and MPC
+  add temporal tracking debug signals for PID and MPC
+  gate temporal yaw and curvature by ds dt and velocity
+  move diag_updater initialization to constructor initializer list
+  * update logic for isDrivingForward
+  * change curvature calculation
+  * feat: actively reset nearest time to zero if we receive new trajectory
+  * fix(pid_longitudinal_controller): reset temporal phase on trajectory replan
+  Mirror MPC `#3050 <https://github.com/autowarefoundation/autoware_universe/issues/3050>`_ by reinitializing m_prev_nearest_time from spatial nearest
+  when header.stamp changes, and fall back to global spatial nearest when the
+  temporal observation window has no candidates.
+  Co-authored-by: Cursor <cursoragent@cursor.com>
+  * precommit
+  * test(pid_longitudinal_controller): use empty time window for spatial fallback case
+  The fallback test used window [1.8, 2.2], which still contains t=2.0, so the
+  bounded search ran instead of spatial fallback and returned t=1.0. Match the
+  MPC fallback test by using a non-overlapping window [10.0, 11.0].
+  Co-authored-by: Cursor <cursoragent@cursor.com>
+  * fix spell
+  * add maintainer
+  * set mode flag to spatial
+  * Update control/autoware_mpc_lateral_controller/param/lateral_controller_defaults.param.yaml
+  Co-authored-by: Go Sakayori <go-sakayori@users.noreply.github.com>
+  * fix comment
+  * revert: PR `#3072 <https://github.com/autowarefoundation/autoware_universe/issues/3072>`_ and `#3050 <https://github.com/autowarefoundation/autoware_universe/issues/3050>`_ (reset nearest time on new trajectory)
+  (cherry picked from commit 9f54a422c4f86465183e5f8a484f543429694b6b)
+  * fix reference point selection
+  (cherry picked from commit 4ead7da4c53d6902f4573246498a917423c59136)
+  * refactors
+  (cherry picked from commit e661dc7403fa54bbeee862772b34da97d88208b8)
+  ---------
+  Co-authored-by: Go Sakayori <gsakayori@gmail.com>
+  Co-authored-by: Go Sakayori <go.sakayori@tier4.jp>
+  Co-authored-by: YuxuanLiuTier4Desktop <619684051@qq.com>
+  Co-authored-by: Cursor <cursoragent@cursor.com>
+  Co-authored-by: Go Sakayori <go-sakayori@users.noreply.github.com>
+* Contributors: Kotakku, Ryohsuke Mitsudome, Taekjin LEE, Takahisa Ishikawa
+
 0.52.0 (2026-06-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

@@ -16,7 +16,6 @@
 #define AUTOWARE__LIDAR_TRANSFUSION__LIDAR_TRANSFUSION_NODE_HPP_
 
 #include "autoware/lidar_transfusion/detection_class_remapper.hpp"
-#include "autoware/lidar_transfusion/postprocess/non_maximum_suppression.hpp"
 #include "autoware/lidar_transfusion/preprocess/pointcloud_densification.hpp"
 #include "autoware/lidar_transfusion/transfusion_trt.hpp"
 #include "autoware/lidar_transfusion/visibility_control.hpp"
@@ -29,6 +28,7 @@
 #include <cuda_blackboard/cuda_pointcloud2.hpp>
 #include <cuda_blackboard/negotiated_types.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
+#include <perception_utils/iou_bev_nms.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_perception_msgs/msg/detected_object_kinematics.hpp>
@@ -65,7 +65,7 @@ private:
   DetectionClassRemapper detection_class_remapper_;
   std::vector<std::string> class_names_;
 
-  NonMaximumSuppression iou_bev_nms_;
+  perception_utils::IouBevNms iou_bev_nms_;
 
   std::unique_ptr<TransfusionTRT> detector_ptr_{nullptr};
 

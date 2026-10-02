@@ -65,7 +65,6 @@ if(TRT_AVAIL AND CUDA_AVAIL)
   endif()
 
   ament_auto_add_library(${PROJECT_NAME}_lib SHARED
-    lib/postprocess/non_maximum_suppression.cpp
     lib/network/camera_data_store.cpp
     lib/network/camera_ego_mask.cpp
     lib/network/network.cpp
@@ -154,7 +153,7 @@ else()
   find_package(ament_cmake_auto REQUIRED)
   ament_auto_find_build_dependencies()
 
-  ament_auto_package(
+  autoware_ament_auto_package(
     INSTALL_TO_SHARE
       launch
   )

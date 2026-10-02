@@ -24,8 +24,10 @@
 
 #include <memory>
 #include <optional>
+#include <set>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -67,6 +69,8 @@ public:
    * parameter.
    * @param[in] profiler Per-layer profiler.
    * @param[in] plugin_paths Paths for TensorRT plugins.
+   * @throw std::runtime_error If TensorRT cannot be initialized, which includes failing to parse
+   * the ONNX model at `trt_config.onnx_path`.
    */
   TrtCommon(
     const TrtCommonConfig & trt_config,
@@ -82,7 +86,9 @@ public:
    *
    * @param[in] profile_dims Optimization profile of tensors for dynamic shapes.
    * @param[in] network_io Network input/output tensors information.
-   * @return Whether setup is successful.
+   * @throw std::invalid_argument If an entry is defined by an index the model has no tensor at.
+   * @return Whether setup is successful, which requires `network_io` and the model's IO to account
+   * for each other, up to the entries offered as optional.
    */
   [[nodiscard]] virtual bool setup(
     ProfileDimsPtr profile_dims = nullptr, NetworkIOPtr network_io = nullptr);
@@ -90,12 +96,16 @@ public:
   /**
    * @brief Get TensorRT engine precision.
    *
+   * Valid immediately after construction. Valid to call before `setup()`.
+   *
    * @return string representation of TensorRT engine precision.
    */
   [[nodiscard]] std::string getPrecision() const;
 
   /**
    * @brief Get tensor name by index from TensorRT engine with fallback from TensorRT network.
+   *
+   * Valid immediately after construction. Valid to call before `setup()`.
    *
    * @param[in] index Tensor index.
    * @return Tensor name.
@@ -105,12 +115,28 @@ public:
   /**
    * @brief Get number of IO tensors from TensorRT engine with fallback from TensorRT network.
    *
+   * Valid immediately after construction. Valid to call before `setup()`.
+   *
    * @return Number of IO tensors.
    */
   [[nodiscard]] int32_t getNbIOTensors() const;
 
   /**
+   * @brief Get the names of all IO tensors from TensorRT engine with fallback from TensorRT
+   * network.
+   *
+   * Valid immediately after construction. Valid to call before `setup()`.
+   *
+   * @throw std::runtime_error If TensorRT counts a tensor it cannot name, which it should never
+   * do.
+   * @return Names of every IO tensor.
+   */
+  [[nodiscard]] std::unordered_set<std::string> getIOTensorNames() const;
+
+  /**
    * @brief Get tensor shape by index from TensorRT engine with fallback from TensorRT network.
+   *
+   * Valid immediately after construction. Valid to call before `setup()`.
    *
    * @param[in] index Tensor index.
    * @return Tensor shape.
@@ -144,6 +170,8 @@ public:
   /**
    * @brief Get input tensor shape by index from TensorRT network.
    *
+   * Valid immediately after construction. Valid to call before `setup()`.
+   *
    * @param[in] index Tensor index.
    * @return Tensor shape.
    */
@@ -151,6 +179,8 @@ public:
 
   /**
    * @brief Get output tensor shape by index from TensorRT network.
+   *
+   * Valid immediately after construction. Valid to call before `setup()`.
    *
    * @param[in] index Tensor index.
    * @return Tensor shape.
@@ -205,7 +235,8 @@ public:
    *
    * @param[in] tensor_name Tensor name.
    * @param[in] dimensions Tensor dimensions.
-   * @return Whether setting input shape is successful.
+   * @return Whether setting input shape is successful. Succeeds without setting anything for a
+   * tensor that was offered as optional and that the model does not declare.
    */
   bool setInputShape(const char * tensor_name, const nvinfer1::Dims & dimensions);
 
@@ -264,12 +295,16 @@ public:
   /**
    * @brief Get per-layer profiler for model.
    *
+   * Valid immediately after construction. Valid to call before `setup()`.
+   *
    * @return Per-layer profiler.
    */
   [[nodiscard]] std::shared_ptr<Profiler> getModelProfiler();
 
   /**
    * @brief Get per-layer profiler for host.
+   *
+   * Valid immediately after construction. Valid to call before `setup()`.
    *
    * @return Per-layer profiler.
    */
@@ -278,12 +313,16 @@ public:
   /**
    * @brief Get TensorRT common configuration.
    *
+   * Valid immediately after construction. Valid to call before `setup()`.
+   *
    * @return TensorRT common configuration.
    */
   [[nodiscard]] std::shared_ptr<TrtCommonConfig> getTrtCommonConfig();
 
   /**
    * @brief Get TensorRT builder configuration.
+   *
+   * Valid immediately after construction. Valid to call before `setup()`.
    *
    * @return TensorRT builder configuration.
    */
@@ -292,12 +331,16 @@ public:
   /**
    * @brief Get TensorRT network definition.
    *
+   * Valid immediately after construction. Valid to call before `setup()`.
+   *
    * @return TensorRT network definition.
    */
   [[nodiscard]] std::shared_ptr<nvinfer1::INetworkDefinition> getNetwork();
 
   /**
    * @brief Get TensorRT logger.
+   *
+   * Valid immediately after construction. Valid to call before `setup()`.
    *
    * @return TensorRT logger.
    */
@@ -316,7 +359,59 @@ public:
    */
   void printProfiling() const;
 
+  /**
+   * @brief Whether the network is built strongly typed (precision "strongly-typed"): tensor
+   * precisions are taken from the model itself.
+   *
+   * @return Whether the network is strongly typed.
+   */
+  [[nodiscard]] bool isStronglyTyped() const;
+
 private:
+  /**
+   * @brief Fill in the tensor name of every entry that was defined by index.
+   *
+   * Every entry carries a name once this returns, which is the precondition for functions using
+   * profiling, logging and contract checks.
+   *
+   * @param[in,out] entries IO entries to name in place.
+   * @throw std::invalid_argument If the model has no tensor at some entry's index, which is a
+   * caller mistake rather than a bad model.
+   */
+  template <typename IOEntries>
+  void resolveTensorNamesOrThrow(IOEntries & entries) const;
+
+  /**
+   * @brief Erase the named entries from both offered lists and record them in `skipped_io_`.
+   *
+   * @param[in] skipped Optional tensors the model does not declare.
+   */
+  void dropSkippedIO(const std::set<std::string> & skipped);
+
+  /**
+   * @brief Reconcile the offered `network_io_` and `profile_dims_` entries with what the model
+   * declares, refusing any model this caller cannot serve.
+   *
+   * Erases from both lists the optional entries the model does not declare, recording them in
+   * `skipped_io_` so the binding setters no-op for them, then requires the offer and the model to
+   * agree in both directions: the model must declare every entry not offered as optional, and a
+   * `network_io_` offered non-empty must account for every tensor the model declares. Both
+   * mismatches are refused before an engine is built.
+   *
+   * @return Whether the offered IO and the model's IO agree.
+   */
+  [[nodiscard]] bool reconcileOfferedIO();
+
+  /**
+   * @brief Take ownership of the caller's offered IO, naming it and reconciling it with the model.
+   *
+   * @param[in] profile_dims Optimization profile dimensions, or null to offer none.
+   * @param[in] network_io Network input/output tensor information, or null to offer none.
+   * @return Whether the offer was accepted, per `reconcileOfferedIO()`.
+   * @throw std::invalid_argument Per `resolveTensorNamesOrThrow()`.
+   */
+  [[nodiscard]] bool acceptOfferedIO(ProfileDimsPtr profile_dims, NetworkIOPtr network_io);
+
   /**
    * @brief Initialize TensorRT common.
    *
@@ -406,6 +501,10 @@ private:
 
   //! @brief Model network input/output tensors information.
   NetworkIOPtr network_io_;
+
+  //!< @brief Names offered as optional that the model does not declare, so the by-name setters can
+  //!< accept them as no-ops instead of failing on a tensor the caller already called optional.
+  std::unordered_set<std::string> skipped_io_;
 };
 
 }  // namespace tensorrt_common

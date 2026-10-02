@@ -16,19 +16,62 @@
 #include "autoware/cuda_pointcloud_preprocessor/point_types.hpp"
 #include "autoware/cuda_pointcloud_preprocessor/types.hpp"
 
+#include <autoware/cuda_utils/cuda_check_error.hpp>
+
 namespace autoware::cuda_pointcloud_preprocessor
 {
+__global__ void ringKeysKernel(
+  const InputPointType * __restrict__ input_points, std::uint16_t * __restrict__ ring_keys,
+  int num_points)
+{
+  int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  if (idx < num_points) {
+    ring_keys[idx] = input_points[idx].channel;
+  }
+}
+
+// The largest ring of the frame, for diagnostics: the first point of each ring (a run start in
+// the sorted keys) binary-searches its run's end; every other thread returns at once.
+__global__ void maxRingSizeKernel(
+  const std::uint16_t * __restrict__ sorted_ring_keys, int num_points,
+  std::uint32_t * __restrict__ output_max)
+{
+  const int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  if (idx >= num_points) {
+    return;
+  }
+  const auto ring = sorted_ring_keys[idx];
+  if (idx > 0 && sorted_ring_keys[idx - 1] == ring) {
+    return;
+  }
+  int lo = idx + 1;
+  int hi = num_points;
+  while (lo < hi) {
+    const int mid = (lo + hi) / 2;
+    if (sorted_ring_keys[mid] == ring) {
+      lo = mid + 1;
+    } else {
+      hi = mid;
+    }
+  }
+  atomicMax(output_max, static_cast<std::uint32_t>(lo - idx));
+}
+
+// Gathers the points in ring order (point_indices is the sorted index list) while transforming
+// them, so no separate organized copy of the input is needed.
 __global__ void transformPointsKernel(
-  const InputPointType * __restrict__ input_points, InputPointType * output_points, int num_points,
+  const InputPointType * __restrict__ input_points,
+  const std::uint32_t * __restrict__ point_indices, InputPointType * output_points, int num_points,
   TransformStruct transform)
 {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
   if (idx < num_points) {
-    output_points[idx] = input_points[idx];
+    const InputPointType & input_point = input_points[point_indices[idx]];
+    output_points[idx] = input_point;
 
-    const float x = input_points[idx].x;
-    const float y = input_points[idx].y;
-    const float z = input_points[idx].z;
+    const float x = input_point.x;
+    const float y = input_point.y;
+    const float z = input_point.z;
 
     output_points[idx].x = transform.m11 * x + transform.m12 * y + transform.m13 * z + transform.x;
     output_points[idx].y = transform.m21 * x + transform.m22 * y + transform.m23 * z + transform.y;
@@ -110,12 +153,32 @@ __global__ void extractPointsKernel(
   }
 }
 
+void ringKeysLaunch(
+  const InputPointType * input_points, std::uint16_t * ring_keys, int num_points,
+  int threads_per_block, int blocks_per_grid, cudaStream_t & stream)
+{
+  ringKeysKernel<<<blocks_per_grid, threads_per_block, 0, stream>>>(
+    input_points, ring_keys, num_points);
+  CHECK_CUDA_ERROR(cudaGetLastError());
+}
+
+void maxRingSizeLaunch(
+  const std::uint16_t * sorted_ring_keys, int num_points, std::uint32_t * output_max,
+  int threads_per_block, int blocks_per_grid, cudaStream_t & stream)
+{
+  maxRingSizeKernel<<<blocks_per_grid, threads_per_block, 0, stream>>>(
+    sorted_ring_keys, num_points, output_max);
+  CHECK_CUDA_ERROR(cudaGetLastError());
+}
+
 void transformPointsLaunch(
-  const InputPointType * input_points, InputPointType * output_points, int num_points,
-  TransformStruct transform, int threads_per_block, int blocks_per_grid, cudaStream_t & stream)
+  const InputPointType * input_points, const std::uint32_t * point_indices,
+  InputPointType * output_points, int num_points, TransformStruct transform, int threads_per_block,
+  int blocks_per_grid, cudaStream_t & stream)
 {
   transformPointsKernel<<<blocks_per_grid, threads_per_block, 0, stream>>>(
-    input_points, output_points, num_points, transform);
+    input_points, point_indices, output_points, num_points, transform);
+  CHECK_CUDA_ERROR(cudaGetLastError());
 }
 
 void cropBoxLaunch(
@@ -126,6 +189,7 @@ void cropBoxLaunch(
   cropBoxKernel<<<blocks_per_grid, threads_per_block, 0, stream>>>(
     d_points, output_crop_mask, output_nan_mask, num_points, crop_box_parameters_ptr,
     num_crop_boxes);
+  CHECK_CUDA_ERROR(cudaGetLastError());
 }
 
 void combineMasksLaunch(
@@ -134,6 +198,7 @@ void combineMasksLaunch(
 {
   combineMasksKernel<<<blocks_per_grid, threads_per_block, 0, stream>>>(
     mask1, mask2, num_points, output_mask);
+  CHECK_CUDA_ERROR(cudaGetLastError());
 }
 
 void extractPointsLaunch(
@@ -143,6 +208,7 @@ void extractPointsLaunch(
 {
   extractPointsKernel<<<blocks_per_grid, threads_per_block, 0, stream>>>(
     input_points, masks, indices, num_points, output_points);
+  CHECK_CUDA_ERROR(cudaGetLastError());
 }
 
 }  // namespace autoware::cuda_pointcloud_preprocessor

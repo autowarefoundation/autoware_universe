@@ -75,7 +75,7 @@ protected:
       rclcpp::Parameter("use_shape_estimation_corrector", false),
       rclcpp::Parameter("use_shape_estimation_filter", false),
       rclcpp::Parameter("use_boost_bbox_optimizer", false),
-    };
+      rclcpp::Parameter("min_cluster_size_m", 0.0)};
 
     parameters.insert(parameters.end(), extra_parameters.begin(), extra_parameters.end());
 

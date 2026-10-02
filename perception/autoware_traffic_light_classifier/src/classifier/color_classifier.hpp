@@ -15,7 +15,7 @@
 #ifndef CLASSIFIER__COLOR_CLASSIFIER_HPP_
 #define CLASSIFIER__COLOR_CLASSIFIER_HPP_
 
-#include "classifier_interface.hpp"
+#include "autoware/traffic_light_classifier/classifier/classifier_interface.hpp"
 
 #include <opencv2/core/core.hpp>
 

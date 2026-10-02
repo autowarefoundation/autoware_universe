@@ -24,7 +24,7 @@
 #include <rclcpp/rclcpp.hpp>
 
 #if ENABLE_GPU
-#include "classifier/cnn_classifier.hpp"
+#include "autoware/traffic_light_classifier/classifier/cnn_classifier.hpp"
 #include "classifier/cnn_lamp_recognizer.hpp"
 #endif
 

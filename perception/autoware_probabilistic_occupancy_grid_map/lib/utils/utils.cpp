@@ -29,14 +29,15 @@ namespace utils
 
 // used in laserscan based occupancy grid map
 bool transformPointcloud(
-  const sensor_msgs::msg::PointCloud2 & input, const tf2_ros::Buffer & tf2,
+  const sensor_msgs::msg::PointCloud2 & input, const tf2_ros::BufferInterface & tf2,
   const std::string & target_frame, sensor_msgs::msg::PointCloud2 & output)
 {
   geometry_msgs::msg::TransformStamped tf_stamped;
   // lookup transform
   try {
     tf_stamped = tf2.lookupTransform(
-      target_frame, input.header.frame_id, input.header.stamp, rclcpp::Duration::from_seconds(0.5));
+      target_frame, input.header.frame_id, tf2_ros::fromMsg(input.header.stamp),
+      tf2::durationFromSec(0.5));
   } catch (tf2::TransformException & ex) {
     RCLCPP_WARN(
       rclcpp::get_logger("probabilistic_occupancy_grid_map"), "Failed to lookup transform: %s",
@@ -53,7 +54,7 @@ bool transformPointcloud(
 
 #ifdef USE_CUDA
 bool transformPointcloudAsync(
-  CudaPointCloud2 & input, const tf2_ros::Buffer & tf2, const std::string & target_frame,
+  CudaPointCloud2 & input, const tf2_ros::BufferInterface & tf2, const std::string & target_frame,
   autoware::cuda_utils::CudaUniquePtr<Eigen::Matrix3f> & device_rotation,
   autoware::cuda_utils::CudaUniquePtr<Eigen::Vector3f> & device_translation)
 {
@@ -61,7 +62,8 @@ bool transformPointcloudAsync(
   // lookup transform
   try {
     tf_stamped = tf2.lookupTransform(
-      target_frame, input.header.frame_id, input.header.stamp, rclcpp::Duration::from_seconds(0.5));
+      target_frame, input.header.frame_id, tf2_ros::fromMsg(input.header.stamp),
+      tf2::durationFromSec(0.5));
   } catch (tf2::TransformException & ex) {
     RCLCPP_WARN(
       rclcpp::get_logger("probabilistic_occupancy_grid_map"), "Failed to lookup transform: %s",
@@ -97,7 +99,7 @@ Eigen::Matrix4f getTransformMatrix(const geometry_msgs::msg::Pose & pose)
 }
 
 bool cropPointcloudByHeight(
-  const sensor_msgs::msg::PointCloud2 & input, const tf2_ros::Buffer & tf2,
+  const sensor_msgs::msg::PointCloud2 & input, const tf2_ros::BufferInterface & tf2,
   const std::string & target_frame, const float min_height, const float max_height,
   sensor_msgs::msg::PointCloud2 & output)
 {
@@ -127,25 +129,26 @@ bool cropPointcloudByHeight(
 }
 
 geometry_msgs::msg::Pose getPose(
-  const std_msgs::msg::Header & source_header, const tf2_ros::Buffer & tf2,
+  const std_msgs::msg::Header & source_header, const tf2_ros::BufferInterface & tf2,
   const std::string & target_frame)
 {
   geometry_msgs::msg::Pose pose;
   geometry_msgs::msg::TransformStamped tf_stamped;
   tf_stamped = tf2.lookupTransform(
-    target_frame, source_header.frame_id, source_header.stamp, rclcpp::Duration::from_seconds(0.5));
+    target_frame, source_header.frame_id, tf2_ros::fromMsg(source_header.stamp),
+    tf2::durationFromSec(0.5));
   pose = autoware_utils::transform2pose(tf_stamped.transform);
   return pose;
 }
 
 geometry_msgs::msg::Pose getPose(
-  const builtin_interfaces::msg::Time & stamp, const tf2_ros::Buffer & tf2,
+  const builtin_interfaces::msg::Time & stamp, const tf2_ros::BufferInterface & tf2,
   const std::string & source_frame, const std::string & target_frame)
 {
   geometry_msgs::msg::Pose pose;
   geometry_msgs::msg::TransformStamped tf_stamped;
-  tf_stamped =
-    tf2.lookupTransform(target_frame, source_frame, stamp, rclcpp::Duration::from_seconds(0.5));
+  tf_stamped = tf2.lookupTransform(
+    target_frame, source_frame, tf2_ros::fromMsg(stamp), tf2::durationFromSec(0.5));
   pose = autoware_utils::transform2pose(tf_stamped.transform);
   return pose;
 }

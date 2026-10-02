@@ -1,0 +1,228 @@
+trajectory_ranker_params:
+  safety:
+    enable:
+      type: bool
+      default_value: true
+      description: Enable safety evaluation
+      read_only: false
+    levels:
+      type: string_array
+      default_value: [safe, low_caution, high_caution, danger, fatal]
+      description: List of safety levels
+      read_only: false
+    penalty:
+      type: double_array
+      default_value: [0.0, 0.1, 0.4, 1.0, 1.0]
+      description: List of safety penalties
+      read_only: false
+    scale:
+      type: double
+      default_value: 20.0
+      description: Safety scale
+      read_only: false
+
+  source:
+    enable:
+      type: bool
+      default_value: true
+      description: Enable source evaluation
+      read_only: false
+    levels:
+      type: string_array
+      default_value: [diffusion_planner, backup_planner_go, backup_planner_stop]
+      description: List of source levels
+      read_only: false
+    penalty:
+      type: double_array
+      default_value: [0.0, 0.45, 0.5]
+      description: List of source penalties
+      read_only: false
+    scale:
+      type: double
+      default_value: 5.0
+      description: Source scale
+      read_only: false
+
+  evaluation:
+    enable:
+      type: bool
+      default_value: false
+      description: Enable evaluation by metrics
+      read_only: false
+    plugin_names:
+      type: string_array
+      default_value:
+        - autoware::trajectory_ranker::metrics::LateralAcceleration
+        - autoware::trajectory_ranker::metrics::LongitudinalJerk
+        - autoware::trajectory_ranker::metrics::TravelDistance
+        - autoware::trajectory_ranker::metrics::LateralDeviation
+        - autoware::trajectory_ranker::metrics::SteeringConsistency
+        - autoware::trajectory_ranker::metrics::TrajectoryConsistency
+      description: List of evaluation plugin names
+      read_only: false
+    scale:
+      type: double
+      default_value: 1.0
+      description: Evaluation scale
+      read_only: false
+    sampling_number:
+      type: int
+      default_value: 16
+      description: Sampling number
+      read_only: false
+    sampling_resolution:
+      type: double
+      default_value: 0.5
+      description: Sampling resolution
+      read_only: false
+    trajectory_history_size:
+      type: int
+      default_value: 10
+      description: Trajectory history size
+      read_only: false
+      validation:
+        bounds<>: [1, 100]
+    decay_weight_base:
+      &base_decay_param {
+        type: double_array,
+        default_value:
+          [
+            1.0,
+            0.8,
+            0.64,
+            0.51,
+            0.41,
+            0.33,
+            0.26,
+            0.21,
+            0.17,
+            0.13,
+            0.10,
+            0.08,
+            0.067,
+            0.053,
+            0.043,
+            0.034,
+          ],
+        validation: { fixed_size<>: [16] },
+        read_only: false,
+      }
+    lateral_acceleration:
+      enable:
+        type: bool
+        default_value: true
+        description: Enable lateral acceleration
+        read_only: false
+      weight:
+        type: double
+        default_value: 0.1
+        description: Lateral acceleration weight
+        read_only: false
+      maximum:
+        type: double
+        default_value: 5.0
+        description: Lateral acceleration maximum
+        read_only: false
+        validation:
+          gt<>: [0.0]
+      decay_weight: *base_decay_param
+    longitudinal_jerk:
+      enable:
+        type: bool
+        default_value: true
+        description: Enable longitudinal jerk
+        read_only: false
+      weight:
+        type: double
+        default_value: 0.1
+        description: Longitudinal jerk weight
+        read_only: false
+      maximum:
+        type: double
+        default_value: 10.0
+        description: Longitudinal jerk maximum
+        read_only: false
+        validation:
+          gt<>: [0.0]
+      decay_weight: *base_decay_param
+    travel_distance:
+      enable:
+        type: bool
+        default_value: true
+        description: Enable travel distance
+        read_only: false
+      weight:
+        type: double
+        default_value: 0.3
+        description: Travel distance weight
+        read_only: false
+      maximum:
+        type: double
+        default_value: 500.0
+        description: Travel distance maximum
+        read_only: false
+        validation:
+          gt<>: [0.0]
+      decay_weight: *base_decay_param
+    lateral_deviation:
+      enable:
+        type: bool
+        default_value: true
+        description: Enable lateral deviation
+        read_only: false
+      weight:
+        type: double
+        default_value: 0.3
+        description: Lateral deviation weight
+        read_only: false
+      maximum:
+        type: double
+        default_value: 10.0
+        description: Lateral deviation maximum
+        read_only: false
+        validation:
+          gt<>: [0.0]
+      decay_weight: *base_decay_param
+    steering_consistency:
+      enable:
+        type: bool
+        default_value: true
+        description: Enable steering consistency
+        read_only: false
+      weight:
+        type: double
+        default_value: 0.3
+        description: Steering consistency weight
+        read_only: false
+      maximum:
+        type: double
+        default_value: 0.1
+        description: Steering consistency maximum
+        read_only: false
+        validation:
+          gt<>: [0.0]
+      decay_weight: *base_decay_param
+    trajectory_consistency:
+      enable:
+        type: bool
+        default_value: true
+        description: Enable trajectory consistency
+        read_only: false
+      weight:
+        type: double
+        default_value: 0.2
+        description: Trajectory consistency weight
+        read_only: false
+      time_horizon:
+        type: double
+        default_value: 2.0
+        description: Trajectory consistency time horizon
+        read_only: false
+      maximum:
+        type: double
+        default_value: 1.0
+        description: Trajectory consistency maximum
+        read_only: false
+        validation:
+          gt<>: [0.0]
+      decay_weight: *base_decay_param

@@ -86,6 +86,9 @@ class SensorInterface(object):
         """Initialize sensor interface."""
         self._sensors_objects = {}
         self._new_data_buffers = Queue()
+        # Measurements taken after the frame currently being processed, kept
+        # for the call that reaches their frame.
+        self._held = []
         self.tag = ""  # Current sensor tag
 
     def register_sensor(self, tag, sensor):
@@ -95,29 +98,41 @@ class SensorInterface(object):
 
         self._sensors_objects[tag] = sensor
 
-    def update_sensor(self, tag, data, timestamp):
+    def update_sensor(self, tag, data, frame):
         if tag not in self._sensors_objects:
             raise ValueError(f"Sensor with tag [{tag}] has not been created")
 
-        self._new_data_buffers.put((tag, timestamp, data))
+        self._new_data_buffers.put((tag, frame, data))
 
-    def get_data(self):
-        """Get all available sensor data without blocking for all sensors."""
+    def get_data(self, target_frame):
+        """Return every measurement captured at or before target_frame.
+
+        Sensor callbacks run asynchronously, so a measurement can reach the
+        queue after the loop has moved past the frame it was captured on, and a
+        sensor faster than the simulation step can deliver several between two
+        calls. Returning (tag, frame, data) rather than the latest measurement
+        per sensor keeps both: the caller can stamp each measurement with the
+        time of the frame it was actually captured on, and nothing captured is
+        silently discarded on the way.
+
+        Measurements from frames the loop has not reached yet are held for the
+        call that does, so they are never stamped with a time before their own.
+        """
         from queue import Empty
 
-        data_dict = {}
+        pending = self._held
+        self._held = []
 
-        # Non-blocking: get all available data from queue
         while True:
             try:
-                sensor_data = self._new_data_buffers.get(block=False)
-                data_dict[sensor_data[0]] = (sensor_data[1], sensor_data[2])
+                pending.append(self._new_data_buffers.get(block=False))
             except Empty:
-                # Queue is empty, break and return whatever data we have
                 break
 
-        # Return available data immediately (could be partial sensor set)
-        return data_dict
+        due = []
+        for measurement in pending:
+            (due if measurement[1] <= target_frame else self._held).append(measurement)
+        return due
 
 
 # Sensor Wrapper
@@ -232,40 +247,76 @@ class SensorWrapper(object):
         elif sensor_type.startswith("sensor.lidar"):
             self._configure_lidar_attributes(bp, sensor_spec)
         elif sensor_type.startswith("sensor.other.gnss"):
-            self._configure_gnss_attributes(bp)
+            self._configure_gnss_attributes(bp, sensor_spec)
         elif sensor_type.startswith("sensor.other.imu"):
-            self._configure_imu_attributes(bp)
+            self._configure_imu_attributes(bp, sensor_spec)
         elif not sensor_type.startswith("sensor."):
             logging.warning(f"Unknown sensor type: {sensor_type}, skipping spawn")
             return False
+
+        # CARLA defaults sensor_tick to 0, which captures on every simulation
+        # step: at a 1/600 s step that is 600 captures a second per camera, and
+        # the rate is then decided solely by the bridge's frequency_hz throttle,
+        # which can only drop whole frames. A mapping asking for 60 Hz came out
+        # at 85.7 and a 200 Hz IMU at 300. Setting sensor_tick lets CARLA
+        # generate at the rate the mapping asks for instead.
+        if "sensor_tick" in sensor_spec:
+            self._set_attribute_if_supported(bp, "sensor_tick", str(sensor_spec["sensor_tick"]))
         return True
 
     def _configure_camera_attributes(self, bp, spec):
         """Configure camera-specific attributes."""
-        bp.set_attribute("image_size_x", str(spec["image_size_x"]))
-        bp.set_attribute("image_size_y", str(spec["image_size_y"]))
-        bp.set_attribute("fov", str(spec["fov"]))
+        self._set_attribute_if_supported(bp, "image_size_x", str(spec["image_size_x"]))
+        self._set_attribute_if_supported(bp, "image_size_y", str(spec["image_size_y"]))
+        self._set_attribute_if_supported(bp, "fov", str(spec["fov"]))
 
     def _configure_lidar_attributes(self, bp, spec):
         """Configure LiDAR-specific attributes."""
-        bp.set_attribute("range", str(spec["range"]))
-        bp.set_attribute("rotation_frequency", str(spec["rotation_frequency"]))
-        bp.set_attribute("channels", str(spec["channels"]))
-        bp.set_attribute("upper_fov", str(spec["upper_fov"]))
-        bp.set_attribute("lower_fov", str(spec["lower_fov"]))
-        bp.set_attribute("points_per_second", str(spec["points_per_second"]))
+        self._set_attribute_if_supported(bp, "range", str(spec["range"]))
+        self._set_attribute_if_supported(bp, "rotation_frequency", str(spec["rotation_frequency"]))
+        self._set_attribute_if_supported(bp, "channels", str(spec["channels"]))
+        self._set_attribute_if_supported(bp, "upper_fov", str(spec["upper_fov"]))
+        self._set_attribute_if_supported(bp, "lower_fov", str(spec["lower_fov"]))
+        self._set_attribute_if_supported(bp, "points_per_second", str(spec["points_per_second"]))
 
-    def _configure_gnss_attributes(self, bp):
-        """Configure GNSS with zero noise for clean simulation."""
+    def _configure_gnss_attributes(self, bp, spec):
+        """Configure GNSS noise, clean unless the sensor mapping asks otherwise."""
         for param in ["alt", "lat", "lon"]:
-            bp.set_attribute(f"noise_{param}_stddev", str(0.0))
-            bp.set_attribute(f"noise_{param}_bias", str(0.0))
+            for quantity in ["stddev", "bias"]:
+                self._set_noise_attribute(bp, spec, f"noise_{param}_{quantity}")
 
-    def _configure_imu_attributes(self, bp):
-        """Configure IMU with zero noise for clean simulation."""
-        for axis in ["x", "y", "z"]:
-            bp.set_attribute(f"noise_accel_stddev_{axis}", str(0.0))
-            bp.set_attribute(f"noise_gyro_stddev_{axis}", str(0.0))
+    def _configure_imu_attributes(self, bp, spec):
+        """Configure IMU noise, clean unless the sensor mapping asks otherwise."""
+        for quantity in ["accel_stddev", "gyro_stddev", "gyro_bias"]:
+            for axis in ["x", "y", "z"]:
+                self._set_noise_attribute(bp, spec, f"noise_{quantity}_{axis}")
+
+    @staticmethod
+    def _set_attribute_if_supported(bp, name, value):
+        """Set a blueprint attribute only when the blueprint exposes it.
+
+        CARLA sensor blueprints expose different attribute sets across
+        versions (for example 0.9.15 vs 0.10), so guarding with
+        ``has_attribute`` keeps sensor setup working on both instead of
+        raising when an attribute is absent.
+        """
+        if not bp.has_attribute(name):
+            return
+        bp.set_attribute(name, value)
+
+    @staticmethod
+    def _set_noise_attribute(bp, spec, name):
+        """Set one CARLA noise attribute, zero unless the mapping overrides it.
+
+        Zero keeps the noise-free measurements the bridge has always produced.
+        That is the right default for reproducing a run, but it makes anything
+        consuming these sensors look better than it would on a real vehicle,
+        so a sensor mapping can name the CARLA attribute under the sensor's
+        parameters and get a sensor that behaves like hardware.
+        """
+        if not bp.has_attribute(name):
+            return
+        bp.set_attribute(name, str(spec.get(name, 0.0)))
 
     def _create_sensor_transform(self, spawn_point):
         """

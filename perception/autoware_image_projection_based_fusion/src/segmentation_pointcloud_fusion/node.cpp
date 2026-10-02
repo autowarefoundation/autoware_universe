@@ -42,7 +42,8 @@ SegmentPointCloudFusionNode::SegmentPointCloudFusionNode(const rclcpp::NodeOptio
       this->get_logger(), "filter_semantic_label_target: %s %d", item.first.c_str(), item.second);
   }
   is_publish_debug_mask_ = declare_parameter<bool>("is_publish_debug_mask");
-  pub_debug_mask_ptr_ = image_transport::create_publisher(this, "~/debug/mask");
+  pub_debug_mask_ptr_ =
+    this->create_publisher<sensor_msgs::msg::Image>("~/debug/mask", rclcpp::SensorDataQoS());
 
   // publisher
   pub_ptr_ = this->create_publisher<PointCloudMsgType>("output", rclcpp::QoS{1});
@@ -82,7 +83,7 @@ void SegmentPointCloudFusionNode::fuse_on_single_image(
     sensor_msgs::msg::Image::SharedPtr debug_mask_msg =
       cv_bridge::CvImage(std_msgs::msg::Header(), "mono8", mask).toImageMsg();
     debug_mask_msg->header = input_mask.header;
-    pub_debug_mask_ptr_.publish(debug_mask_msg);
+    pub_debug_mask_ptr_->publish(*debug_mask_msg);
   }
   const int orig_width = camera_info.width;
   const int orig_height = camera_info.height;

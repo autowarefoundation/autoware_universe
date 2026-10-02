@@ -2,6 +2,63 @@
 Changelog for package autoware_lidar_centerpoint
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* fix(autoware_lidar_centerpoint): reject point clouds with an unexpected point_step (`#13313 <https://github.com/autowarefoundation/autoware_universe/issues/13313>`_)
+  The voxel generator reinterpret_casts the cloud to a 16-byte InputPointType but
+  nothing validated the layout, so any other point type was read at the wrong
+  stride, producing detections from misread data with no error.
+  Co-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>
+* fix(autoware_lidar_centerpoint): use voxel_size_y when scaling y position variance (`#12992 <https://github.com/autowarefoundation/autoware_universe/issues/12992>`_)
+* refactor(autoware_lidar_centerpoint)!: scope model params to the manifest and check its version (`#13211 <https://github.com/autowarefoundation/autoware_universe/issues/13211>`_)
+  * refactor(autoware_lidar_centerpoint)!: scope model params to the manifest and check its version
+  yaw_norm_thresholds is indexed by the predicted class in the postprocess
+  kernel, so its length and order follow model_params.class_names. It moves
+  from centerpoint_common.param.yaml into the model manifest and is now
+  checked against the class list.
+  The manifest declares its version, and the node accepts major version 4
+  from minor version 1 upward, so a bundle that predates the manifest layout
+  fails with an actionable message instead of an uninitialized parameter.
+  Also adds a schema for detection_class_remapper.param.yaml, renders the
+  common and remapper parameter tables from the schemas, and makes the launch
+  file default to the base variant.
+  Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+  * remove copied ml package config
+  * style(pre-commit): autofix
+  * refactor(lidar_centerpoint): enhance version checking with model path context and update documentation
+  ---------
+  Co-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* refactor(lidar_centerpoint): replace NMS with perception_utils::IouBevNms (`#13177 <https://github.com/autowarefoundation/autoware_universe/issues/13177>`_)
+  refactor: replace NMS with perception_utils::IouBevNms
+* docs: replace retired model hosting URLs with Hugging Face links (`#13204 <https://github.com/autowarefoundation/autoware_universe/issues/13204>`_)
+  * docs: replace retired model hosting URLs with Hugging Face links
+  The model artifacts moved from awf.ml.dev.web.auto and the
+  autoware-files S3 bucket to Hugging Face repositories under the
+  AutowareFoundation org (`autowarefoundation/autoware#7223 <https://github.com/autowarefoundation/autoware/issues/7223>`_). The READMEs
+  still pointed manual downloads at the old hosts, and the yabloc README
+  still gave wget instructions for the retired archive.
+  The two dataset links on the S3 bucket stay: the bucket keeps serving
+  datasets, maps and rosbags. Only the model objects are retired.
+  The centerpoint v0 and v1 files were never migrated and stop being
+  distributed, so their changelog rows lose the download links.
+  * docs: name the ML package configs in the model download notes
+  The launch files read transfusion_ml_package.param.yaml and
+  ml_package_camera_streampetr.param.yaml from the model directory. The
+  download notes did not name them, so a manual download missed two
+  required files.
+  ---------
+* refactor(autoware_lidar_centerpoint)!: consume per-variant model folders via a model manifest (`#13087 <https://github.com/autowarefoundation/autoware_universe/issues/13087>`_)
+* refactor(autoware_universe): use autoware_ament_auto_package in perception DNN packages (`#12277 <https://github.com/autowarefoundation/autoware_universe/issues/12277>`_)
+  Co-authored-by: github-actions <github-actions@github.com>
+  Co-authored-by: Taekjin LEE <taekjin.lee@tier4.jp>
+* fix(autoware_lidar_centerpoint): sync parameter schemas with actual node parameters (`#12949 <https://github.com/autowarefoundation/autoware_universe/issues/12949>`_)
+  * fix(autoware_lidar_centerpoint): fix schema filename and sync with current parameters
+  * fix(autoware_lidar_centerpoint): keep centerpoint schema excluded from CI due to basename collision
+  ---------
+* Contributors: Gabriel Manalu, Kotaro Uetake, Max Schmeller, Mete Fatih Cırıt, Ryohsuke Mitsudome, Taekjin LEE, Vishal Chauhan
+
 0.52.0 (2026-06-30)
 -------------------
 

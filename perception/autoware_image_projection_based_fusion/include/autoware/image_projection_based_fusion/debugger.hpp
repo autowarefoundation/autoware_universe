@@ -19,7 +19,8 @@
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
-#include <image_transport/image_transport.hpp>
+#include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <sensor_msgs/msg/image.hpp>
@@ -40,8 +41,8 @@ class Debugger
 {
 public:
   explicit Debugger(
-    rclcpp::Node * node_ptr, const std::size_t image_num, const std::size_t image_buffer_size,
-    std::vector<std::string> input_camera_topics);
+    autoware::agnocast_wrapper::Node * node_ptr, const std::size_t image_num,
+    const std::size_t image_buffer_size, std::vector<std::string> input_camera_topics);
 
   void publishImage(const std::size_t image_id, const rclcpp::Time & stamp);
 
@@ -54,13 +55,14 @@ public:
 
 private:
   void imageCallback(
-    const sensor_msgs::msg::Image::ConstSharedPtr input_image_msg, const std::size_t image_id);
+    const AUTOWARE_MESSAGE_CONST_SHARED_PTR(sensor_msgs::msg::Image) input_image_msg,
+    const std::size_t image_id);
 
-  std::shared_ptr<image_transport::ImageTransport> image_transport_;
   std::vector<std::string> input_camera_topics_;
-  std::vector<image_transport::Subscriber> image_subs_;
-  std::vector<image_transport::Publisher> image_pubs_;
-  std::vector<boost::circular_buffer<sensor_msgs::msg::Image::ConstSharedPtr>> image_buffers_;
+  std::vector<AUTOWARE_SUBSCRIPTION_PTR(sensor_msgs::msg::Image)> image_subs_;
+  std::vector<AUTOWARE_PUBLISHER_PTR(sensor_msgs::msg::Image)> image_pubs_;
+  std::vector<boost::circular_buffer<AUTOWARE_MESSAGE_CONST_SHARED_PTR(sensor_msgs::msg::Image)>>
+    image_buffers_;
 
   std::size_t image_buffer_size_;
 };

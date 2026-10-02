@@ -15,16 +15,55 @@
 #include "map_based_prediction_node.hpp"
 
 #include "autoware/map_based_prediction/params.hpp"
+#include "autoware/map_based_prediction/utils.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
+#include <autoware_utils/ros/parameter.hpp>
 #include <autoware_utils/ros/update_param.hpp>
+
+#include <autoware_perception_msgs/msg/object_classification.hpp>
 
 #include <functional>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace autoware::map_based_prediction
 {
+namespace
+{
+using autoware_perception_msgs::msg::ObjectClassification;
+using autoware_utils::get_or_declare_parameter;
+
+// Every class defined in autoware_perception_msgs::msg::ObjectClassification.
+const std::vector<std::pair<ObjectClassification::_label_type, std::string>> object_label_names = {
+  {ObjectClassification::UNKNOWN, "unknown"},
+  {ObjectClassification::CAR, "car"},
+  {ObjectClassification::TRUCK, "truck"},
+  {ObjectClassification::BUS, "bus"},
+  {ObjectClassification::TRAILER, "trailer"},
+  {ObjectClassification::MOTORCYCLE, "motorcycle"},
+  {ObjectClassification::BICYCLE, "bicycle"},
+  {ObjectClassification::PEDESTRIAN, "pedestrian"},
+  {ObjectClassification::ANIMAL, "animal"},
+  {ObjectClassification::HAZARD, "hazard"},
+  {ObjectClassification::OVER_DRIVABLE, "over_drivable"},
+  {ObjectClassification::UNDER_DRIVABLE, "under_drivable"}};
+
+/// @brief Declare the deceleration of every object class, defaulting to the base value for the
+/// classes the parameter file does not list.
+utils::ObjectDecelerationParams declare_object_deceleration_params(
+  autoware::agnocast_wrapper::Node & node, const std::string & ns)
+{
+  const double base = get_or_declare_parameter<double>(node, ns + "base");
+  utils::ObjectDecelerationParams params;
+  for (const auto & [label, object_label] : object_label_names) {
+    params.per_label.emplace(label, node.declare_parameter<double>(ns + object_label, base));
+  }
+  return params;
+}
+}  // namespace
 
 MapBasedPredictionNode::MapBasedPredictionNode(const rclcpp::NodeOptions & node_options)
 : Node("map_based_prediction", node_options)
@@ -109,6 +148,8 @@ MapBasedPredictionNode::MapBasedPredictionNode(const rclcpp::NodeOptions & node_
       declare_parameter<double>("max_crosswalk_user_on_road_distance");
     vru_params.use_crosswalk_signal =
       declare_parameter<bool>("crosswalk_with_signal.use_crosswalk_signal");
+    vru_params.object_deceleration =
+      declare_object_deceleration_params(*this, "behavior_model.object_deceleration.");
     vru_params.traffic_signal.threshold_velocity_assumed_as_stopping =
       declare_parameter<double>("crosswalk_with_signal.threshold_velocity_assumed_as_stopping");
     vru_params.traffic_signal.distance_set_for_no_intention_to_walk =

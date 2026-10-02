@@ -34,7 +34,8 @@ public:
     const autoware::lidar_centerpoint::CenterPointConfig & config);
 
   bool enqueuePointCloud(
-    const sensor_msgs::msg::PointCloud2 & input_pointcloud_msg, const tf2_ros::Buffer & tf_buffer);
+    const sensor_msgs::msg::PointCloud2 & input_pointcloud_msg,
+    const autoware::agnocast_wrapper::Buffer & tf_buffer);
 
   std::size_t generateSweepPoints(std::vector<float> & points);
 

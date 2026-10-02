@@ -149,6 +149,8 @@ void PredictorVru::setLaneletMap(std::shared_ptr<lanelet::LaneletMap> lanelet_ma
   crosswalks_.insert(crosswalks_.end(), walkways.begin(), walkways.end());
 
   fence_module_.buildFromMap(lanelet_map_ptr_);
+  vegetation_module_.buildFromMap(lanelet_map_ptr_);
+  road_boundary_module_.build_from_map(lanelet_map_ptr_);
 }
 
 void PredictorVru::loadCurrentCrosswalkUsers(const TrackedObjects & objects)
@@ -242,8 +244,15 @@ PredictedObject PredictorVru::getPredictedObjectAsCrosswalkUser(const TrackedObj
       mutable_object, params_.prediction_time_horizon);
     predicted_path.confidence = 1.0;
 
+    // One linestring per path, shared by the cut modules; cuts only shorten it.
+    auto predicted_path_ls = utils::to_linestring_2d(
+      predicted_path.path, predicted_path.path.empty() ? 0 : predicted_path.path.size() - 1);
+    const PredictedPath predicted_path_cut_with_fences =
+      fence_module_.cutPathBeforeFences(predicted_path, predicted_path_ls);
+    predicted_path_ls.resize(predicted_path_cut_with_fences.path.size());
     predicted_object.kinematics.predicted_paths.push_back(
-      fence_module_.cutPathBeforeFences(predicted_path));
+      vegetation_module_.cutPathsCrossingVegetation(
+        predicted_path_cut_with_fences, predicted_path_ls, mutable_object.shape));
   }
 
   boost::optional<lanelet::ConstLanelet> crossing_crosswalk{boost::none};
@@ -385,11 +394,25 @@ PredictedObject PredictorVru::getPredictedObjectAsCrosswalkUser(const TrackedObj
     if (predicted_path.path.empty()) {
       continue;
     }
-    if (fence_module_.doesPathCrossAnyFenceBeforeCrosswalk(predicted_path)) {
+    const auto predicted_path_ls = utils::to_linestring_2d(
+      predicted_path.path, std::min(predicted_path.arrival_index, predicted_path.path.size() - 1));
+    if (fence_module_.doesPathCrossAnyFenceBeforeCrosswalk(predicted_path_ls)) {
+      continue;
+    }
+    if (
+      vegetation_module_.doesPathCrossAnyVegetationBeforeCrosswalk(
+        predicted_path, predicted_path_ls, mutable_object.shape)) {
       continue;
     }
     predicted_object.kinematics.predicted_paths.push_back(predicted_path);
   }
+
+  const auto is_crosswalk_signal_red = [this](const lanelet::ConstLanelet & crosswalk) {
+    return params_.use_crosswalk_signal && traffic_signal_module_.isRedSignal(crosswalk);
+  };
+  predicted_object.kinematics.predicted_paths =
+    road_boundary_module_.cut_paths_crossing_road_boundary(
+      predicted_object, within_road, is_crosswalk_signal_red);
 
   const auto n_path = predicted_object.kinematics.predicted_paths.size();
   for (auto & predicted_path : predicted_object.kinematics.predicted_paths) {

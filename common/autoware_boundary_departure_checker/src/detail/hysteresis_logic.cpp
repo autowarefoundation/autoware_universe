@@ -20,7 +20,7 @@ namespace autoware::boundary_departure_checker
 {
 HysteresisResult update_and_judge(
   const HysteresisState & state,
-  const std::optional<Side<std::optional<CriticalPointPair>>> & evaluation_result,
+  const std::optional<Side<std::optional<DeparturePointPair>>> & evaluation_result,
   const UncrossableBoundaryDepartureParam & param, const double current_time_s)
 {
   HysteresisResult result;

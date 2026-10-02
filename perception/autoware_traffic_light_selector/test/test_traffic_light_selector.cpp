@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "../src/traffic_light_selector.hpp"
+#include "autoware/traffic_light_selector/traffic_light_selector.hpp"
 
 #include <gtest/gtest.h>
 
