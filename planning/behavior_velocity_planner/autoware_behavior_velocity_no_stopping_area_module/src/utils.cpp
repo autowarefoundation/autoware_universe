@@ -16,6 +16,8 @@
 
 #include <autoware/behavior_velocity_planner_common/utilization/arc_lane_util.hpp>
 #include <autoware/behavior_velocity_planner_common/utilization/path_utilization.hpp>
+#include <autoware/lanelet2_utils/conversion.hpp>
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware/trajectory/utils/crop.hpp>
 #include <autoware/trajectory/utils/crossed.hpp>
@@ -267,25 +269,49 @@ std::optional<LineString2d> generate_stop_line(
   LineString2d stop_line;
   for (const auto & no_stopping_area : no_stopping_areas) {
     const auto & area_poly = lanelet::utils::to2D(no_stopping_area).basicPolygon();
-    for (size_t i = 0; i < path.points.size() - 1; ++i) {
-      const auto p0 = path.points.at(i).point.pose.position;
-      const auto p1 = path.points.at(i + 1).point.pose.position;
-      const LineString2d line{{p0.x, p0.y}, {p1.x, p1.y}};
-      std::vector<Point2d> collision_points;
-      boost::geometry::intersection(area_poly, line, collision_points);
-      if (!collision_points.empty()) {
-        const double yaw = autoware_utils::calc_azimuth_angle(p0, p1);
-        const double w = ego_width;
-        const double l = stop_line_margin;
-        stop_line.emplace_back(
-          -l * std::cos(yaw) + collision_points.front().x() + w * std::cos(yaw + M_PI_2),
-          collision_points.front().y() + w * std::sin(yaw + M_PI_2));
-        stop_line.emplace_back(
-          -l * std::cos(yaw) + collision_points.front().x() + w * std::cos(yaw - M_PI_2),
-          collision_points.front().y() + w * std::sin(yaw - M_PI_2));
-        return stop_line;
-      }
+    auto collision_points =
+      autoware::experimental::trajectory::crossed_with_polygon(path, area_poly);
+
+    if (collision_points.empty()) {
+      continue;
     }
+
+    // interpolate for intersect point
+    std::vector<lanelet::ConstPoint3d> ls_points = {};
+    for (auto & pt : path.points) {
+      ls_points.push_back(autoware::experimental::lanelet2_utils::from_ros(pt.point.pose));
+    }
+
+    auto ls_opt = autoware::experimental::lanelet2_utils::create_safe_linestring(ls_points);
+    if (!ls_opt) {
+      return std::nullopt;
+    }
+
+    auto ls = *ls_opt;
+
+    const auto intersect_opt =
+      autoware::experimental::lanelet2_utils::interpolate_linestring(ls, collision_points.front());
+    if (!intersect_opt) {
+      return std::nullopt;
+    }
+    const auto & intersect_point = *intersect_opt;
+
+    // find yaw
+    const auto closest_seg =
+      autoware::experimental::lanelet2_utils::get_closest_segment(ls, intersect_point);
+
+    const auto yaw = autoware_utils::calc_azimuth_angle(
+      autoware::experimental::lanelet2_utils::to_ros(closest_seg.front()),
+      autoware::experimental::lanelet2_utils::to_ros(closest_seg.back()));
+    const double w = ego_width;
+    const double l = stop_line_margin;
+    stop_line.emplace_back(
+      -l * std::cos(yaw) + intersect_point.x() + w * std::cos(yaw + M_PI_2),
+      intersect_point.y() + w * std::sin(yaw + M_PI_2));
+    stop_line.emplace_back(
+      -l * std::cos(yaw) + intersect_point.x() + w * std::cos(yaw - M_PI_2),
+      intersect_point.y() + w * std::sin(yaw - M_PI_2));
+    return stop_line;
   }
   return {};
 }
