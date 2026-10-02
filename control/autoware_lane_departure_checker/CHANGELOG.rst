@@ -2,6 +2,21 @@
 Changelog for package autoware_lane_departure_checker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* refactor(control): move node design files into each package (`#13100 <https://github.com/autowarefoundation/autoware_universe/issues/13100>`_)
+  Co-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>
+* refactor(autoware_lane_departure_checker): migrate to polling:: API (`#13034 <https://github.com/autowarefoundation/autoware_universe/issues/13034>`_)
+* feat(lane_departure_checker): apply `agnocast_wrapper::Node` to `lane_departure_checker` (`#12950 <https://github.com/autowarefoundation/autoware_universe/issues/12950>`_)
+  * apply agnocast_wrapper::Node
+  * style(pre-commit): autofix
+  * fix: diag
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+  Co-authored-by: kobayu858 <yutaro.kobayashi.2@tier4.jp>
+* Contributors: Koichi Imai, Ryohsuke Mitsudome, Taekjin LEE
+
 0.52.0 (2026-06-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

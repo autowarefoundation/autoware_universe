@@ -119,7 +119,7 @@ static std::array<float, low_visibility_debug_field_count> make_low_visibility_d
 
 PolarVoxelOutlierFilterComponent::PolarVoxelOutlierFilterComponent(
   const rclcpp::NodeOptions & options)
-: Filter("PolarVoxelOutlierFilter", options),
+: AgnocastFilter("PolarVoxelOutlierFilter", options),
   azimuth_domain_min(0.0),
   azimuth_domain_max(TWO_PI),
   elevation_domain_min(-M_PI / 2.0),
@@ -207,7 +207,7 @@ PolarVoxelOutlierFilterComponent::PolarVoxelOutlierFilterComponent(
 
   // Create noise cloud publisher if enabled
   if (publish_noise_cloud_) {
-    rclcpp::PublisherOptions pub_options;
+    AUTOWARE_PUBLISHER_OPTIONS pub_options;
     pub_options.qos_overriding_options = rclcpp::QosOverridingOptions::with_default_policies();
     noise_cloud_pub_ = create_publisher<sensor_msgs::msg::PointCloud2>(
       "polar_voxel_outlier_filter/debug/pointcloud_noise", rclcpp::SensorDataQoS(), pub_options);
@@ -225,21 +225,6 @@ PolarVoxelOutlierFilterComponent::PolarVoxelOutlierFilterComponent(
   using std::placeholders::_1;
   set_param_res_ = this->add_on_set_parameters_callback(
     [this](const std::vector<rclcpp::Parameter> & p) { return param_callback(p); });
-
-  // TODO(Koichi98): Remove this override once Filter base class supports agnocast_wrapper.
-  // The aliasing shared_ptr bridge is needed because Filter::sub_input_ uses raw rclcpp types.
-  sub_input_.reset();
-  // cppcheck-suppress unknownMacro
-  agnocast_sub_input_ = AUTOWARE_CREATE_SUBSCRIPTION(
-    PointCloud2, "input", rclcpp::SensorDataQoS().keep_last(max_queue_size_),
-    // cppcheck-suppress unknownMacro
-    [this](AUTOWARE_MESSAGE_CONST_SHARED_PTR(PointCloud2) msg) {
-      auto holder =
-        std::make_shared<AUTOWARE_MESSAGE_CONST_SHARED_PTR(PointCloud2)>(std::move(msg));
-      PointCloud2ConstPtr bridge(holder, holder->get());
-      input_indices_callback(bridge, PointIndicesConstPtr());
-    },
-    AUTOWARE_SUBSCRIPTION_OPTIONS{});
 
   RCLCPP_INFO(
     get_logger(),
@@ -508,18 +493,18 @@ void PolarVoxelOutlierFilterComponent::publish_noise_cloud(
     return;
   }
 
-  sensor_msgs::msg::PointCloud2 noise_cloud;
-  noise_cloud.header = input.header;
-  noise_cloud.height = point_cloud_height_organized;
-  noise_cloud.width =
+  auto noise_cloud = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(noise_cloud_pub_);
+  noise_cloud->header = input.header;
+  noise_cloud->height = point_cloud_height_organized;
+  noise_cloud->width =
     static_cast<uint32_t>(std::count(valid_points_mask.begin(), valid_points_mask.end(), false));
-  noise_cloud.point_step = input.point_step;
-  noise_cloud.fields = input.fields;
-  append_low_visibility_debug_fields(noise_cloud);
-  noise_cloud.is_bigendian = input.is_bigendian;
-  noise_cloud.row_step = noise_cloud.width * noise_cloud.point_step;
-  noise_cloud.is_dense = input.is_dense;
-  noise_cloud.data.resize(noise_cloud.row_step * noise_cloud.height);
+  noise_cloud->point_step = input.point_step;
+  noise_cloud->fields = input.fields;
+  append_low_visibility_debug_fields(*noise_cloud);
+  noise_cloud->is_bigendian = input.is_bigendian;
+  noise_cloud->row_step = noise_cloud->width * noise_cloud->point_step;
+  noise_cloud->is_dense = input.is_dense;
+  noise_cloud->data.resize(noise_cloud->row_step * noise_cloud->height);
 
   std::unordered_map<PolarVoxelIndex, LowVisibilityVoxelStats, PolarVoxelIndexHash>
     voxel_stats_cache;
@@ -549,20 +534,20 @@ void PolarVoxelOutlierFilterComponent::publish_noise_cloud(
   for (size_t i = 0; i < valid_points_mask.size(); ++i) {
     if (!valid_points_mask[i]) {
       std::memcpy(
-        &noise_cloud.data[noise_idx * noise_cloud.point_step], &input.data[i * input.point_step],
+        &noise_cloud->data[noise_idx * noise_cloud->point_step], &input.data[i * input.point_step],
         input.point_step);
       const auto & point_info = point_voxel_info[i];
       const auto stats =
         point_info.has_value() ? get_voxel_stats(point_info->voxel_idx) : LowVisibilityVoxelStats{};
       const auto debug_values = make_low_visibility_debug_values(point_info, stats);
       std::memcpy(
-        &noise_cloud.data[noise_idx * noise_cloud.point_step + input.point_step],
+        &noise_cloud->data[noise_idx * noise_cloud->point_step + input.point_step],
         debug_values.data(), debug_values.size() * sizeof(float));
       noise_idx++;
     }
   }
 
-  noise_cloud_pub_->publish(noise_cloud);
+  noise_cloud_pub_->publish(std::move(noise_cloud));
 }
 
 void PolarVoxelOutlierFilterComponent::publish_diagnostics(
@@ -661,10 +646,10 @@ void PolarVoxelOutlierFilterComponent::publish_visibility_metric()
     return;
   }
 
-  autoware_internal_debug_msgs::msg::Float32Stamped visibility_msg;
-  visibility_msg.stamp = this->now();
-  visibility_msg.data = static_cast<float>(visibility_.value());
-  visibility_pub_->publish(visibility_msg);
+  auto visibility_msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(visibility_pub_);
+  visibility_msg->stamp = this->now();
+  visibility_msg->data = static_cast<float>(visibility_.value());
+  visibility_pub_->publish(std::move(visibility_msg));
 }
 
 void PolarVoxelOutlierFilterComponent::publish_filter_ratio_metric()
@@ -673,10 +658,10 @@ void PolarVoxelOutlierFilterComponent::publish_filter_ratio_metric()
     return;
   }
 
-  autoware_internal_debug_msgs::msg::Float32Stamped ratio_msg;
-  ratio_msg.stamp = this->now();
-  ratio_msg.data = static_cast<float>(filter_ratio_.value_or(0.0));
-  ratio_pub_->publish(ratio_msg);
+  auto ratio_msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(ratio_pub_);
+  ratio_msg->stamp = this->now();
+  ratio_msg->data = static_cast<float>(filter_ratio_.value_or(0.0));
+  ratio_pub_->publish(std::move(ratio_msg));
 }
 
 void PolarVoxelOutlierFilterComponent::publish_low_visibility_voxels(
@@ -696,17 +681,17 @@ void PolarVoxelOutlierFilterComponent::publish_low_visibility_voxels(
   const size_t selected_point_count = std::count_if(
     point_voxel_info.begin(), point_voxel_info.end(), is_selected_low_visibility_point);
 
-  sensor_msgs::msg::PointCloud2 cloud;
-  cloud.header = input.header;
-  cloud.height = point_cloud_height_organized;
-  cloud.width = static_cast<uint32_t>(selected_point_count);
-  cloud.point_step = input.point_step;
-  cloud.fields = input.fields;
-  append_low_visibility_debug_fields(cloud);
-  cloud.is_bigendian = input.is_bigendian;
-  cloud.row_step = cloud.width * cloud.point_step;
-  cloud.is_dense = input.is_dense;
-  cloud.data.resize(cloud.row_step * cloud.height);
+  auto cloud = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(low_visibility_voxels_pub_);
+  cloud->header = input.header;
+  cloud->height = point_cloud_height_organized;
+  cloud->width = static_cast<uint32_t>(selected_point_count);
+  cloud->point_step = input.point_step;
+  cloud->fields = input.fields;
+  append_low_visibility_debug_fields(*cloud);
+  cloud->is_bigendian = input.is_bigendian;
+  cloud->row_step = cloud->width * cloud->point_step;
+  cloud->is_dense = input.is_dense;
+  cloud->data.resize(cloud->row_step * cloud->height);
   // RCLCPP_WARN(get_logger(), "Publishing low visibility voxels: %zu points",
   // selected_point_count);
   size_t output_idx = 0;
@@ -718,17 +703,17 @@ void PolarVoxelOutlierFilterComponent::publish_low_visibility_voxels(
                            ? stats_it->second
                            : LowVisibilityVoxelStats{};
       std::memcpy(
-        &cloud.data[output_idx * cloud.point_step], &input.data[input_idx * input.point_step],
+        &cloud->data[output_idx * cloud->point_step], &input.data[input_idx * input.point_step],
         input.point_step);
       const auto debug_values = make_low_visibility_debug_values(point_info, stats);
       std::memcpy(
-        &cloud.data[output_idx * cloud.point_step + input.point_step], debug_values.data(),
+        &cloud->data[output_idx * cloud->point_step + input.point_step], debug_values.data(),
         debug_values.size() * sizeof(float));
       ++output_idx;
     }
   }
 
-  low_visibility_voxels_pub_->publish(cloud);
+  low_visibility_voxels_pub_->publish(std::move(cloud));
 }
 
 bool PolarVoxelOutlierFilterComponent::has_polar_coordinates(const PointCloud2 & input)
@@ -1054,7 +1039,7 @@ void PolarVoxelOutlierFilterComponent::update_publish_noise_cloud(const rclcpp::
 
   // Recreate publisher if needed
   if (!noise_cloud_pub_) {
-    rclcpp::PublisherOptions pub_options;
+    AUTOWARE_PUBLISHER_OPTIONS pub_options;
     pub_options.qos_overriding_options = rclcpp::QosOverridingOptions::with_default_policies();
     noise_cloud_pub_ = create_publisher<sensor_msgs::msg::PointCloud2>(
       "polar_voxel_outlier_filter/debug/pointcloud_noise", rclcpp::SensorDataQoS(), pub_options);
@@ -1574,20 +1559,20 @@ PolarVoxelOutlierFilterComponent::extract_polar_from_xyz(float x, float y, float
 void PolarVoxelOutlierFilterComponent::publish_area_marker(
   const std_msgs::msg::Header & input_header)
 {
-  auto marker = visualization_msgs::msg::Marker();
-  marker.header = input_header;
-  marker.ns = "visibility_estimation_area";
-  marker.id = 0;
-  marker.type = visualization_msgs::msg::Marker::TRIANGLE_LIST;
-  marker.action = visualization_msgs::msg::Marker::ADD;
-  marker.scale.x = 1.0;
-  marker.scale.y = 1.0;
-  marker.scale.z = 1.0;
-  marker.color.a = 0.1;
-  marker.color.r = 0.0;
-  marker.color.g = 1.0;  // transparent green
-  marker.color.b = 0.0;
-  marker.pose.orientation.w = 1.0;
+  auto marker = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(area_marker_pub_);
+  marker->header = input_header;
+  marker->ns = "visibility_estimation_area";
+  marker->id = 0;
+  marker->type = visualization_msgs::msg::Marker::TRIANGLE_LIST;
+  marker->action = visualization_msgs::msg::Marker::ADD;
+  marker->scale.x = 1.0;
+  marker->scale.y = 1.0;
+  marker->scale.z = 1.0;
+  marker->color.a = 0.1;
+  marker->color.r = 0.0;
+  marker->color.g = 1.0;  // transparent green
+  marker->color.b = 0.0;
+  marker->pose.orientation.w = 1.0;
 
   auto polar_to_xyz = [](auto radius, auto azimuth, auto elevation) {
     // NOTE: This conversion assumes the following angular definitions
@@ -1652,43 +1637,43 @@ void PolarVoxelOutlierFilterComponent::publish_area_marker(
       auto p8 = polar_to_xyz(r2, az2, el2);  // far, right, upper
 
       // Bottom surface triangles
-      marker.points.push_back(p1);
-      marker.points.push_back(p3);
-      marker.points.push_back(p2);
+      marker->points.push_back(p1);
+      marker->points.push_back(p3);
+      marker->points.push_back(p2);
 
-      marker.points.push_back(p2);
-      marker.points.push_back(p3);
-      marker.points.push_back(p4);
+      marker->points.push_back(p2);
+      marker->points.push_back(p3);
+      marker->points.push_back(p4);
 
       // Top surface triangles
-      marker.points.push_back(p5);
-      marker.points.push_back(p6);
-      marker.points.push_back(p7);
+      marker->points.push_back(p5);
+      marker->points.push_back(p6);
+      marker->points.push_back(p7);
 
-      marker.points.push_back(p6);
-      marker.points.push_back(p8);
-      marker.points.push_back(p7);
+      marker->points.push_back(p6);
+      marker->points.push_back(p8);
+      marker->points.push_back(p7);
 
       // Vertical sides between min and max radius
-      marker.points.push_back(p1);
-      marker.points.push_back(p2);
-      marker.points.push_back(p5);
+      marker->points.push_back(p1);
+      marker->points.push_back(p2);
+      marker->points.push_back(p5);
 
-      marker.points.push_back(p2);
-      marker.points.push_back(p6);
-      marker.points.push_back(p5);
+      marker->points.push_back(p2);
+      marker->points.push_back(p6);
+      marker->points.push_back(p5);
 
-      marker.points.push_back(p3);
-      marker.points.push_back(p4);
-      marker.points.push_back(p7);
+      marker->points.push_back(p3);
+      marker->points.push_back(p4);
+      marker->points.push_back(p7);
 
-      marker.points.push_back(p4);
-      marker.points.push_back(p8);
-      marker.points.push_back(p7);
+      marker->points.push_back(p4);
+      marker->points.push_back(p8);
+      marker->points.push_back(p7);
     }
   }
 
-  area_marker_pub_->publish(marker);
+  area_marker_pub_->publish(std::move(marker));
 }
 }  // namespace autoware::pointcloud_preprocessor
 

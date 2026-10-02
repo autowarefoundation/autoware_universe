@@ -2,6 +2,16 @@
 Changelog for package autoware_motion_velocity_boundary_departure_prevention_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* fix: missing dependencies for tl_expected and libexpected-dev (`#13438 <https://github.com/autowarefoundation/autoware_universe/issues/13438>`_)
+* chore(pre-commit): update clang-format to v22.1.5 (`#13126 <https://github.com/autowarefoundation/autoware_universe/issues/13126>`_)
+  * chore(pre-commit): update clang-format to v22.1.5
+  * style(pre-commit): autofix
+  ---------
+* Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome
+
 0.52.0 (2026-06-30)
 -------------------
 

@@ -2,6 +2,29 @@
 Changelog for package autoware_lidar_frnet
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* fix(design): align the perception node designs with the packages they describe (`#13339 <https://github.com/autowarefoundation/autoware_universe/issues/13339>`_)
+  The lanelet filter components register under the lanelet_filter:: namespace,
+  and the apollo instance segmentation and transfusion nodes are built with the
+  autoware\_ prefix on the executable name.
+  BEVFusion, StreamPetr and LidarFRNet name param file defaults that resolve to
+  nothing: the first two are missing the config/ prefix, and the three files
+  LidarFRNet names are called frnet.param.yaml, ml_package_frnet_ot128.param.yaml
+  and diagnostics_frnet.param.yaml.
+  ElevationMapLoader pins its map_hash input with global:, which keeps the port
+  out of the design graph: link_manager skips any connection whose target is a
+  global input port and the exporter emits no remap. remap_target: keeps the same
+  fixed topic name while letting the port take part in the graph.
+* refactor(autoware_universe): use autoware_ament_auto_package in perception DNN packages (`#12277 <https://github.com/autowarefoundation/autoware_universe/issues/12277>`_)
+  Co-authored-by: github-actions <github-actions@github.com>
+  Co-authored-by: Taekjin LEE <taekjin.lee@tier4.jp>
+* refactor(perception): move node design files into each package (`#13104 <https://github.com/autowarefoundation/autoware_universe/issues/13104>`_)
+  Co-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>
+* fix(autoware_lidar_frnet): sync configs (`#13040 <https://github.com/autowarefoundation/autoware_universe/issues/13040>`_)
+* Contributors: Amadeusz Szymko, Ryohsuke Mitsudome, Taekjin LEE, Vishal Chauhan
+
 0.52.0 (2026-06-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

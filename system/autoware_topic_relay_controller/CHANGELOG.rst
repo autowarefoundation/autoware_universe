@@ -2,6 +2,22 @@
 Changelog for package autoware_topic_relay_controller
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* feat(autoware_topic_relay_controller): add throttle mode (`#13395 <https://github.com/autowarefoundation/autoware_universe/issues/13395>`_)
+  * feat(autoware_topic_relay_controller): add throttle mode
+  * fix(autoware_topic_relay_controller): reject a non-positive msgs_per_sec
+  With msgs_per_sec set to 0 or a negative value the node aborted on
+  `rclcpp::Rate`'s own `std::invalid_argument`, whose message does not name
+  the parameter, and on Humble `rclcpp::Rate` does not check the rate at all.
+  Throw with the parameter name before constructing the period.
+  ---------
+* refactor(autoware_topic_relay_controller): migrate to agnocast_wrapper::Node (`#13394 <https://github.com/autowarefoundation/autoware_universe/issues/13394>`_)
+* fix(autoware_topic_relay_controller): fix keep publish feature (`#12697 <https://github.com/autowarefoundation/autoware_universe/issues/12697>`_)
+  fix: uncheck relay status
+* Contributors: Koichi Imai, Ryohsuke Mitsudome, Tetsuhiro Kawaguchi
+
 0.52.0 (2026-06-30)
 -------------------
 

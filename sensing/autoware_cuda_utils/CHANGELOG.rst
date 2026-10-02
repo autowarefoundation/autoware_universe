@@ -2,6 +2,37 @@
 Changelog for package autoware_cuda_utils
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* fix(autoware_cuda_utils): export CCCL for host compilation with CUDA 13 (`#13302 <https://github.com/autowarefoundation/autoware_universe/issues/13302>`_)
+  * fix(autoware_cuda_utils): export CCCL for host compilation with CUDA 13
+  CUDA 13 moved the Thrust, CUB and libcu++ headers to include/cccl/. nvcc adds
+  that directory by itself. The host compiler does not, so g++ fails on any host
+  file that reaches a CCCL header.
+  The installed thrust_utils.hpp uses Thrust, so the include path belongs in the
+  exported interface of autoware_cuda_utils. Export an INTERFACE target that
+  carries the package headers and CCCL::CCCL, and add cmake/find_cccl.cmake to
+  locate the toolkit CCCL config outside the default CMake search path.
+  Consumers that already depend on autoware_cuda_utils need no change. Link the
+  target in autoware_ptv3, whose CUDA library is not built through
+  ament_target_dependencies.
+  * fix(autoware_cuda_utils): mark the CCCL include as system, export CUDA::cudart
+  The CCCL config creates non-imported targets, so the cccl include directory
+  reached consumers as -I in 79 flag files across 25 packages, and a future
+  CCCL header warning would break builds under -Werror. A small imported marker
+  target, autoware_cuda_utils::cccl_system, now carries the same directory as a
+  system include. CMake unions system include sets across the link closure, and
+  the explicit property survives the CMAKE_NO_SYSTEM_FROM_IMPORTED that
+  mrt_cmake_modules leaks into consumer scopes. No NVIDIA target is modified.
+  The exported interface also carries CUDA::cudart: the installed
+  thrust_utils.hpp includes cuda_runtime_api.h, which the package and CCCL
+  include directories alone cannot resolve.
+  Also state above the autoware_ptv3 link why it is load-bearing: nvcc supplies
+  CCCL to the .cu files, and detection3d_postprocess_test host-compiles Thrust
+  without ament_target_dependencies.
+* Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome
+
 0.52.0 (2026-06-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

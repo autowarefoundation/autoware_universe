@@ -2,6 +2,37 @@
 Changelog for package autoware_behavior_path_planner_common
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* chore(pre-commit): update clang-format to v22.1.5 (`#13126 <https://github.com/autowarefoundation/autoware_universe/issues/13126>`_)
+  * chore(pre-commit): update clang-format to v22.1.5
+  * style(pre-commit): autofix
+  ---------
+* fix(pre-commit): update pre-commit-hooks-ros to v0.10.3 and adapt include guards (`#13083 <https://github.com/autowarefoundation/autoware_universe/issues/13083>`_)
+  * chore: sync files
+  * fix(pre-commit): adapt include guards to pre-commit-hooks-ros v0.10.3
+  ros-include-guard v0.10.3 only recognises an include guard when #endif is the
+  last non-empty line of the file, so that feature test macros are no longer
+  mistaken for guards. 29 headers failed that check.
+  25 headers wrap the guard in "// clang-format off" / "// clang-format on"
+  because the #endif comment plus its // NOLINT exceeds the 100 column limit.
+  Drop only the trailing "on" marker; the "off" marker then runs to end of file
+  and still protects the line from being wrapped.
+  3 CUDA headers ended with "/* *INDENT-ON* */". Move it above the #endif so it
+  stays paired with the "/* *INDENT-OFF* */" near the top of the file.
+  autoware_behavior_path_planner/test/input.hpp closed its guard immediately after
+  opening it, leaving the entire body unguarded. Move the #endif to the end.
+  Also hold clang-format at v21.1.8. clang-format 22 migrates
+  "AlignAfterOpenBracket: AlwaysBreak" to "BreakAfterOpenBracketIf: true", which
+  forces a break after every "if (" whose condition does not fit on one line and
+  reformats 88 files.
+  ---------
+  Co-authored-by: github-actions <github-actions@github.com>
+  Co-authored-by: Mete Fatih Cırıt <mfc@autoware.org>
+* test(autoware_behavior_path_planner_common): drop rclcpp-dependent lane count expectation (`#13109 <https://github.com/autowarefoundation/autoware_universe/issues/13109>`_)
+* Contributors: Koichi Imai, Mete Fatih Cırıt, Ryohsuke Mitsudome, awf-autoware-bot[bot]
+
 0.52.0 (2026-06-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
