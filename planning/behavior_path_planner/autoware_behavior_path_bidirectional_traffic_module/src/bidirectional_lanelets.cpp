@@ -190,7 +190,7 @@ ConnectedBidirectionalLanelets::get_overlap_interval(
     lane_ids_set.insert(lanelet.id());
   }
 
-  auto interval = experimental::trajectory::find_intervals(
+  auto interval_opt = experimental::trajectory::find_first_interval(
     trajectory,
     [&](const autoware_internal_planning_msgs::msg::PathPointWithLaneId & point) -> bool {
       for (const auto & lane_id : point.lane_ids) {
@@ -198,8 +198,8 @@ ConnectedBidirectionalLanelets::get_overlap_interval(
       }
       return false;
     });
-  if (interval.empty()) return std::nullopt;
-  return interval.front();
+  if (!interval_opt.has_value()) return std::nullopt;
+  return interval_opt.value();
 }
 
 Eigen::Vector2d calc_pose_direction(const geometry_msgs::msg::Pose & pose)

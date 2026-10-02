@@ -132,17 +132,17 @@ std::optional<Polygon2d> generate_ego_no_stopping_area_lane_polygon(
   }
 
   const auto no_stopping_area = no_stopping_area_reg_elem.noStoppingAreas().front();
-  const auto ego_area_intervals = experimental::trajectory::find_intervals(
+  const auto ego_area_interval = experimental::trajectory::find_first_interval(
     path, [&](const autoware_internal_planning_msgs::msg::PathPointWithLaneId & p) {
       const auto & pos = p.point.pose.position;
       return bg::covered_by(
         Point2d{pos.x, pos.y}, lanelet::utils::to2D(no_stopping_area).basicPolygon());
     });
-  if (ego_area_intervals.empty()) {
+  if (!ego_area_interval.has_value()) {
     return std::nullopt;
   }
 
-  const auto [ego_area_start_s, ego_area_end_s] = ego_area_intervals.front();
+  const auto [ego_area_start_s, ego_area_end_s] = ego_area_interval.value();
   if (ego_area_start_s - *ego_s > max_polygon_length) {
     return std::nullopt;
   }
