@@ -15,6 +15,7 @@
 #ifndef SIMPLE_SWITCHER__SIMPLE_SWITCHER_NODE_HPP_
 #define SIMPLE_SWITCHER__SIMPLE_SWITCHER_NODE_HPP_
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <std_msgs/msg/empty.hpp>
@@ -32,7 +33,7 @@
 namespace autoware::redundancy_switcher
 {
 
-class SimpleSwitcherNode : public rclcpp::Node
+class SimpleSwitcherNode : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit SimpleSwitcherNode(const rclcpp::NodeOptions & options);
@@ -62,20 +63,20 @@ private:
   std::string annotation_;
   std::mutex mutex_;
 
-  rclcpp::Publisher<tier4_system_msgs::msg::ActiveControlUnit>::SharedPtr pub_active_;
-  rclcpp::Publisher<std_msgs::msg::UInt8>::SharedPtr pub_signals_main_;
-  rclcpp::Publisher<std_msgs::msg::UInt8>::SharedPtr pub_signals_sub_;
-  rclcpp::Publisher<std_msgs::msg::String>::SharedPtr pub_annotation_main_;
-  rclcpp::Publisher<std_msgs::msg::String>::SharedPtr pub_annotation_sub_;
+  AUTOWARE_PUBLISHER_PTR(tier4_system_msgs::msg::ActiveControlUnit) pub_active_;
+  AUTOWARE_PUBLISHER_PTR(std_msgs::msg::UInt8) pub_signals_main_;
+  AUTOWARE_PUBLISHER_PTR(std_msgs::msg::UInt8) pub_signals_sub_;
+  AUTOWARE_PUBLISHER_PTR(std_msgs::msg::String) pub_annotation_main_;
+  AUTOWARE_PUBLISHER_PTR(std_msgs::msg::String) pub_annotation_sub_;
 
-  rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr srv_manual_active_;
-  rclcpp::Subscription<std_msgs::msg::Empty>::SharedPtr sub_reset_;
-  rclcpp::Subscription<std_msgs::msg::Empty>::SharedPtr sub_self_main_;
-  rclcpp::Subscription<std_msgs::msg::Empty>::SharedPtr sub_self_sub_;
-  rclcpp::Subscription<std_msgs::msg::UInt16>::SharedPtr sub_priority_main_;
-  rclcpp::Subscription<std_msgs::msg::UInt16>::SharedPtr sub_priority_sub_;
+  AUTOWARE_SERVICE_PTR(std_srvs::srv::SetBool) srv_manual_active_;
+  AUTOWARE_SUBSCRIPTION_PTR(std_msgs::msg::Empty) sub_reset_;
+  AUTOWARE_SUBSCRIPTION_PTR(std_msgs::msg::Empty) sub_self_main_;
+  AUTOWARE_SUBSCRIPTION_PTR(std_msgs::msg::Empty) sub_self_sub_;
+  AUTOWARE_SUBSCRIPTION_PTR(std_msgs::msg::UInt16) sub_priority_main_;
+  AUTOWARE_SUBSCRIPTION_PTR(std_msgs::msg::UInt16) sub_priority_sub_;
 
-  rclcpp::TimerBase::SharedPtr timer_;
+  AUTOWARE_TIMER_PTR timer_;
 };
 
 }  // namespace autoware::redundancy_switcher

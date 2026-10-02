@@ -13,14 +13,17 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   src/non_redundant/non_redundant_adapter.cpp
   src/simple_switcher/switcher_adapter.cpp
 )
+autoware_agnocast_wrapper_setup(${PROJECT_NAME})
 
 ament_auto_add_library(simple_switcher_node_component SHARED
   src/simple_switcher/simple_switcher_node.cpp
 )
 
-rclcpp_components_register_node(simple_switcher_node_component
+autoware_agnocast_wrapper_register_node(simple_switcher_node_component
   PLUGIN "autoware::redundancy_switcher::SimpleSwitcherNode"
   EXECUTABLE simple_switcher_node
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
+  ROS2_EXECUTOR MultiThreadedExecutor
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE

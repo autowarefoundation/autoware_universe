@@ -40,7 +40,8 @@ constexpr char kAnnotationMainTopic[] =
 constexpr char kAnnotationSubTopic[] = "/system/simple_switcher/status/switcher_annotation/sub_ecu";
 }  // namespace
 
-void SimpleSwitcherAdapter::initialize(rclcpp::Node * node, std::shared_ptr<EventGateway> gateway)
+void SimpleSwitcherAdapter::initialize(
+  autoware::agnocast_wrapper::Node * node, std::shared_ptr<EventGateway> gateway)
 {
   if (!node) throw std::invalid_argument("SimpleSwitcherAdapter: node is null");
   if (!gateway) throw std::invalid_argument("SimpleSwitcherAdapter: gateway is null");

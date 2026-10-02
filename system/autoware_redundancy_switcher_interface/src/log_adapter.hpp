@@ -14,6 +14,7 @@
 #ifndef LOG_ADAPTER_HPP_
 #define LOG_ADAPTER_HPP_
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <redundancy_switcher_interface/plugin/event_gateway.hpp>
 #include <redundancy_switcher_interface/plugin/i_adapter_plugin.hpp>
@@ -37,7 +38,8 @@ public:
   LogAdapter() = default;
   ~LogAdapter() override = default;
 
-  void initialize(rclcpp::Node * node, std::shared_ptr<EventGateway> gateway) override;
+  void initialize(
+    autoware::agnocast_wrapper::Node * node, std::shared_ptr<EventGateway> gateway) override;
 
   void execute(const OutputCommand & command) override;
 
