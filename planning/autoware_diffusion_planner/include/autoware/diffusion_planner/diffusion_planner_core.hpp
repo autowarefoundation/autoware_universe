@@ -15,6 +15,7 @@
 #ifndef AUTOWARE__DIFFUSION_PLANNER__DIFFUSION_PLANNER_CORE_HPP_
 #define AUTOWARE__DIFFUSION_PLANNER__DIFFUSION_PLANNER_CORE_HPP_
 
+#include "autoware/diffusion_planner/camp_atom_materializer.hpp"
 #include "autoware/diffusion_planner/conversion/agent.hpp"
 #include "autoware/diffusion_planner/conversion/agent_history_resampler.hpp"
 #include "autoware/diffusion_planner/inference/guidance/centerline_guidance.hpp"
@@ -98,6 +99,8 @@ struct PlannerOutput
   TurnIndicatorsCommand turn_indicators_command;
   Float32MultiArray denoising_steps;
   std::unordered_map<std::string, std::vector<bool>> guidance_triggered;
+  std::size_t selected_candidate_index{0};
+  std::vector<double> camp_candidate_costs;
 };
 
 struct FrameContext
@@ -162,6 +165,8 @@ struct DiffusionPlannerParams
   bool ignore_neighbors;
   bool remap_unsupported_objects_to_pedestrian;
   double traffic_light_group_msg_timeout_seconds;
+  bool camp_enabled{false};
+  std::string camp_fixed_weight_model_path;
   int batch_size;
   std::vector<double> temperature_list;
   int64_t velocity_smoothing_window;
@@ -221,6 +226,16 @@ public:
   void resolve_model_paths();
 
   /**
+   * @brief Clear retained planning and observation history at an episode boundary.
+   *
+   *
+   * Loaded models, the map and the current route are preserved. Map/route changes and
+   * a
+   * backwards odometry clock also reset this history automatically.
+   */
+  void reset();
+
+  /**
    * @brief Prepare frame context for inference.
    *
    * @param ego_kinematic_state Current ego vehicle odometry
@@ -250,6 +265,8 @@ public:
    */
   InputDataMap create_input_data(const FrameContext & frame_context);
 
+  CampTensorContext capture_camp_tensor_context(const InputDataMap & input_data_map) const;
+
   /**
    * @brief Set the lanelet map context.
    *
@@ -262,7 +279,11 @@ public:
    *
    * @return true if model is loaded, false otherwise
    */
-  bool is_model_loaded() const { return diffusion_planner_inference_ != nullptr; }
+  bool is_model_loaded() const
+  {
+    return diffusion_planner_inference_ != nullptr &&
+           (!params_.camp_enabled || camp_model_.has_value());
+  }
 
   /**
    * @brief Check if the map is loaded.
@@ -313,8 +334,11 @@ public:
   /**
    * @brief Create all planner output messages from raw inference outputs.
    *
-   * Parses raw predictions, creates ego trajectory (batch 0), candidate trajectories
-   * for all batches, predicted objects for neighbor agents, and turn indicator command.
+   * Parses raw predictions, optionally ranks the unchanged candidate pool with CAMP,
+   * and
+   * creates the selected ego trajectory, all candidate trajectories, aligned
+   * predicted
+   * objects, and turn indicator command.
    *
    * @param inference_output Successful inference output.
    * @param frame_context Context of the current frame.
@@ -324,7 +348,8 @@ public:
    */
   PlannerOutput create_planner_output(
     const InferenceOutput & inference_output, const FrameContext & frame_context,
-    const rclcpp::Time & timestamp, const UUID & generator_uuid);
+    const rclcpp::Time & timestamp, const UUID & generator_uuid,
+    const std::optional<CampTensorContext> & camp_tensor_context = std::nullopt);
 
   /**
    * @brief Get the first traffic light on the route for debugging.
@@ -352,7 +377,11 @@ public:
    */
   const LaneletRoute::ConstSharedPtr & get_route() const { return route_ptr_; }
 
+  bool is_camp_enabled() const { return params_.camp_enabled; }
+
 private:
+  friend class DiffusionPlannerCoreTestPeer;
+
   // Parameters
   DiffusionPlannerParams params_;
   VehicleSpec vehicle_spec_;
@@ -385,6 +414,10 @@ private:
   std::map<lanelet::Id, TrafficSignalStamped> traffic_light_id_map_;
   std::vector<std::vector<std::vector<Eigen::Matrix4d>>> last_agent_poses_map_;
   std::optional<Eigen::Matrix4d> last_ego_to_map_transform_;
+  std::size_t last_selected_candidate_index_{0};
+  std::optional<rclcpp::Time> last_frame_time_;
+  std::optional<trajectory_ranker::CampFixedWeightModel> camp_model_;
+  std::optional<CampPreviousPlan> camp_previous_plan_;
 
   // Lanelet map
   LaneletRoute::ConstSharedPtr route_ptr_;
