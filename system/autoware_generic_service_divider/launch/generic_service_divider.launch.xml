@@ -1,7 +1,10 @@
 <launch>
   <arg name="config_file" default="$(find-pkg-share autoware_generic_service_divider)/config/generic_service_divider.param.yaml"/>
 
+  <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
+
   <node pkg="autoware_generic_service_divider" exec="autoware_generic_service_divider_node" name="generic_service_divider" output="screen">
+    <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
     <param from="$(var config_file)"/>
   </node>
 </launch>

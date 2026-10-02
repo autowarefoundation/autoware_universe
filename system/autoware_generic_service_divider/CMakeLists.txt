@@ -4,11 +4,9 @@ project(autoware_generic_service_divider)
 find_package(autoware_cmake REQUIRED)
 autoware_package()
 
-# Core library: GenericService, GenericClient, typesupport helpers, plugin base
+# Core library: plugin base (the generic service/client themselves now come from
+# autoware_agnocast_wrapper, which also gives this the runtime rclcpp/Agnocast switch)
 ament_auto_add_library(${PROJECT_NAME}_core SHARED
-  src/service_typesupport_helpers.cpp
-  src/generic_service.cpp
-  src/generic_client.cpp
   src/service_divider_plugin_base.cpp
 )
 
@@ -31,10 +29,11 @@ ament_auto_add_library(${PROJECT_NAME}_node_component SHARED
 )
 target_link_libraries(${PROJECT_NAME}_node_component ${PROJECT_NAME}_core)
 
-rclcpp_components_register_node(${PROJECT_NAME}_node_component
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}_node_component
   PLUGIN "generic_service_divider::GenericServiceDividerNode"
   EXECUTABLE ${PROJECT_NAME}_node
-  EXECUTOR MultiThreadedExecutor
+  ROS2_EXECUTOR MultiThreadedExecutor
+  AGNOCAST_EXECUTOR MultiThreadedAgnocastExecutor
 )
 
 pluginlib_export_plugin_description_file(${PROJECT_NAME} plugins.xml)
@@ -52,6 +51,7 @@ if(BUILD_TESTING)
     ${PROJECT_NAME}_plugins
   )
   ament_target_dependencies(test_generic_service_divider
+    autoware_agnocast_wrapper
     rclcpp
     pluginlib
     autoware_system_msgs

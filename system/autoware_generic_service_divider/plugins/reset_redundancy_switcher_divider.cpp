@@ -74,6 +74,18 @@ public:
     return r;
   }
 
+  void copy_request(void * destination, const void * source) const override
+  {
+    *static_cast<tier4_system_msgs::srv::ResetRedundancySwitcher::Request *>(destination) =
+      *static_cast<const tier4_system_msgs::srv::ResetRedundancySwitcher::Request *>(source);
+  }
+
+  void copy_response(void * destination, const void * source) const override
+  {
+    *static_cast<tier4_system_msgs::srv::ResetRedundancySwitcher::Response *>(destination) =
+      *static_cast<const tier4_system_msgs::srv::ResetRedundancySwitcher::Response *>(source);
+  }
+
 private:
   std::string input_name_;
   std::vector<OutputServiceConfig> outputs_;
