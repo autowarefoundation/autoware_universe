@@ -42,6 +42,10 @@ from geometry_msgs.msg import TransformStamped
 from nav_msgs.msg import Odometry
 import numpy
 import rclpy
+from rclpy.qos import QoSDurabilityPolicy
+from rclpy.qos import QoSHistoryPolicy
+from rclpy.qos import QoSProfile
+from rclpy.qos import QoSReliabilityPolicy
 from rosgraph_msgs.msg import Clock
 from sensor_msgs.msg import CameraInfo
 from sensor_msgs.msg import Imu
@@ -149,6 +153,10 @@ class carla_ros2_interface(object):
             # at low target accelerations.
             "min_positive_throttle": (rclpy.Parameter.Type.DOUBLE, 0.0),
             "min_positive_throttle_speed_threshold": (rclpy.Parameter.Type.DOUBLE, 0.8),
+            # Also decides whether camera sensors are spawned at all: without rendering
+            # they can produce no image, and on a server started without a renderer
+            # (CarlaUnreal.sh -nullrhi) spawning one takes the server down. See
+            # _skip_cameras_in_no_rendering_mode.
             "no_rendering_mode": (rclpy.Parameter.Type.BOOL, False),
             # Publish the CARLA ground-truth localization (kinematic_state and
             # the map->base_link TF) directly from the ego transform. Used by
@@ -286,6 +294,32 @@ class carla_ros2_interface(object):
         self.sub_vehicle_initialpose = self.ros2_node.create_subscription(
             PoseWithCovarianceStamped, "initialpose", self.initialpose_callback, 1
         )
+        # A publisher that latches its initial pose (TRANSIENT_LOCAL) and sends
+        # it once -- a scenario runner placing the ego, a replay script, a
+        # `ros2 topic pub --qos-durability transient_local` -- typically does so
+        # long before this node has a world to put an ego in. The volatile
+        # subscription above is compatible with such a publisher, so the two
+        # connect; but a volatile reader is not given the sample that was
+        # latched before it arrived, and a publisher that sends it once never
+        # sends it again. The pose is then lost and the ego stays wherever
+        # `spawn_point` put it, which defaults to a random point on the map.
+        #
+        # A second subscription asking for TRANSIENT_LOCAL is given that sample
+        # when it connects, whenever this node comes up. Both are needed: RViz's
+        # "2D Pose Estimate" publishes volatile, which a TRANSIENT_LOCAL reader
+        # is incompatible with and would never receive at all.
+        # https://design.ros2.org/articles/qos.html
+        self.sub_vehicle_initialpose_latched = self.ros2_node.create_subscription(
+            PoseWithCovarianceStamped,
+            "initialpose",
+            self.initialpose_callback,
+            QoSProfile(
+                depth=1,
+                history=QoSHistoryPolicy.KEEP_LAST,
+                reliability=QoSReliabilityPolicy.RELIABLE,
+                durability=QoSDurabilityPolicy.TRANSIENT_LOCAL,
+            ),
+        )
         self.sub_turn_indicators = self.ros2_node.create_subscription(
             TurnIndicatorsCommand,
             "/control/command/turn_indicators_cmd",
@@ -331,7 +365,10 @@ class carla_ros2_interface(object):
 
         self._register_sensor_configs(self.sensor_configs)
         self._create_sensor_publishers_from_registry()
-        self.sensors = {"sensors": self._build_sensor_specs(self.sensor_configs)}
+        sensor_specs = self._skip_cameras_in_no_rendering_mode(
+            self._build_sensor_specs(self.sensor_configs)
+        )
+        self.sensors = {"sensors": sensor_specs}
 
         self.logger.info(f"Configured {len(self.sensor_configs)} sensors from mapping")
 
@@ -395,6 +432,35 @@ class carla_ros2_interface(object):
             sensor_specs.append(spec)
 
         return sensor_specs
+
+    def _skip_cameras_in_no_rendering_mode(self, sensor_specs):
+        """Drop cameras from the CARLA spawn list while rendering is off.
+
+        no_rendering_mode turns the scene rendering off, so a camera could only ever return
+        an empty image. Worse, the same flag is what a renderer-less server
+        (CarlaUnreal.sh -nullrhi) is run with, and there spawning a camera **segfaults the
+        server**; every call after that fails with an opaque ``RuntimeError: std::exception``,
+        which buries the real cause. A client cannot detect such a server - its world settings,
+        blueprint library and sensor attributes are identical to a rendering one - so follow
+        no_rendering_mode and leave the cameras out of the spawn list. Their topics stay
+        advertised but silent; every other sensor is unaffected.
+
+        Only the sensors still bound for CARLA reach this point, so cameras handed to an
+        external renderer earlier are untouched.
+        """
+        if not self.param_values["no_rendering_mode"]:
+            return sensor_specs
+        kept = [spec for spec in sensor_specs if not spec["type"].startswith("sensor.camera")]
+        skipped = [spec["id"] for spec in sensor_specs if spec["type"].startswith("sensor.camera")]
+        if skipped:
+            self.logger.warning(
+                f"no_rendering_mode is set, so the camera sensors in the mapping "
+                f"({', '.join(skipped)}) are not spawned in CARLA: without rendering they can "
+                "produce no image, and on a server started without a renderer "
+                "(CarlaUnreal.sh -nullrhi) spawning one crashes the server. Their topics stay "
+                "silent."
+            )
+        return kept
 
     def __init__(self):
         # Initialize instance variables
@@ -1675,7 +1741,7 @@ class carla_ros2_interface(object):
             )
             return
 
-        if sensor_type == "sensor.camera.rgb":
+        if sensor_type.startswith("sensor.camera"):
             if not self.checkFrequency(key, timestamp):
                 self.sensor_registry.update_sensor_timestamp(key, timestamp)
                 self._submit_to_publish_worker(key, self.camera, measurement, key, timestamp)
