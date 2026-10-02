@@ -2,6 +2,20 @@
 Changelog for package autoware_dummy_diag_publisher
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* fix(design): align the simulator node designs with the packages they describe (`#13335 <https://github.com/autowarefoundation/autoware_universe/issues/13335>`_)
+  * fix(autoware_vehicle_door_simulator): drop the plugin field from the node design
+  The package builds its node with ament_auto_add_executable and registers no
+  component, so the design has an executable but no plugin.
+  * fix(autoware_dummy_diag_publisher): declare the parameters the launcher passes
+  The required diagnostics come from the system-side parameter files, so the
+  package defaults are empty and the node takes a second parameter file.
+  ---------
+* chore(dummy_diag_publisher): move package directory (`#13223 <https://github.com/autowarefoundation/autoware_universe/issues/13223>`_)
+* Contributors: Ryohsuke Mitsudome, Taekjin LEE, Takagi, Isamu
+
 0.52.0 (2026-06-30)
 -------------------
 

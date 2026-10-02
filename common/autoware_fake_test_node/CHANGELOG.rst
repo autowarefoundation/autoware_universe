@@ -2,6 +2,12 @@
 Changelog for package autoware_fake_test_node
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* chore(common): update package maintainers (`#13182 <https://github.com/autowarefoundation/autoware_universe/issues/13182>`_)
+* Contributors: Ryohsuke Mitsudome, Satoshi OTA
+
 0.52.0 (2026-06-30)
 -------------------
 

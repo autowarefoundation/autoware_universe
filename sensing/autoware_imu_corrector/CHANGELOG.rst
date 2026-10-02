@@ -2,6 +2,19 @@
 Changelog for package autoware_imu_corrector
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* refactor(sensing): move node design files into each package (`#13105 <https://github.com/autowarefoundation/autoware_universe/issues/13105>`_)
+* feat(imu_corrector): apply `agnocast_wrapper::Node` to `autoware_imu_corrector` (`#12865 <https://github.com/autowarefoundation/autoware_universe/issues/12865>`_)
+  * apply agnocast_wrapper::Node
+  * apply to gyro_bias_estimator
+  * style(pre-commit): autofix
+  * fix copilot review to add cmath and fix to disable test when agnocast enabled
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Koichi Imai, Ryohsuke Mitsudome, Taekjin LEE
+
 0.52.0 (2026-06-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

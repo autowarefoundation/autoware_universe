@@ -14,11 +14,14 @@
 
 import launch
 from launch.actions import DeclareLaunchArgument
+from launch.actions import IncludeLaunchDescription
 from launch.actions import OpaqueFunction
 from launch.actions import SetLaunchConfiguration
 from launch.conditions import IfCondition
 from launch.conditions import UnlessCondition
+from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
+from launch.substitutions import PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 import yaml
@@ -108,6 +111,7 @@ class SegmentationPointcloudFusion:
                 self.segmentation_pointcloud_fusion_sync_param,
                 self.segmentation_pointcloud_fusion_param,
             ],
+            additional_env={"LD_PRELOAD": LaunchConfiguration("ld_preload_value")},
         )
         return node
 
@@ -164,8 +168,21 @@ def generate_launch_description():
         "component_container_mt",
         condition=IfCondition(LaunchConfiguration("use_multithread")),
     )
+
+    agnocast_env = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            PathJoinSubstitution(
+                [
+                    FindPackageShare("autoware_agnocast_wrapper"),
+                    "launch",
+                    "agnocast_env.launch.py",
+                ]
+            )
+        ),
+    )
+
     return launch.LaunchDescription(
         launch_arguments
-        + [set_container_executable, set_container_mt_executable]
+        + [agnocast_env, set_container_executable, set_container_mt_executable]
         + [OpaqueFunction(function=launch_setup)]
     )

@@ -15,4 +15,30 @@ autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
 )
 
+if(BUILD_TESTING)
+  find_package(ament_cmake_ros REQUIRED)
+
+  # ROS-based tests can only run while agnocast is disabled: the node's pub/sub then go through rclcpp.
+  if(NOT "$ENV{ENABLE_AGNOCAST}" STREQUAL "1")
+    # Characterization test: drives RadarObjectsAdapter over its real topics. Runs in an isolated
+    # ROS domain so that it cannot interfere with other tests.
+    ament_add_ros_isolated_gtest(test_radar_objects_adapter_characterization
+      test/test_radar_objects_adapter_characterization.cpp
+      TIMEOUT 300
+    )
+    target_include_directories(test_radar_objects_adapter_characterization PRIVATE
+      ${CMAKE_CURRENT_SOURCE_DIR}/src
+    )
+    target_link_libraries(test_radar_objects_adapter_characterization
+      ${PROJECT_NAME}
+    )
+    ament_target_dependencies(test_radar_objects_adapter_characterization
+      autoware_agnocast_wrapper
+      autoware_perception_msgs
+      autoware_sensing_msgs
+      rclcpp
+    )
+  endif()
+endif()
+
 ament_auto_package(INSTALL_TO_SHARE launch config)

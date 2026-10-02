@@ -14,12 +14,13 @@
 #include "topic_relay_controller_node.hpp"
 
 #include <memory>
+#include <stdexcept>
 #include <string>
 
 namespace autoware::topic_relay_controller
 {
 TopicRelayController::TopicRelayController(const rclcpp::NodeOptions & options)
-: Node("topic_relay_controller", options), is_relaying_(true)
+: Node("topic_relay_controller", options), is_relaying_(true), throttle_period_(0, 0)
 {
   // Parameter
   node_param_.topic = declare_parameter<std::string>("topic");
@@ -34,6 +35,27 @@ TopicRelayController::TopicRelayController(const rclcpp::NodeOptions & options)
   node_param_.enable_keep_publishing = declare_parameter<bool>("enable_keep_publishing");
   if (node_param_.enable_keep_publishing)
     node_param_.update_rate = declare_parameter<int>("update_rate");
+  node_param_.enable_throttle = declare_parameter<bool>("enable_throttle", false);
+  if (node_param_.enable_throttle) {
+    node_param_.msgs_per_sec = declare_parameter<double>("msgs_per_sec");
+    if (node_param_.msgs_per_sec <= 0.0) {
+      throw std::invalid_argument("msgs_per_sec must be greater than 0");
+    }
+    throttle_period_ = rclcpp::Duration(rclcpp::Rate(node_param_.msgs_per_sec).period());
+    last_relayed_time_ = now();
+  }
+
+  // Both modes set the output rate, from opposite ends: enable_keep_publishing republishes the
+  // last value on a timer whether or not one arrived, enable_throttle forwards arrivals and drops
+  // the ones that come too soon. Combining them would leave the timer publishing at update_rate
+  // regardless of the throttle, so the throttle is the one that gives way.
+  if (node_param_.enable_throttle && node_param_.enable_keep_publishing) {
+    RCLCPP_ERROR(
+      get_logger(),
+      "enable_throttle and enable_keep_publishing are mutually exclusive. Ignoring "
+      "enable_throttle.");
+    node_param_.enable_throttle = false;
+  }
 
   if (node_param_.is_transform) {
     node_param_.frame_id = declare_parameter<std::string>("frame_id");
@@ -86,7 +108,7 @@ TopicRelayController::TopicRelayController(const rclcpp::NodeOptions & options)
 
           if (node_param_.enable_keep_publishing) {
             last_tf_topic_ = msg;
-          } else {
+          } else if (!node_param_.enable_throttle || is_throttle_period_elapsed()) {
             pub_transform_->publish(*msg);
           }
         }
@@ -103,7 +125,7 @@ TopicRelayController::TopicRelayController(const rclcpp::NodeOptions & options)
 
         if (node_param_.enable_keep_publishing) {
           last_topic_ = msg;
-        } else {
+        } else if (!node_param_.enable_throttle || is_throttle_period_elapsed()) {
           pub_topic_->publish(*msg);
         }
       });
@@ -121,6 +143,25 @@ TopicRelayController::TopicRelayController(const rclcpp::NodeOptions & options)
         }
       });
   }
+}
+
+bool TopicRelayController::is_throttle_period_elapsed()
+{
+  const auto stamp = now();
+
+  // A clock that jumps back (a replayed bag, a sim-time reset) would otherwise stall the relay
+  // until the clock caught up with the stale timestamp.
+  if (stamp < last_relayed_time_) {
+    RCLCPP_WARN(get_logger(), "Detected jump back in time, resetting the throttle period.");
+    last_relayed_time_ = stamp;
+  }
+
+  if (stamp - last_relayed_time_ < throttle_period_) {
+    return false;
+  }
+
+  last_relayed_time_ = stamp;
+  return true;
 }
 }  // namespace autoware::topic_relay_controller
 

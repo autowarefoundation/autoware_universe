@@ -2,6 +2,23 @@
 Changelog for package autoware_behavior_velocity_crosswalk_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* chore: update planning param.yaml comments (`#13061 <https://github.com/autowarefoundation/autoware_universe/issues/13061>`_)
+  update planning param.yaml comments
+* chore(planning): update package maintainers (`#13186 <https://github.com/autowarefoundation/autoware_universe/issues/13186>`_)
+* chore(pre-commit): update clang-format to v22.1.5 (`#13126 <https://github.com/autowarefoundation/autoware_universe/issues/13126>`_)
+  * chore(pre-commit): update clang-format to v22.1.5
+  * style(pre-commit): autofix
+  ---------
+* fix(behavior_velocity_crosswalk_module): use getHighestProbLabel instead of front() (`#12970 <https://github.com/autowarefoundation/autoware_universe/issues/12970>`_)
+  * fix: getHighestProbLabel not front
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Kento Yabuuchi, Mete Fatih Cırıt, Ryohsuke Mitsudome, Satoshi OTA, Taeseung Sohn
+
 0.52.0 (2026-06-30)
 -------------------
 

@@ -2,6 +2,93 @@
 Changelog for package autoware_traffic_light_arbiter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* build(traffic_light_perception): split core/node CMake targets and expose public core headers (`#13325 <https://github.com/autowarefoundation/autoware_universe/issues/13325>`_)
+  * refactor(autoware_traffic_light_category_merger): expose core header, split core/node CMake targets
+  Move traffic_light_category_merger.hpp into
+  include/autoware/traffic_light_category_merger/, and split the CMake
+  target into ${PROJECT_NAME} (core) and ${PROJECT_NAME}_node (Node
+  adapter linking the core). The Node header stays in src/.
+  No behavior change; colcon build + colcon test pass (7 tests, 0
+  failures).
+  * refactor(autoware_traffic_light_selector): expose core header, split core/node CMake targets
+  Move traffic_light_selector.hpp into
+  include/autoware/traffic_light_selector/, keeping
+  traffic_light_selector_utils.hpp private in src/ (not part of the
+  public API). Split the CMake target into ${PROJECT_NAME} (core:
+  selector + utils) and ${PROJECT_NAME}_node (Node adapter linking the
+  core).
+  No behavior change; colcon build + colcon test pass (7 tests, 0
+  failures).
+  * refactor(autoware_traffic_light_map_based_detector): expose core header, split core/node CMake targets
+  Move traffic_light_map_based_detector.hpp into
+  include/autoware/traffic_light_map_based_detector/, keeping
+  traffic_light_map_based_detector_process.hpp private in src/ (not
+  part of the public API). Since the public header declares functions
+  taking image_geometry::PinholeCameraModel, add that include directly
+  to the header instead of pulling it in transitively via the private
+  process header. Split the CMake target into ${PROJECT_NAME} (core:
+  detector + process) and ${PROJECT_NAME}_node (Node adapter linking
+  the core).
+  No behavior change; colcon build + colcon test pass (7 tests, 0
+  failures).
+  * refactor(autoware_tensorrt_yolox): build TrtYoloXDetector as part of the core library
+  tensorrt_yolox_detector.cpp implements core detection logic and was
+  being compiled into ${PROJECT_NAME}_node (the Node adapter target)
+  instead of ${PROJECT_NAME} (the core library). Move it to the core
+  target so the core library does not depend on the node target for
+  its own logic.
+  * refactor(autoware_traffic_light_classifier): expose TrafficLightClassifier as the sole public header
+  - Move traffic_light_classifier.hpp to include/autoware/traffic_light_classifier/
+  and forward-declare ClassifierInterface instead of including
+  classifier/classifier_interface.hpp, so the classifier/*.hpp backends and
+  classifier_params.hpp / traffic_light_classifier_node.hpp stay private under src/.
+  - Split the CMake library target into ${PROJECT_NAME} (ROS-free classification
+  core) and ${PROJECT_NAME}_node (rclcpp::Node adapter layer), mirroring the
+  core/node separation already present in src/.
+  - single_image_debug_inference_node and the node-level integration test now
+  link against both libraries instead of recompiling every source file.
+  * refactor(autoware_traffic_light_multi_camera_fusion): move headers under include/, split core/node CMake targets
+  * refactor(autoware_traffic_light_arbiter): split core/node CMake targets
+  * refactor(autoware_image_transport_decompressor): move core logic header to include, node header to src
+  * refactor(autoware_crosswalk_traffic_light_estimator): move core logic header to include, node header to src, split core/node CMake targets
+  ---------
+* refactor(autoware_traffic_light_arbiter): accept source_priority as string at the boundary (`#13271 <https://github.com/autowarefoundation/autoware_universe/issues/13271>`_)
+  Node's source_priority parameter is a string, but TrafficLightArbiter
+  and SignalMatchValidator previously required callers to pre-convert it
+  into the SourcePriority enum themselves. Both constructors now accept
+  the raw std::string directly and convert it internally via the new
+  to_source_priority() free function, so the enum-vs-string translation
+  is no longer duplicated at each call site. Internal storage and
+  comparisons still use SourcePriority.
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+* refactor(autoware_traffic_light_arbiter): rename classes to drop Core suffix (`#13016 <https://github.com/autowarefoundation/autoware_universe/issues/13016>`_)
+  * refactor(autoware_traffic_light_arbiter): rename classes to drop Core suffix
+  Line up file names with class names: the ROS-free arbitration logic is now the
+  canonical TrafficLightArbiter in traffic_light_arbiter.{hpp,cpp}, and the thin
+  ROS node is TrafficLightArbiterNode in traffic_light_arbiter_node.{hpp,cpp}.
+  Previously the base-named file held the Node while the core carried a Core
+  suffix, so names were crossed.
+  Pure rename/move, no behavior change. The registered component becomes
+  autoware::traffic_light::TrafficLightArbiterNode, but the executable name
+  (traffic_light_arbiter_node), package name, and launch entry are unchanged, so
+  downstream launch integration is unaffected.
+  * docs(autoware_traffic_light_arbiter): describe arbiter by capability, not as a node
+  The README attributed merging and signal-match validation to "a node", but that behavior lives in the arbitration core; the node is only the ROS I/O wrapper. Describe both by capability so the doc matches the Node/Core split.
+  ---------
+* test(autoware_traffic_light_arbiter): consolidate node tests into a single integration suite (`#12931 <https://github.com/autowarefoundation/autoware_universe/issues/12931>`_)
+  Consolidate autoware_traffic_light_arbiter node tests into a single integration
+  suite. ROS wiring (subscriptions, parameters, publish, map gating, etc.) is
+  covered by the new integration suite, while exhaustive arbitration logic stays
+  in the ROS-free core suite (~95% coverage maintained). Adopt
+  ament_add_ros_isolated_gtest to prevent DDS cross-talk, fold test map
+  construction into publish_map, and rename helpers/comments to match reality.
+* refactor(autoware_traffic_light_arbiter): clean up arbiter core and validator interface (`#12899 <https://github.com/autowarefoundation/autoware_universe/issues/12899>`_)
+  Refactor SignalMatchValidator usage in autoware_traffic_light_arbiter: add const-correctness to query methods, remove a redundant state-tracking member in favor of deriving mode from the validator pointer, rename a field for clarity, and extract the perception staleness-check logic into a dedicated helper function.
+* Contributors: Ryohsuke Mitsudome, Takahisa Ishikawa, Takayuki AKAMINE
+
 0.52.0 (2026-06-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

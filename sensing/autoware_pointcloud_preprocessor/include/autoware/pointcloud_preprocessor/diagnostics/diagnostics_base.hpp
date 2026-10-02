@@ -20,16 +20,21 @@
 
 namespace autoware::pointcloud_preprocessor
 {
-class DiagnosticsBase
+template <typename NodeT = rclcpp::Node>
+class GenericDiagnosticsBase
 {
 public:
-  virtual ~DiagnosticsBase() = default;
+  using DiagnosticsInterfaceT = autoware_utils::BasicDiagnosticsInterface<NodeT>;
 
-  virtual void add_to_interface(autoware_utils::DiagnosticsInterface & interface) const = 0;
+  virtual ~GenericDiagnosticsBase() = default;
+
+  virtual void add_to_interface(DiagnosticsInterfaceT & interface) const = 0;
 
   [[nodiscard]] virtual std::optional<std::pair<int, std::string>> evaluate_status() const
   {
     return std::nullopt;
   }
 };
+
+using DiagnosticsBase = GenericDiagnosticsBase<rclcpp::Node>;
 }  // namespace autoware::pointcloud_preprocessor

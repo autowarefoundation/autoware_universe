@@ -1,0 +1,24 @@
+<launch>
+  <arg name="param_path" default="$(find-pkg-share autoware_mrm_steering_hold_stop_operator)/config/mrm_steering_hold_stop_operator.param.yaml"/>
+
+  <!-- Inputs -->
+  <arg name="input_trigger" default="/system/in_lane_stop/trigger"/>
+  <arg name="input_steering_status" default="/vehicle/status/steering_status"/>
+  <arg name="input_kinematic_state" default="/localization/kinematic_state"/>
+  <arg name="input_acceleration" default="/localization/acceleration"/>
+
+  <!-- Outputs -->
+  <arg name="output_control" default="/control/control_command_gate/inputs/in_lane_stop/control"/>
+  <arg name="output_debug_status" default="/control/mrm_steering_hold_stop_operator/debug/status"/>
+
+  <node pkg="autoware_mrm_steering_hold_stop_operator" exec="autoware_mrm_steering_hold_stop_operator_node" name="mrm_steering_hold_stop_operator" output="screen">
+    <param from="$(var param_path)"/>
+
+    <remap from="~/input/trigger" to="$(var input_trigger)"/>
+    <remap from="~/input/steering_status" to="$(var input_steering_status)"/>
+    <remap from="~/input/kinematic_state" to="$(var input_kinematic_state)"/>
+    <remap from="~/input/acceleration" to="$(var input_acceleration)"/>
+    <remap from="~/output/control" to="$(var output_control)"/>
+    <remap from="~/debug/status" to="$(var output_debug_status)"/>
+  </node>
+</launch>
