@@ -24443,7 +24443,7 @@ and reports how many it skipped through a throttled warning.</p>
 <li><code>default_sensor_kit_name</code>: Default sensor kit to use (e.g., <code>carla_sensor_kit_description</code>)</li>
 <li><code>sensor_mappings</code>: Maps each sensor to CARLA type and ROS topics</li>
 <li><code>enabled_sensors</code>: List of sensors to spawn in CARLA</li>
-<li><code>vehicle_config</code> (optional): Vehicle parameters like wheelbase</li>
+<li><code>vehicle_config</code> (optional): Vehicle parameters like wheelbase. <code>wheelbase</code> (default 2.85 m) also sets where the bridge puts <code>base_link</code>: <code>wheelbase / 2</code> behind the CARLA actor origin (vehicle center), for the sensors as well as for the GNSS pose, the ground truth localization and the RViz initial pose. <code>spawn_point</code> places the actor origin.</li>
 </ul>
 <p>Example sensor mapping:</p>
 <div class="highlight"><pre><span></span><code><span class="nt">sensor_mappings</span><span class="p">:</span>
