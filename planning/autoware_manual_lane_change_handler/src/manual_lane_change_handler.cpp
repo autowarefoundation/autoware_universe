@@ -87,11 +87,13 @@ ManualLaneChangeHandler::sort_primitives_left_to_right(
   sorted_primitives.push_back(preferred_primitive);
 
   // Walk right lanes
-  for (auto right = route_handler.getRightLanelet(current, true); right;
-       right = route_handler.getRightLanelet(*right, true)) {
-    if (auto match = find_primitive(right->id())) {
+  auto right = route_handler.getRightLanelet(current, true);
+  while (right.has_value()) {
+    const auto right_lanelet = right.value();
+    if (auto match = find_primitive(right_lanelet.id())) {
       sorted_primitives.push_back(*match);
     }
+    right = route_handler.getRightLanelet(right_lanelet, true);
   }
 
   std::vector<autoware_planning_msgs::msg::LaneletPrimitive> result{
