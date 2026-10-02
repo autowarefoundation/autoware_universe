@@ -44,8 +44,8 @@ class SensorLoop(object):
         self.timestamp_last_run = 0.0
         self.timeout = 20.0
         self.tick_follower = False
-        # False when another client owns the ego and drives it itself.
-        self.apply_ego_control = True
+        # True when another client owns the ego and drives it itself.
+        self.attach_to_existing_ego = False
 
     def _stop_loop(self):
         self.running = False
@@ -59,7 +59,7 @@ class SensorLoop(object):
                 ego_action = self.sensor()
             except SensorReceivedNoData as e:
                 raise RuntimeError(e)
-            if self.apply_ego_control:
+            if not self.attach_to_existing_ego:
                 self.ego_actor.apply_control(ego_action)
         if self.running and not self.tick_follower:
             CarlaDataProvider.get_world().tick()
@@ -509,7 +509,7 @@ class InitializeInterface(object):
         self.bridge_loop.start_system_time = time.time()
         self.bridge_loop.start_game_time = GameTime.get_time()
         self.bridge_loop.tick_follower = self.tick_follower
-        self.bridge_loop.apply_ego_control = not self.attach_to_existing_ego
+        self.bridge_loop.attach_to_existing_ego = self.attach_to_existing_ego
         self.bridge_loop.running = True
         if self.tick_follower:
             self._run_bridge_follower()
