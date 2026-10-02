@@ -15,6 +15,7 @@
 
   <depend>autoware_adapi_specs</depend>
   <depend>autoware_adapi_v1_msgs</depend>
+  <depend>autoware_agnocast_wrapper</depend>
   <depend>autoware_component_interface_utils</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
