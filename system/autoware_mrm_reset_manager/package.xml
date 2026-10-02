@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_mrm_reset_manager</name>
-  <version>0.1.0</version>
+  <version>0.53.0</version>
   <description>Manages MRM reset orchestration by coordinating AD API states and forwarding reset requests to system services.</description>
 
   <maintainer email="tetsuhiro.kawaguchi@tier4.jp">Tetsuhiro Kawaguchi</maintainer>

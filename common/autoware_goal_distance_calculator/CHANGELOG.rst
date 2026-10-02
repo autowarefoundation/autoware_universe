@@ -2,6 +2,19 @@
 Changelog for package autoware_goal_distance_calculator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* fix(autoware_goal_distance_calculator): declare the route input as a remap target (`#13333 <https://github.com/autowarefoundation/autoware_universe/issues/13333>`_)
+  The route subscriber is pinned to /planning/mission_planning/route with
+  global:, which keeps the port out of the design graph: link_manager skips any
+  connection whose target is a global input port and the exporter emits no remap.
+  remap_target: keeps the same fixed topic name while letting the port take part
+  in the graph.
+* refactor(common): move node design files into each package (`#13097 <https://github.com/autowarefoundation/autoware_universe/issues/13097>`_)
+  Co-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>
+* Contributors: Ryohsuke Mitsudome, Taekjin LEE
+
 0.52.0 (2026-06-30)
 -------------------
 

@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="3">
   <name>autoware_trajectory_modifier</name>
-  <version>0.52.0</version>
+  <version>0.53.0</version>
   <description>The autoware_trajectory_modifier package for combined trajectory modification and optimization</description>
 
   <maintainer email="maxime.clement@tier4.jp">Maxime CLEMENT</maintainer>

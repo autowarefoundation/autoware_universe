@@ -2,6 +2,27 @@
 Changelog for package autoware_manual_lane_change_handler
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* fix(autoware_manual_lane_change_handler): added a new maintainer (`#13273 <https://github.com/autowarefoundation/autoware_universe/issues/13273>`_)
+  Added new maintainer
+* fix(planning, control): point design param_files at the packages that install them (`#13219 <https://github.com/autowarefoundation/autoware_universe/issues/13219>`_)
+  BehaviorPathPlanner listed its plugin modules' param files as relative
+  paths, resolving against the host node package; each module package
+  installs its own config. PlanningValidator referenced its checker
+  plugins' param files under the host package with a planning_validator\_
+  filename prefix the plugins do not use. TrajectoryFollower referenced
+  config/ where the package installs param/, and controller files that
+  exist per controller type (mpc, pid). ManualLaneChangeHandler declared
+  a param file that does not exist; the node declares no parameters.
+  The run_out module ships a config directory that ament_auto_package()
+  did not install.
+  Co-authored-by: Claude Fable 5 <noreply@anthropic.com>
+* refactor(planning): move node design files into each package (`#13102 <https://github.com/autowarefoundation/autoware_universe/issues/13102>`_)
+  Co-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>
+* Contributors: Arjun Jagdish Ram, Ryohsuke Mitsudome, Taekjin LEE
+
 0.52.0 (2026-06-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

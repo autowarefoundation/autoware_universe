@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_redundancy_switcher_interface_plugins</name>
-  <version>0.1.0</version>
+  <version>0.53.0</version>
   <description>IAdapterPlugin implementations for autoware_redundancy_switcher_interface. Includes RedundancySwitcherAdapter (for https://github.com/tier4/redundancy_switcher via UDS protocol) and NonRedundantSwitcherAdapter (for single-ECU non-redundant systems).</description>
   <maintainer email="tetsuhiro.kawaguchi@tier4.jp">Tetsuhiro Kawaguchi</maintainer>
   <maintainer email="mokoto.kurihara@tier4.jp">Mokoto Kurihara</maintainer>

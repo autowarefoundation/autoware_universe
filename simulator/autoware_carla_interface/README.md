@@ -159,7 +159,7 @@ All the key parameters can be configured in `autoware_carla_interface.launch.xml
 | `max_real_delta_seconds`          | double | 0.05                                                                              | Parameter to limit the simulation speed below `fixed_delta_seconds`                                                                                                                                                                                                                                                                                                                 |
 | `tick_follower`                   | bool   | False                                                                             | If True, the bridge does not tick the CARLA world and instead follows the frames ticked by another client. See [Multi-client co-simulation](#multi-client-co-simulation).                                                                                                                                                                                                           |
 | `carla_map`                       | string | ""                                                                                | Explicit CARLA level name. When non-empty it overrides the name derived from `map_path`; useful for CARLA 0.10 levels whose name differs from the Autoware map directory. Empty reproduces the current behavior.                                                                                                                                                                    |
-| `no_rendering_mode`               | bool   | False                                                                             | Disable CARLA scene rendering via world settings for headless/faster simulation. Applied unconditionally on world load, so the default `False` (re-)enables rendering even if the server was started headless; set `True` to keep rendering off.                                                                                                                                    |
+| `no_rendering_mode`               | bool   | False                                                                             | Disable CARLA scene rendering via world settings for headless/faster simulation. Applied unconditionally on world load, so the default `False` (re-)enables rendering even if the server was started headless; set `True` to keep rendering off. Camera sensors are not spawned while this is set, see [Rendering-less CARLA servers](#rendering-less-carla-servers).               |
 | `force_load_world`                | bool   | False                                                                             | Always reload the world with `client.load_world()` instead of `load_world_if_different()`. Default False reproduces the current call (with a version-tolerant fallback).                                                                                                                                                                                                            |
 | `map_origin_x`                    | double | 0.0                                                                               | X offset from the CARLA world origin to the Autoware map frame origin, for levels authored with their own local origin. Default 0.0 is the identity (no change).                                                                                                                                                                                                                    |
 | `map_origin_y`                    | double | 0.0                                                                               | Y offset from the CARLA world origin to the Autoware map frame origin. Default 0.0 is the identity (no change).                                                                                                                                                                                                                                                                     |
@@ -266,7 +266,7 @@ Maps Autoware sensors to CARLA sensor types and parameters. Key sections:
 - `default_sensor_kit_name`: Default sensor kit to use (e.g., `carla_sensor_kit_description`)
 - `sensor_mappings`: Maps each sensor to CARLA type and ROS topics
 - `enabled_sensors`: List of sensors to spawn in CARLA
-- `vehicle_config` (optional): Vehicle parameters like wheelbase
+- `vehicle_config` (optional): Vehicle parameters like wheelbase. `wheelbase` (default 2.85 m) also sets where the bridge puts `base_link`: `wheelbase / 2` behind the CARLA actor origin (vehicle center), for the sensors as well as for the GNSS pose, the ground truth localization and the RViz initial pose. `spawn_point` places the actor origin.
 
 Example sensor mapping:
 
@@ -297,6 +297,11 @@ reads, so it costs no information at all. A 1600x900 frame is 5,760,000 bytes as
 `bgra8`, 4,320,000 bytes as `bgr8` and 1,440,000 bytes as `mono8`.
 
 For CARLA sensor parameters, see [CARLA Sensor Reference](https://carla.readthedocs.io/en/latest/ref_sensors/).
+
+A `carla_type` of any `sensor.camera.*` is published as a camera: CARLA's depth
+and semantic segmentation cameras deliver the same BGRA frame through the same
+callback as the RGB one, and are published on the mapping's `topic_image` and
+`topic_info` with the encoded values untouched.
 
 ##### Capture Rate
 
@@ -383,6 +388,25 @@ ros2 launch autoware_launch e2e_simulator.launch.xml \
 ```
 
 Note that with this configuration, features that depend on the surround cameras (such as the multi-camera RViz view) are unavailable.
+
+##### Rendering-less CARLA servers
+
+A CARLA server started without a renderer (`CarlaUnreal.sh -nullrhi`) **crashes as soon as a camera sensor is spawned on it**. Everything the bridge asks of CARLA afterwards fails with an opaque `RuntimeError: std::exception`, which makes the original cause hard to recognise in the logs. The ray-cast LiDAR, by contrast, needs no renderer and keeps producing points, so such a server is a practical way to run LiDAR-only closed-loop tests without a display.
+
+A client cannot detect a renderer-less server: its world settings, blueprint library and sensor attributes are identical to a rendering one. Say so with `no_rendering_mode`, which already means "this run does not render":
+
+```bash
+ros2 launch autoware_launch e2e_simulator.launch.xml \
+    map_path:=$HOME/autoware_map/Town01 \
+    vehicle_model:=sample_vehicle \
+    sensor_model:=carla_sensor_kit \
+    simulator_type:=carla \
+    no_rendering_mode:=True
+```
+
+With `no_rendering_mode:=True` the cameras in the sensor mapping are **not spawned in CARLA**, and the sensors that work without rendering (LiDAR, IMU, GNSS) are spawned as usual. The skipped cameras are named in a warning, and their topics stay advertised but silent. No separate camera-free sensor mapping is needed: the same mapping works with and without rendering.
+
+This also fixes the plain `no_rendering_mode:=True` case on a rendering server, where cameras used to be spawned only to return empty images.
 
 ### World Loading
 
