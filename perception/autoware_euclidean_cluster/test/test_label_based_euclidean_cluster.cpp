@@ -30,7 +30,9 @@
 #include <cstdint>
 #include <cstring>
 #include <memory>
+#include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace autoware::euclidean_cluster
@@ -95,6 +97,18 @@ protected:
     return msg;
   }
 
+  pcl::PointCloud<PointXYZCPE> preprocess(
+    const sensor_msgs::msg::PointCloud2 & input, const float min_probability = 0.0F)
+  {
+    PointCloudPreprocessor preprocessor(min_probability);
+    auto result = preprocessor.process(input);
+    if (!result) {
+      ADD_FAILURE() << "Preprocessing failed: " << result.error();
+      return {};
+    }
+    return std::move(*result);
+  }
+
   static constexpr std::uint8_t kCarClassId =
     static_cast<std::uint8_t>(PointCloudClassification::CAR);
 };
@@ -106,13 +120,13 @@ protected:
 TEST_F(LabelBasedEuclideanClusterTest, EmptyPointCloudReturnsEmptyObjects)
 {
   LabelBasedEuclideanCluster cluster(
-    0.0f, ShapePolicy::ALL_POLYGON, default_cluster_,
+    ShapePolicy::ALL_POLYGON, default_cluster_,
     std::unordered_map<uint8_t, std::shared_ptr<EuclideanClusterInterface>>{}, shape_estimator_);
 
   auto pc = create_pointcloud({}, {}, {});
 
   // Act
-  auto result = cluster.process(pc);
+  auto result = cluster.process(preprocess(pc));
 
   // Assert
   ASSERT_TRUE(result.has_value());
@@ -123,7 +137,7 @@ TEST_F(LabelBasedEuclideanClusterTest, EmptyPointCloudReturnsEmptyObjects)
 TEST_F(LabelBasedEuclideanClusterTest, PointCloudWithDefaultClassIdUsesCarLabel)
 {
   LabelBasedEuclideanCluster cluster(
-    0.0f, ShapePolicy::ALL_POLYGON, default_cluster_,
+    ShapePolicy::ALL_POLYGON, default_cluster_,
     std::unordered_map<uint8_t, std::shared_ptr<EuclideanClusterInterface>>{}, shape_estimator_);
 
   // Create enough points to potentially form a cluster
@@ -137,7 +151,7 @@ TEST_F(LabelBasedEuclideanClusterTest, PointCloudWithDefaultClassIdUsesCarLabel)
   auto pc = create_pointcloud(x_coords, y_coords, z_coords);
 
   // Act
-  auto result = cluster.process(pc);
+  auto result = cluster.process(preprocess(pc));
 
   // Assert
   ASSERT_TRUE(result.has_value());
@@ -151,7 +165,7 @@ TEST_F(LabelBasedEuclideanClusterTest, PointCloudWithDefaultClassIdUsesCarLabel)
 TEST_F(LabelBasedEuclideanClusterTest, PointsAreGroupedByLabel)
 {
   LabelBasedEuclideanCluster cluster(
-    0.0f, ShapePolicy::ALL_POLYGON, default_cluster_,
+    ShapePolicy::ALL_POLYGON, default_cluster_,
     std::unordered_map<uint8_t, std::shared_ptr<EuclideanClusterInterface>>{}, shape_estimator_);
 
   // Create two well-separated clusters: car at origin and pedestrian at (5,0)
@@ -176,7 +190,7 @@ TEST_F(LabelBasedEuclideanClusterTest, PointsAreGroupedByLabel)
     x_vals, y_vals, z_vals, std::vector<uint8_t>(class_vals.begin(), class_vals.end()), prob_vals);
 
   // Act
-  auto result = cluster.process(pc);
+  auto result = cluster.process(preprocess(pc));
 
   // Assert - should have clusters for both classes
   ASSERT_TRUE(result.has_value());
@@ -207,7 +221,7 @@ TEST_F(LabelBasedEuclideanClusterTest, PerLabelMinimumSizeFiltersTinyTruckButKee
   auto hazard_cluster =
     std::make_shared<VoxelGridBasedEuclideanCluster>(false, 2, 1.0, 0.1, 1, 10, 100, 10000, 0.0F);
   LabelBasedEuclideanCluster cluster(
-    0.0f, ShapePolicy::ALL_POLYGON, default_cluster_,
+    ShapePolicy::ALL_POLYGON, default_cluster_,
     std::unordered_map<uint8_t, std::shared_ptr<EuclideanClusterInterface>>{
       {truck_object_label, truck_cluster},
       {hazard_object_label, hazard_cluster},
@@ -226,7 +240,7 @@ TEST_F(LabelBasedEuclideanClusterTest, PerLabelMinimumSizeFiltersTinyTruckButKee
       hazard_point_label,
     });
 
-  const auto result = cluster.process(pc);
+  const auto result = cluster.process(preprocess(pc));
 
   ASSERT_TRUE(result.has_value());
   ASSERT_EQ(result->objects.objects.size(), 1U);
@@ -240,10 +254,6 @@ TEST_F(LabelBasedEuclideanClusterTest, PerLabelMinimumSizeFiltersTinyTruckButKee
 
 TEST_F(LabelBasedEuclideanClusterTest, PointsBelowMinProbabilityAreFiltered)
 {
-  LabelBasedEuclideanCluster cluster(
-    0.8f, ShapePolicy::ALL_POLYGON, default_cluster_,
-    std::unordered_map<uint8_t, std::shared_ptr<EuclideanClusterInterface>>{}, shape_estimator_);
-
   // Create points with varying probabilities
   auto pc = create_pointcloud(
     {0.0f, 0.1f, 0.2f, 0.3f},  // x
@@ -254,18 +264,22 @@ TEST_F(LabelBasedEuclideanClusterTest, PointsBelowMinProbabilityAreFiltered)
   );
 
   // Act
-  auto result = cluster.process(pc);
+  PointCloudPreprocessor preprocessor(0.8F);
+  const auto result = preprocessor.process(pc);
 
   // Assert - only points with prob >= 0.8 should be kept (indices 1, 3)
-  // These should form a cluster or be filtered out if too small
   ASSERT_TRUE(result.has_value());
-  EXPECT_LE(result->objects.objects.size(), 2U);
+  ASSERT_EQ(result->size(), 2U);
+  EXPECT_FLOAT_EQ(result->points[0].x, 0.1F);
+  EXPECT_FLOAT_EQ(result->points[0].probability, 0.9F);
+  EXPECT_FLOAT_EQ(result->points[1].x, 0.3F);
+  EXPECT_FLOAT_EQ(result->points[1].probability, 0.95F);
 }
 
 TEST_F(LabelBasedEuclideanClusterTest, AverageProbabilityIsCorrect)
 {
   LabelBasedEuclideanCluster cluster(
-    0.0f, ShapePolicy::ALL_POLYGON, default_cluster_,
+    ShapePolicy::ALL_POLYGON, default_cluster_,
     std::unordered_map<uint8_t, std::shared_ptr<EuclideanClusterInterface>>{}, shape_estimator_);
 
   // Create cluster with known probabilities
@@ -284,7 +298,7 @@ TEST_F(LabelBasedEuclideanClusterTest, AverageProbabilityIsCorrect)
   auto pc = create_pointcloud(x_vals, y_vals, z_vals, class_ids, prob_vals);
 
   // Act
-  auto result = cluster.process(pc);
+  auto result = cluster.process(preprocess(pc));
 
   // Assert
   ASSERT_TRUE(result.has_value());
@@ -299,7 +313,7 @@ TEST_F(LabelBasedEuclideanClusterTest, AverageProbabilityIsCorrect)
 TEST_F(LabelBasedEuclideanClusterTest, ShapeIsPopulated)
 {
   LabelBasedEuclideanCluster cluster(
-    0.0f, ShapePolicy::ALL_POLYGON, default_cluster_,
+    ShapePolicy::ALL_POLYGON, default_cluster_,
     std::unordered_map<uint8_t, std::shared_ptr<EuclideanClusterInterface>>{}, shape_estimator_);
 
   // Create a reasonable cluster
@@ -315,7 +329,7 @@ TEST_F(LabelBasedEuclideanClusterTest, ShapeIsPopulated)
   auto pc = create_pointcloud(x_vals, y_vals, z_vals, class_ids);
 
   // Act
-  auto result = cluster.process(pc);
+  auto result = cluster.process(preprocess(pc));
 
   // Assert
   ASSERT_TRUE(result.has_value());
@@ -331,7 +345,7 @@ TEST_F(LabelBasedEuclideanClusterTest, ShapeIsPopulated)
 TEST_F(LabelBasedEuclideanClusterTest, InvalidClassificationsAreOutputAsSegments)
 {
   LabelBasedEuclideanCluster cluster(
-    0.0f, ShapePolicy::ALL_POLYGON, default_cluster_,
+    ShapePolicy::ALL_POLYGON, default_cluster_,
     std::unordered_map<uint8_t, std::shared_ptr<EuclideanClusterInterface>>{}, shape_estimator_);
 
   auto pc = create_pointcloud(
@@ -343,7 +357,7 @@ TEST_F(LabelBasedEuclideanClusterTest, InvalidClassificationsAreOutputAsSegments
   );
 
   // Act
-  auto result = cluster.process(pc);
+  auto result = cluster.process(preprocess(pc));
 
   ASSERT_TRUE(result.has_value());
   EXPECT_EQ(result->segments.width, 2U);
@@ -355,7 +369,7 @@ TEST_F(LabelBasedEuclideanClusterTest, InvalidClassificationsAreOutputAsSegments
 TEST_F(LabelBasedEuclideanClusterTest, SemanticNonObjectLabelsAreOutputAsSegments)
 {
   LabelBasedEuclideanCluster cluster(
-    0.0f, ShapePolicy::ALL_POLYGON, default_cluster_,
+    ShapePolicy::ALL_POLYGON, default_cluster_,
     std::unordered_map<uint8_t, std::shared_ptr<EuclideanClusterInterface>>{}, shape_estimator_);
 
   const auto flat_surface = static_cast<std::uint8_t>(PointCloudClassification::FLAT_SURFACE);
@@ -363,7 +377,7 @@ TEST_F(LabelBasedEuclideanClusterTest, SemanticNonObjectLabelsAreOutputAsSegment
     {0.0f, 0.1f, 0.2f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f},
     {flat_surface, flat_surface, flat_surface}, {0.9f, 0.8f, 0.7f});
 
-  const auto result = cluster.process(pc);
+  const auto result = cluster.process(preprocess(pc));
 
   ASSERT_TRUE(result.has_value());
   EXPECT_TRUE(result->objects.objects.empty());
@@ -376,27 +390,20 @@ TEST_F(LabelBasedEuclideanClusterTest, SemanticNonObjectLabelsAreOutputAsSegment
 
 TEST_F(LabelBasedEuclideanClusterTest, ReturnsErrorWhenRequiredFieldsAreMissing)
 {
-  LabelBasedEuclideanCluster cluster(
-    0.0f, ShapePolicy::ALL_POLYGON, default_cluster_,
-    std::unordered_map<uint8_t, std::shared_ptr<EuclideanClusterInterface>>{}, shape_estimator_);
-
   sensor_msgs::msg::PointCloud2 pc;
   pc.height = 1;
   pc.width = 1;
   pc.is_dense = true;
   // Intentionally missing x/y/z field definitions
 
-  const auto result = cluster.process(pc);
+  PointCloudPreprocessor preprocessor(0.0F);
+  const auto result = preprocessor.process(pc);
   ASSERT_FALSE(result.has_value());
   EXPECT_FALSE(result.error().empty());
 }
 
 TEST_F(LabelBasedEuclideanClusterTest, ReturnsErrorWhenLayoutIsNotPointXYZCPE)
 {
-  LabelBasedEuclideanCluster cluster(
-    0.0f, ShapePolicy::ALL_POLYGON, default_cluster_,
-    std::unordered_map<uint8_t, std::shared_ptr<EuclideanClusterInterface>>{}, shape_estimator_);
-
   // A PointXYZI cloud carries x/y/z but is not a PointXYZCPE cloud.
   sensor_msgs::msg::PointCloud2 pc;
   pc.height = 1;
@@ -407,39 +414,34 @@ TEST_F(LabelBasedEuclideanClusterTest, ReturnsErrorWhenLayoutIsNotPointXYZCPE)
   pc.row_step = pc.point_step * pc.width;
   pc.data.resize(pc.row_step);
 
-  const auto result = cluster.process(pc);
+  PointCloudPreprocessor preprocessor(0.0F);
+  const auto result = preprocessor.process(pc);
   ASSERT_FALSE(result.has_value());
   EXPECT_FALSE(result.error().empty());
 }
 
 TEST_F(LabelBasedEuclideanClusterTest, ReturnsErrorWhenPointStepDoesNotMatchPointXYZCPE)
 {
-  LabelBasedEuclideanCluster cluster(
-    0.0f, ShapePolicy::ALL_POLYGON, default_cluster_,
-    std::unordered_map<uint8_t, std::shared_ptr<EuclideanClusterInterface>>{}, shape_estimator_);
-
   // The PointXYZCPE fields with extra per-point padding are not a densely packed cloud.
   auto pc = create_pointcloud({0.0f}, {0.0f}, {0.0f});
   pc.point_step = sizeof(PointXYZCPE) + 4U;
   pc.row_step = pc.point_step * pc.width;
   pc.data.resize(pc.row_step);
 
-  const auto result = cluster.process(pc);
+  PointCloudPreprocessor preprocessor(0.0F);
+  const auto result = preprocessor.process(pc);
   ASSERT_FALSE(result.has_value());
   EXPECT_FALSE(result.error().empty());
 }
 
 TEST_F(LabelBasedEuclideanClusterTest, ReturnsErrorWhenDataSizeDoesNotAgreeWithPointCount)
 {
-  LabelBasedEuclideanCluster cluster(
-    0.0f, ShapePolicy::ALL_POLYGON, default_cluster_,
-    std::unordered_map<uint8_t, std::shared_ptr<EuclideanClusterInterface>>{}, shape_estimator_);
-
   // More bytes than width * height * point_step would overrun the converted cloud.
   auto pc = create_pointcloud({0.0f}, {0.0f}, {0.0f});
   pc.data.resize(pc.data.size() * 4U);
 
-  const auto result = cluster.process(pc);
+  PointCloudPreprocessor preprocessor(0.0F);
+  const auto result = preprocessor.process(pc);
   ASSERT_FALSE(result.has_value());
   EXPECT_FALSE(result.error().empty());
 }

@@ -57,7 +57,8 @@ private:
   AUTOWARE_PUBLISHER_PTR(sensor_msgs::msg::PointCloud2) segments_pub_;
 
   // Core clustering processor
-  std::unique_ptr<LabelBasedEuclideanCluster> processor_;
+  std::unique_ptr<PointCloudPreprocessor> preprocessor_;
+  std::unique_ptr<LabelBasedEuclideanCluster> cluster_;
 
   // Timing and debug instrumentation
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
