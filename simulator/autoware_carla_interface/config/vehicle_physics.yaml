@@ -1,0 +1,49 @@
+# Vehicle physics applied to the ego actor after it spawns.
+#
+# CARLA 0.10 ships the same placeholder physics for every car: 70 deg of steer on
+# the front wheels, a corrupt steering_curve whose points are unsorted and
+# duplicated ([(0, 1.0), (10, 0.5), (0, 1.0), ...]), wheels that report no
+# position, and one cornering stiffness for the whole fleet. The car a scenario
+# drives therefore does not move like the vehicle Autoware plans for. The
+# defaults here are the Lincoln MKZ that `sample_vehicle_description` models
+# (wheel_base 2.79 m, wheel_radius 0.383 m, max_steer_angle 0.70 rad).
+#
+# Two kinds of keys:
+#
+# * `steer_normalization_deg` is read by the interface, not written to CARLA. It
+#   is the wheel angle the server actually reaches at VehicleControl.steer = 1.0,
+#   which is what a commanded tire angle has to be divided by. It is NOT the
+#   vehicle's modelled max_steer_angle: CARLA 0.10 reports 70 deg for every car
+#   and ignores writes to it, while the wheels reach ~45.5 deg (measured from the
+#   yaw rate at full steer). Getting this wrong is understeer -- the ego runs wide
+#   through curves by metres.
+# * every other key is written onto carla.VehiclePhysicsControl, `wheels` onto
+#   carla.WheelPhysicsControl (front/rear select the steered and the fixed axles),
+#   and steering_curve takes [speed, factor] pairs.
+#
+# Only the keys present here are written; everything else the server reports is
+# left untouched. Point the `vehicle_physics_config` launch argument at another
+# file, or set it empty, to change or skip this.
+
+default:
+  # Lincoln MKZ, matching sample_vehicle_description.
+  steer_normalization_deg: 45.5
+  mass: 1750.0 # [kg]
+  steering_curve: # flat: the speed-based attenuation CARLA 0.10 ships is corrupt
+    - [0.0, 1.0]
+    - [120.0, 1.0]
+  wheels:
+    front:
+      wheel_radius: 38.3 # [cm] = 0.383 m
+    rear:
+      wheel_radius: 38.3 # [cm]
+
+# Per-blueprint overrides, merged over `default`.
+vehicles:
+  vehicle.mini.cooper:
+    mass: 1250.0 # [kg]
+    wheels:
+      front:
+        wheel_radius: 31.0 # [cm]
+      rear:
+        wheel_radius: 31.0 # [cm]

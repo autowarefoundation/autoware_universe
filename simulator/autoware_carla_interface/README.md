@@ -26,6 +26,8 @@ This ros package enables communication between Autoware and CARLA for autonomous
 
 3. **Download CARLA Lanelet2 Maps**: Get the y-axis inverted maps from [CARLA Autoware Contents](https://bitbucket.org/carla-simulator/autoware-contents/src/master/maps/)
 
+4. **For the scenario closed loop only**: a CPython **3.12** interpreter, matching the ABI of the scenario runner's CARLA 0.10 wheel. On Ubuntu 24.04 / ROS 2 Jazzy this is the system `python3` and `rosdep install` already covers it through `python3-venv`. On Ubuntu 22.04 it has to be installed out of band; see [Scenario closed loop](#scenario-closed-loop). The rest of this bridge needs nothing beyond `rosdep`.
+
 #### Map Setup
 
 1. Download the maps (y-axis inverted version) to an arbitrary location
@@ -235,6 +237,27 @@ Two things to keep in mind when using this mode:
 
 If the bridge cannot keep up with the incoming cadence it drops the frames it has fallen behind on
 and reports how many it skipped through a throttled warning.
+
+### Scenario closed loop
+
+`with_scenario:=<source>#<scenario-name>` runs a CARLA scenario closed loop. `<source>` is a wheelhouse (a `.zip` of wheels or a directory of wheels, installed offline) or any pip install source; it is installed into a dedicated virtualenv whose `scenario` entrypoint hosts the gRPC server the bridge talks to. Leaving `with_scenario` empty (the default) disables the scenario bridge entirely, and nothing below applies.
+
+#### Interpreter prerequisite
+
+The venv is built with `scenario_python` (default `python3.12`), and that interpreter **must match the ABI of the CARLA 0.10 wheel in the wheelhouse** — currently cp312. This is the one prerequisite `rosdep` cannot supply:
+
+- `python3 -m venv` does not provide an interpreter. It links the one that runs it, so the venv's Python version is whatever `scenario_python` already is on the system.
+- `python3-venv` and `python3-pip` are rosdep-resolvable and declared in `package.xml`, but they only add venv support for the system Python: on Ubuntu 24.04 that pulls `python3.12-venv`, on Ubuntu 22.04 `python3.10-venv`.
+- rosdep has no versioned interpreter keys (no `python3.X` rules exist in rosdistro) and cannot add a PPA.
+
+So:
+
+| Platform                    | What is needed                                                                                                                                                                                                                                                                                                                                                                        |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Ubuntu 24.04 / ROS 2 Jazzy  | Nothing extra. The system `python3` is 3.12 and `rosdep install` covers it.                                                                                                                                                                                                                                                                                                           |
+| Ubuntu 22.04 / ROS 2 Humble | No `python3.12` package exists in the archive. Install one out of band (e.g. the [deadsnakes PPA](https://launchpad.net/~deadsnakes/+archive/ubuntu/ppa): `python3.12 python3.12-venv`), or pass `scenario_python:=<interpreter>` matching your own wheelhouse. Note that CARLA 0.10 publishes no wheel for CPython 3.10, so the stock wheelhouse cannot be used on 22.04 either way. |
+
+When the interpreter is missing, provisioning fails with a message naming it and what to install, rather than a bare `FileNotFoundError`.
 
 ### Sensor Configuration
 

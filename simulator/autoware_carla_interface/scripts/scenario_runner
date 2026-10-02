@@ -1,0 +1,8 @@
+#!/usr/bin/env python3
+# Entry point script for the scenario_runner process
+import sys
+
+from autoware_carla_interface.scenario_bridge.venv_manager import main
+
+if __name__ == "__main__":
+    sys.exit(main())
