@@ -155,7 +155,7 @@ public:
         initial_covariance.pos_x = sq(1.0);
         initial_covariance.pos_y = sq(0.3);
         initial_covariance.yaw = sq(deg2rad(25.0));
-        initial_covariance.vel_long = sq(kmph2mps(1000.0));
+        initial_covariance.vel_long = sq(kmph2mps(140.0));
         initial_covariance.vel_lat = sq(0.2);
 
         // measurement noise model
@@ -201,7 +201,7 @@ public:
         initial_covariance.pos_x = sq(1.0);
         initial_covariance.pos_y = sq(0.3);
         initial_covariance.yaw = sq(deg2rad(25.0));
-        initial_covariance.vel_long = sq(kmph2mps(1000.0));
+        initial_covariance.vel_long = sq(kmph2mps(140.0));
         initial_covariance.vel_lat = sq(0.2);
 
         // measurement noise model
@@ -247,7 +247,7 @@ public:
         initial_covariance.pos_x = sq(1.5);
         initial_covariance.pos_y = sq(0.5);
         initial_covariance.yaw = sq(deg2rad(25.0));
-        initial_covariance.vel_long = sq(kmph2mps(1000.0));
+        initial_covariance.vel_long = sq(kmph2mps(140.0));
         initial_covariance.vel_lat = sq(0.2);
 
         // measurement noise model
@@ -293,7 +293,7 @@ public:
         initial_covariance.pos_x = sq(0.8);
         initial_covariance.pos_y = sq(0.5);
         initial_covariance.yaw = sq(deg2rad(25.0));
-        initial_covariance.vel_long = sq(kmph2mps(1000.0));
+        initial_covariance.vel_long = sq(kmph2mps(120.0));
         initial_covariance.vel_lat = sq(0.2);
 
         // measurement noise model
