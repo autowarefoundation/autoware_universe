@@ -158,7 +158,7 @@ void TrajectoryChecker::set_diag_status(
   }
 
   if (override_all_error_diag_) {
-    const auto warn_msg = msg + " (error diag was overriden internally)";
+    const auto warn_msg = msg + " (error diag was overridden internally)";
     stat.summary(DiagnosticStatus::WARN, warn_msg);
     return;
   }
