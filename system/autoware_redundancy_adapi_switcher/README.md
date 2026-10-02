@@ -96,9 +96,9 @@ Launches the `RedundancyAdapiSwitcher` node.
 | `output_diag_status`        | `/diagnostics_graph/status`              | Output diagnostic status topic              |
 | `output_diag_struct`        | `/diagnostics_graph/struct`              | Output diagnostic graph structure topic     |
 
-### `sub_default_adapi.launch.py`
+### `sub_default_adapi.launch.xml`
 
-Launches the Sub ECU adapi container. Loads `HeartbeatNode`, `DiagnosticsNode`, and `FailSafeNode` into a `component_container_mt`.
+Launches the Sub ECU adapi nodes `HeartbeatNode`, `DiagnosticsNode`, and `FailSafeNode`. With `ENABLE_AGNOCAST=0` they are loaded into a `component_container_mt`; with `ENABLE_AGNOCAST=1` each runs as its own process.
 
 | Argument | Default                                                           | Description                      |
 | -------- | ----------------------------------------------------------------- | -------------------------------- |
