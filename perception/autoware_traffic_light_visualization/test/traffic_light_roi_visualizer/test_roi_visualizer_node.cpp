@@ -24,6 +24,11 @@
 // Two cases drive the node end to end, one per synchronizer, to show that a synchronized set of
 // messages reaches the drawing and comes back out. They check that something was drawn in the
 // signal color, not what - that is the unit tests' job.
+//
+// Every case that publishes anything arranges the same way, so the per-case Arrange says nothing
+// about it: start the node, subscribe to its output, and wait until it has subscribed to its
+// inputs. The last step is not optional - the node unsubscribes while nothing watches its output,
+// so anything published before it has subscribed is simply not received.
 
 #include "traffic_light_roi_visualizer/roi_visualizer_node.hpp"
 
@@ -311,17 +316,22 @@ protected:
 // The exception type is not pinned: it comes from rclcpp, not from this node.
 TEST_F(TrafficLightRoiVisualizerNodeTest, Construct_HighAccuracyParameterMissing_Throws)
 {
+  // Arrange: both parameters are declared without a default, so both are required. Only
+  // use_image_transport is given here; use_high_accuracy_detection is left out on purpose.
   rclcpp::NodeOptions options;
   options.parameter_overrides({{"use_image_transport", false}});
 
+  // Act and Assert
   EXPECT_THROW(std::make_shared<TrafficLightRoiVisualizerNode>(options), std::exception);
 }
 
 TEST_F(TrafficLightRoiVisualizerNodeTest, Construct_ImageTransportParameterMissing_Throws)
 {
+  // Arrange: the mirror of the case above - use_image_transport is the one left out.
   rclcpp::NodeOptions options;
   options.parameter_overrides({{"use_high_accuracy_detection", false}});
 
+  // Act and Assert
   EXPECT_THROW(std::make_shared<TrafficLightRoiVisualizerNode>(options), std::exception);
 }
 
@@ -333,10 +343,14 @@ TEST_F(TrafficLightRoiVisualizerNodeTest, Construct_ImageTransportParameterMissi
 // away) is not pinned; only the initial state is.
 TEST_F(TrafficLightRoiVisualizerNodeTest, Interface_OutputUnsubscribed_InputsNotSubscribed)
 {
+  // Arrange
   start_node(/*use_high_accuracy_detection=*/true, /*use_image_transport=*/false);
 
+  // Act: run the executor so that the node's 100 ms connect timer gets a chance to fire. Nothing
+  // subscribes to the output, so this is the whole of the stimulus.
   pump(delivery_budget);
 
+  // Assert: the node leaves all four inputs alone
   EXPECT_EQ(image_pub_->get_subscription_count(), 0u);
   EXPECT_EQ(roi_pub_->get_subscription_count(), 0u);
   EXPECT_EQ(rough_roi_pub_->get_subscription_count(), 0u);
@@ -347,11 +361,15 @@ TEST_F(TrafficLightRoiVisualizerNodeTest, Interface_OutputUnsubscribed_InputsNot
 // traffic signals. Without high accuracy detection it leaves the rough ROIs alone.
 TEST_F(TrafficLightRoiVisualizerNodeTest, Interface_OutputSubscribed_FineInputsSubscribed)
 {
+  // Arrange
   start_node(/*use_high_accuracy_detection=*/false, /*use_image_transport=*/false);
-  subscribe_output();
 
+  // Act: subscribing to the output is the event the lazy subscription reacts to; the wait gives
+  // the connect timer time to notice.
+  subscribe_output();
   ASSERT_TRUE(wait_until_node_subscribes_inputs());
 
+  // Assert: the three inputs the three-input synchronizer needs, and not the rough ROIs
   EXPECT_GT(roi_pub_->get_subscription_count(), 0u);
   EXPECT_GT(signal_pub_->get_subscription_count(), 0u);
   EXPECT_EQ(rough_roi_pub_->get_subscription_count(), 0u);
@@ -361,11 +379,14 @@ TEST_F(TrafficLightRoiVisualizerNodeTest, Interface_OutputSubscribed_FineInputsS
 // the four-input synchronizer and image_rough_roi_callback().
 TEST_F(TrafficLightRoiVisualizerNodeTest, Interface_HighAccuracy_RoughRoiSubscribed)
 {
+  // Arrange
   start_node(/*use_high_accuracy_detection=*/true, /*use_image_transport=*/false);
-  subscribe_output();
 
+  // Act: as above, subscribing to the output is what makes the node subscribe to its inputs
+  subscribe_output();
   ASSERT_TRUE(wait_until_node_subscribes_inputs());
 
+  // Assert: with the parameter on, the fourth input is subscribed too
   EXPECT_GT(rough_roi_pub_->get_subscription_count(), 0u);
 }
 
@@ -379,15 +400,19 @@ TEST_F(TrafficLightRoiVisualizerNodeTest, Interface_HighAccuracy_RoughRoiSubscri
 // differing stamps is not pinned either; every other test publishes one stamp for the whole set.
 TEST_F(TrafficLightRoiVisualizerNodeTest, Sync_FineRoisMissing_NoOutput)
 {
+  // Arrange
   start_node(/*use_high_accuracy_detection=*/false, /*use_image_transport=*/false);
   subscribe_output();
   ASSERT_TRUE(wait_until_node_subscribes_inputs());
 
+  // Act: publish every input the three-input synchronizer takes except the fine ROIs, all with
+  // the same stamp so that only the missing one keeps it from pairing them up.
   const auto now = peer_->now();
   image_pub_->publish(stamped(background_image, now));
   signal_pub_->publish(stamped(green_signal, now));
   pump(delivery_budget);
 
+  // Assert: the callback never runs, so nothing is published
   EXPECT_EQ(output_, nullptr);
 }
 
@@ -399,16 +424,19 @@ TEST_F(TrafficLightRoiVisualizerNodeTest, Sync_FineRoisMissing_NoOutput)
 // Interface_OutputSubscribed_FineInputsSubscribed.
 TEST_F(TrafficLightRoiVisualizerNodeTest, Sync_RoughRoisMissing_NoOutput)
 {
+  // Arrange
   start_node(/*use_high_accuracy_detection=*/true, /*use_image_transport=*/false);
   subscribe_output();
   ASSERT_TRUE(wait_until_node_subscribes_inputs());
 
+  // Act: the same, one synchronizer up - everything except the rough ROIs, same stamp
   const auto now = peer_->now();
   image_pub_->publish(stamped(background_image, now));
   roi_pub_->publish(stamped(fine_rois, now));
   signal_pub_->publish(stamped(green_signal, now));
   pump(delivery_budget);
 
+  // Assert: the callback never runs, so nothing is published
   EXPECT_EQ(output_, nullptr);
 }
 
@@ -420,12 +448,15 @@ TEST_F(TrafficLightRoiVisualizerNodeTest, Sync_RoughRoisMissing_NoOutput)
 // signal color and contains black text - because it is a rendering detail.
 TEST_F(TrafficLightRoiVisualizerNodeTest, Pipeline_FineInputs_DrawnImagePublished)
 {
+  // Arrange
   start_node(/*use_high_accuracy_detection=*/false, /*use_image_transport=*/false);
   subscribe_output();
   ASSERT_TRUE(wait_until_node_subscribes_inputs());
 
+  // Act
   ASSERT_TRUE(send_inputs_and_wait_for_output(background_image, fine_rois, green_signal));
 
+  // Assert
   EXPECT_EQ(output_->width, static_cast<uint32_t>(image_width));
   EXPECT_EQ(output_->height, static_cast<uint32_t>(image_height));
   EXPECT_EQ(output_->encoding, "rgb8");
@@ -456,14 +487,16 @@ TEST_F(TrafficLightRoiVisualizerNodeTest, Pipeline_FineInputs_DrawnImagePublishe
 // box lands on the rough ROI instead.
 TEST_F(TrafficLightRoiVisualizerNodeTest, Pipeline_RoughAndFineInputs_DrawnImagePublished)
 {
+  // Arrange
   start_node(/*use_high_accuracy_detection=*/true, /*use_image_transport=*/false);
   subscribe_output();
   ASSERT_TRUE(wait_until_node_subscribes_inputs());
 
+  // Act
   ASSERT_TRUE(
     send_inputs_and_wait_for_output(background_image, fine_rois, green_signal, rough_rois));
 
-  // Both frames are drawn. Each of these corners lies on one rectangle only.
+  // Assert: both frames are drawn. Each of these corners lies on one rectangle only.
   const auto rough_frame_corner = pixel_at(*output_, rough_box.x, rough_box.y);
   const auto fine_frame_bottom_left = pixel_at(*output_, fine_box.x, fine_box.y + fine_box.height);
   EXPECT_EQ(rough_frame_corner, green_signal_rgb);
@@ -490,12 +523,15 @@ TEST_F(TrafficLightRoiVisualizerNodeTest, Pipeline_RoughAndFineInputs_DrawnImage
 // Where compressed_image_transport is installed, ~/output/image/compressed would tell them apart.
 TEST_F(TrafficLightRoiVisualizerNodeTest, Interface_ImageTransportEnabled_SameOutput)
 {
+  // Arrange
   start_node(/*use_high_accuracy_detection=*/false, /*use_image_transport=*/true);
   subscribe_output();
   ASSERT_TRUE(wait_until_node_subscribes_inputs());
 
+  // Act
   ASSERT_TRUE(send_inputs_and_wait_for_output(background_image, fine_rois, green_signal));
 
+  // Assert
   EXPECT_EQ(output_->encoding, "rgb8");
 
   // One drawn pixel is enough: this case is about the publisher, not the drawing
@@ -507,13 +543,16 @@ TEST_F(TrafficLightRoiVisualizerNodeTest, Interface_ImageTransportEnabled_SameOu
 // case of its own - the test above only exercises the other one.
 TEST_F(TrafficLightRoiVisualizerNodeTest, Interface_ImageTransportHighAccuracy_SameOutput)
 {
+  // Arrange
   start_node(/*use_high_accuracy_detection=*/true, /*use_image_transport=*/true);
   subscribe_output();
   ASSERT_TRUE(wait_until_node_subscribes_inputs());
 
+  // Act
   ASSERT_TRUE(
     send_inputs_and_wait_for_output(background_image, fine_rois, green_signal, rough_rois));
 
+  // Assert
   EXPECT_EQ(output_->encoding, "rgb8");
 
   const auto rough_frame_corner = pixel_at(*output_, rough_box.x, rough_box.y);
