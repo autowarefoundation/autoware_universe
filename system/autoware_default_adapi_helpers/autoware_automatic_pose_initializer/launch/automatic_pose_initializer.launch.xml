@@ -1,6 +1,0 @@
-<launch>
-  <group>
-    <push-ros-namespace namespace="default_adapi/helpers"/>
-    <node pkg="autoware_automatic_pose_initializer" exec="autoware_automatic_pose_initializer_node"/>
-  </group>
-</launch>
