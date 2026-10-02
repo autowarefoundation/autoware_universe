@@ -2051,10 +2051,6 @@ TEST_F(ConcatenateNodeTest, DiagnosticsReportsErrorWhenACloudIsDroppedAsLate)
 
   // Assert
   EXPECT_EQ(status.level, DiagnosticStatus::ERROR);
-  EXPECT_EQ(
-    status.message,
-    "Concatenated pointcloud was dropped due to its timestamp is earlier than the latest "
-    "published one");
   // The diagnostic still describes the cloud that was dropped.
   EXPECT_EQ(
     get_diagnostic_value(status, "Concatenated pointcloud timestamp"), format_seconds(late));

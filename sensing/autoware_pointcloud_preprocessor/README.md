@@ -62,6 +62,62 @@ Detail description of each filter's algorithm is in the following links.
 `autoware::pointcloud_preprocessor::Filter` is implemented based on pcl_perception [1] because
 of [this issue](https://github.com/ros-perception/perception_pcl/issues/9).
 
+## Examples
+
+Examples are not built by default, so release builds do not pay for them. Enable them with
+`-DBUILD_EXAMPLES=ON`:
+
+```bash
+colcon build --packages-select autoware_pointcloud_preprocessor \
+  --cmake-args -DCMAKE_BUILD_TYPE=Release -DBUILD_EXAMPLES=ON
+```
+
+### concatenate_without_ros_node
+
+Concatenates three point clouds through the `concatenate_core` library alone: no node, no executor
+and no spinning. Clouds, transforms and twist are handed to the core directly, so every input is
+guaranteed to be processed - unlike a pub/sub pipeline, where a subscriber that comes up late
+silently misses messages. This makes it a convenient starting point for replaying recorded data
+deterministically, and for measuring concatenation cost on its own.
+
+```bash
+./build/autoware_pointcloud_preprocessor/concatenate_without_ros_node [points_per_cloud] [iterations] [warmup]
+```
+
+| Argument           | Default | Description                               |
+| ------------------ | ------- | ----------------------------------------- |
+| `points_per_cloud` | 40000   | points in each of the three source clouds |
+| `iterations`       | 200     | timed concatenations                      |
+| `warmup`           | 20      | untimed runs before measuring             |
+
+The example verifies the concatenated cloud and the diagnostics, then reports the time spent inside
+`combine_pointclouds()` only. Building the clouds, the transforms and the grouping all happen
+outside the measured region.
+
+```text
+concatenated cloud
+  frame_id   : base_link
+  stamp      : 1000
+  points     : 120000
+  point_step : 16
+  sources    : 3
+  collectors : 1
+
+concatenation time over 200 runs
+  average : 78.601 ms
+  stddev  : 1.603 ms
+  min     : 75.894 ms
+  median  : 79.222 ms
+  p95     : 80.293 ms
+  max     : 81.265 ms
+  rate    : 1.53 Mpoint/s (12.72 concatenations/s)
+```
+
+The absolute figures depend on the machine; use them to compare runs, not as a specification.
+
+Build with `-DCMAKE_BUILD_TYPE=Release` before reading anything into the timings. Without it the
+package compiles unoptimized and the same run is roughly 80x slower.
+
 ## Measuring the performance
 
 In Autoware, point cloud data from each LiDAR sensor undergoes preprocessing in the sensing pipeline before being input

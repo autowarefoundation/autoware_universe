@@ -99,7 +99,7 @@ PointCloudConcatenationComponent::PointCloudConcatenationComponent(
   // Cloud info
   {
     concatenation_info_manager_ =
-      std::make_unique<ConcatenationInfoManager>("naive", input_topics_);
+      std::make_unique<ConcatenationInfoManager>(MatchingStrategyType::naive, input_topics_);
   }
 
   // Output Publishers
