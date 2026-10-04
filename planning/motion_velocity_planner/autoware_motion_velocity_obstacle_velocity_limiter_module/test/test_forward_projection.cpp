@@ -155,8 +155,7 @@ TEST(TestForwardProjection, bicycleProjectionLineArc)
     for (size_t i = 1; i < line.size(); ++i) {
       const auto t = static_cast<double>(i) * params.duration / 6.0;
       const auto heading = params.velocity * t / radius;
-      const auto expected_x =
-        radius * std::sin(heading) + params.extra_length * std::cos(heading);
+      const auto expected_x = radius * std::sin(heading) + params.extra_length * std::cos(heading);
       const auto expected_y =
         radius * (1.0 - std::cos(heading)) + params.extra_length * std::sin(heading);
       EXPECT_NEAR(line[i].x(), expected_x, EPS_APPROX)
