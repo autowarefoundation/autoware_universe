@@ -76,13 +76,12 @@ void calculateSteeringAngles(TrajectoryPoints & trajectory, const double wheel_b
   for (auto i = 1ul; i < trajectory.size(); ++i) {
     prev_point = trajectory[i - 1];
     auto & point = trajectory[i];
-    const auto dt =
-      autoware_utils::calc_distance2d(prev_point, point) / prev_point.longitudinal_velocity_mps;
+    const auto ds = autoware_utils::calc_distance2d(prev_point, point);
     const auto heading = tf2::getYaw(point.pose.orientation);
     const auto d_heading = autoware_utils::normalize_radian(heading - prev_heading);
     prev_heading = heading;
-    point.front_wheel_angle_rad =
-      static_cast<float>(std::atan2(wheel_base * d_heading, point.longitudinal_velocity_mps * dt));
+    // steering = atan(wheel_base * curvature) with curvature = d_heading / ds
+    point.front_wheel_angle_rad = static_cast<float>(std::atan2(wheel_base * d_heading, ds));
   }
 }
 
