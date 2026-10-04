@@ -71,12 +71,20 @@ TrajectoryPoints downsampleTrajectory(
 
 void calculateSteeringAngles(TrajectoryPoints & trajectory, const double wheel_base)
 {
+  constexpr auto min_segment_length = 1e-3;  // [m]
   auto prev_point = trajectory.front();
   auto prev_heading = tf2::getYaw(prev_point.pose.orientation);
   for (auto i = 1ul; i < trajectory.size(); ++i) {
     prev_point = trajectory[i - 1];
     auto & point = trajectory[i];
     const auto ds = autoware_utils::calc_distance2d(prev_point, point);
+    if (ds < min_segment_length) {
+      // the curvature cannot be calculated on a (nearly) zero-length segment: keep the previous
+      // steering angle and leave prev_heading unchanged so that the heading change is accounted for
+      // in the next segment
+      point.front_wheel_angle_rad = prev_point.front_wheel_angle_rad;
+      continue;
+    }
     const auto heading = tf2::getYaw(point.pose.orientation);
     const auto d_heading = autoware_utils::normalize_radian(heading - prev_heading);
     prev_heading = heading;
