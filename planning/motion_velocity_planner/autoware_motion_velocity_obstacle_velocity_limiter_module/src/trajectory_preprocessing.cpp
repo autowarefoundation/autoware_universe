@@ -18,6 +18,7 @@
 
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/math/normalization.hpp>
 #include <tf2/utils.hpp>
 
 #include <geometry_msgs/msg/detail/point__struct.hpp>
@@ -78,7 +79,7 @@ void calculateSteeringAngles(TrajectoryPoints & trajectory, const double wheel_b
     const auto dt =
       autoware_utils::calc_distance2d(prev_point, point) / prev_point.longitudinal_velocity_mps;
     const auto heading = tf2::getYaw(point.pose.orientation);
-    const auto d_heading = heading - prev_heading;
+    const auto d_heading = autoware_utils::normalize_radian(heading - prev_heading);
     prev_heading = heading;
     point.front_wheel_angle_rad =
       static_cast<float>(std::atan2(wheel_base * d_heading, point.longitudinal_velocity_mps * dt));
