@@ -17,7 +17,7 @@
 
 #include "interface.hpp"
 
-#include <rclcpp/rclcpp.hpp>
+#include <autoware/agnocast_wrapper/node.hpp>
 
 #include <memory>
 
@@ -27,11 +27,11 @@ namespace autoware::trajectory_gate
 class TrajectoryPublisher : public TrajectoryReceiver
 {
 public:
-  explicit TrajectoryPublisher(rclcpp::Node & node);
+  explicit TrajectoryPublisher(autoware::agnocast_wrapper::Node & node);
   void receive(const Trajectory & msg) override;
 
 private:
-  rclcpp::Publisher<Trajectory>::SharedPtr pub_trajectory_;
+  AUTOWARE_PUBLISHER_PTR(Trajectory) pub_trajectory_;
 };
 
 }  // namespace autoware::trajectory_gate
