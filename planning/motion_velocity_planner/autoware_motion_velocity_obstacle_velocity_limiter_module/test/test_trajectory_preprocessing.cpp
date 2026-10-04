@@ -78,3 +78,31 @@ TEST(TestTrajectoryPreprocessing, calculateSteeringAnglesHeadingCrossingPi)
     EXPECT_NEAR(trajectory[i].front_wheel_angle_rad, expected_steering, 1e-4) << "index: " << i;
   }
 }
+
+// The steering angle only depends on the geometry of the trajectory, not on its velocity profile.
+TEST(TestTrajectoryPreprocessing, calculateSteeringAnglesVaryingVelocity)
+{
+  constexpr auto curvature = 0.05;
+  auto trajectory = generateConstantCurvatureTrajectory(0.0, curvature, 0.0, 1.0, 10);
+  for (size_t i = 0; i < trajectory.size(); ++i) {
+    trajectory[i].longitudinal_velocity_mps = static_cast<float>(10.0 - static_cast<double>(i));
+  }
+  calculateSteeringAngles(trajectory, WHEEL_BASE);
+  const auto expected_steering = std::atan(WHEEL_BASE * curvature);
+  for (size_t i = 1; i < trajectory.size(); ++i) {
+    EXPECT_NEAR(trajectory[i].front_wheel_angle_rad, expected_steering, 1e-3) << "index: " << i;
+  }
+}
+
+// Points with a zero velocity (e.g., after a stop point) must not produce NaN steering angles.
+TEST(TestTrajectoryPreprocessing, calculateSteeringAnglesZeroVelocity)
+{
+  constexpr auto curvature = 0.05;
+  auto trajectory = generateConstantCurvatureTrajectory(0.0, curvature, 0.0, 1.0, 10);
+  calculateSteeringAngles(trajectory, WHEEL_BASE);
+  const auto expected_steering = std::atan(WHEEL_BASE * curvature);
+  for (size_t i = 1; i < trajectory.size(); ++i) {
+    EXPECT_FALSE(std::isnan(trajectory[i].front_wheel_angle_rad)) << "index: " << i;
+    EXPECT_NEAR(trajectory[i].front_wheel_angle_rad, expected_steering, 1e-3) << "index: " << i;
+  }
+}
