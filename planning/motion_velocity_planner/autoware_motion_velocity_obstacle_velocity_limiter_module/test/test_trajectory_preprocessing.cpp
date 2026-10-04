@@ -106,3 +106,40 @@ TEST(TestTrajectoryPreprocessing, calculateSteeringAnglesZeroVelocity)
     EXPECT_NEAR(trajectory[i].front_wheel_angle_rad, expected_steering, 1e-3) << "index: " << i;
   }
 }
+
+// A duplicated point (zero-length segment) keeps the steering angle of the previous point.
+TEST(TestTrajectoryPreprocessing, calculateSteeringAnglesDuplicatedPoint)
+{
+  constexpr auto curvature = 0.05;
+  auto trajectory = generateConstantCurvatureTrajectory(0.0, curvature, 5.0, 1.0, 10);
+  trajectory.insert(trajectory.begin() + 5, trajectory[4]);
+  calculateSteeringAngles(trajectory, WHEEL_BASE);
+  const auto expected_steering = std::atan(WHEEL_BASE * curvature);
+  for (size_t i = 1; i < trajectory.size(); ++i) {
+    EXPECT_NEAR(trajectory[i].front_wheel_angle_rad, expected_steering, 1e-3) << "index: " << i;
+  }
+}
+
+// A heading change at a duplicated point is accounted for in the next segment instead of
+// producing a steering angle of +-pi/2.
+TEST(TestTrajectoryPreprocessing, calculateSteeringAnglesDuplicatedPointWithHeadingChange)
+{
+  constexpr auto d_heading = 0.1;
+  auto trajectory = generateConstantCurvatureTrajectory(0.0, 0.0, 5.0, 1.0, 3);
+  // insert a point at the same position as the first point, rotated by d_heading
+  auto rotated_point = trajectory[0];
+  rotated_point.pose.orientation = autoware_utils::create_quaternion_from_yaw(d_heading);
+  trajectory.insert(trajectory.begin() + 1, rotated_point);
+  // the following points also keep the rotated heading
+  for (size_t i = 2; i < trajectory.size(); ++i) {
+    trajectory[i].pose.orientation = autoware_utils::create_quaternion_from_yaw(d_heading);
+  }
+  trajectory[0].front_wheel_angle_rad = 0.0f;
+  calculateSteeringAngles(trajectory, WHEEL_BASE);
+  // duplicated point: previous steering angle is kept
+  EXPECT_NEAR(trajectory[1].front_wheel_angle_rad, 0.0, 1e-6);
+  // next segment (length 1.0): the heading change happened over that segment
+  EXPECT_NEAR(trajectory[2].front_wheel_angle_rad, std::atan(WHEEL_BASE * d_heading / 1.0), 1e-6);
+  // after that, the heading is constant
+  EXPECT_NEAR(trajectory[3].front_wheel_angle_rad, 0.0, 1e-6);
+}
