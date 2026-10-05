@@ -267,7 +267,7 @@ rclcpp_components_register_node(pointcloud_preprocessor_filter
 autoware_agnocast_wrapper_register_node(pointcloud_preprocessor_filter
   PLUGIN "autoware::pointcloud_preprocessor::BlockageDiagComponent"
   EXECUTABLE blockage_diag_node
-  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
   ROS2_EXECUTOR SingleThreadedExecutor
 )
 

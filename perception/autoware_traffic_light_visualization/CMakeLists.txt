@@ -7,7 +7,8 @@ autoware_package()
 find_package(OpenCV REQUIRED)
 
 ament_auto_add_library(traffic_light_roi_visualizer SHARED
-  src/traffic_light_roi_visualizer/node.cpp
+  src/traffic_light_roi_visualizer/roi_visualizer_node.cpp
+  src/traffic_light_roi_visualizer/roi_visualizer.cpp
   src/traffic_light_roi_visualizer/shape_draw.cpp
 )
 
