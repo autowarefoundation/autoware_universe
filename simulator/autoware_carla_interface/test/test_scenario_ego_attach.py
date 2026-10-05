@@ -4,6 +4,8 @@
 the actors through a handful of methods -- so these run without a simulator.
 """
 
+from types import SimpleNamespace
+
 import pytest
 
 # ``modules/__init__.py`` eagerly imports the ROS publisher manager, so the ROS
@@ -33,23 +35,22 @@ class _Actor:
         self.attributes = {"role_name": role_name}
 
 
-class _ActorList:
-    def __init__(self, actors):
-        self._actors = actors
-
-    def filter(self, pattern):
-        assert pattern == "vehicle.*"
-        return list(self._actors)
-
-
 class _World:
-    """A world whose actor list is whatever ``actors`` holds when it is asked."""
+    """A world whose actor list is whatever ``actors`` holds when it is asked.
+
+    ``get_actors()`` stands in for CARLA's ``ActorList``; the blueprint filter
+    is the only thing the attach path uses it for.
+    """
 
     def __init__(self, actors):
         self._actors = actors
 
     def get_actors(self):
-        return _ActorList(self._actors)
+        return SimpleNamespace(filter=self._filter)
+
+    def _filter(self, pattern):
+        assert pattern == "vehicle.*"
+        return list(self._actors)
 
 
 def test_finds_the_actor_carrying_the_ego_role():

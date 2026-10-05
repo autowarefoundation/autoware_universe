@@ -18,17 +18,20 @@ import carla
 import yaml
 
 
+def _merge_wheels(base, override):
+    """Return the per-axle wheel settings of *base* updated by *override*."""
+    merged = {axle: dict(cfg) for axle, cfg in base.items()}
+    for axle, cfg in override.items():
+        merged[axle] = {**merged.get(axle, {}), **cfg}
+    return merged
+
+
 def _merge_settings(base, override):
     """Return *base* updated by *override*, one level deep for `wheels`."""
-    merged = dict(base)
-    for key, value in override.items():
-        if key == "wheels" and isinstance(value, dict):
-            wheels = {axle: dict(cfg) for axle, cfg in merged.get("wheels", {}).items()}
-            for axle, cfg in value.items():
-                wheels[axle] = {**wheels.get(axle, {}), **cfg}
-            merged["wheels"] = wheels
-        else:
-            merged[key] = value
+    merged = {**base, **override}
+    wheels = override.get("wheels")
+    if isinstance(wheels, dict):
+        merged["wheels"] = _merge_wheels(base.get("wheels") or {}, wheels)
     return merged
 
 
@@ -86,28 +89,27 @@ def _apply_steer_normalization(interface, settings, path):
     print(f"INFO: Steer normalization set to {float(steer_deg):.1f} deg from {path}.")
 
 
+def _write_one(physics, key, value) -> bool:
+    """Write one setting onto *physics*; return whether the key was known."""
+    if key == "wheels":
+        physics.wheels = _apply_wheel_settings(physics, value)
+    elif key == "steering_curve":
+        physics.steering_curve = [carla.Vector2D(float(x), float(y)) for x, y in value]
+    elif hasattr(physics, key):
+        setattr(physics, key, float(value))
+    else:
+        print(f"WARNING: Unknown vehicle physics key '{key}'; skipped.")
+        return False
+    return True
+
+
 def _write_settings(physics, settings):
     """Write *settings* onto *physics*; return the keys that were written."""
-    applied = []
-    for key, value in settings.items():
-        if key == "wheels":
-            physics.wheels = _apply_wheel_settings(physics, value)
-        elif key == "steering_curve":
-            physics.steering_curve = [carla.Vector2D(float(x), float(y)) for x, y in value]
-        elif hasattr(physics, key):
-            setattr(physics, key, float(value))
-        else:
-            print(f"WARNING: Unknown vehicle physics key '{key}'; skipped.")
-            continue
-        applied.append(key)
-    return applied
+    return [key for key, value in settings.items() if _write_one(physics, key, value)]
 
 
-def apply(ego_actor, interface):
-    """Apply the configured physics to the ego, so it moves like the modelled car.
-
-    Reads ``vehicle_physics_config`` (empty disables this) and writes only the
-    keys it names.
+def _config_path(interface) -> str:
+    """Return the config to apply, or "" when the ego's physics are left alone.
 
     The config values (45.5 deg steer normalization, a flat steering curve,
     Lincoln mass/wheel radius) are calibrated for the 0.10 placeholder physics,
@@ -116,13 +118,25 @@ def apply(ego_actor, interface):
     """
     path = str(interface.param_values.get("vehicle_physics_config", "")).strip()
     if not path:
-        return
-    if not interface.uses_chaos_physics:
-        print(
-            "INFO: Skipping vehicle_physics_config on CARLA "
-            f"{interface.carla_version}: it is calibrated for the 0.10 "
-            "placeholder physics and only applied on CARLA 0.10+."
-        )
+        return ""
+    if interface.uses_chaos_physics:
+        return path
+    print(
+        "INFO: Skipping vehicle_physics_config on CARLA "
+        f"{interface.carla_version}: it is calibrated for the 0.10 "
+        "placeholder physics and only applied on CARLA 0.10+."
+    )
+    return ""
+
+
+def apply(ego_actor, interface):
+    """Apply the configured physics to the ego, so it moves like the modelled car.
+
+    Reads ``vehicle_physics_config`` (empty, or a CARLA older than 0.10,
+    disables this) and writes only the keys it names.
+    """
+    path = _config_path(interface)
+    if not path:
         return
     settings = _read_settings(path, ego_actor.type_id)
     if not settings:

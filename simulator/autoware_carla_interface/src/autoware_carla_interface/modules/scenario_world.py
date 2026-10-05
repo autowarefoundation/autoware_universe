@@ -67,6 +67,17 @@ def _observed_tick(world) -> bool:
         return False
 
 
+def _ownership(client, world, expected: str):
+    """Return ``(owned, active_map, sync_enabled)`` for one look at the world.
+
+    *owned* holds when the active map is the expected one -- skipped when its
+    name cannot be read -- and synchronous mode is on.
+    """
+    current, unreadable = _active_map(client)
+    sync_enabled = _sync_enabled(world)
+    return (unreadable or current == expected) and sync_enabled, current, sync_enabled
+
+
 def _not_owned_message(timeout: float, expected: str, current, sync_enabled: bool) -> str:
     """Return the message for a runner that never claimed the world."""
     return (
@@ -114,9 +125,7 @@ def wait_for_external_world(client, expected_map: str, timeout: float, logger):
     )
     while True:
         world = client.get_world()
-        current, unreadable = _active_map(client)
-        sync_enabled = _sync_enabled(world)
-        owned = (unreadable or current == expected) and sync_enabled
+        owned, current, sync_enabled = _ownership(client, world, expected)
         if owned and _observed_tick(world):
             logger.info(f"Adopted the scenario runner's live CARLA world (map '{current}').")
             return world

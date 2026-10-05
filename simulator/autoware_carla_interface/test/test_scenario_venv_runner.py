@@ -199,7 +199,7 @@ def test_wheelhouse_install_args_empty_raises(tmp_path):
 
 
 def _multi_wheelhouse(tmp_path) -> Path:
-    """A wheelhouse exported for 3.10 and 3.12, the two ROS 2 Pythons."""
+    """Return a wheelhouse exported for 3.10 and 3.12, the two ROS 2 Pythons."""
     wh = tmp_path / "multi"
     wh.mkdir(exist_ok=True)
     for name in (
