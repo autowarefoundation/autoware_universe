@@ -68,6 +68,7 @@ from autoware_carla_interface.scenario_bridge.ad_api import OPERATION_MODE_STATE
 from autoware_carla_interface.scenario_bridge.ad_api import ROUTING_SET_ROUTE_POINTS_SERVICE
 from autoware_carla_interface.scenario_bridge.ad_api import ROUTING_STATE_TOPIC
 from autoware_carla_interface.scenario_bridge.ad_api import ReadinessAggregator
+from autoware_carla_interface.scenario_bridge.client import Mission
 from autoware_carla_interface.scenario_bridge.client import ScenarioBridgeClient
 from autoware_carla_interface.scenario_bridge.proto import autoware_bridge_pb2 as pb2
 from geometry_msgs.msg import Pose
@@ -110,11 +111,21 @@ def _response_ok(future) -> tuple[bool, str]:
     request is only accepted when ``status.success``.  A failed ``future`` (the
     call itself raised) or an unsuccessful status both count as "not accepted", so
     the caller can retry.
+
+    A cancelled future is one :meth:`ScenarioBridgeNode._expire_stalled_steps`
+    gave up on, and ``rclpy``'s ``Future.cancel`` runs the done callbacks with no
+    result rather than raising -- so the cancellation has to be read off the
+    future itself. Without that an expired request would read as accepted and
+    latch ``_route_accepted`` for a route the planner never took.
     """
+    if future.cancelled():
+        return False, "cancelled: no answer in time"
     try:
         response = future.result()
     except Exception as error:  # noqa: BLE001 - surfaced as a retryable failure
         return False, f"call failed: {error}"
+    if response is None:
+        return False, "no response"
     status = getattr(response, "status", None)
     if status is None:
         return True, ""
@@ -154,7 +165,7 @@ class ScenarioBridgeNode(Node):
         # only while a request is in flight; _expire_stalled_steps drops the ones
         # that were never answered.
         self._inflight: dict = {}
-        self._mission: Optional[pb2.GetMissionResponse] = None
+        self._mission: Optional[Mission] = None
         self._localization_requested = False
         self._route_requested = False
         # Whether THIS bridge's set-route request for the current mission has been
