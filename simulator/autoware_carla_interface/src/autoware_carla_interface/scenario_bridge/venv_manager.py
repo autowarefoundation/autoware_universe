@@ -197,27 +197,30 @@ def wheelhouse_pythons(wheels: Sequence[Path]) -> list[int]:
     return sorted(minors)
 
 
+def _tag_installable(tag: str, abi: str, minor: int) -> bool:
+    """Whether CPython 3.*minor* can install a wheel carrying one python *tag*."""
+    generic = _GENERIC_TAG.match(tag)
+    if generic is not None:
+        # `py3` is any 3.x; `py36` is 3.6 and up.
+        floor = generic.group(1)
+        return not floor or int(floor) <= minor
+    cpython = _CPYTHON_TAG.match(tag)
+    if cpython is None:
+        return False
+    built = int(cpython.group(1))
+    if built == minor:
+        return True
+    # A stable-ABI wheel also installs on every minor after the one it names.
+    return abi == "abi3" and built <= minor
+
+
 def _installable(wheel: Path, minor: int) -> bool:
     """Whether CPython 3.*minor* can install *wheel*."""
     pythons, abi = _wheel_tags(wheel)
     if not pythons:
         # Not a name this can read; let pip be the one to refuse it.
         return True
-    for tag in pythons:
-        generic = _GENERIC_TAG.match(tag)
-        if generic is not None:
-            # `py3` is any 3.x; `py36` is 3.6 and up.
-            if not generic.group(1) or int(generic.group(1)) <= minor:
-                return True
-            continue
-        cpython = _CPYTHON_TAG.match(tag)
-        if cpython is None:
-            continue
-        built = int(cpython.group(1))
-        # A stable-ABI wheel installs on its own minor and every later one.
-        if built == minor or (abi == "abi3" and built <= minor):
-            return True
-    return False
+    return any(_tag_installable(tag, abi, minor) for tag in pythons)
 
 
 def _interpreter(minor: int) -> str:
