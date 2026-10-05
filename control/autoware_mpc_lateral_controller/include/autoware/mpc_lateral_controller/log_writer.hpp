@@ -17,6 +17,7 @@
 
 #include <fmt/format.h>
 
+#include <cstddef>
 #include <string_view>
 #include <type_traits>
 
@@ -37,6 +38,14 @@ class LogWriter
 public:
   enum class Level { debug, info, warn, error, fatal };
 
+  /// The place in the code a line comes from. The macros at the end fill it.
+  struct Site
+  {
+    const char * function_name;
+    const char * file_name;
+    size_t line_number;
+  };
+
   virtual ~LogWriter() = default;
 
   /// Whether a line of this level would be read now. `after_s` is the shortest time between
@@ -44,8 +53,8 @@ public:
   /// holds when that place wrote last, and a call that returns true sets it to now.
   virtual bool shouldWrite(Level level, double after_s, double & last_sent_s) const = 0;
 
-  /// Write the finished line.
-  virtual void write(Level level, std::string_view line) const = 0;
+  /// Write the finished line, naming the place it comes from.
+  virtual void write(Level level, const Site & site, std::string_view line) const = 0;
 };
 
 /// A writer that drops every line, for a caller that wants no log at all.
@@ -53,7 +62,7 @@ class NullLogWriter : public LogWriter
 {
 public:
   bool shouldWrite(Level, double, double &) const override { return false; }
-  void write(Level, std::string_view) const override {}
+  void write(Level, const Site &, std::string_view) const override {}
 };
 
 /// The writer a caller meets before it is given one of its own. It is one object for the
@@ -62,7 +71,9 @@ inline const NullLogWriter no_log{};
 }  // namespace autoware::motion::control::mpc_lateral_controller
 
 /// Write a line through `writer`, at most once per `after_s` seconds. The message is built
-/// only when it would be read, so the arguments are not evaluated otherwise.
+/// only when it would be read, so the arguments are not evaluated otherwise. The macro runs
+/// where the line is written, so it can name that place; a writer called as a plain function
+/// could only name itself.
 ///
 /// The waiting time lives in a `static` of the line that writes, not in the writer, in the
 /// same way the throttling macros of rclcpp keep theirs. Two objects that run the same line
@@ -70,14 +81,16 @@ inline const NullLogWriter no_log{};
 /// macro inside a function defined in a header shares the waiting time between every shared
 /// library that includes the header, because the linker keeps one such `static` for the
 /// whole process. Write it in a source file to keep the sharing inside one library.
-#define AW_MPC_LOG(writer, level_name, after_s, ...)                                   \
-  do {                                                                                 \
-    static double aw_log_last_s = 0.0;                                                 \
-    const auto & aw_log_writer = (writer);                                             \
-    using AwLogLevel = std::decay_t<decltype(aw_log_writer)>::Level;                   \
-    if (aw_log_writer.shouldWrite(AwLogLevel::level_name, (after_s), aw_log_last_s)) { \
-      aw_log_writer.write(AwLogLevel::level_name, ::fmt::format(__VA_ARGS__));         \
-    }                                                                                  \
+#define AW_MPC_LOG(writer, level_name, after_s, ...)                                           \
+  do {                                                                                         \
+    static double aw_log_last_s = 0.0;                                                         \
+    const auto & aw_log_writer = (writer);                                                     \
+    using AwLogWriter = std::decay_t<decltype(aw_log_writer)>;                                 \
+    static const AwLogWriter::Site aw_log_site{__func__, __FILE__, __LINE__};                  \
+    if (aw_log_writer.shouldWrite(AwLogWriter::Level::level_name, (after_s), aw_log_last_s)) { \
+      aw_log_writer.write(                                                                     \
+        AwLogWriter::Level::level_name, aw_log_site, ::fmt::format(__VA_ARGS__));              \
+    }                                                                                          \
   } while (0)
 
 // Only the names below carry the name of this package.

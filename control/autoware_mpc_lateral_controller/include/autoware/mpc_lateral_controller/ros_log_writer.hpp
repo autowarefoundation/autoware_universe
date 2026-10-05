@@ -38,7 +38,7 @@ public:
   }
 
   bool shouldWrite(Level level, double after_s, double & last_sent_s) const override;
-  void write(Level level, std::string_view line) const override;
+  void write(Level level, const Site & site, std::string_view line) const override;
 
 private:
   static int severityOf(Level level);

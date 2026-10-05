@@ -14,6 +14,8 @@
 
 #include "autoware/mpc_lateral_controller/ros_log_writer.hpp"
 
+#include <rcutils/logging.h>
+
 #include <string_view>
 
 namespace autoware::motion::control::mpc_lateral_controller
@@ -35,26 +37,13 @@ bool RosLogWriter::shouldWrite(const Level level, const double after_s, double &
   return true;
 }
 
-void RosLogWriter::write(const Level level, const std::string_view line) const
+void RosLogWriter::write(const Level level, const Site & site, const std::string_view line) const
 {
-  const auto size = static_cast<int>(line.size());
-  switch (level) {
-    case Level::debug:
-      RCLCPP_DEBUG(logger_, "%.*s", size, line.data());
-      break;
-    case Level::info:
-      RCLCPP_INFO(logger_, "%.*s", size, line.data());
-      break;
-    case Level::warn:
-      RCLCPP_WARN(logger_, "%.*s", size, line.data());
-      break;
-    case Level::error:
-      RCLCPP_ERROR(logger_, "%.*s", size, line.data());
-      break;
-    case Level::fatal:
-      RCLCPP_FATAL(logger_, "%.*s", size, line.data());
-      break;
-  }
+  RCUTILS_LOGGING_AUTOINIT;
+  const rcutils_log_location_t location{site.function_name, site.file_name, site.line_number};
+  rcutils_log(
+    &location, severityOf(level), logger_.get_name(), "%.*s", static_cast<int>(line.size()),
+    line.data());
 }
 
 int RosLogWriter::severityOf(const Level level)
