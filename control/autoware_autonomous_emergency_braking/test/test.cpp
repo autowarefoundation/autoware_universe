@@ -129,6 +129,99 @@ TEST_F(TestAEB, checkCollision)
   ASSERT_FALSE(aeb_node_->hasCollision(longitudinal_velocity, object_no_collision));
 }
 
+namespace
+{
+void set_rss_parameters(AEB & aeb_node)
+{
+  aeb_node.t_response_ = 1.0;
+  aeb_node.a_ego_min_ = -3.0;
+  aeb_node.a_obj_min_ = -1.0;
+  aeb_node.longitudinal_offset_margin_ = 1.0;
+}
+}  // namespace
+
+TEST_F(TestAEB, checkCollisionClosestApproachWhileBraking)
+{
+  set_rss_parameters(*aeb_node_);
+  // Ego brakes harder than the object, so the speeds become equal 3 s after ego starts braking.
+  // By then the gap has shrunk by 14.5 m. The object travels 25.8 m farther than ego before both
+  // stop, so the stopping distances alone would require only the margin.
+  constexpr double ego_velocity = 20.0;
+  ObjectData object;
+  object.velocity = 15.0;
+  object.distance_to_object = 10.0;
+  ASSERT_TRUE(aeb_node_->hasCollision(ego_velocity, object));
+  EXPECT_DOUBLE_EQ(aeb_node_->collision_data_keeper_.get()->rss, 14.5 + 1.0);
+
+  object.distance_to_object = 16.0;
+  EXPECT_FALSE(aeb_node_->hasCollision(ego_velocity, object));
+}
+
+TEST_F(TestAEB, checkCollisionObjectStopsBeforeClosestApproach)
+{
+  set_rss_parameters(*aeb_node_);
+  // The object stops 1 s after ego starts braking, before the speeds become equal, so the gap is
+  // smallest once both vehicles have stopped.
+  constexpr double ego_velocity = 10.0;
+  ObjectData object;
+  object.velocity = 2.0;
+  object.distance_to_object = 20.0;
+  ASSERT_TRUE(aeb_node_->hasCollision(ego_velocity, object));
+  EXPECT_DOUBLE_EQ(
+    aeb_node_->collision_data_keeper_.get()->rss, 10.0 + 100.0 / 6.0 - 4.0 / 2.0 + 1.0);
+
+  object.distance_to_object = 26.0;
+  EXPECT_FALSE(aeb_node_->hasCollision(ego_velocity, object));
+}
+
+TEST_F(TestAEB, checkCollisionObjectPullsAway)
+{
+  set_rss_parameters(*aeb_node_);
+  // The object is faster than ego and the gap never shrinks, so only the margin is required.
+  constexpr double ego_velocity = 10.0;
+  ObjectData object;
+  object.velocity = 20.0;
+  object.distance_to_object = 0.5;
+  ASSERT_TRUE(aeb_node_->hasCollision(ego_velocity, object));
+  EXPECT_DOUBLE_EQ(aeb_node_->collision_data_keeper_.get()->rss, 1.0);
+
+  object.distance_to_object = 1.5;
+  EXPECT_FALSE(aeb_node_->hasCollision(ego_velocity, object));
+}
+
+TEST_F(TestAEB, checkCollisionEgoBrakesNoHarderThanObject)
+{
+  set_rss_parameters(*aeb_node_);
+  aeb_node_->a_ego_min_ = -1.0;
+  // With equal decelerations, the object stays 4 m/s faster than ego once ego starts braking, so
+  // the gap never shrinks and only the margin is required.
+  constexpr double ego_velocity = 10.0;
+  ObjectData object;
+  object.velocity = 15.0;
+  object.distance_to_object = 0.5;
+  ASSERT_TRUE(aeb_node_->hasCollision(ego_velocity, object));
+  EXPECT_DOUBLE_EQ(aeb_node_->collision_data_keeper_.get()->rss, 1.0);
+
+  object.distance_to_object = 1.5;
+  EXPECT_FALSE(aeb_node_->hasCollision(ego_velocity, object));
+}
+
+TEST_F(TestAEB, checkCollisionClosestApproachWhileReversing)
+{
+  set_rss_parameters(*aeb_node_);
+  // The required distance depends only on the ego speed, so this matches the forward case in
+  // checkCollisionClosestApproachWhileBraking.
+  constexpr double ego_velocity = -20.0;
+  ObjectData object;
+  object.velocity = 15.0;
+  object.distance_to_object = 10.0;
+  ASSERT_TRUE(aeb_node_->hasCollision(ego_velocity, object));
+  EXPECT_DOUBLE_EQ(aeb_node_->collision_data_keeper_.get()->rss, 14.5 + 1.0);
+
+  object.distance_to_object = 16.0;
+  EXPECT_FALSE(aeb_node_->hasCollision(ego_velocity, object));
+}
+
 TEST_F(TestAEB, getObjectOnPathData)
 {
   constexpr double longitudinal_velocity = 3.0;
