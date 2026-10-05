@@ -12,21 +12,33 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Adopt the CARLA world the scenario runner owns (scenario mode).
+"""Adopt the CARLA world and the ego the scenario runner owns (scenario mode).
 
-Extracted from ``carla_autoware`` so the world-handoff logic lives on its own:
-in scenario mode the interface does not load the world, it waits for the
-``autoware_carla_scenario`` runner to bring one up and then adopts it. See
-``wait_for_external_world`` for the handoff contract.
+Extracted from ``carla_autoware`` so the handoff logic lives on its own: in
+scenario mode the interface loads neither the world nor the ego, it waits for
+the ``autoware_carla_scenario`` runner to bring both up and then adopts them.
+See :func:`wait_for_external_world` and :func:`attach_to_scenario_ego` for the
+two halves of the handoff contract.
+
+Nothing here imports ``carla``: the world and the actors are only ever used
+through the handful of methods named below, so the handoff is unit-testable
+without a simulator.
 """
 
 from __future__ import annotations
 
 import time
 
+#: How often to look for the scenario's ego while waiting to attach to it.
+EGO_ATTACH_POLL_INTERVAL_S = 0.5
+
 
 class ScenarioWorldNotOwned(RuntimeError):
     """Raised when the scenario runner never took ownership of the CARLA world."""
+
+
+class ScenarioEgoMissing(RuntimeError):
+    """Raised when the scenario never placed an ego for this node to attach to."""
 
 
 def _active_map(client):
@@ -53,6 +65,19 @@ def _observed_tick(world) -> bool:
         return True
     except RuntimeError:
         return False
+
+
+def _not_owned_message(timeout: float, expected: str, current, sync_enabled: bool) -> str:
+    """Return the message for a runner that never claimed the world."""
+    return (
+        f"The scenario runner did not take ownership of the CARLA world within "
+        f"{timeout:.0f}s (expected map '{expected}', active map: {current}, "
+        f"synchronous mode: {sync_enabled}). Refusing to start on a world nobody "
+        "claimed: it would be the async default world or the previous episode's, "
+        "so the run would drive the wrong map or a clock nobody advances. Check "
+        "that the scenario runner is running, that its map matches carla_map, and "
+        "raise scenario_world_wait_timeout if the runner simply needs longer."
+    )
 
 
 def wait_for_external_world(client, expected_map: str, timeout: float, logger):
@@ -88,23 +113,53 @@ def wait_for_external_world(client, expected_map: str, timeout: float, logger):
         f"(expected map '{expected}'); not loading the world here (the runner owns it)."
     )
     while True:
+        world = client.get_world()
         current, unreadable = _active_map(client)
-        owned = (unreadable or current == expected) and _sync_enabled(client.get_world())
-        if owned and _observed_tick(client.get_world()):
+        sync_enabled = _sync_enabled(world)
+        owned = (unreadable or current == expected) and sync_enabled
+        if owned and _observed_tick(world):
             logger.info(f"Adopted the scenario runner's live CARLA world (map '{current}').")
-            return client.get_world()
+            return world
         if time.time() >= deadline:
-            message = (
-                f"The scenario runner did not take ownership of the CARLA world within "
-                f"{timeout:.0f}s (expected map '{expected}', active map: {current}, "
-                f"synchronous mode: {_sync_enabled(client.get_world())}). Refusing to "
-                "start on a world nobody claimed: it would be the async default world "
-                "or the previous episode's, so the run would drive the wrong map or a "
-                "clock nobody advances. Check that the scenario runner is running, that "
-                "its map matches carla_map, and raise scenario_world_wait_timeout if the "
-                "runner simply needs longer."
-            )
+            message = _not_owned_message(timeout, expected, current, sync_enabled)
             logger.error(message)
             raise ScenarioWorldNotOwned(message)
         if not owned:
             time.sleep(1.0)
+
+
+def find_ego_actor(world, role_name: str):
+    """Return the vehicle carrying *role_name*, if one is in *world*."""
+    for actor in world.get_actors().filter("vehicle.*"):
+        if actor.attributes.get("role_name") == role_name:
+            return actor
+    return None
+
+
+def attach_to_scenario_ego(world, role_name: str, timeout: float, logger):
+    """Wait for the ego the scenario placed and adopt it.
+
+    The wait is bounded so a scenario that never places an ego cannot hang the
+    startup. It fails instead of falling back to spawning one here: starting
+    from the interface's own spawn point would run a different scenario than
+    the one that was asked for, and silently so.
+
+    Returns:
+        The scenario's ego actor.
+
+    Raises:
+        ScenarioEgoMissing: If no such actor appears within *timeout*.
+    """
+    deadline = time.time() + timeout
+    while True:
+        actor = find_ego_actor(world, role_name)
+        if actor is not None:
+            logger.info(f"Attached to the scenario's ego: id={actor.id} role_name='{role_name}'")
+            return actor
+        if time.time() >= deadline:
+            raise ScenarioEgoMissing(
+                f"No actor with role_name='{role_name}' appeared within {timeout:.1f}s. "
+                "In scenario mode the scenario places the ego and this node attaches "
+                "to it; check that the scenario runner started and reached its ego spawn."
+            )
+        time.sleep(EGO_ATTACH_POLL_INTERVAL_S)
