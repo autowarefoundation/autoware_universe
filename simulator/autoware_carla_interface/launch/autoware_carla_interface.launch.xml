@@ -226,13 +226,13 @@
     <executable
       cmd="$(find-pkg-prefix autoware_carla_interface)/lib/autoware_carla_interface/scenario_runner $(var with_scenario) --python=$(var scenario_python) --pip-args=$(var scenario_pip_args) --overrides=$(var scenario_overrides)"
       output="screen"
-      if="$(eval &quot;'$(var with_scenario)'.strip() != ''&quot;)"
+      if="$(var is_scenario)"
     />
 
     <!-- Scenario bridge: dial the runner's gRPC server, pull the mission, and
          drive Autoware's localization init / routing / engage and report
          readiness. Only launched when with_scenario is non-empty. -->
-    <node pkg="autoware_carla_interface" exec="scenario_bridge" name="scenario_bridge" output="screen" if="$(eval &quot;'$(var with_scenario)'.strip() != ''&quot;)">
+    <node pkg="autoware_carla_interface" exec="scenario_bridge" name="scenario_bridge" output="screen" if="$(var is_scenario)">
       <param name="bridge_address" value="$(var bridge_address)"/>
       <param name="auto_engage" value="$(var auto_engage)"/>
       <param name="initialize_localization" value="$(var initialize_localization)"/>

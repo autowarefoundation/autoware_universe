@@ -26,7 +26,7 @@ This ros package enables communication between Autoware and CARLA for autonomous
 
 3. **Download CARLA Lanelet2 Maps**: Get the y-axis inverted maps from [CARLA Autoware Contents](https://bitbucket.org/carla-simulator/autoware-contents/src/master/maps/)
 
-4. **For the scenario closed loop only**: a CPython **3.12** interpreter, matching the ABI of the scenario runner's CARLA 0.10 wheel. On Ubuntu 24.04 / ROS 2 Jazzy this is the system `python3` and `rosdep install` already covers it through `python3-venv`. On Ubuntu 22.04 it has to be installed out of band; see [Scenario closed loop](#scenario-closed-loop). The rest of this bridge needs nothing beyond `rosdep`.
+4. **For the scenario closed loop only**: nothing beyond `rosdep`. The scenario runner's virtualenv is built with the interpreter the wheelhouse holds wheels for, which on both Ubuntu 24.04 / ROS 2 Jazzy (3.12) and Ubuntu 22.04 / ROS 2 Humble (3.10) is the distribution's own `python3`, already covered by the `python3-venv` and `python3-pip` dependencies. See [Scenario closed loop](#scenario-closed-loop).
 
 #### Map Setup
 
