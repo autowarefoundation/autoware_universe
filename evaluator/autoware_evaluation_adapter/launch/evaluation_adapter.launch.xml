@@ -5,7 +5,7 @@
     <push-ros-namespace namespace="evaluation_adapter"/>
     <include file="$(find-pkg-share autoware_evaluation_adapter)/launch/namespace.launch.py"/>
 
-    <node_container pkg="rclcpp_components" exec="component_container_mt" name="container" namespace="" unless="$(eval &quot;'$(var use_agnocast)' == '1'&quot;)"/>
+    <node_container pkg="rclcpp_components" exec="component_container_mt" name="container" namespace="" unless="$(equals $(var use_agnocast) 1)"/>
     <autoware_node pkg="autoware_evaluation_adapter" exec="autoware_engage_node" name="autoware_engage" target="$(var current_ros_namespace)/container"/>
     <autoware_node pkg="autoware_evaluation_adapter" exec="velocity_limit_node" name="velocity_limit" target="$(var current_ros_namespace)/container"/>
   </group>
