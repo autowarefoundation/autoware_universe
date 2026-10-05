@@ -23967,10 +23967,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#sub_default_adapilaunchpy" class="md-nav__link">
+  <a href="#sub_default_adapilaunchxml" class="md-nav__link">
     <span class="md-ellipsis">
       
-        sub_default_adapi.launch.py
+        sub_default_adapi.launch.xml
       
     </span>
   </a>
@@ -24212,8 +24212,8 @@ RedundancyAdapiSwitcher         RedundancyAdapiSwitcher
 </tr>
 </tbody>
 </table>
-<h3 id="sub_default_adapilaunchpy"><code>sub_default_adapi.launch.py</code><a class="headerlink" href="#sub_default_adapilaunchpy" title="Permanent link">#</a></h3>
-<p>Launches the Sub ECU adapi container. Loads <code>HeartbeatNode</code>, <code>DiagnosticsNode</code>, and <code>FailSafeNode</code> into a <code>component_container_mt</code>.</p>
+<h3 id="sub_default_adapilaunchxml"><code>sub_default_adapi.launch.xml</code><a class="headerlink" href="#sub_default_adapilaunchxml" title="Permanent link">#</a></h3>
+<p>Launches the Sub ECU adapi nodes <code>HeartbeatNode</code>, <code>DiagnosticsNode</code>, and <code>FailSafeNode</code>. With <code>ENABLE_AGNOCAST=0</code> they are loaded into a <code>component_container_mt</code>; with <code>ENABLE_AGNOCAST=1</code> each runs as its own process.</p>
 <table>
 <thead>
 <tr>
