@@ -242,7 +242,7 @@ and reports how many it skipped through a throttled warning.
 
 `with_scenario:=<source>#<scenario-name>` runs a CARLA scenario closed loop. `<source>` is a wheelhouse (a `.zip` of wheels or a directory of wheels, installed offline) or any pip install source; it is installed into a dedicated virtualenv whose `scenario` entrypoint hosts the gRPC server the bridge talks to. Leaving `with_scenario` empty (the default) disables the scenario bridge entirely, and nothing below applies.
 
-<!-- cspell:ignore rosdistro deadsnakes -->
+<!-- cspell:ignore rosdistro deadsnakes virtualenv -->
 
 #### Which interpreter the venv is built with
 
