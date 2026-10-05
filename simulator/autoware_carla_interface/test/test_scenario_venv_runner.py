@@ -279,6 +279,14 @@ def test_only_the_wheels_the_interpreter_can_install_are_named(tmp_path):
     ]
 
 
+def test_an_interpreter_whose_version_cannot_be_read_gets_every_wheel(tmp_path):
+    # `/opt/py/bin/python` says nothing about its version, so there is nothing to
+    # filter on; pip is left to refuse whatever does not fit, with its own message.
+    wheels = _find_wheels(_multi_wheelhouse(tmp_path))
+    args = _wheelhouse_install_args(wheels, "/opt/py/bin/python")
+    assert args == ["--no-index", "--no-deps", *map(str, wheels)]
+
+
 def test_an_interpreter_older_than_every_wheel_is_refused(tmp_path):
     wh = tmp_path / "newer"
     wh.mkdir()

@@ -282,6 +282,29 @@ def select_python(requested: str, wheels: Sequence[Path]) -> str:
     )
 
 
+def _wheels_for(wheels: Sequence[Path], python: str) -> list[Path]:
+    """Return the wheels *python* can install, or all of them if it cannot be read.
+
+    An interpreter named something whose version this cannot parse
+    (``/opt/py/bin/python``) is taken at its word: pip refuses what does not
+    fit, with its own message.
+    """
+    matched = re.search(r"3\.(\d+)$", python)
+    if matched is None:
+        return list(wheels)
+    minor = int(matched.group(1))
+    return [wheel for wheel in wheels if _installable(wheel, minor)]
+
+
+def _no_installable_wheel(wheels: Sequence[Path], python: str) -> RuntimeError:
+    """Return the error for a wheelhouse that holds nothing *python* can install."""
+    supported = ", ".join(_interpreter(minor) for minor in wheelhouse_pythons(wheels))
+    return RuntimeError(
+        f"No wheel in this wheelhouse can be installed by {python}. It holds wheels "
+        f"for {supported or 'no interpreter this can identify'}."
+    )
+
+
 def _wheelhouse_install_args(wheels: Sequence[Path], python: str) -> list[str]:
     """Return the ``pip install`` args for *wheels* under the *python* venv.
 
@@ -298,23 +321,9 @@ def _wheelhouse_install_args(wheels: Sequence[Path], python: str) -> list[str]:
     Raises:
         RuntimeError: If no wheel in the wheelhouse matches *python*.
     """
-    matched = re.search(r"3\.(\d+)$", python)
-    if matched is None:
-        # An interpreter named something this cannot parse (`/opt/py/bin/python`)
-        # is taken at its word: pip refuses what does not fit, with its own message.
-        return ["--no-index", "--no-deps", *(str(wheel) for wheel in wheels)]
-    minor = int(matched.group(1))
-    installable = [wheel for wheel in wheels if _installable(wheel, minor)]
+    installable = _wheels_for(wheels, python)
     if not installable:
-        raise RuntimeError(
-            f"No wheel in this wheelhouse can be installed by {python}. It holds "
-            "wheels for "
-            + (
-                ", ".join(_interpreter(each) for each in wheelhouse_pythons(wheels))
-                or "no interpreter this can identify"
-            )
-            + "."
-        )
+        raise _no_installable_wheel(wheels, python)
     return ["--no-index", "--no-deps", *(str(wheel) for wheel in installable)]
 
 
