@@ -35,40 +35,56 @@ def _merge_settings(base, override):
     return merged
 
 
-def _read_settings(path, blueprint_id):
-    """Return the physics settings for *blueprint_id*, or None if there are none."""
+def _load_document(path):
+    """Return the parsed ``vehicle_physics_config`` at *path*, or None if unreadable."""
     try:
         with open(path) as config_file:
-            document = yaml.safe_load(config_file) or {}
+            return yaml.safe_load(config_file) or {}
     except OSError as error:
         print(f"WARNING: Cannot read vehicle_physics_config {path}: {error}")
-        return None
     except yaml.YAMLError as error:
         print(f"WARNING: Invalid vehicle_physics_config {path}: {error}")
-        return None
+    return None
 
-    settings = document.get("default") or {}
-    settings = _merge_settings(settings, (document.get("vehicles") or {}).get(blueprint_id) or {})
+
+def _read_settings(path, blueprint_id):
+    """Return the physics settings for *blueprint_id*, or None if there are none."""
+    document = _load_document(path)
+    if document is None:
+        return None
+    vehicles = document.get("vehicles") or {}
+    settings = _merge_settings(document.get("default") or {}, vehicles.get(blueprint_id) or {})
     return settings or None
 
 
-def _apply_wheel_settings(physics, wheel_settings):
-    """Write the front/rear wheel settings onto *physics*; return the wheel list.
+def _is_front(wheels):
+    """Return, per wheel, whether it sits on the steered (front) axle.
 
     The steered wheels are the ones the server reports a non-zero
     max_steer_angle for, so "front" keeps meaning the steered axle even after
-    this has been applied once.
+    this has been applied once. A vehicle that steers nothing (yet) falls back
+    to the first half of the list.
     """
-    wheels = list(physics.wheels)
-    steered = [w.max_steer_angle > 0.0 for w in wheels]
-    if not any(steered):  # nothing steers (yet): take the first half as front
-        steered = [i < len(wheels) / 2 for i in range(len(wheels))]
-    for wheel, is_front in zip(wheels, steered):
-        for key, value in (wheel_settings.get("front" if is_front else "rear") or {}).items():
-            if not hasattr(wheel, key):
-                print(f"WARNING: Unknown wheel physics key '{key}'; skipped.")
-                continue
+    steered = [wheel.max_steer_angle > 0.0 for wheel in wheels]
+    if any(steered):
+        return steered
+    return [index < len(wheels) / 2 for index in range(len(wheels))]
+
+
+def _write_wheel(wheel, settings):
+    """Write one axle's settings onto one wheel."""
+    for key, value in settings.items():
+        if hasattr(wheel, key):
             setattr(wheel, key, float(value))
+        else:
+            print(f"WARNING: Unknown wheel physics key '{key}'; skipped.")
+
+
+def _apply_wheel_settings(physics, wheel_settings):
+    """Write the front/rear wheel settings onto *physics*; return the wheel list."""
+    wheels = list(physics.wheels)
+    for wheel, is_front in zip(wheels, _is_front(wheels)):
+        _write_wheel(wheel, wheel_settings.get("front" if is_front else "rear") or {})
     return wheels
 
 
