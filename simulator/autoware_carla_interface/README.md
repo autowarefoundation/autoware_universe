@@ -242,22 +242,34 @@ and reports how many it skipped through a throttled warning.
 
 `with_scenario:=<source>#<scenario-name>` runs a CARLA scenario closed loop. `<source>` is a wheelhouse (a `.zip` of wheels or a directory of wheels, installed offline) or any pip install source; it is installed into a dedicated virtualenv whose `scenario` entrypoint hosts the gRPC server the bridge talks to. Leaving `with_scenario` empty (the default) disables the scenario bridge entirely, and nothing below applies.
 
-#### Interpreter prerequisite
+<!-- cspell:ignore rosdistro deadsnakes -->
 
-The venv is built with `scenario_python` (default `python3.12`), and that interpreter **must match the ABI of the CARLA 0.10 wheel in the wheelhouse** — currently cp312. This is the one prerequisite `rosdep` cannot supply:
+#### Which interpreter the venv is built with
 
-- `python3 -m venv` does not provide an interpreter. It links the one that runs it, so the venv's Python version is whatever `scenario_python` already is on the system.
-- `python3-venv` and `python3-pip` are rosdep-resolvable and declared in `package.xml`, but they only add venv support for the system Python: on Ubuntu 24.04 that pulls `python3.12-venv`, on Ubuntu 22.04 `python3.10-venv`.
-- rosdep has no versioned interpreter keys (no `python3.X` rules exist in rosdistro) and cannot add a PPA.
+`scenario_python` defaults to `auto`, which reads the answer out of the wheelhouse: a wheel
+compiled for one interpreter carries its tag in the filename (`carla-0.10.0-cp310-cp310-…`), so
+the set of tags *is* the set of interpreters that wheelhouse can be installed under. The Python
+running the launch is preferred whenever it is in that set, and it is the distribution's own:
 
-So:
+| Platform                    | Interpreter chosen | What is needed                                                                                    |
+| --------------------------- | ------------------ | ------------------------------------------------------------------------------------------------- |
+| Ubuntu 24.04 / ROS 2 Jazzy  | `python3.12`       | Nothing extra — `python3-venv` and `python3-pip` are in `package.xml` and `rosdep install` covers them. |
+| Ubuntu 22.04 / ROS 2 Humble | `python3.10`       | The same nothing extra, as long as the wheelhouse was exported with 3.10 in it (every wheelhouse exported by `autoware_carla_scenario` is). |
 
-| Platform                    | What is needed                                                                                                                                                                                                                                                                                                                                                                        |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Ubuntu 24.04 / ROS 2 Jazzy  | Nothing extra. The system `python3` is 3.12 and `rosdep install` covers it.                                                                                                                                                                                                                                                                                                           |
-| Ubuntu 22.04 / ROS 2 Humble | No `python3.12` package exists in the archive. Install one out of band (e.g. the [deadsnakes PPA](https://launchpad.net/~deadsnakes/+archive/ubuntu/ppa): `python3.12 python3.12-venv`), or pass `scenario_python:=<interpreter>` matching your own wheelhouse. Note that CARLA 0.10 publishes no wheel for CPython 3.10, so the stock wheelhouse cannot be used on 22.04 either way. |
+This matters because `rosdep` cannot supply a *versioned* interpreter: `python3 -m venv` links the
+Python that runs it rather than providing one, no `python3.X` keys exist in rosdistro, and rosdep
+cannot add a PPA. Pinning the venv to one version would therefore have meant installing a Python
+out of band on every distribution but one. Reading the version off the wheelhouse avoids that
+entirely.
 
-When the interpreter is missing, provisioning fails with a message naming it and what to install, rather than a bare `FileNotFoundError`.
+Only the wheels the chosen interpreter can install are passed to pip. A wheelhouse covering
+several holds the others' compiled wheels too, and pip fails an install the moment it is handed a
+wheel tagged for another interpreter.
+
+Pass `scenario_python:=<interpreter>` to override the choice — for a wheelhouse built elsewhere,
+or an interpreter that is not on `PATH` under its version name. An override that is not installed
+fails with a message naming it and what to install, rather than a bare `FileNotFoundError`; so
+does a wheelhouse whose interpreters are all missing.
 
 ### Sensor Configuration
 

@@ -1,4 +1,4 @@
-# cspell:ignore execv virtualenv wheelhouse
+# cspell:ignore execv virtualenv wheelhouse abi3 manylinux rosdistro
 # Copyright 2024 Tier IV, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,19 +20,27 @@ rclpy-free Python distribution that exposes a ``scenario`` console entrypoint an
 hosts the ``AutowareBridge`` gRPC server.  Rather than a Docker image, this
 installs it into a dedicated virtualenv and then ``exec``s the entrypoint, so the
 launched process *becomes* the runner.  The venv keeps the runner's dependencies
-(its CPython-3.12 CARLA 0.10 wheel, protobuf 4.x, ...) isolated from the ROS 2
-Python environment -- which may even be a different Python version -- so the two
-never clash, and it is built with ``python3-venv`` + ``python3-pip`` (both
-rosdep-resolvable), so ``autoware_carla_interface`` stays declarable through
-``package.xml``.  The *interpreter* the venv is built with is the one thing rosdep
-cannot supply -- see :meth:`ScenarioVenvRunner._check_python`.
+(its compiled CARLA 0.10 client, protobuf 4.x, ...) isolated from the ROS 2
+Python environment so the two never clash, and it is built with ``python3-venv``
++ ``python3-pip`` (both rosdep-resolvable), so ``autoware_carla_interface`` stays
+declarable through ``package.xml``.
+
+The *interpreter* the venv is built with is chosen from the wheelhouse itself:
+a wheelhouse carries a wheel per interpreter it supports, and the tags on those
+wheels say which.  The system Python is preferred when it is one of them, which
+on both Jazzy (3.12) and Humble (3.10) it is -- so nothing has to be installed
+out of band and ``scenario_python`` only has to be passed when overriding the
+choice.  See :func:`select_python`.
 
 Two source kinds are accepted (``with_scenario:=<source>#<scenario-name>``):
 
 * a **wheelhouse** -- a ``.zip`` of wheels (extracted first) or a directory of
   wheels, holding the scenario and its full dependency closure.  It is installed
   offline with ``pip install --no-index --no-deps <wheels...>`` -- no ``uv``, git,
-  or network.  This is the primary, self-contained path.
+  or network.  This is the primary, self-contained path.  Only the wheels the
+  chosen interpreter can install are named: a wheelhouse built for several
+  carries the others' compiled wheels too, and pip refuses a wheel whose tag
+  does not match however it was asked for it.
 * any **pip install source** (a name, path, or VCS URL), installed with
   ``pip install <source>`` (plus ``scenario_pip_args``).
 
@@ -53,9 +61,11 @@ import hashlib
 import logging
 import os
 from pathlib import Path
+import re
 import shlex
 import shutil
 import subprocess
+import sys
 from typing import NoReturn
 from typing import Optional
 from typing import Sequence
@@ -63,10 +73,19 @@ import zipfile
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["ScenarioVenvRunner", "parse_spec", "main"]
+__all__ = ["ScenarioVenvRunner", "parse_spec", "select_python", "main"]
 
 #: Console script the scenario runner installs.
 _ENTRYPOINT = "scenario"
+
+#: ``--python=auto``: pick the interpreter from the wheelhouse's own wheel tags.
+AUTO_PYTHON = "auto"
+
+#: A wheel built for one CPython minor, e.g. ``cp310``.
+_CPYTHON_TAG = re.compile(r"^cp3(\d+)$")
+
+#: A wheel that is not built for a particular minor, e.g. ``py3`` or ``py36``.
+_GENERIC_TAG = re.compile(r"^py3(\d*)$")
 
 
 def parse_spec(spec: str) -> tuple[str, str]:
@@ -121,12 +140,10 @@ def _extract_zip(zip_path: Path) -> Path:
     return dest
 
 
-def _wheelhouse_install_args(source: str) -> list[str]:
-    """Return the ``pip install`` args for a wheelhouse *source*.
+def _wheelhouse_wheels(source: str) -> list[Path]:
+    """Return every wheel in the wheelhouse at *source*.
 
     *source* is a wheelhouse ``.zip`` (extracted first) or a directory of wheels.
-    Installs the whole wheel set offline -- ``--no-index`` so nothing is fetched,
-    ``--no-deps`` because the wheelhouse already carries the full closure.
 
     Raises:
         FileNotFoundError: If the wheelhouse holds no ``*.whl`` files.
@@ -143,7 +160,159 @@ def _wheelhouse_install_args(source: str) -> list[str]:
             "(`uv build --wheel`, or `pip wheel`) and point this at the wheels. "
             "Installing from a source tree is not supported yet."
         )
-    return ["--no-index", "--no-deps", *(str(w) for w in wheels)]
+    return wheels
+
+
+def _wheel_tags(wheel: Path) -> tuple[list[str], str]:
+    """Return a wheel's ``(python tags, abi tag)``, or ``([], "")`` if unreadable.
+
+    ``name-version[-build]-python-abi-platform.whl``, and the python field holds
+    several tags joined by ``.`` when one wheel serves several interpreters.
+    """
+    fields = wheel.name[: -len(".whl")].split("-")
+    if len(fields) < 5:
+        return [], ""
+    return fields[-3].split("."), fields[-2]
+
+
+def wheelhouse_pythons(wheels: Sequence[Path]) -> list[int]:
+    """Return the CPython minors *wheels* were built for, ascending.
+
+    Only wheels pinned to one interpreter are counted -- ``cp310-cp310``, the
+    shape a compiled extension has.  ``py3-none-any`` and ``cp37-abi3`` install
+    under a whole range and so say nothing about which interpreters the
+    wheelhouse was resolved for.
+
+    Returns:
+        e.g. ``[10, 12]`` for a wheelhouse serving Humble and Jazzy, or an empty
+        list when nothing in it is interpreter-specific.
+    """
+    minors = set()
+    for wheel in wheels:
+        pythons, abi = _wheel_tags(wheel)
+        for tag in pythons:
+            matched = _CPYTHON_TAG.match(tag)
+            if matched is not None and abi == tag:
+                minors.add(int(matched.group(1)))
+    return sorted(minors)
+
+
+def _installable(wheel: Path, minor: int) -> bool:
+    """Whether CPython 3.*minor* can install *wheel*."""
+    pythons, abi = _wheel_tags(wheel)
+    if not pythons:
+        # Not a name this can read; let pip be the one to refuse it.
+        return True
+    for tag in pythons:
+        generic = _GENERIC_TAG.match(tag)
+        if generic is not None:
+            # `py3` is any 3.x; `py36` is 3.6 and up.
+            if not generic.group(1) or int(generic.group(1)) <= minor:
+                return True
+            continue
+        cpython = _CPYTHON_TAG.match(tag)
+        if cpython is None:
+            continue
+        built = int(cpython.group(1))
+        # A stable-ABI wheel installs on its own minor and every later one.
+        if built == minor or (abi == "abi3" and built <= minor):
+            return True
+    return False
+
+
+def _interpreter(minor: int) -> str:
+    """Return the command name for CPython 3.*minor*."""
+    return f"python3.{minor}"
+
+
+def _running_minor() -> int:
+    """Return the CPython minor of the process asking -- the ROS 2 distribution's."""
+    return sys.version_info.minor
+
+
+def select_python(requested: str, wheels: Sequence[Path]) -> str:
+    """Return the interpreter to build the venv with.
+
+    Anything other than :data:`AUTO_PYTHON` is taken as given -- an explicit
+    ``scenario_python:=`` is an instruction, not a hint, and it is checked for
+    existence later where the message can say what to install.
+
+    Automatically, the wheelhouse decides. It holds a wheel per interpreter it
+    was resolved for, so the tags on those wheels are the list of interpreters
+    that can install it, and the one running this process is preferred whenever
+    it is on that list: it is the ROS 2 distribution's own Python, it is
+    certainly installed, and its ``python3-venv`` is what ``package.xml``
+    already pulls in. Otherwise the newest supported interpreter that is
+    actually installed wins.
+
+    Args:
+        requested: ``scenario_python``; :data:`AUTO_PYTHON` to choose here.
+        wheels: The wheelhouse's wheels, or empty for a pip source -- there is
+            nothing to read tags off then, so the running interpreter is used.
+
+    Returns:
+        The interpreter command, e.g. ``python3.10``.
+
+    Raises:
+        RuntimeError: If the wheelhouse supports no interpreter that is
+            installed here.
+    """
+    if requested != AUTO_PYTHON:
+        return requested
+
+    running = _running_minor()
+    supported = wheelhouse_pythons(wheels)
+    if not supported or running in supported:
+        return _interpreter(running)
+
+    for minor in reversed(supported):
+        if shutil.which(_interpreter(minor)) is not None:
+            return _interpreter(minor)
+
+    raise RuntimeError(
+        "This wheelhouse holds wheels for "
+        + ", ".join(_interpreter(minor) for minor in supported)
+        + f", and none of them is installed -- this process runs {_interpreter(running)}. "
+        "Install one of them (on Ubuntu, `python3.X python3.X-venv`), export a "
+        "wheelhouse covering this interpreter, or pass scenario_python:= to choose "
+        "one yourself."
+    )
+
+
+def _wheelhouse_install_args(wheels: Sequence[Path], python: str) -> list[str]:
+    """Return the ``pip install`` args for *wheels* under the *python* venv.
+
+    Installs offline -- ``--no-index`` so nothing is fetched, ``--no-deps``
+    because the wheelhouse already carries the full closure.
+
+    Naming the wheels individually is what makes those two flags enough, and it
+    is also why they have to be filtered: a wheelhouse built for 3.10 and 3.12
+    holds both interpreters' compiled wheels, and pip fails the whole install on
+    the first one tagged for the other (`is not a supported wheel on this
+    platform`). Filtering by tag here, rather than handing pip the directory and
+    a requirement set, keeps the install exactly as pinned as the wheelhouse is.
+
+    Raises:
+        RuntimeError: If no wheel in the wheelhouse matches *python*.
+    """
+    matched = re.search(r"3\.(\d+)$", python)
+    if matched is None:
+        # An interpreter named something this cannot parse (`/opt/py/bin/python`)
+        # is taken at its word: pip refuses what does not fit, with its own message.
+        return ["--no-index", "--no-deps", *(str(wheel) for wheel in wheels)]
+    minor = int(matched.group(1))
+    installable = [wheel for wheel in wheels if _installable(wheel, minor)]
+    if not installable:
+        raise RuntimeError(
+            f"No wheel in this wheelhouse can be installed by {python}. It holds "
+            "wheels for "
+            + (
+                ", ".join(_interpreter(each) for each in wheelhouse_pythons(wheels))
+                or "no interpreter this can identify"
+            )
+            + "."
+        )
+    return ["--no-index", "--no-deps", *(str(wheel) for wheel in installable)]
 
 
 def _is_wheelhouse(source: str) -> bool:
@@ -173,10 +342,10 @@ class ScenarioVenvRunner:
             the ``map`` group after the ``scenario`` one, so the group's default
             wins over what the scenario config sets unless the map is overridden
             too.
-        python: Interpreter used to build the venv.  Must match the wheelhouse's
-            CARLA 0.10.0 wheel ABI (cp312 for the current wheelhouse; matches
-            Ubuntu 24.04 / ROS 2 Jazzy) -- independent of whatever Python the ROS 2
-            node itself runs.
+        python: Interpreter used to build the venv.  It has to be one the
+            wheelhouse holds wheels for; :func:`select_python` is what picks it
+            from the wheelhouse rather than from a default that can only be
+            right on one ROS 2 distribution.
 
     The venv lives at a stable path under the user cache (keyed on the install args)
     and is reused across launches -- the install is skipped when its entrypoint
@@ -189,7 +358,7 @@ class ScenarioVenvRunner:
         scenario_name: str,
         *,
         overrides: Sequence[str] = (),
-        python: str = "python3.12",
+        python: str,
     ) -> None:
         self._install_args = list(install_args)
         self._scenario_name = scenario_name
@@ -225,14 +394,13 @@ class ScenarioVenvRunner:
 
         ``python3 -m venv`` does not provide an interpreter, it links the one running
         it, so the venv's Python version is whatever *python* already is on this
-        system. That is why ``python3-venv`` (rosdep-resolvable) is necessary but not
-        sufficient here: on Ubuntu 24.04 / Jazzy it pulls ``python3.12-venv`` and the
-        default is exactly the interpreter the wheelhouse needs, while on Ubuntu 22.04
-        it pulls ``python3.10-venv`` and no ``python3.12`` package exists in the
-        archive at all. rosdep cannot express a versioned interpreter (no
-        ``python3.X`` keys exist in rosdistro) and cannot add the PPA that would carry
-        one, so this prerequisite is declared here and in the README instead of
-        ``package.xml``.
+        system. ``python3-venv`` and ``python3-pip`` (both rosdep-resolvable, both in
+        ``package.xml``) add venv support for the distribution's own Python and for
+        no other: rosdep cannot express a versioned interpreter, since no
+        ``python3.X`` keys exist in rosdistro.
+
+        Chosen automatically that is exactly what gets picked, so reaching this
+        means ``scenario_python:=`` named something that is not installed.
 
         Without this check the failure is a bare ``FileNotFoundError: [Errno 2] ...
         'python3.12'`` from ``subprocess.run``, which says nothing about what to
@@ -241,13 +409,11 @@ class ScenarioVenvRunner:
         if shutil.which(self._python) is not None:
             return
         raise RuntimeError(
-            f"Interpreter '{self._python}' not found, so the scenario runner's venv cannot be "
-            "built. It must match the ABI of the wheelhouse's CARLA 0.10 wheel (cp312). On "
-            "Ubuntu 24.04 / ROS 2 Jazzy that is the system python3, which 'python3-venv' "
-            "already installs. On Ubuntu 22.04 / Humble no python3.12 package exists in the "
-            "archive: install one out of band (e.g. the deadsnakes PPA: python3.12 "
-            "python3.12-venv), or point scenario_python:= at an interpreter matching your "
-            "wheelhouse."
+            f"Interpreter '{self._python}' not found, so the scenario runner's venv cannot "
+            "be built. It was named by scenario_python:= -- drop that argument to have the "
+            "interpreter chosen from the wheelhouse's own wheel tags, or install this one "
+            "(on Ubuntu, `python3.X python3.X-venv`; versions the archive does not carry "
+            "come from a PPA such as deadsnakes)."
         )
 
     def provision(self) -> None:
@@ -280,16 +446,24 @@ class ScenarioVenvRunner:
 
 
 def _make_runner(source: str, scenario_name: str, args: argparse.Namespace) -> ScenarioVenvRunner:
-    """Build the runner for *source*: a wheelhouse (.zip/dir) or a pip install source."""
+    """Build the runner for *source*: a wheelhouse (.zip/dir) or a pip install source.
+
+    The interpreter is settled before the install args, because a wheelhouse's
+    args are the subset of its wheels that interpreter can install.
+    """
     if _is_wheelhouse(source):
-        install_args = _wheelhouse_install_args(source)
+        wheels = _wheelhouse_wheels(source)
+        python = select_python(args.python, wheels)
+        install_args = _wheelhouse_install_args(wheels, python)
     else:
+        python = select_python(args.python, ())
         install_args = [*shlex.split(args.pip_args), source]
+    logger.info("Scenario venv interpreter: %s", python)
     return ScenarioVenvRunner(
         install_args,
         scenario_name,
         overrides=shlex.split(args.overrides),
-        python=args.python,
+        python=python,
     )
 
 
@@ -303,7 +477,10 @@ def main(argv: Optional[Sequence[str]] = None) -> NoReturn:
         "directory of wheels) or a pip install source",
     )
     parser.add_argument(
-        "--python", default="python3.12", help="Interpreter used to build the venv (CPython 3.12)"
+        "--python",
+        default=AUTO_PYTHON,
+        help="Interpreter used to build the venv; 'auto' (the default) picks one the "
+        "wheelhouse has wheels for, preferring the Python running this process",
     )
     parser.add_argument(
         "--pip-args", default="", help="Extra 'pip install' args (shlex-split) for a pip source"

@@ -106,8 +106,8 @@
     />
     <arg
       name="scenario_python"
-      default="python3.12"
-      description="Interpreter used to build the scenario runner's virtualenv. Must match the wheelhouse's CARLA 0.10 wheel ABI (cp312 for the current wheelhouse). rosdep cannot supply a versioned interpreter, so on Ubuntu 24.04 / Jazzy this is the system python3 (covered by python3-venv) while on 22.04 it has to be installed out of band; see the README's Scenario closed loop section"
+      default="auto"
+      description="Interpreter used to build the scenario runner's virtualenv. 'auto' (the default) reads the interpreters the wheelhouse holds wheels for off their tags and prefers this distribution's own python3, which covers Jazzy (3.12) and Humble (3.10); name an interpreter here to override that. See the README's Scenario closed loop section"
     />
     <arg name="scenario_pip_args" default="" description="Extra 'pip install' args for the scenario runner venv, e.g. '--find-links /path/to/carla_wheels' for the vendored CARLA wheel"/>
     <arg
