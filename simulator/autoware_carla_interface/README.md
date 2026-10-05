@@ -248,15 +248,15 @@ and reports how many it skipped through a throttled warning.
 
 `scenario_python` defaults to `auto`, which reads the answer out of the wheelhouse: a wheel
 compiled for one interpreter carries its tag in the filename (`carla-0.10.0-cp310-cp310-…`), so
-the set of tags *is* the set of interpreters that wheelhouse can be installed under. The Python
+the set of tags _is_ the set of interpreters that wheelhouse can be installed under. The Python
 running the launch is preferred whenever it is in that set, and it is the distribution's own:
 
-| Platform                    | Interpreter chosen | What is needed                                                                                    |
-| --------------------------- | ------------------ | ------------------------------------------------------------------------------------------------- |
-| Ubuntu 24.04 / ROS 2 Jazzy  | `python3.12`       | Nothing extra — `python3-venv` and `python3-pip` are in `package.xml` and `rosdep install` covers them. |
+| Platform                    | Interpreter chosen | What is needed                                                                                                                              |
+| --------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Ubuntu 24.04 / ROS 2 Jazzy  | `python3.12`       | Nothing extra — `python3-venv` and `python3-pip` are in `package.xml` and `rosdep install` covers them.                                     |
 | Ubuntu 22.04 / ROS 2 Humble | `python3.10`       | The same nothing extra, as long as the wheelhouse was exported with 3.10 in it (every wheelhouse exported by `autoware_carla_scenario` is). |
 
-This matters because `rosdep` cannot supply a *versioned* interpreter: `python3 -m venv` links the
+This matters because `rosdep` cannot supply a _versioned_ interpreter: `python3 -m venv` links the
 Python that runs it rather than providing one, no `python3.X` keys exist in rosdistro, and rosdep
 cannot add a PPA. Pinning the venv to one version would therefore have meant installing a Python
 out of band on every distribution but one. Reading the version off the wheelhouse avoids that
