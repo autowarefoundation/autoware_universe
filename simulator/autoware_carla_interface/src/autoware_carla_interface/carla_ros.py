@@ -1106,6 +1106,34 @@ class carla_ros2_interface(object):
         """Time constant [s] of the first-order lag applied to the steer command."""
         return float(self.param_values.get("steering_lag_time_constant", self.tau))
 
+    def set_physics_control(self, physics_control):
+        """Publish a freshly read physics control to the control path.
+
+        Both steer angles are derived from it and then cached, so replacing it
+        has to drop those caches. Done under ``_state_lock`` because the ROS spin
+        thread is already running control_callback by the time the ego's physics
+        are written (see modules.vehicle_physics): without the lock a command
+        that lands in between caches an angle from the physics being replaced and
+        keeps it for the whole run.
+        """
+        with self._state_lock:
+            self.physics_control = physics_control
+            self._physics_max_steer_angle_rad = None
+            self._max_steer_angle_rad = None
+
+    def set_steer_normalization_deg(self, max_steer_angle_deg):
+        """Set the calibrated full-steer wheel angle [deg] used to normalize commands.
+
+        Written after the ego spawns (from ``vehicle_physics_config``), i.e. while
+        control_callback may already be running, so the value and the cache it
+        feeds are updated together under ``_state_lock``. Leaving the cache in
+        place would silently keep CARLA's own 70 deg and understeer the ego by
+        the ratio between the two.
+        """
+        with self._state_lock:
+            self.param_values["max_wheel_steer_angle_deg"] = float(max_steer_angle_deg)
+            self._max_steer_angle_rad = None
+
     def first_order_steering(self, steer_input, tau=None):
         """
         First order steering model.
@@ -1257,19 +1285,18 @@ class carla_ros2_interface(object):
     def _legacy_steer_cmd(self, in_cmd):
         """Steer fraction for CARLA 0.9.x (PhysX). Needs _state_lock held.
 
-        The pre-0.10 model: the steering_curve is a multiplier sampled at the
-        forward speed, and the longer LEGACY_STEERING_LAG_TAU lag is applied, so a
-        with_scenario-empty 0.9 run keeps its previous steering response.
+        Same normalization as the 0.10 path -- steer_cmd is a tire angle in
+        radians while VehicleControl.steer is a fraction of the wheel's max steer
+        angle in [-1, 1], and the sign flips because Autoware is CCW-positive and
+        CARLA CW-positive -- but without the steering_curve compensation: on
+        PhysX the curve CARLA ships is sane and the simulator applies its own
+        speed-based limit internally, so dividing by it here would over-steer.
+        Only the longer LEGACY_STEERING_LAG_TAU lag differs from the 0.10 path,
+        which is what keeps a 0.9 run's steering response unchanged.
         """
-        steer_curve = self.physics_control.steering_curve
-        current_vel = self.ego_actor.get_velocity()
-        max_steer_ratio = numpy.interp(
-            abs(current_vel.x), [v.x for v in steer_curve], [v.y for v in steer_curve]
-        )
-        return (
-            self.first_order_steering(-in_cmd.actuation.steer_cmd, tau=LEGACY_STEERING_LAG_TAU)
-            * max_steer_ratio
-        )
+        steer_norm = -in_cmd.actuation.steer_cmd / self._max_wheel_steer_angle_rad()
+        steer_norm = max(-1.0, min(1.0, steer_norm))
+        return self.first_order_steering(steer_norm, tau=LEGACY_STEERING_LAG_TAU)
 
     def _physics_max_wheel_steer_angle_rad(self):
         """Max steerable wheel angle [rad] reported by the vehicle physics.

@@ -96,7 +96,6 @@ class InitializeInterface(object):
         self.scenario_mode = self.param_["scenario_mode"]
         self.scenario_world_wait_timeout = self.param_["scenario_world_wait_timeout"]
         self.ego_attach_timeout = self.param_["ego_attach_timeout"]
-        # Set once an actor is adopted, so the cleanup leaves it to its owner.
 
     def _parse_spawn_point(self):
         """Parse spawn point string and return transform with randomize flag."""
@@ -451,7 +450,7 @@ class InitializeInterface(object):
 
         self.ego_actor = self._spawn_ego_actor()
         self.interface.ego_actor = self.ego_actor  # TODO improve design
-        self.interface.physics_control = self.ego_actor.get_physics_control()
+        self.interface.set_physics_control(self.ego_actor.get_physics_control())
         vehicle_physics.apply(self.ego_actor, self.interface)
         if self.interface.param_values.get("flatten_steering_curve", False):
             vehicle_physics.flatten_steering_curve(self.ego_actor, self.interface)

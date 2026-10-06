@@ -115,13 +115,23 @@ def _apply_steer_normalization(interface, settings, path):
         return
     if float(interface.param_values.get("max_wheel_steer_angle_deg", 0.0)) > 0.0:
         return
-    interface.param_values["max_wheel_steer_angle_deg"] = float(steer_deg)
+    # Goes through the interface so the cached angle derived from the old value is
+    # dropped under its state lock; a plain param_values write would be ignored by
+    # a control_callback that had already cached CARLA's own 70 deg.
+    interface.set_steer_normalization_deg(steer_deg)
     print(f"INFO: Steer normalization set to {float(steer_deg):.1f} deg from {path}.")
 
 
 def _write_one(physics, key, value) -> bool:
     """Write one setting onto *physics*; return whether the key was known."""
     if key == "wheels":
+        if not isinstance(value, dict):
+            # Anything else (a list of axle names, a scalar) would reach
+            # dict.get() on a non-mapping and raise AttributeError, which the
+            # caller's except clause does not cover -- a typo in the YAML would
+            # take the whole interface node down at startup.
+            print("WARNING: vehicle physics 'wheels' must be a mapping of axle -> settings.")
+            return False
         physics.wheels = _apply_wheel_settings(physics, value)
     elif key == "steering_curve":
         physics.steering_curve = [carla.Vector2D(float(x), float(y)) for x, y in value]
@@ -178,7 +188,7 @@ def apply(ego_actor, interface):
         physics = ego_actor.get_physics_control()
         applied = _write_settings(physics, settings)
         ego_actor.apply_physics_control(physics)
-        interface.physics_control = ego_actor.get_physics_control()
+        interface.set_physics_control(ego_actor.get_physics_control())
         print(
             f"INFO: Applied vehicle physics from {path} to {ego_actor.type_id} "
             f"({', '.join(applied) or 'nothing'})."
@@ -204,7 +214,7 @@ def flatten_steering_curve(ego_actor, interface):
             carla.Vector2D(120.0, 1.0),
         ]
         ego_actor.apply_physics_control(physics)
-        interface.physics_control = physics
+        interface.set_physics_control(physics)
         print("INFO: Applied a flat steering curve to the ego vehicle.")
     except RuntimeError as error:
         print(f"WARNING: Failed to flatten the steering curve: {error}")
