@@ -15,6 +15,7 @@
 #ifndef AUTOWARE_ENGAGE_HPP_
 #define AUTOWARE_ENGAGE_HPP_
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_adapi_v1_msgs/msg/operation_mode_state.hpp>
@@ -30,19 +31,19 @@ using EngageStatus = tier4_external_api_msgs::msg::EngageStatus;
 using ChangeOperationMode = autoware_adapi_v1_msgs::srv::ChangeOperationMode;
 using OperationModeState = autoware_adapi_v1_msgs::msg::OperationModeState;
 
-class AutowareEngage : public rclcpp::Node
+class AutowareEngage : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit AutowareEngage(const rclcpp::NodeOptions & options);
 
 private:
-  rclcpp::Publisher<EngageStatus>::SharedPtr pub_engage_;
-  rclcpp::Service<EngageService>::SharedPtr srv_engage_;
+  AUTOWARE_PUBLISHER_PTR(EngageStatus) pub_engage_;
+  AUTOWARE_SERVICE_PTR(EngageService) srv_engage_;
 
   rclcpp::CallbackGroup::SharedPtr callback_group_;
-  rclcpp::Subscription<OperationModeState>::SharedPtr sub_operation_mode_state_;
-  rclcpp::Client<ChangeOperationMode>::SharedPtr cli_change_stop_mode_;
-  rclcpp::Client<ChangeOperationMode>::SharedPtr cli_change_autonomous_mode_;
+  AUTOWARE_SUBSCRIPTION_PTR(OperationModeState) sub_operation_mode_state_;
+  AUTOWARE_CLIENT_PTR(ChangeOperationMode) cli_change_stop_mode_;
+  AUTOWARE_CLIENT_PTR(ChangeOperationMode) cli_change_autonomous_mode_;
 
   void on_state(const OperationModeState & msg);
   void on_engage(
