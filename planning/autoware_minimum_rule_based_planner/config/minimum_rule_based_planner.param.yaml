@@ -85,9 +85,6 @@
         bbox: ["car", "truck", "bus", "trailer", "motorcycle", "bicycle", "pedestrian", "hazard", "animal", "unknown"]
         polygon: ["car", "truck", "bus", "trailer", "pedestrian", "hazard", "animal", "unknown"]
         pointcloud: ["structure", "vegetation"]
-      pointcloud:
-        height_buffer: 0.5  # height buffer to add above ego height [m]
-        min_height: 0.2  # minimum height of pointcloud [m]
       front_distance_th:
         car: 0.5
         truck: 0.5
@@ -127,6 +124,8 @@
       hysteresis_distance: 0.1 # [m]
       hysteresis_time: 0.2     # [s]
       ego_stopped_vel_th: 0.1  # [m/s]
+      pcd_height_buffer: 0.5  # height buffer to add above ego height [m]
+      pcd_min_height: 0.2  # minimum height of pointcloud [m]
 
     velocity_smoother:
       nearest_dist_threshold_m: 1.5

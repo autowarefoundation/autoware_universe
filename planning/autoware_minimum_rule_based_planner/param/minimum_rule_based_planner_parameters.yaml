@@ -312,19 +312,6 @@ minimum_rule_based_planner:
         default_value: [structure, vegetation]
         description: pointcloud types to consider for surround obstacle stop
         read_only: false
-    pointcloud:
-      height_buffer:
-        type: double
-        default_value: 0.5
-        description: height buffer to add above ego height [m]
-        validation:
-          bounds<>: [0.0, 10.0]
-      min_height:
-        type: double
-        default_value: 0.2
-        description: minimum height of pointcloud [m]
-        validation:
-          bounds<>: [0.0, 10.0]
     base_distance_th:
       &distance_th_template {
         type: double,
@@ -370,6 +357,18 @@ minimum_rule_based_planner:
       validation:
         bounds<>: [0.0, 10.0]
       read_only: false
+    pcd_height_buffer:
+      type: double
+      default_value: 0.5
+      description: height buffer to add above ego height [m]
+      validation:
+        bounds<>: [0.0, 10.0]
+    pcd_min_height:
+      type: double
+      default_value: 0.2
+      description: minimum height of pointcloud [m]
+      validation:
+        bounds<>: [0.0, 10.0]
 
   debug:
     enable_path:

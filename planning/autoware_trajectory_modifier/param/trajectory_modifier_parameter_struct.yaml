@@ -390,21 +390,6 @@ trajectory_modifier_params:
         default_value: [hazard, structure, vegetation]
         description: Pointcloud types to consider for surround obstacle stop
         read_only: false
-    pointcloud:
-      height_buffer:
-        type: double
-        default_value: 0.5
-        description: Height buffer to add above ego height [m]
-        validation:
-          bounds<>: [0.0, 10.0]
-        read_only: false
-      min_height:
-        type: double
-        default_value: 0.2
-        description: Minimum height of pointcloud [m]
-        validation:
-          bounds<>: [0.0, 10.0]
-        read_only: false
     base_distance_th:
       &distance_th_template {
         type: double,
@@ -447,6 +432,20 @@ trajectory_modifier_params:
       type: double
       default_value: 0.1
       description: Velocity threshold below which ego vehicle is considered stopped [m/s]
+      validation:
+        bounds<>: [0.0, 10.0]
+      read_only: false
+    pcd_height_buffer:
+      type: double
+      default_value: 0.5
+      description: Height buffer to add above ego height [m]
+      validation:
+        bounds<>: [0.0, 10.0]
+      read_only: false
+    pcd_min_height:
+      type: double
+      default_value: 0.2
+      description: Minimum height of pointcloud [m]
       validation:
         bounds<>: [0.0, 10.0]
       read_only: false
