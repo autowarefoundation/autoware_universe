@@ -247,9 +247,11 @@ and reports how many it skipped through a throttled warning.
 #### Which interpreter the venv is built with
 
 `scenario_python` defaults to `auto`, which reads the answer out of the wheelhouse: a wheel
-compiled for one interpreter carries its tag in the filename (`carla-0.10.0-cp310-cp310-…`), so
-the set of tags _is_ the set of interpreters that wheelhouse can be installed under. The Python
-running the launch is preferred whenever it is in that set, and it is the distribution's own:
+compiled for one interpreter carries its tag in the filename (`numpy-2.2.6-cp310-cp310-…`), so
+the set of tags _is_ the set of interpreters that wheelhouse can be installed under. A wheelhouse
+holds one such wheel per interpreter it was exported for, next to the `py3-none-any` ones that
+install under all of them. The Python running the launch is preferred whenever it is in that set,
+and it is the distribution's own:
 
 | Platform                    | Interpreter chosen | What is needed                                                                                                                              |
 | --------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
