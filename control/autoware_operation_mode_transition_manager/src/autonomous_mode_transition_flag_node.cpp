@@ -16,6 +16,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace autoware::operation_mode_transition_manager
 {
@@ -118,10 +119,15 @@ bool AutonomousModeTransitionFlagNode::inputs_are_fresh(const rclcpp::Time & now
   // Mirrors OperationModeTransitionManager::subscribeData timeout handling, but here
   // it gates the retained values (this node keeps the last message across ticks) so a
   // stalled or exited publisher stops counting once its timestamp ages past the limit.
+  // The names of the inputs that went stale, collected rather than logged one by
+  // one: a throttle macro keyed on its source location would share a single
+  // window across all four call sites, so only whichever input happened to be
+  // checked first in a window would ever be named.
+  std::vector<const char *> stale_inputs;
   const auto timed_out = [&](const char * name, const auto & stamp) {
     const bool stale = input_timeout_ < (now - rclcpp::Time(stamp)).seconds();
     if (stale) {
-      RCLCPP_WARN_THROTTLE(get_logger(), *clock_, 3000, "Retained %s is timed out.", name);
+      stale_inputs.push_back(name);
     }
     return stale;
   };
@@ -132,6 +138,17 @@ bool AutonomousModeTransitionFlagNode::inputs_are_fresh(const rclcpp::Time & now
   const bool control_cmd_ok = !timed_out("control_cmd", input_data_.control_cmd->stamp);
   const bool trajectory_follower_control_cmd_ok = !timed_out(
     "trajectory_follower_control_cmd", input_data_.trajectory_follower_control_cmd->stamp);
+  if (!stale_inputs.empty()) {
+    std::string names;
+    for (const auto * name : stale_inputs) {
+      if (!names.empty()) {
+        names += ", ";
+      }
+      names += name;
+    }
+    RCLCPP_WARN_THROTTLE(
+      get_logger(), *clock_, 3000, "Retained inputs are timed out: %s.", names.c_str());
+  }
   return kinematics_ok && trajectory_ok && control_cmd_ok && trajectory_follower_control_cmd_ok;
 }
 
