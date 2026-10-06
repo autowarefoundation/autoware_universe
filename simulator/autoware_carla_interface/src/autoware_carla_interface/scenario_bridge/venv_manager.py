@@ -466,7 +466,11 @@ def _make_runner(source: str, scenario_name: str, args: argparse.Namespace) -> S
     if _is_wheelhouse(source):
         wheels = _wheelhouse_wheels(source)
         python = select_python(args.python, wheels)
-        install_args = _wheelhouse_install_args(wheels, python)
+        # scenario_pip_args applies to a wheelhouse too (--find-links for a wheel
+        # the wheelhouse does not carry, --no-build-isolation, ...). It goes ahead
+        # of the flags and the wheel paths so the wheels stay the trailing
+        # positional arguments.
+        install_args = [*shlex.split(args.pip_args), *_wheelhouse_install_args(wheels, python)]
     else:
         python = select_python(args.python, ())
         install_args = [*shlex.split(args.pip_args), source]

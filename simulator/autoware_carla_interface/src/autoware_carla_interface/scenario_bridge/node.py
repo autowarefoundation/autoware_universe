@@ -472,6 +472,18 @@ class ScenarioBridgeNode(Node):
         if self._route_requested:
             return
         if not self._aggregator.route_acceptable:
+            if self._aggregator.route_set:
+                # UNKNOWN resolves itself once the planner publishes; SET does not.
+                # It is a route from an earlier run that this bridge did not set, so
+                # it waits forever -- say which state it is stuck on instead of
+                # hanging the startup silently.
+                self.get_logger().warning(
+                    "A route is already SET, and the AD API only accepts a new one in "
+                    "the UNSET state, so the scenario's route cannot be submitted. "
+                    "Clear the leftover route (/api/routing/clear_route) or restart "
+                    "the planning stack.",
+                    throttle_duration_sec=10.0,
+                )
             return
         if not self._route_cli.service_is_ready():
             return
