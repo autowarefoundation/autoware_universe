@@ -195,8 +195,8 @@ obstacle_proximity_checker::Inputs SurroundObstacleStop::to_proximity_checker_in
     ego_side_offset + params_.side_distance_th.pointcloud + params_.hysteresis_distance;
   const auto [min_x, max_x] = std::pair(-rear_offset, front_offset);
   const auto [min_y, max_y] = std::pair(-side_offset, side_offset);
-  const auto min_z = params_.pointcloud.min_height;
-  const auto max_z = context_->vehicle_info.vehicle_height_m + params_.pointcloud.height_buffer;
+  const auto min_z = params_.pcd_min_height;
+  const auto max_z = context_->vehicle_info.vehicle_height_m + params_.pcd_height_buffer;
   pointcloud_filter_->filter_pointcloud(
     transformed_pointcloud, min_x, max_x, min_y, max_y, min_z, max_z);
 
