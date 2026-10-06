@@ -242,8 +242,8 @@ protected:
     p.ego_stopped_vel_th = 0.1;
     p.side_distance_th.car = 1.0;
     p.side_distance_th.pointcloud = 1.0;
-    p.pointcloud.min_height = 0.2;
-    p.pointcloud.height_buffer = 0.5;
+    p.pcd_min_height = 0.2;
+    p.pcd_height_buffer = 0.5;
   }
 
   TrajectoryModifierData make_stopped_input(
@@ -377,7 +377,7 @@ TEST_F(SurroundObstacleStopIntegrationTest, TrajectoryNotModifiedWhenPointcloudI
 TEST_F(
   SurroundObstacleStopIntegrationTest, TrajectoryModifiedWhenLowPointcloudAndMinHeightIsLowered)
 {
-  params_.surround_obstacle_stop.pointcloud.min_height = 0.0;
+  params_.surround_obstacle_stop.pcd_min_height = 0.0;
   plugin_->update_params(TrajectoryModifierParams{params_});
   auto trajectory = create_straight_trajectory(10.0, 5.0);
   const auto pointcloud = make_pointcloud_in_base_link(0.0, 1.5, 0.1);
