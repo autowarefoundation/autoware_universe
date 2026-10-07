@@ -1,0 +1,5 @@
+<library path="autoware_minimap_overlay_rviz_plugin">
+  <class type="autoware_minimap_overlay_rviz_plugin::VehicleMapDisplay"
+         base_class_type="rviz_common::Display">
+  </class>
+</library>
