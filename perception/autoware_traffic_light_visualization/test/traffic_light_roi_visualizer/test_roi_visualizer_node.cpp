@@ -21,9 +21,10 @@
 // synchronizer will not fire while one of its topics is silent; and that either publisher
 // delivers.
 //
-// Two cases drive the node end to end, one per synchronizer, to show that a synchronized set of
-// messages reaches the drawing and comes back out. They check that something was drawn in the
-// signal color, not what - that is the unit tests' job.
+// Four cases drive the node end to end, each synchronizer against each publisher, to show that a
+// synchronized set of messages reaches the drawing and comes back out. All four assert the same
+// minimum: the output is RGB8, and one pixel carries the signal color. That something was drawn
+// is the point; what was drawn is the unit tests' job.
 //
 // Every case that publishes anything arranges the same way, so the per-case Arrange says nothing
 // about it: start the node, subscribe to its output, and wait until it has subscribed to its
@@ -155,24 +156,6 @@ const TrafficLightRoiArray fine_rois = make_roi_array(signal_id, {fine_box});
 const TrafficLightRoiArray rough_rois = make_roi_array(signal_id, {rough_box});
 const TrafficLightArray green_signal =
   make_signal_array(signal_id, TrafficLightElement::GREEN, TrafficLightElement::CIRCLE);
-
-Pixel pixel_at(const Image & image, int x, int y);
-
-// Two points in the strip above a ROI, where a label box is drawn. Offsets measured on 2026-09-15.
-constexpr Pixel label_icon_rgb{0, 0, 0};
-
-// The fill of the box, right of where the id text reaches: background unless a box was drawn.
-Pixel label_box_pixel(const Image & image, const Box & box)
-{
-  return pixel_at(image, box.x + 80, box.y - 13);
-}
-
-// The shape icon inside the box. Black gives it away: the frames and the id text use the signal
-// color, so nothing else in the output is black.
-Pixel label_icon_pixel(const Image & image, const Box & box)
-{
-  return pixel_at(image, box.x + 13, box.y - 13);
-}
 
 Pixel pixel_at(const Image & image, int x, int y)
 {
@@ -440,12 +423,12 @@ TEST_F(TrafficLightRoiVisualizerNodeTest, Sync_RoughRoisMissing_NoOutput)
   EXPECT_EQ(output_, nullptr);
 }
 
-// A ROI whose id matches a classified traffic signal is drawn in the color of that signal's
-// circle, and the label box with the shape icon and the confidence is drawn above it. The output
-// keeps the geometry and the RGB8 encoding of the input image.
+// The three-input synchronizer, end to end: an image, the fine ROIs and the signals go in, and a
+// drawn image comes back out.
 //
-// The exact shape of the label box is not pinned - only that it is drawn above the ROI in the
-// signal color and contains black text - because it is a rendering detail.
+// One pixel of the frame around the fine ROI is enough to show that the callback reached the
+// drawing and published what came back. RoiWithSignalGetsFrameAndLabelBox checks what is drawn
+// there.
 TEST_F(TrafficLightRoiVisualizerNodeTest, Pipeline_FineInputs_DrawnImagePublished)
 {
   // Arrange
@@ -457,34 +440,18 @@ TEST_F(TrafficLightRoiVisualizerNodeTest, Pipeline_FineInputs_DrawnImagePublishe
   ASSERT_TRUE(send_inputs_and_wait_for_output(background_image, fine_rois, green_signal));
 
   // Assert
-  EXPECT_EQ(output_->width, static_cast<uint32_t>(image_width));
-  EXPECT_EQ(output_->height, static_cast<uint32_t>(image_height));
   EXPECT_EQ(output_->encoding, "rgb8");
 
-  // The rectangle around the ROI should be painted.
   const auto frame_corner = pixel_at(*output_, fine_box.x, fine_box.y);
-  const auto frame_bottom_left = pixel_at(*output_, fine_box.x, fine_box.y + fine_box.height);
-  const auto frame_top_right = pixel_at(*output_, fine_box.x + fine_box.width, fine_box.y);
   EXPECT_EQ(frame_corner, green_signal_rgb);
-  EXPECT_EQ(frame_bottom_left, green_signal_rgb);
-  EXPECT_EQ(frame_top_right, green_signal_rgb);
-  // The inside of the ROI is left untouched.
-  const auto roi_interior =
-    pixel_at(*output_, fine_box.x + fine_box.width / 2, fine_box.y + fine_box.height / 2);
-  EXPECT_EQ(roi_interior, background_rgb);
-  // The label box sits above the ROI, filled with the signal color and carrying the shape icon.
-  const auto above_the_roi = label_box_pixel(*output_, fine_box);
-  const auto label_icon = label_icon_pixel(*output_, fine_box);
-  EXPECT_EQ(above_the_roi, green_signal_rgb);
-  EXPECT_EQ(label_icon, label_icon_rgb);
 }
 
-// With high accuracy detection both rectangles are drawn: the rough ROI from the map based
-// detector and, inside it, the fine ROI from the fine detector.
+// The four-input synchronizer, end to end. use_high_accuracy_detection adds the rough ROIs as a
+// fourth input and hands the set to the other callback.
 //
-// The two corners checked below lie on exactly one rectangle each, and the label box is checked at
-// the fine ROI - the opposite of Visualization_RoughOnlyWithSignal_RoughLabeled, where the same
-// box lands on the rough ROI instead.
+// The pixel checked is the rough ROI's corner, which lies on no other rectangle. Only
+// visualize_with_rough_rois() ever paints it, so it also says which of the two callbacks ran.
+// RoughAndFineWithSignalDrawBothFramesAndOneLabel checks what that call draws.
 TEST_F(TrafficLightRoiVisualizerNodeTest, Pipeline_RoughAndFineInputs_DrawnImagePublished)
 {
   // Arrange
@@ -496,15 +463,11 @@ TEST_F(TrafficLightRoiVisualizerNodeTest, Pipeline_RoughAndFineInputs_DrawnImage
   ASSERT_TRUE(
     send_inputs_and_wait_for_output(background_image, fine_rois, green_signal, rough_rois));
 
-  // Assert: both frames are drawn. Each of these corners lies on one rectangle only.
-  const auto rough_frame_corner = pixel_at(*output_, rough_box.x, rough_box.y);
-  const auto fine_frame_bottom_left = pixel_at(*output_, fine_box.x, fine_box.y + fine_box.height);
-  EXPECT_EQ(rough_frame_corner, green_signal_rgb);
-  EXPECT_EQ(fine_frame_bottom_left, green_signal_rgb);
+  // Assert
+  EXPECT_EQ(output_->encoding, "rgb8");
 
-  // The label box goes above the fine ROI, not the rough one
-  const auto icon_above_the_fine_roi = label_icon_pixel(*output_, fine_box);
-  EXPECT_EQ(icon_above_the_fine_roi, label_icon_rgb);
+  const auto rough_frame_corner = pixel_at(*output_, rough_box.x, rough_box.y);
+  EXPECT_EQ(rough_frame_corner, green_signal_rgb);
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -534,13 +497,13 @@ TEST_F(TrafficLightRoiVisualizerNodeTest, Interface_ImageTransportEnabled_SameOu
   // Assert
   EXPECT_EQ(output_->encoding, "rgb8");
 
-  // One drawn pixel is enough: this case is about the publisher, not the drawing
   const auto frame_corner = pixel_at(*output_, fine_box.x, fine_box.y);
   EXPECT_EQ(frame_corner, green_signal_rgb);
 }
 
-// Each callback carries its own copy of that branch, so the one that walks the rough ROIs needs a
-// case of its own - the test above only exercises the other one.
+// The same publisher on the other synchronizer. Both callbacks publish through one helper, so
+// this is not a second copy of the branch above; it is the fourth cell of the synchronizer by
+// publisher pairing, and the rough ROI's corner is again what says which callback ran.
 TEST_F(TrafficLightRoiVisualizerNodeTest, Interface_ImageTransportHighAccuracy_SameOutput)
 {
   // Arrange
