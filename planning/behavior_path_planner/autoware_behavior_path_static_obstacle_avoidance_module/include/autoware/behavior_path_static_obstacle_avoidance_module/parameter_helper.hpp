@@ -124,6 +124,15 @@ AvoidanceParameters getParameter(rclcpp::Node * node)
       get_or_declare_parameter<double>(*node, ns + "max_compensation_time");
     p.unstable_classification_time =
       get_or_declare_parameter<double>(*node, ns + "unstable_classification_time");
+    // an empty default keeps the check disabled when the parameter is not given
+    const auto uncrossable_types_param = ns + "uncrossable_linestring_types";
+    const auto raw_uncrossable_types =
+      node->has_parameter(uncrossable_types_param)
+        ? node->get_parameter(uncrossable_types_param).as_string_array()
+        : node->declare_parameter<std::vector<std::string>>(
+            uncrossable_types_param, std::vector<std::string>{});
+    p.uncrossable_linestring_types =
+      drivable_area_expansion::to_linestring_types(raw_uncrossable_types);
   }
 
   {
