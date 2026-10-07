@@ -54,6 +54,14 @@ bool check_input_map(const std::unordered_map<std::string, std::vector<float>> &
 Eigen::Matrix4d pose_to_matrix4d(const geometry_msgs::msg::Pose & pose);
 
 /**
+ * @brief Extracts yaw angle from a quaternion.
+ *
+ * @param quaternion The quaternion representing an orientation.
+ * @return Yaw angle [rad].
+ */
+double yaw_from_quaternion(const geometry_msgs::msg::Quaternion & quaternion);
+
+/**
  * @brief Extracts yaw angle from rotation matrix and converts to cos/sin representation.
  *
  * @param rotation_matrix 3x3 rotation matrix.

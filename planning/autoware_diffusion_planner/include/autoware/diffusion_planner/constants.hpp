@@ -15,6 +15,8 @@
 #ifndef AUTOWARE__DIFFUSION_PLANNER__CONSTANTS_HPP_
 #define AUTOWARE__DIFFUSION_PLANNER__CONSTANTS_HPP_
 
+#include <cmath>
+
 namespace autoware::diffusion_planner::constants
 {
 
@@ -31,6 +33,7 @@ constexpr int LOG_THROTTLE_INTERVAL_MS = 5000;
 
 // Geometric constants
 constexpr double LANE_MASK_RANGE_M = 100.0;
+constexpr double MAX_ROUTE_SEGMENT_YAW_DIFF_RAD = M_PI / 3.0;
 constexpr double BACKWARD_PATH_LENGTH_M = 0.0;
 constexpr double FORWARD_PATH_LENGTH_M = 150.0;
 

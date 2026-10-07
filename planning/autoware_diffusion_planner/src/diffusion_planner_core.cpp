@@ -430,6 +430,7 @@ InputDataMap DiffusionPlannerCore::create_input_data(const FrameContext & frame_
   const auto & center_x = static_cast<float>(pose_center.position.x);
   const auto & center_y = static_cast<float>(pose_center.position.y);
   const auto & center_z = static_cast<float>(pose_center.position.z);
+  const double center_yaw = utils::yaw_from_quaternion(pose_center.orientation);
 
   // random sample trajectories
   int64_t delay_step = 0;
@@ -515,7 +516,7 @@ InputDataMap DiffusionPlannerCore::create_input_data(const FrameContext & frame_
   {
     const std::vector<int64_t> segment_indices =
       lane_segment_context_->select_route_segment_indices(
-        *route_ptr_, center_x, center_y, center_z, NUM_SEGMENTS_IN_ROUTE);
+        *route_ptr_, center_x, center_y, center_z, center_yaw, NUM_SEGMENTS_IN_ROUTE);
     const auto [route_lanes, route_lanes_speed_limit] =
       lane_segment_context_->create_tensor_data_from_indices(
         map_to_ego_transform, traffic_light_id_map_, segment_indices, NUM_SEGMENTS_IN_ROUTE);
@@ -709,9 +710,10 @@ DiffusionPlannerCore::get_first_traffic_light_on_route(const FrameContext & fram
   const double center_x = pose_center.position.x;
   const double center_y = pose_center.position.y;
   const double center_z = pose_center.position.z;
+  const double center_yaw = utils::yaw_from_quaternion(pose_center.orientation);
 
   return lane_segment_context_->get_first_traffic_light_on_route(
-    *route_ptr_, center_x, center_y, center_z, traffic_light_id_map_);
+    *route_ptr_, center_x, center_y, center_z, center_yaw, traffic_light_id_map_);
 }
 
 int64_t DiffusionPlannerCore::count_valid_elements(
