@@ -147,6 +147,24 @@ void calculateCartesian(
     path.curvatures.push_back(path.curvatures.back());
   }
 }
+const Polynomial & getLongitudinalPolynomial(const Trajectory & trajectory)
+{
+  const auto & polynomial = trajectory.longitudinal_polynomial;
+  if (!polynomial) {
+    throw std::bad_optional_access();
+  }
+  return *polynomial;
+}
+
+const Polynomial & getLateralPolynomial(const Trajectory & trajectory)
+{
+  const auto & polynomial = trajectory.lateral_polynomial;
+  if (!polynomial) {
+    throw std::bad_optional_access();
+  }
+  return *polynomial;
+}
+
 void calculateCartesian(
   const autoware::sampler_common::transform::Spline2D & reference, Trajectory & trajectory)
 {
@@ -171,13 +189,16 @@ void calculateCartesian(
     }
     const auto last_curvature = trajectory.curvatures.empty() ? 0.0 : trajectory.curvatures.back();
     trajectory.curvatures.push_back(last_curvature);
+    const auto & longitudinal_polynomial = getLongitudinalPolynomial(trajectory);
+    const auto & lateral_polynomial = getLateralPolynomial(trajectory);
+
     // Calculate velocities, accelerations, jerk
     for (size_t i = 0; i < trajectory.times.size(); ++i) {
       const auto time = trajectory.times[i];
-      const auto s_vel = trajectory.longitudinal_polynomial->velocity(time);
-      const auto s_acc = trajectory.longitudinal_polynomial->acceleration(time);
-      const auto d_vel = trajectory.lateral_polynomial->velocity(time);
-      const auto d_acc = trajectory.lateral_polynomial->acceleration(time);
+      const auto s_vel = longitudinal_polynomial.velocity(time);
+      const auto s_acc = longitudinal_polynomial.acceleration(time);
+      const auto d_vel = lateral_polynomial.velocity(time);
+      const auto d_acc = lateral_polynomial.acceleration(time);
       Eigen::Rotation2D rotation(d_yaws[i]);
       Eigen::Vector2d vel_vector{s_vel, d_vel};
       Eigen::Vector2d acc_vector{s_acc, d_acc};
@@ -188,7 +209,7 @@ void calculateCartesian(
       trajectory.longitudinal_accelerations.push_back(acc.x());
       trajectory.lateral_accelerations.push_back(acc.y());
       trajectory.jerks.push_back(
-        trajectory.longitudinal_polynomial->jerk(time) + trajectory.lateral_polynomial->jerk(time));
+        longitudinal_polynomial.jerk(time) + lateral_polynomial.jerk(time));
     }
     if (trajectory.longitudinal_accelerations.empty()) {
       trajectory.longitudinal_accelerations.push_back(0.0);
