@@ -242,6 +242,8 @@ protected:
     p.ego_stopped_vel_th = 0.1;
     p.side_distance_th.car = 1.0;
     p.side_distance_th.pointcloud = 1.0;
+    p.pcd_min_height = 0.2;
+    p.pcd_height_buffer = 0.5;
   }
 
   TrajectoryModifierData make_stopped_input(
@@ -340,6 +342,45 @@ TEST_F(SurroundObstacleStopIntegrationTest, TrajectoryModifiedWhenNearbyPointclo
 {
   auto trajectory = create_straight_trajectory(10.0, 5.0);
   const auto pointcloud = make_pointcloud_in_base_link(0.0, 1.5, 0.5);
+  const auto input = make_stopped_input(nullptr, pointcloud);
+
+  const bool modified = process_plugin(*plugin_, trajectory, input);
+
+  ASSERT_TRUE(modified);
+  expect_stop_trajectory_at_ego(trajectory);
+}
+
+TEST_F(SurroundObstacleStopIntegrationTest, TrajectoryNotModifiedWhenPointcloudIsBelowMinHeight)
+{
+  auto trajectory = create_straight_trajectory(10.0, 5.0);
+  // low obstacle such as a curb
+  const auto pointcloud = make_pointcloud_in_base_link(0.0, 1.5, 0.1);
+  const auto input = make_stopped_input(nullptr, pointcloud);
+
+  const bool modified = process_plugin(*plugin_, trajectory, input);
+
+  EXPECT_FALSE(modified);
+}
+
+TEST_F(SurroundObstacleStopIntegrationTest, TrajectoryNotModifiedWhenPointcloudIsAboveEgoHeight)
+{
+  auto trajectory = create_straight_trajectory(10.0, 5.0);
+  // above vehicle_height (2.5 m) + height_buffer (0.5 m)
+  const auto pointcloud = make_pointcloud_in_base_link(0.0, 1.5, 3.5);
+  const auto input = make_stopped_input(nullptr, pointcloud);
+
+  const bool modified = process_plugin(*plugin_, trajectory, input);
+
+  EXPECT_FALSE(modified);
+}
+
+TEST_F(
+  SurroundObstacleStopIntegrationTest, TrajectoryModifiedWhenLowPointcloudAndMinHeightIsLowered)
+{
+  params_.surround_obstacle_stop.pcd_min_height = 0.0;
+  plugin_->update_params(TrajectoryModifierParams{params_});
+  auto trajectory = create_straight_trajectory(10.0, 5.0);
+  const auto pointcloud = make_pointcloud_in_base_link(0.0, 1.5, 0.1);
   const auto input = make_stopped_input(nullptr, pointcloud);
 
   const bool modified = process_plugin(*plugin_, trajectory, input);

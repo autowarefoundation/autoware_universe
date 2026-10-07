@@ -435,6 +435,20 @@ trajectory_modifier_params:
       validation:
         bounds<>: [0.0, 10.0]
       read_only: false
+    pcd_height_buffer:
+      type: double
+      default_value: 0.5
+      description: Height buffer to add above ego height [m]
+      validation:
+        bounds<>: [0.0, 10.0]
+      read_only: false
+    pcd_min_height:
+      type: double
+      default_value: 0.2
+      description: Minimum height of pointcloud [m]
+      validation:
+        bounds<>: [0.0, 10.0]
+      read_only: false
   traffic_light_stop:
     stop_margin:
       type: double

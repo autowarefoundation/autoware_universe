@@ -197,7 +197,6 @@ simulator/autoware_dummy_traffic_light_publisher/** junya.sasaki@tier4.jp takayu
 simulator/autoware_fault_injection/** junya.sasaki@tier4.jp keisuke.shima@tier4.jp
 simulator/autoware_vehicle_door_simulator/** isamu.takagi@tier4.jp junya.sasaki@tier4.jp
 simulator/tier4_dummy_object_rviz_plugin/** yukihiro.saito@tier4.jp
-system/autoware_bluetooth_monitor/** fumihito.ito@tier4.jp junya.sasaki@tier4.jp
 system/autoware_command_mode_decider/** isamu.takagi@tier4.jp
 system/autoware_command_mode_decider_plugins/** isamu.takagi@tier4.jp
 system/autoware_command_mode_switcher/** isamu.takagi@tier4.jp

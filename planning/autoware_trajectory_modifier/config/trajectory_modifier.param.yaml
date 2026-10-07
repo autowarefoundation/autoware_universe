@@ -164,3 +164,5 @@
       hysteresis_distance: 0.1
       hysteresis_time: 0.2
       ego_stopped_vel_th: 0.1 # [m/s]
+      pcd_height_buffer: 0.5  # height buffer to add above ego height [m]
+      pcd_min_height: 0.2  # minimum height of pointcloud [m]

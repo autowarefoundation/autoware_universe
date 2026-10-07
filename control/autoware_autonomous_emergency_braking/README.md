@@ -239,17 +239,48 @@ In the fifth step, the AEB module checks for a potential collision with the clos
 
 The module only evaluates the closest target object because this safe braking distance acts as a threshold for all target objects. If the distance to the nearest target object is determined to be safe, the module assumes that all other objects further along the path are also safe.
 
-The braking distance is formulated as:
+The braking distance is the largest amount by which the gap to the obstacle can shrink, plus a margin. The module assumes that the obstacle starts braking immediately, and that the ego vehicle keeps its current speed for $t_{response}$ before it starts braking.
 
-$$
-d_{braking} = v_{ego}*t_{response} + v_{ego}^2/(2*a_{min}) -(sign(v_{obj})) * v_{obj}^2/(2*a_{obj_{min}}) + offset
-$$
+The equations below use the following symbols:
 
-Where:
-
-- $v_{ego}$ and $v_{obj}$ are the current velocities of the ego vehicle and the obstacle.
-- $a_{min}$ and $a_{obj\_min}$ are the maximum decelerations (minimum accelerations) of the ego vehicle and the obstacle.
+- $v_{ego}$ is the absolute value of the current ego velocity, and $v_{obj}$ is the obstacle velocity along the ego path.
+- $a_{ego} = |a_{ego\_min}|$ and $a_{obj} = |a_{obj\_min}|$ are positive deceleration magnitudes. The parameters `a_ego_min` and `a_obj_min` are negative accelerations, and the module uses their absolute values.
 - $t_{response}$ is the response time required for the ego vehicle to begin decelerating.
+- $\mathrm{offset}$ is the `longitudinal_offset_margin` parameter.
+
+Once both vehicles have stopped, the gap has shrunk by:
+
+$$
+d_{stop} = v_{ego} t_{response} + \frac{v_{ego}^2}{2 a_{ego}} - \mathrm{sign}(v_{obj}) \frac{v_{obj}^2}{2 a_{obj}}.
+$$
+
+If the obstacle moves away from the ego vehicle ($v_{obj} > 0$) and the ego vehicle brakes harder ($a_{ego} > a_{obj}$), the gap can be smallest while both vehicles are still moving, when their speeds become equal. This closest approach happens $\Delta t^*$ after the ego vehicle starts braking:
+
+$$
+\Delta t^* = \frac{v_{ego} - v_{obj} + a_{obj} t_{response}}{a_{ego} - a_{obj}}.
+$$
+
+The closest approach is used only if it happens after the ego vehicle starts braking and before either vehicle stops, that is, if:
+
+$$
+0 \le \Delta t^* \le \min\left(\frac{v_{ego}}{a_{ego}}, \frac{v_{obj}}{a_{obj}} - t_{response}\right).
+$$
+
+In that case, the gap has shrunk by:
+
+$$
+d_{peak} = (v_{ego} - v_{obj}) t_{response} + \frac{a_{obj} t_{response}^2}{2} + \frac{(v_{ego} - v_{obj} + a_{obj} t_{response}) \Delta t^*}{2}.
+$$
+
+Otherwise, the gap is smallest either now or once both vehicles have stopped, so $d_{peak}$ is not used.
+
+The braking distance takes the largest of these values, clamped at zero, and then adds the margin:
+
+$$
+d_{braking} = \max(0, d_{stop}, d_{peak}) + \mathrm{offset}.
+$$
+
+The zero clamp covers the case where the gap is smallest now. In that case $d_{stop} \le 0$, because the obstacle travels at least as far as the ego vehicle before both stop. The clamp keeps this value from cancelling out the margin, so $d_{braking}$ is never less than $\mathrm{offset}$.
 
 If the actual distance to the obstacle is less than this calculated distance ($d_{braking}$), the AEB module sends an emergency stop signal.
 
