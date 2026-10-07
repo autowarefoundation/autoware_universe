@@ -1,6 +1,11 @@
 <launch>
+  <!-- Set `ld_preload_value` -->
+  <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
+
   <group>
     <push-ros-namespace namespace="default_adapi/helpers"/>
-    <node pkg="autoware_automatic_pose_initializer" exec="autoware_automatic_pose_initializer_node"/>
+    <node pkg="autoware_automatic_pose_initializer" exec="autoware_automatic_pose_initializer_node">
+      <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
+    </node>
   </group>
 </launch>
