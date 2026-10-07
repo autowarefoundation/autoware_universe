@@ -201,7 +201,7 @@ const TrafficLightArray green_signal =
 // visualize(): the fine ROIs are the subject, one frame per ROI.
 // ---------------------------------------------------------------------------------------------
 
-TEST(TrafficLightRoiVisualizer, NoRoisLeavesTheImageUntouched)
+TEST(TrafficLightRoiVisualizer, NoRoisLeavesImageUntouched)
 {
   // Arrange
   const auto visualizer = make_visualizer();
@@ -214,7 +214,7 @@ TEST(TrafficLightRoiVisualizer, NoRoisLeavesTheImageUntouched)
   EXPECT_EQ(count_pixels_differing_from(*output, background_rgb), 0u);
 }
 
-TEST(TrafficLightRoiVisualizer, OutputKeepsTheSizeEncodingAndHeaderOfTheInput)
+TEST(TrafficLightRoiVisualizer, OutputKeepsSizeEncodingAndHeaderOfInput)
 {
   // Arrange
   const auto visualizer = make_visualizer();
@@ -232,7 +232,7 @@ TEST(TrafficLightRoiVisualizer, OutputKeepsTheSizeEncodingAndHeaderOfTheInput)
   EXPECT_EQ(output->header.stamp.nanosec, background_image.header.stamp.nanosec);
 }
 
-TEST(TrafficLightRoiVisualizer, RoiWithoutASignalGetsAFrameButNoLabelBox)
+TEST(TrafficLightRoiVisualizer, RoiWithoutSignalGetsFrameButNoLabelBox)
 {
   // Arrange
   const auto visualizer = make_visualizer();
@@ -250,7 +250,7 @@ TEST(TrafficLightRoiVisualizer, RoiWithoutASignalGetsAFrameButNoLabelBox)
   EXPECT_EQ(above_the_roi, background_rgb);
 }
 
-TEST(TrafficLightRoiVisualizer, RoiWithASignalGetsAFrameAndALabelBox)
+TEST(TrafficLightRoiVisualizer, RoiWithSignalGetsFrameAndLabelBox)
 {
   // Arrange
   const auto visualizer = make_visualizer();
@@ -275,7 +275,7 @@ TEST(TrafficLightRoiVisualizer, RoiWithASignalGetsAFrameAndALabelBox)
   EXPECT_EQ(roi_interior, background_rgb);
 }
 
-TEST(TrafficLightRoiVisualizer, ASignalReportedForAnotherIdIsNotUsed)
+TEST(TrafficLightRoiVisualizer, SignalReportedForAnotherIdIsNotUsed)
 {
   // Arrange
   const auto other =
@@ -293,7 +293,7 @@ TEST(TrafficLightRoiVisualizer, ASignalReportedForAnotherIdIsNotUsed)
   EXPECT_EQ(above_the_roi, background_rgb);
 }
 
-TEST(TrafficLightRoiVisualizer, EveryRoiInTheArrayIsDrawn)
+TEST(TrafficLightRoiVisualizer, EveryRoiInArrayIsDrawn)
 {
   // Arrange
   constexpr Box second_box{400, 150, 40, 90};
@@ -315,7 +315,7 @@ TEST(TrafficLightRoiVisualizer, EveryRoiInTheArrayIsDrawn)
 // The frame color, which comes from the signal alone and is shared by both entry points.
 // ---------------------------------------------------------------------------------------------
 
-TEST(TrafficLightRoiVisualizer, RedCircleColorsTheFrameRed)
+TEST(TrafficLightRoiVisualizer, RedCircleColorsFrameRed)
 {
   // Arrange
   const auto signal = make_signal(signal_id, TrafficLightElement::RED, TrafficLightElement::CIRCLE);
@@ -330,7 +330,7 @@ TEST(TrafficLightRoiVisualizer, RedCircleColorsTheFrameRed)
   EXPECT_EQ(frame_corner, red_signal_rgb);
 }
 
-TEST(TrafficLightRoiVisualizer, AmberCircleColorsTheFrameAmber)
+TEST(TrafficLightRoiVisualizer, AmberCircleColorsFrameAmber)
 {
   // Arrange
   const auto signal =
@@ -346,7 +346,7 @@ TEST(TrafficLightRoiVisualizer, AmberCircleColorsTheFrameAmber)
   EXPECT_EQ(frame_corner, amber_signal_rgb);
 }
 
-TEST(TrafficLightRoiVisualizer, GreenCircleColorsTheFrameGreen)
+TEST(TrafficLightRoiVisualizer, GreenCircleColorsFrameGreen)
 {
   // Arrange
   const auto visualizer = make_visualizer();
@@ -360,7 +360,7 @@ TEST(TrafficLightRoiVisualizer, GreenCircleColorsTheFrameGreen)
   EXPECT_EQ(frame_corner, green_signal_rgb);
 }
 
-TEST(TrafficLightRoiVisualizer, UnknownCircleFallsBackToAnOffWhite)
+TEST(TrafficLightRoiVisualizer, UnknownCircleFallsBackToOffWhite)
 {
   // Arrange
   const auto signal =
@@ -377,7 +377,7 @@ TEST(TrafficLightRoiVisualizer, UnknownCircleFallsBackToAnOffWhite)
   EXPECT_NE(frame_corner, no_circle_rgb);
 }
 
-TEST(TrafficLightRoiVisualizer, WhiteCircleAlsoFallsBackToTheOffWhite)
+TEST(TrafficLightRoiVisualizer, WhiteCircleAlsoFallsBackToOffWhite)
 {
   // Arrange: str_to_color() knows red, yellow and green only, so WHITE - a color the message
   // defines - lands in the same fallback as UNKNOWN.
@@ -394,7 +394,7 @@ TEST(TrafficLightRoiVisualizer, WhiteCircleAlsoFallsBackToTheOffWhite)
   EXPECT_EQ(frame_corner, unknown_circle_rgb);
 }
 
-TEST(TrafficLightRoiVisualizer, AColorCodeNoOneDefinesFallsBackToTheOffWhite)
+TEST(TrafficLightRoiVisualizer, UndefinedColorCodeFallsBackToOffWhite)
 {
   // Arrange: an element carrying a code outside the message definition. state_to_label() answers
   // with an empty string for it, so the label reads "-circle" and str_to_color("") takes the
@@ -412,7 +412,7 @@ TEST(TrafficLightRoiVisualizer, AColorCodeNoOneDefinesFallsBackToTheOffWhite)
   EXPECT_EQ(frame_corner, unknown_circle_rgb);
 }
 
-TEST(TrafficLightRoiVisualizer, ASignalWithoutACircleLeavesTheFrameWhite)
+TEST(TrafficLightRoiVisualizer, SignalWithoutCircleLeavesFrameWhite)
 {
   // Arrange: an arrow, i.e. a classified signal whose only element is not a circle. The color of
   // the element is dropped: only a circle decides the frame color.
@@ -429,7 +429,7 @@ TEST(TrafficLightRoiVisualizer, ASignalWithoutACircleLeavesTheFrameWhite)
   EXPECT_EQ(frame_corner, no_circle_rgb);
 }
 
-TEST(TrafficLightRoiVisualizer, AnInvalidRecognitionIsWhiteLikeAnArrow)
+TEST(TrafficLightRoiVisualizer, InvalidRecognitionIsWhiteLikeArrow)
 {
   // Arrange: unknown-unknown is how an invalid recognition reaches this node. Its shape is not a
   // circle either, so it gets the same white as the arrow above.
@@ -446,7 +446,7 @@ TEST(TrafficLightRoiVisualizer, AnInvalidRecognitionIsWhiteLikeAnArrow)
   EXPECT_EQ(frame_corner, no_circle_rgb);
 }
 
-TEST(TrafficLightRoiVisualizer, TheCircleDecidesTheColorAmongSeveralElements)
+TEST(TrafficLightRoiVisualizer, CircleDecidesColorAmongSeveralElements)
 {
   // Arrange: A green circle together with a red arrow, the way a signal reports several lamps at
   // once.
@@ -489,7 +489,7 @@ TEST(TrafficLightRoiVisualizer, AnyConvertibleEncodingComesBackAsRgb8)
   EXPECT_EQ(untouched, background_rgb);
 }
 
-TEST(TrafficLightRoiVisualizer, AnEncodingCvBridgeCannotConvertThrows)
+TEST(TrafficLightRoiVisualizer, EncodingCvBridgeCannotConvertThrows)
 {
   // Arrange
   const auto input = make_image("no_such_encoding", background_rgb);
@@ -499,7 +499,7 @@ TEST(TrafficLightRoiVisualizer, AnEncodingCvBridgeCannotConvertThrows)
   EXPECT_THROW(visualizer.visualize(input, fine_rois, green_signal), cv_bridge::Exception);
 }
 
-TEST(TrafficLightRoiVisualizer, ARoiAtTheOriginGetsAFrameButNoLabelBox)
+TEST(TrafficLightRoiVisualizer, RoiAtOriginGetsFrameButNoLabelBox)
 {
   // Arrange: draw_shape() reads a ROI at (0,0) as undetected and returns before drawing anything.
   // The frame is drawn all the same, because that happens before the label box.
@@ -520,7 +520,7 @@ TEST(TrafficLightRoiVisualizer, ARoiAtTheOriginGetsAFrameButNoLabelBox)
   EXPECT_EQ(inside_the_roi, background_rgb);
 }
 
-TEST(TrafficLightRoiVisualizer, ARoiTooCloseToTheTopGetsNoLabelBox)
+TEST(TrafficLightRoiVisualizer, RoiTooCloseToTopGetsNoLabelBox)
 {
   // Arrange: the label box goes above the ROI, so a ROI within its height of the top edge leaves no
   // room. draw_shape() checks and returns rather than clipping.
@@ -547,7 +547,7 @@ TEST(TrafficLightRoiVisualizer, ARoiTooCloseToTheTopGetsNoLabelBox)
 // in a working pipeline - the others need a synchronizer mismatch upstream.
 // ---------------------------------------------------------------------------------------------
 
-TEST(TrafficLightRoiVisualizer, NoRoughRoisLeavesTheImageUntouched)
+TEST(TrafficLightRoiVisualizer, NoRoughRoisLeavesImageUntouched)
 {
   // Arrange
   const auto visualizer = make_visualizer();
@@ -561,7 +561,7 @@ TEST(TrafficLightRoiVisualizer, NoRoughRoisLeavesTheImageUntouched)
   EXPECT_EQ(count_pixels_differing_from(*output, background_rgb), 0u);
 }
 
-TEST(TrafficLightRoiVisualizer, RoughAndFineWithASignalDrawBothFramesAndOneLabel)
+TEST(TrafficLightRoiVisualizer, RoughAndFineWithSignalDrawBothFramesAndOneLabel)
 {
   // Arrange
   const auto visualizer = make_visualizer();
@@ -582,7 +582,7 @@ TEST(TrafficLightRoiVisualizer, RoughAndFineWithASignalDrawBothFramesAndOneLabel
   EXPECT_EQ(icon_above_the_fine_roi, label_icon_rgb);
 }
 
-TEST(TrafficLightRoiVisualizer, RoughAndFineWithoutASignalDrawBothFramesInWhite)
+TEST(TrafficLightRoiVisualizer, RoughAndFineWithoutSignalDrawBothFramesInWhite)
 {
   // Arrange
   const auto visualizer = make_visualizer();
@@ -606,7 +606,7 @@ TEST(TrafficLightRoiVisualizer, RoughAndFineWithoutASignalDrawBothFramesInWhite)
   EXPECT_EQ(above_the_fine_roi, background_rgb);
 }
 
-TEST(TrafficLightRoiVisualizer, ARoughRoiWithoutAFineOneCarriesTheLabelItself)
+TEST(TrafficLightRoiVisualizer, RoughRoiWithoutFineOneCarriesLabelItself)
 {
   // Arrange
   const auto visualizer = make_visualizer();
@@ -627,7 +627,7 @@ TEST(TrafficLightRoiVisualizer, ARoughRoiWithoutAFineOneCarriesTheLabelItself)
   EXPECT_EQ(where_the_fine_roi_would_be, background_rgb);
 }
 
-TEST(TrafficLightRoiVisualizer, ARoughRoiWithNeitherIsDrawnOnItsOwn)
+TEST(TrafficLightRoiVisualizer, RoughRoiWithNeitherIsDrawnOnItsOwn)
 {
   // Arrange
   const auto visualizer = make_visualizer();
@@ -648,7 +648,7 @@ TEST(TrafficLightRoiVisualizer, ARoughRoiWithNeitherIsDrawnOnItsOwn)
   EXPECT_EQ(where_the_fine_roi_would_be, background_rgb);
 }
 
-TEST(TrafficLightRoiVisualizer, AFineRoiNoRoughRoiMentionsIsNotDrawn)
+TEST(TrafficLightRoiVisualizer, FineRoiNoRoughRoiMentionsIsNotDrawn)
 {
   // Arrange: the loop walks the rough ROIs and looks the fine ones up by id, so a fine ROI for a
   // traffic light the rough ROIs say nothing about is never reached - not even a frame.
@@ -667,7 +667,7 @@ TEST(TrafficLightRoiVisualizer, AFineRoiNoRoughRoiMentionsIsNotDrawn)
   EXPECT_EQ(where_the_orphan_is, background_rgb);
 }
 
-TEST(TrafficLightRoiVisualizer, EveryRoughRoiInTheArrayIsDrawn)
+TEST(TrafficLightRoiVisualizer, EveryRoughRoiInArrayIsDrawn)
 {
   // Arrange
   constexpr Box second_rough{400, 140, 60, 110};
