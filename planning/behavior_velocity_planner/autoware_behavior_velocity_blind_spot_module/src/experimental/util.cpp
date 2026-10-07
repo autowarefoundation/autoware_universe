@@ -305,15 +305,15 @@ std::optional<StopLinePositions> generate_stop_points(
     intersection_lanelet.leftBound().front().basicPoint2d(),
     intersection_lanelet.rightBound().front().basicPoint2d()};
 
-  const auto lane_id_intervals =
-    autoware::experimental::trajectory::find_intervals(path, [&](const PathPointWithLaneId & p) {
+  const auto lane_id_intervals = autoware::experimental::trajectory::find_first_interval(
+    path, [&](const PathPointWithLaneId & p) {
       return std::find(p.lane_ids.begin(), p.lane_ids.end(), intersection_lanelet.id()) !=
              p.lane_ids.end();
     });
-  if (lane_id_intervals.empty()) {
+  if (!lane_id_intervals.has_value()) {
     return std::nullopt;
   }
-  const auto [start_lane, end] = lane_id_intervals.front();
+  const auto [start_lane, end] = lane_id_intervals.value();
   const auto start = std::max(0., start_lane - ego_length);
 
   for (const auto & s : path.get_underlying_bases()) {
