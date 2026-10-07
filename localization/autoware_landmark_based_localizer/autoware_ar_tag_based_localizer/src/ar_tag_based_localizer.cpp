@@ -68,7 +68,7 @@
 #include <limits>
 
 ArTagBasedLocalizer::ArTagBasedLocalizer(const rclcpp::NodeOptions & options)
-: rclcpp::Node("ar_tag_based_localizer", options), cam_info_received_(false)
+: autoware::agnocast_wrapper::Node("ar_tag_based_localizer", options), cam_info_received_(false)
 {
   /*
     Declare node parameters
@@ -107,8 +107,9 @@ ArTagBasedLocalizer::ArTagBasedLocalizer(const rclcpp::NodeOptions & options)
   /*
     tf
   */
-  tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
-  tf_listener_ = std::make_unique<tf2_ros::TransformListener>(*tf_buffer_);
+  tf_buffer_ = std::make_unique<autoware::agnocast_wrapper::Buffer>(this->get_clock());
+  tf_listener_ =
+    std::make_unique<autoware::agnocast_wrapper::TransformListener>(*tf_buffer_, *this);
 
   /*
     Subscribers
@@ -143,14 +144,16 @@ ArTagBasedLocalizer::ArTagBasedLocalizer(const rclcpp::NodeOptions & options)
   RCLCPP_INFO(this->get_logger(), "Setup of ar_tag_based_localizer node is successful!");
 }
 
-void ArTagBasedLocalizer::map_bin_callback(const LaneletMapBin::ConstSharedPtr & msg)
+void ArTagBasedLocalizer::map_bin_callback(
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(LaneletMapBin) & msg)
 {
-  landmark_manager_.parse_landmarks(msg, "apriltag_16h5");
-  const MarkerArray marker_msg = landmark_manager_.get_landmarks_as_marker_array_msg();
-  mapped_tag_pose_pub_->publish(marker_msg);
+  landmark_manager_.parse_landmarks(std::make_shared<LaneletMapBin>(*msg), "apriltag_16h5");
+  auto marker_msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(mapped_tag_pose_pub_);
+  *marker_msg = landmark_manager_.get_landmarks_as_marker_array_msg();
+  mapped_tag_pose_pub_->publish(std::move(marker_msg));
 }
 
-void ArTagBasedLocalizer::image_callback(const Image::ConstSharedPtr & msg)
+void ArTagBasedLocalizer::image_callback(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(Image) & msg)
 {
   // check subscribers
   if ((image_pub_->get_subscription_count() == 0) && (pose_pub_->get_subscription_count() == 0)) {
@@ -183,15 +186,15 @@ void ArTagBasedLocalizer::image_callback(const Image::ConstSharedPtr & msg)
 
   // for debug
   if (detected_tag_pose_pub_->get_subscription_count() > 0) {
-    PoseArray pose_array_msg;
-    pose_array_msg.header.stamp = sensor_stamp;
-    pose_array_msg.header.frame_id = "map";
+    auto pose_array_msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(detected_tag_pose_pub_);
+    pose_array_msg->header.stamp = sensor_stamp;
+    pose_array_msg->header.frame_id = "map";
     for (const Landmark & landmark : landmarks) {
       const Pose detected_marker_on_map =
         autoware_utils_geometry::transform_pose(landmark.pose, self_pose);
-      pose_array_msg.poses.push_back(detected_marker_on_map);
+      pose_array_msg->poses.push_back(detected_marker_on_map);
     }
-    detected_tag_pose_pub_->publish(pose_array_msg);
+    detected_tag_pose_pub_->publish(std::move(pose_array_msg));
   }
 
   // calc new_self_pose
@@ -208,19 +211,19 @@ void ArTagBasedLocalizer::image_callback(const Image::ConstSharedPtr & msg)
   }
 
   // publish
-  PoseWithCovarianceStamped pose_with_covariance_stamped;
-  pose_with_covariance_stamped.header.stamp = sensor_stamp;
-  pose_with_covariance_stamped.header.frame_id = "map";
-  pose_with_covariance_stamped.pose.pose = new_self_pose;
+  auto pose_with_covariance_stamped = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pose_pub_);
+  pose_with_covariance_stamped->header.stamp = sensor_stamp;
+  pose_with_covariance_stamped->header.frame_id = "map";
+  pose_with_covariance_stamped->pose.pose = new_self_pose;
 
   // ~5[m]: base_covariance
   // 5~[m]: scaling base_covariance by std::pow(distance / 5, 3)
   const double coeff = std::max(1.0, std::pow(distance / 5, 3));
   for (int i = 0; i < 36; i++) {
-    pose_with_covariance_stamped.pose.covariance[i] = coeff * base_covariance_[i];
+    pose_with_covariance_stamped->pose.covariance[i] = coeff * base_covariance_[i];
   }
 
-  pose_pub_->publish(pose_with_covariance_stamped);
+  pose_pub_->publish(std::move(pose_with_covariance_stamped));
 
   // publish diagnostics
   const int detected_tags = static_cast<int>(landmarks.size());
@@ -243,15 +246,16 @@ void ArTagBasedLocalizer::image_callback(const Image::ConstSharedPtr & msg)
   key_value.value = std::to_string(detected_tags);
   diag_status.values.push_back(key_value);
 
-  DiagnosticArray diag_msg;
-  diag_msg.header.stamp = this->now();
-  diag_msg.status.push_back(diag_status);
+  auto diag_msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(diag_pub_);
+  diag_msg->header.stamp = this->now();
+  diag_msg->status.push_back(diag_status);
 
-  diag_pub_->publish(diag_msg);
+  diag_pub_->publish(std::move(diag_msg));
 }
 
 // wait for one camera info, then shut down that subscriber
-void ArTagBasedLocalizer::cam_info_callback(const CameraInfo::ConstSharedPtr & msg)
+void ArTagBasedLocalizer::cam_info_callback(
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(CameraInfo) & msg)
 {
   if (cam_info_received_) {
     return;
@@ -271,10 +275,11 @@ void ArTagBasedLocalizer::cam_info_callback(const CameraInfo::ConstSharedPtr & m
   cam_info_received_ = true;
 }
 
-void ArTagBasedLocalizer::ekf_pose_callback(const PoseWithCovarianceStamped::ConstSharedPtr & msg)
+void ArTagBasedLocalizer::ekf_pose_callback(
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(PoseWithCovarianceStamped) & msg)
 {
   if (msg->header.frame_id == "map") {
-    ekf_pose_buffer_->push_back(msg);
+    ekf_pose_buffer_->push_back(std::make_shared<PoseWithCovarianceStamped>(*msg));
   } else {
     RCLCPP_ERROR_STREAM_THROTTLE(
       get_logger(), *this->get_clock(), 1000,
@@ -285,7 +290,7 @@ void ArTagBasedLocalizer::ekf_pose_callback(const PoseWithCovarianceStamped::Con
 }
 
 std::vector<landmark_manager::Landmark> ArTagBasedLocalizer::detect_landmarks(
-  const Image::ConstSharedPtr & msg)
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(Image) & msg)
 {
   const builtin_interfaces::msg::Time sensor_stamp = msg->header.stamp;
 
@@ -344,7 +349,9 @@ std::vector<landmark_manager::Landmark> ArTagBasedLocalizer::detect_landmarks(
     out_msg.header.stamp = sensor_stamp;
     out_msg.encoding = sensor_msgs::image_encodings::RGB8;
     out_msg.image = in_image;
-    image_pub_->publish(*out_msg.toImageMsg());
+    auto image_msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(image_pub_);
+    *image_msg = *out_msg.toImageMsg();
+    image_pub_->publish(std::move(image_msg));
   }
 
   return landmarks;

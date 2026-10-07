@@ -15,6 +15,7 @@
 
   <test_depend>ament_index_cpp</test_depend>
   <depend>aruco</depend>
+  <depend>autoware_agnocast_wrapper</depend>
   <depend>autoware_landmark_manager</depend>
   <depend>autoware_localization_util</depend>
   <depend>autoware_utils_geometry</depend>
