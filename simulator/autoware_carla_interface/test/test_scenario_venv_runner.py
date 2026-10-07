@@ -152,11 +152,29 @@ def test_default_venv_dir_is_content_addressed():
 
 
 def test_is_wheelhouse(tmp_path):
-    (tmp_path / "wh").mkdir()
+    wh, _ = _wheelhouse(tmp_path)
     assert _is_wheelhouse(str(tmp_path / "x.zip")) is True
     assert _is_wheelhouse(str(tmp_path / "X.ZIP")) is True
-    assert _is_wheelhouse(str(tmp_path / "wh")) is True  # existing directory
+    assert _is_wheelhouse(str(wh)) is True  # a directory with wheels in it
     assert _is_wheelhouse("some-pip-pkg") is False
+
+
+def test_a_directory_without_wheels_is_a_pip_source(tmp_path):
+    """A source checkout is a path source; it used to be refused as an empty wheelhouse."""
+    checkout = tmp_path / "scenario-checkout"
+    (checkout / "src").mkdir(parents=True)
+    (checkout / "pyproject.toml").write_text("[project]\nname = 'x'\n")
+
+    assert _is_wheelhouse(str(checkout)) is False
+    runner = _make_runner(str(checkout), "s", _args(pip_args="--no-build-isolation"))
+    assert runner._install_args == ["--no-build-isolation", str(checkout)]
+
+
+def test_an_empty_directory_is_a_pip_source_too(tmp_path):
+    """Nothing to install from offline, so pip is the one to say what is wrong."""
+    empty = tmp_path / "empty"
+    empty.mkdir()
+    assert _is_wheelhouse(str(empty)) is False
 
 
 def test_find_wheels_is_recursive_and_sorted(tmp_path):
@@ -189,10 +207,14 @@ def test_wheelhouse_install_args_from_zip(tmp_path, monkeypatch):
     ]
 
 
-def test_wheelhouse_install_args_empty_raises(tmp_path):
-    (tmp_path / "empty").mkdir()
+def test_wheelhouse_install_args_empty_raises(tmp_path, monkeypatch):
+    """An archive with no wheels in it: the only way to still reach this."""
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "cache"))
+    archive = tmp_path / "empty.zip"
+    with zipfile.ZipFile(archive, "w") as zf:
+        zf.writestr("README.md", b"")
     with pytest.raises(FileNotFoundError):
-        _wheelhouse_wheels(str(tmp_path / "empty"))
+        _wheelhouse_wheels(str(archive))
 
 
 # -- which interpreter, and which wheels it can have ---------------------------

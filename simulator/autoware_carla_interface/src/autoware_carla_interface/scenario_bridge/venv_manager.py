@@ -42,7 +42,8 @@ Two source kinds are accepted (``with_scenario:=<source>#<scenario-name>``):
   carries the others' compiled wheels too, and pip refuses a wheel whose tag
   does not match however it was asked for it.
 * any **pip install source** (a name, path, or VCS URL), installed with
-  ``pip install <source>`` (plus ``scenario_pip_args``).
+  ``pip install <source>`` (plus ``scenario_pip_args``).  A local directory is
+  one of these when it holds no wheels -- a source checkout pip builds.
 
 Process lifecycle (start/stop) is owned by ROS 2 launch, which runs this via an
 ``<executable>`` and signals it directly -- the ``os.execv`` means launch's child
@@ -153,12 +154,12 @@ def _wheelhouse_wheels(source: str) -> list[Path]:
     wheels = _find_wheels(root)
     if not wheels:
         raise FileNotFoundError(
-            f"no *.whl under {source}, so there is nothing to install. A directory "
-            "or .zip given as the scenario source is taken to be a wheelhouse -- a "
-            "tree of wheels carrying the runner and its full dependency closure, "
-            "installed offline. A source checkout is not one: build it first "
-            "(`uv build --wheel`, or `pip wheel`) and point this at the wheels. "
-            "Installing from a source tree is not supported yet."
+            f"no *.whl under {source}, so there is nothing to install. A .zip given "
+            "as the scenario source is taken to be a wheelhouse -- a tree of wheels "
+            "carrying the runner and its full dependency closure, installed offline. "
+            "Build the wheels into it (`uv build --wheel`, or `pip wheel`), or pass "
+            "a source checkout as a directory instead: a local directory with no "
+            "wheels in it is handed to pip as a path source."
         )
     return wheels
 
@@ -328,16 +329,24 @@ def _wheelhouse_install_args(wheels: Sequence[Path], python: str) -> list[str]:
 
 
 def _is_wheelhouse(source: str) -> bool:
-    """Whether *source* is a wheelhouse (a ``.zip`` or an existing directory).
+    """Whether *source* is a wheelhouse rather than a pip install source.
 
-    Every local path is one: a wheelhouse is the only local source supported
-    today, so a directory without wheels is a mistake to report rather than a
-    second kind of source to guess at. :func:`_wheelhouse_install_args` says so
-    when it finds none. Anything that is not a local path falls through to pip,
-    which is how a PyPI name or a VCS URL reaches it.
+    Decided by what a directory holds, not by it being a directory: a tree with
+    wheels in it is a wheelhouse, and one without is a source checkout, which is
+    a path source pip installs by building it. Treating every local directory as
+    a wheelhouse refused that second kind outright -- `pip install
+    /path/to/checkout` never reached pip, it failed on "no *.whl" first.
+
+    A ``.zip`` is taken on its name alone: the wheels are inside the archive, so
+    answering this would mean extracting it, and :func:`_wheelhouse_wheels` is
+    where that happens (and where an archive with no wheels is reported).
+    Anything that is not a local path falls through to pip, which is how a PyPI
+    name or a VCS URL reaches it.
     """
+    if source.lower().endswith(".zip"):
+        return True
     path = Path(source).expanduser()
-    return source.lower().endswith(".zip") or path.is_dir()
+    return path.is_dir() and bool(_find_wheels(path))
 
 
 class ScenarioVenvRunner:
