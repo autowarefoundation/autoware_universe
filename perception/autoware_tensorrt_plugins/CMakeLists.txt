@@ -108,6 +108,7 @@ if(TRT_AVAIL AND CUDA_AVAIL AND SPCONV_AVAIL)
     src/unique_ops/unique.cu
     src/multi_scale_deform_attn_ops/ms_deform_attn_kernel.cu
     src/rotate_ops/rotate_kernel.cu
+    src/scalar_ops/fill_scalar.cu
     src/select_and_pad_ops/select_and_pad_kernel.cu
   )
 
