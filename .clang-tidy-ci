@@ -3,7 +3,6 @@ Checks: "
   bugprone-*,
   -bugprone-branch-clone,
   -bugprone-easily-swappable-parameters,
-  -bugprone-empty-catch,
   -bugprone-exception-escape,
   -bugprone-implicit-widening-of-multiplication-result,
   -bugprone-infinite-loop,
