@@ -71,6 +71,18 @@ public:
     return r;
   }
 
+  void copy_request(void * destination, const void * source) const override
+  {
+    *static_cast<tier4_system_msgs::srv::ResetDiagGraph::Request *>(destination) =
+      *static_cast<const tier4_system_msgs::srv::ResetDiagGraph::Request *>(source);
+  }
+
+  void copy_response(void * destination, const void * source) const override
+  {
+    *static_cast<tier4_system_msgs::srv::ResetDiagGraph::Response *>(destination) =
+      *static_cast<const tier4_system_msgs::srv::ResetDiagGraph::Response *>(source);
+  }
+
 private:
   std::string input_name_;
   std::vector<OutputServiceConfig> outputs_;

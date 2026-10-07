@@ -20,8 +20,14 @@
 
 #include <gtest/gtest.h>
 
+#ifdef USE_AGNOCAST_ENABLED
+#include <agnocast/agnocast_multi_threaded_executor.hpp>
+#endif
+
 #include <atomic>
 #include <chrono>
+#include <cstdlib>
+#include <cstring>
 #include <functional>
 #include <memory>
 #include <string>
@@ -31,6 +37,19 @@
 using ChangeOperationMode = autoware_system_msgs::srv::ChangeOperationMode;
 using std::chrono_literals::operator""s;
 
+namespace
+{
+/// Same check as autoware_agnocast_wrapper's own test suite (test/heaphook_probe.hpp): agnocast
+/// exits the process from inside an endpoint constructor when LD_PRELOAD lacks the heaphook, so
+/// tests must skip rather than run in that configuration instead of crashing the whole binary.
+bool agnocast_heaphook_loaded()
+{
+  const char * ld_preload = std::getenv("LD_PRELOAD");
+  return ld_preload != nullptr &&
+         std::string(ld_preload).find("libagnocast_heaphook.so") != std::string::npos;
+}
+}  // namespace
+
 class TestGenericServiceDivider : public ::testing::Test
 {
 protected:
@@ -39,13 +58,35 @@ protected:
 
   void SetUp() override
   {
+    if (autoware::agnocast_wrapper::use_agnocast() && !agnocast_heaphook_loaded()) {
+      GTEST_SKIP() << "ENABLE_AGNOCAST=1 without the agnocast heaphook: the agnocast backend "
+                      "cannot be exercised in this environment.";
+    }
+
     main_called_.store(false);
     sub_called_.store(false);
 
     mock_node_ = std::make_shared<rclcpp::Node>("mock_servers");
     client_node_ = std::make_shared<rclcpp::Node>("test_client");
 
+    // divider_node_'s own generic service/clients (created by setup_service_division() in
+    // create_divider_node() below) only actually dispatch under a real Agnocast backend when
+    // driven by agnocast::MultiThreadedAgnocastExecutor -- a plain rclcpp executor cannot deliver
+    // their callbacks at all (see autoware_agnocast_wrapper's own generic_service_client.cpp test
+    // for the same constraint). mock_node_/client_node_ stay ordinary rclcpp::Node peers in both
+    // cases (representing external services this process does not control), and
+    // MultiThreadedAgnocastExecutor drives plain rclcpp callback groups just as well as agnocast
+    // ones, so long as the two are never mixed in the same group -- which they are not here,
+    // since they live on different nodes.
+#ifdef USE_AGNOCAST_ENABLED
+    if (autoware::agnocast_wrapper::use_agnocast()) {
+      executor_ = std::make_shared<agnocast::MultiThreadedAgnocastExecutor>();
+    } else {
+      executor_ = std::make_shared<rclcpp::executors::MultiThreadedExecutor>();
+    }
+#else
     executor_ = std::make_shared<rclcpp::executors::MultiThreadedExecutor>();
+#endif
     executor_->add_node(mock_node_);
     executor_->add_node(client_node_);
   }
@@ -129,6 +170,38 @@ protected:
     executor_->add_node(divider_node_);
   }
 
+  /// A plugin configured with zero output services (e.g. a config mistake): regression coverage
+  /// for handle_request()'s empty-output-list path, which must still answer the caller instead of
+  /// leaving the call pending forever (there is no forward_request() call to ever drive
+  /// try_finalize_response() in that case).
+  void create_divider_node_with_no_outputs()
+  {
+    rclcpp::NodeOptions options;
+    options.append_parameter_override(
+      "plugins", std::vector<std::string>{"generic_service_divider::ChangeOperationModeDivider"});
+    options.append_parameter_override("change_operation_mode.input_service", "/test/change_op");
+    options.append_parameter_override(
+      "change_operation_mode.output_services.names", std::vector<std::string>{});
+    options.append_parameter_override(
+      "change_operation_mode.output_services.primaries", std::vector<bool>{});
+    options.append_parameter_override(
+      "change_operation_mode.output_services.timeouts_ms", std::vector<int64_t>{});
+
+    divider_node_ = std::make_shared<rclcpp::Node>("divider_host_no_outputs", options);
+
+    plugin_loader_ =
+      std::make_shared<pluginlib::ClassLoader<generic_service_divider::ServiceDividerPluginBase>>(
+        "autoware_generic_service_divider", "generic_service_divider::ServiceDividerPluginBase");
+
+    auto divider_shared = std::shared_ptr<rclcpp::Node>(divider_node_);
+    plugin_ =
+      plugin_loader_->createSharedInstance("generic_service_divider::ChangeOperationModeDivider");
+    plugin_->initialize(divider_shared);
+    plugin_->setup_service_division();
+
+    executor_->add_node(divider_node_);
+  }
+
   void create_client()
   {
     client_ = client_node_->create_client<ChangeOperationMode>("/test/change_op");
@@ -194,7 +267,9 @@ protected:
   rclcpp::Service<ChangeOperationMode>::SharedPtr main_server_;
   rclcpp::Service<ChangeOperationMode>::SharedPtr sub_server_;
   rclcpp::Client<ChangeOperationMode>::SharedPtr client_;
-  std::shared_ptr<rclcpp::executors::MultiThreadedExecutor> executor_;
+  // rclcpp::Executor (not the concrete MultiThreadedExecutor) so SetUp() can hold either that or
+  // agnocast::MultiThreadedAgnocastExecutor, chosen at runtime by use_agnocast().
+  std::shared_ptr<rclcpp::Executor> executor_;
   std::shared_ptr<pluginlib::ClassLoader<generic_service_divider::ServiceDividerPluginBase>>
     plugin_loader_;
   std::shared_ptr<generic_service_divider::ServiceDividerPluginBase> plugin_;
@@ -284,6 +359,41 @@ TEST_F(TestGenericServiceDivider, SubServerTimeout)
 
   sub_server_.reset();
   expect_division_result(call_service(), false, true, false);
+}
+
+// Symmetric with SubServerTimeout above, but for the *primary* output: send_final_response()'s
+// "primary did not respond" branch (outcome.primary_response left null because the primary timed
+// out, as opposed to MainServerFails' "primary responded, but with failure" branch) is otherwise
+// never exercised by any test in this file.
+TEST_F(TestGenericServiceDivider, PrimaryServerTimeout)
+{
+  create_mock_servers(true, true);
+  create_divider_node(1000);  // 1 second timeout
+  create_client();
+  start_spinning();
+
+  ASSERT_TRUE(client_->wait_for_service(5s));
+  ASSERT_TRUE(wait_until(
+    [this]() { return plugin_->get_startup_diagnostic_info().input_service_started; }, 5s));
+
+  main_server_.reset();
+  expect_division_result(call_service(), false, false, true);
+}
+
+// A plugin with zero output services must still advertise its input service and answer callers
+// with a clean error, not hang forever -- see the comment on handle_request()'s empty-list guard.
+TEST_F(TestGenericServiceDivider, NoOutputServicesRespondsInsteadOfHanging)
+{
+  create_divider_node_with_no_outputs();
+  create_client();
+  start_spinning();
+
+  ASSERT_TRUE(client_->wait_for_service(5s));
+  auto response = call_service();
+  ASSERT_NE(response, nullptr);
+  EXPECT_FALSE(response->status.success);
+  EXPECT_FALSE(main_called_.load());
+  EXPECT_FALSE(sub_called_.load());
 }
 
 int main(int argc, char ** argv)

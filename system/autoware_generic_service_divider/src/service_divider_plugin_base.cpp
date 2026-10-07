@@ -61,12 +61,8 @@ void ServiceDividerPluginBase::setup_service_division()
     entry.callback_group =
       node_->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
 
-    rcl_client_options_t client_options = rcl_client_get_default_options();
-    entry.client = std::make_shared<GenericClient>(
-      node_->get_node_base_interface().get(), node_->get_node_graph_interface(), output_cfg.name,
-      type, client_options);
-    node_->get_node_services_interface()->add_client(
-      std::dynamic_pointer_cast<rclcpp::ClientBase>(entry.client), entry.callback_group);
+    entry.client = autoware::agnocast_wrapper::create_generic_client(
+      node_.get(), output_cfg.name, type, rclcpp::ServicesQoS(), entry.callback_group);
 
     output_clients_.push_back(std::move(entry));
   }
@@ -117,15 +113,12 @@ void ServiceDividerPluginBase::advertise_input_service()
   const auto type = service_type();
   const auto input_name = input_service_name();
 
-  rcl_service_options_t service_options = rcl_service_get_default_options();
-  input_service_ = std::make_shared<GenericService>(
-    node_->get_node_base_interface()->get_shared_rcl_node_handle(), input_name, type,
-    std::bind(
-      &ServiceDividerPluginBase::handle_request, this, std::placeholders::_1, std::placeholders::_2,
-      std::placeholders::_3),
-    service_options);
-  node_->get_node_services_interface()->add_service(
-    std::dynamic_pointer_cast<rclcpp::ServiceBase>(input_service_), service_callback_group_);
+  input_service_ = autoware::agnocast_wrapper::create_generic_service(
+    node_.get(), input_name, type,
+    [this](AUTOWARE_GENERIC_SERVICE_PTR service, std::shared_ptr<void> request) {
+      handle_request(service, request);
+    },
+    rclcpp::ServicesQoS(), service_callback_group_);
 
   input_service_started_ = true;
   if (server_wait_timer_) {
@@ -139,11 +132,10 @@ void ServiceDividerPluginBase::advertise_input_service()
 }
 
 void ServiceDividerPluginBase::handle_request(
-  std::shared_ptr<GenericService> service, std::shared_ptr<rmw_request_id_t> request_header,
-  std::shared_ptr<void> request)
+  AUTOWARE_GENERIC_SERVICE_PTR service, std::shared_ptr<void> request)
 {
   auto pending = std::make_shared<PendingDivision>();
-  pending->request_header = request_header;
+  pending->request = request;
   pending->service = service;
 
   for (const auto & entry : output_clients_) {
@@ -159,6 +151,17 @@ void ServiceDividerPluginBase::handle_request(
     node_->get_logger(), "Service divider[%ld]: call received on '%s'%s%s", pending_id,
     input_service_name().c_str(), request_detail.empty() ? "" : " request=",
     request_detail.empty() ? "" : request_detail.c_str());
+
+  if (output_clients_.empty()) {
+    // No forward_request() call will ever run to drive try_finalize_response() (it is only
+    // invoked from a forward_request()-armed timeout timer or response callback), so a plugin
+    // misconfigured with zero output services would otherwise leave this call unanswered forever
+    // instead of failing loudly. evaluate_outputs() naturally reports no primary response in this
+    // case (there is no entry to mark primary), so the caller gets a clean error instead of a
+    // hang.
+    try_finalize_response(pending);
+    return;
+  }
 
   for (auto & entry : output_clients_) {
     forward_request(entry, pending, pending_id, request);
@@ -220,8 +223,22 @@ void ServiceDividerPluginBase::forward_request(
   }
 
   try {
+    // Borrow this specific client's own request buffer and fill it via the plugin's
+    // copy_request(), rather than handing it the shared `request` object directly: this output
+    // client's async_send_request() only accepts a buffer this specific client borrowed via its
+    // own create_request() (a hard requirement on the Agnocast path, where `request` belongs to
+    // the input service's own borrowed shared-memory buffer, not this client's -- see
+    // GenericClient::async_send_request()'s doc comment in autoware_agnocast_wrapper).
+    auto forwarded_request = entry.client->create_request();
+    try {
+      copy_request(forwarded_request.get(), request.get());
+    } catch (...) {
+      entry.client->cancel_request(forwarded_request);
+      throw;
+    }
     entry.client->async_send_request(
-      request, [this, pending, name, pending_id](GenericClient::SharedFuture future) {
+      forwarded_request, [this, pending, name, pending_id](
+                           autoware::agnocast_wrapper::GenericClient::SharedFuture future) {
         auto response = future.get();
         const auto response_detail = format_response(response.get());
         if (!mark_output_completed(pending, name, false, response)) {
@@ -293,14 +310,34 @@ ServiceDividerPluginBase::DivisionOutcome ServiceDividerPluginBase::evaluate_out
   return outcome;
 }
 
+std::shared_ptr<void> ServiceDividerPluginBase::build_response(
+  const std::shared_ptr<PendingDivision> & pending, const std::shared_ptr<void> & source)
+{
+  // Borrow this service's own response buffer and fill it via the plugin's copy_response(),
+  // rather than sending `source` directly: none of outcome.primary_response (received through a
+  // different GenericClient) or create_error_response()'s freshly-allocated object was obtained
+  // from this service's own create_response(pending->request), which send_response() requires on
+  // the Agnocast path (see its doc comment in autoware_agnocast_wrapper) -- Agnocast has no way to
+  // publish an arbitrary heap object through a service's shared-memory channel.
+  auto response = pending->service->create_response(pending->request);
+  try {
+    copy_response(response.get(), source.get());
+  } catch (...) {
+    pending->service->cancel_response(pending->request, response);
+    throw;
+  }
+  return response;
+}
+
 void ServiceDividerPluginBase::send_final_response(
   const std::shared_ptr<PendingDivision> & pending, const DivisionOutcome & outcome)
 {
   if (!outcome.primary_response) {
     RCLCPP_ERROR(
       node_->get_logger(), "Service divider: primary service did not respond, returning error");
-    pending->service->send_response(
-      *pending->request_header, create_error_response("Primary service did not respond"));
+    auto response =
+      build_response(pending, create_error_response("Primary service did not respond"));
+    pending->service->send_response(pending->request, response);
     return;
   }
 
@@ -310,16 +347,17 @@ void ServiceDividerPluginBase::send_final_response(
       "Service divider: at least one output failed/timed out, returning error response "
       "(primary='%s')",
       outcome.primary_name.c_str());
-    pending->service->send_response(
-      *pending->request_header,
-      create_error_response("One or more output services failed or timed out"));
+    auto response = build_response(
+      pending, create_error_response("One or more output services failed or timed out"));
+    pending->service->send_response(pending->request, response);
     return;
   }
 
   RCLCPP_INFO(
     node_->get_logger(), "Service divider: all outputs succeeded, returning primary response '%s'",
     outcome.primary_name.c_str());
-  pending->service->send_response(*pending->request_header, outcome.primary_response);
+  auto response = build_response(pending, outcome.primary_response);
+  pending->service->send_response(pending->request, response);
 }
 
 void ServiceDividerPluginBase::erase_pending_division(

@@ -74,6 +74,18 @@ public:
     return r;
   }
 
+  void copy_request(void * destination, const void * source) const override
+  {
+    *static_cast<autoware_system_msgs::srv::ChangeAutowareControl::Request *>(destination) =
+      *static_cast<const autoware_system_msgs::srv::ChangeAutowareControl::Request *>(source);
+  }
+
+  void copy_response(void * destination, const void * source) const override
+  {
+    *static_cast<autoware_system_msgs::srv::ChangeAutowareControl::Response *>(destination) =
+      *static_cast<const autoware_system_msgs::srv::ChangeAutowareControl::Response *>(source);
+  }
+
 private:
   std::string input_name_;
   std::vector<OutputServiceConfig> outputs_;
