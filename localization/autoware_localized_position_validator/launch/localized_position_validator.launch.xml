@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="input/odometry" default="/localization/kinematic_state"/>
+  <arg name="input/pointcloud" default="/localization/pose_estimator/points_aligned"/>
+  <arg name="input/pointcloud_map" default="/map/pointcloud_map"/>
+  <arg name="input/partial_pointcloud_map" default="/map/get_partial_pointcloud_map"/>
+  <arg name="data_path" default="$(env HOME)/autoware_data" description="packages data and artifacts directory path"/>
+  <arg name="model_name" default="pointpillars_resnet18" description=""/>
+  <arg name="model_path" default="$(var data_path)/autoware_localized_position_validator"/>
+  <arg name="model_param_path" default="$(find-pkg-share autoware_localized_position_validator)/config/$(var model_name).param.yaml"/>
+  <arg name="param_path" default="$(find-pkg-share autoware_localized_position_validator)/config/validator.param.yaml"/>
+
+  <group>
+    <node pkg="autoware_localized_position_validator" exec="autoware_localized_position_validator_node" name="localized_position_validator" output="both">
+      <remap from="~/input/odometry" to="$(var input/odometry)"/>
+      <remap from="~/input/pointcloud" to="$(var input/pointcloud)"/>
+      <remap from="~/input/pointcloud_map" to="$(var input/pointcloud_map)"/>
+      <remap from="~/input/partial_pointcloud_map" to="$(var input/partial_pointcloud_map)"/>
+      <param from="$(var param_path)" allow_substs="true"/>
+      <param from="$(var model_param_path)" allow_substs="true"/>
+    </node>
+  </group>
+</launch>
