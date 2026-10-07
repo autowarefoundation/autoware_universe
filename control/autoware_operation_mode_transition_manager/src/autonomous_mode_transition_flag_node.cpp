@@ -16,6 +16,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace autoware::operation_mode_transition_manager
 {
@@ -25,6 +26,7 @@ AutonomousModeTransitionFlagNode::AutonomousModeTransitionFlagNode(
 : Node("autonomous_mode_transition_flag_node", options)
 {
   declare_parameter<double>("stable_check.duration");
+  input_timeout_ = declare_parameter<double>("input_timeout");
   autonomous_mode_ = std::make_unique<AutonomousMode>(this);
 
   pub_transition_available_ =
@@ -54,10 +56,15 @@ void AutonomousModeTransitionFlagNode::on_timer()
   };
 
   const auto input = take_data();
-  const bool is_available = autonomous_mode_->isModeChangeAvailable(input);
-  const bool is_completed = autonomous_mode_->isModeChangeCompleted(input);
-
   const auto stamp = get_clock()->now();
+  // Before every input has been seen once there is nothing to judge on, and once a
+  // publisher stalls its retained value must not keep the answer "yes" alive, so the
+  // judgement also requires every input to still be fresh. Either way the answer to
+  // "can autonomous run" is no.
+  const bool has_fresh_data = has_all_data() && inputs_are_fresh(stamp);
+  const bool is_available = has_fresh_data && autonomous_mode_->isModeChangeAvailable(input);
+  const bool is_completed = has_fresh_data && autonomous_mode_->isModeChangeCompleted(input);
+
   publish(pub_transition_available_, stamp, is_available);
   publish(pub_transition_completed_, stamp, is_completed);
   publish_driving_mode_available(is_available);
@@ -70,29 +77,79 @@ void AutonomousModeTransitionFlagNode::on_timer()
 
 InputData AutonomousModeTransitionFlagNode::take_data()
 {
-  InputData data;
-
+  // Each input keeps its last value: the polling subscribers return nothing on a
+  // tick that saw no new message, and the checks read every field, so dropping
+  // back to a default-constructed InputData would report a zero pose, an empty
+  // trajectory and a zero command -- "not available" -- on every such tick.
   const auto kinematics = sub_kinematics_.take_data();
   if (kinematics) {
-    data.kinematics = *kinematics;
+    input_data_.kinematics = *kinematics;
+    has_kinematics_ = true;
   }
 
   const auto trajectory = sub_trajectory_.take_data();
   if (trajectory) {
-    data.trajectory = *trajectory;
+    input_data_.trajectory = *trajectory;
+    has_trajectory_ = true;
   }
 
   const auto control_cmd = sub_control_cmd_.take_data();
   if (control_cmd) {
-    data.control_cmd = *control_cmd;
+    input_data_.control_cmd = *control_cmd;
+    has_control_cmd_ = true;
   }
 
   const auto trajectory_follower_control_cmd = sub_trajectory_follower_control_cmd_.take_data();
   if (trajectory_follower_control_cmd) {
-    data.trajectory_follower_control_cmd = *trajectory_follower_control_cmd;
+    input_data_.trajectory_follower_control_cmd = *trajectory_follower_control_cmd;
+    has_trajectory_follower_control_cmd_ = true;
   }
 
-  return data;
+  return input_data_;
+}
+
+bool AutonomousModeTransitionFlagNode::has_all_data() const
+{
+  return has_kinematics_ && has_trajectory_ && has_control_cmd_ &&
+         has_trajectory_follower_control_cmd_;
+}
+
+bool AutonomousModeTransitionFlagNode::inputs_are_fresh(const rclcpp::Time & now) const
+{
+  // Mirrors OperationModeTransitionManager::subscribeData timeout handling, but here
+  // it gates the retained values (this node keeps the last message across ticks) so a
+  // stalled or exited publisher stops counting once its timestamp ages past the limit.
+  // The names of the inputs that went stale, collected rather than logged one by
+  // one: a throttle macro keyed on its source location would share a single
+  // window across all four call sites, so only whichever input happened to be
+  // checked first in a window would ever be named.
+  std::vector<const char *> stale_inputs;
+  const auto timed_out = [&](const char * name, const auto & stamp) {
+    const bool stale = input_timeout_ < (now - rclcpp::Time(stamp)).seconds();
+    if (stale) {
+      stale_inputs.push_back(name);
+    }
+    return stale;
+  };
+  // has_all_data() guarantees each optional holds a value before this runs. Evaluate
+  // every input (no short-circuit) so each stalled one is logged, then require all.
+  const bool kinematics_ok = !timed_out("kinematics", input_data_.kinematics->header.stamp);
+  const bool trajectory_ok = !timed_out("trajectory", input_data_.trajectory->header.stamp);
+  const bool control_cmd_ok = !timed_out("control_cmd", input_data_.control_cmd->stamp);
+  const bool trajectory_follower_control_cmd_ok = !timed_out(
+    "trajectory_follower_control_cmd", input_data_.trajectory_follower_control_cmd->stamp);
+  if (!stale_inputs.empty()) {
+    std::string names;
+    for (const auto * name : stale_inputs) {
+      if (!names.empty()) {
+        names += ", ";
+      }
+      names += name;
+    }
+    RCLCPP_WARN_THROTTLE(
+      get_logger(), *clock_, 3000, "Retained inputs are timed out: %s.", names.c_str());
+  }
+  return kinematics_ok && trajectory_ok && control_cmd_ok && trajectory_follower_control_cmd_ok;
 }
 
 void AutonomousModeTransitionFlagNode::on_driving_mode_info(const DrivingModeInfo & msg)

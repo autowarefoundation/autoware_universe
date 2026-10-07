@@ -26,6 +26,8 @@ This ros package enables communication between Autoware and CARLA for autonomous
 
 3. **Download CARLA Lanelet2 Maps**: Get the y-axis inverted maps from [CARLA Autoware Contents](https://bitbucket.org/carla-simulator/autoware-contents/src/master/maps/)
 
+4. **For the scenario closed loop only**: nothing beyond `rosdep`. The scenario runner's virtualenv is built with the interpreter the wheelhouse holds wheels for, which on both Ubuntu 24.04 / ROS 2 Jazzy (3.12) and Ubuntu 22.04 / ROS 2 Humble (3.10) is the distribution's own `python3`, already covered by the `python3-venv` and `python3-pip` dependencies. See [Scenario closed loop](#scenario-closed-loop).
+
 #### Map Setup
 
 1. Download the maps (y-axis inverted version) to an arbitrary location
@@ -235,6 +237,41 @@ Two things to keep in mind when using this mode:
 
 If the bridge cannot keep up with the incoming cadence it drops the frames it has fallen behind on
 and reports how many it skipped through a throttled warning.
+
+### Scenario closed loop
+
+`with_scenario:=<source>#<scenario-name>` runs a CARLA scenario closed loop. `<source>` is a wheelhouse (a `.zip` of wheels or a directory of wheels, installed offline) or any pip install source; it is installed into a dedicated virtualenv whose `scenario` entrypoint hosts the gRPC server the bridge talks to. Leaving `with_scenario` empty (the default) disables the scenario bridge entirely, and nothing below applies.
+
+<!-- cspell:ignore rosdistro deadsnakes virtualenv -->
+
+#### Which interpreter the venv is built with
+
+`scenario_python` defaults to `auto`, which reads the answer out of the wheelhouse: a wheel
+compiled for one interpreter carries its tag in the filename (`numpy-2.2.6-cp310-cp310-…`), so
+the set of tags _is_ the set of interpreters that wheelhouse can be installed under. A wheelhouse
+holds one such wheel per interpreter it was exported for, next to the `py3-none-any` ones that
+install under all of them. The Python running the launch is preferred whenever it is in that set,
+and it is the distribution's own:
+
+| Platform                    | Interpreter chosen | What is needed                                                                                                                              |
+| --------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Ubuntu 24.04 / ROS 2 Jazzy  | `python3.12`       | Nothing extra — `python3-venv` and `python3-pip` are in `package.xml` and `rosdep install` covers them.                                     |
+| Ubuntu 22.04 / ROS 2 Humble | `python3.10`       | The same nothing extra, as long as the wheelhouse was exported with 3.10 in it (every wheelhouse exported by `autoware_carla_scenario` is). |
+
+This matters because `rosdep` cannot supply a _versioned_ interpreter: `python3 -m venv` links the
+Python that runs it rather than providing one, no `python3.X` keys exist in rosdistro, and rosdep
+cannot add a PPA. Pinning the venv to one version would therefore have meant installing a Python
+out of band on every distribution but one. Reading the version off the wheelhouse avoids that
+entirely.
+
+Only the wheels the chosen interpreter can install are passed to pip. A wheelhouse covering
+several holds the others' compiled wheels too, and pip fails an install the moment it is handed a
+wheel tagged for another interpreter.
+
+Pass `scenario_python:=<interpreter>` to override the choice — for a wheelhouse built elsewhere,
+or an interpreter that is not on `PATH` under its version name. An override that is not installed
+fails with a message naming it and what to install, rather than a bare `FileNotFoundError`; so
+does a wheelhouse whose interpreters are all missing.
 
 ### Sensor Configuration
 
