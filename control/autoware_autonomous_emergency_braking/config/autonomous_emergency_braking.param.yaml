@@ -12,6 +12,11 @@
     imu_path_lat_dev_threshold: 1.75
     min_generated_imu_path_length: 0.5
     max_generated_imu_path_length: 10.0
+    # Kinematic-state (yaw-rate) watchdog tolerance [s]: the twist stamp must lie within +/- this of
+    # the node clock. Too old (stale localization) or implausibly ahead (clock skew) makes the
+    # IMU-path yaw source unavailable (the path is skipped), never a usable/zero-yaw estimate.
+    # Initial conservative value, not calibrated against measured on-vehicle jitter.
+    kinematic_state_timeout_sec: 0.5
     imu_prediction_time_horizon: 1.5
     imu_prediction_time_interval: 0.1
     mpc_prediction_time_horizon: 4.5
