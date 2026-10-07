@@ -14,7 +14,8 @@
 #ifndef NON_REDUNDANT__NON_REDUNDANT_ADAPTER_HPP_
 #define NON_REDUNDANT__NON_REDUNDANT_ADAPTER_HPP_
 
-#include <diagnostic_updater/diagnostic_updater.hpp>
+#include <autoware/agnocast_wrapper/diagnostic_updater.hpp>
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <redundancy_switcher_interface/plugin/event_gateway.hpp>
 #include <redundancy_switcher_interface/plugin/i_adapter_plugin.hpp>
@@ -30,14 +31,15 @@ public:
   NonRedundantSwitcherAdapter() = default;
   ~NonRedundantSwitcherAdapter() override = default;
 
-  void initialize(rclcpp::Node * node, std::shared_ptr<EventGateway> gateway) override;
+  void initialize(
+    autoware::agnocast_wrapper::Node * node, std::shared_ptr<EventGateway> gateway) override;
   void execute(const OutputCommand & command) override;
 
 private:
   // All diag callbacks return OK unconditionally — no hardware switcher to check.
   static void diag_skipped(diagnostic_updater::DiagnosticStatusWrapper & stat);
 
-  std::unique_ptr<diagnostic_updater::Updater> updater_;
+  std::unique_ptr<autoware::agnocast_wrapper::diagnostic_updater::Updater> updater_;
 };
 
 }  // namespace autoware::redundancy_switcher

@@ -1,7 +1,10 @@
 <launch>
   <arg name="param_file" default="$(find-pkg-share autoware_redundancy_switcher_interface_plugins)/config/simple_switcher_node.param.yaml"/>
 
+  <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
+
   <node pkg="autoware_redundancy_switcher_interface_plugins" exec="simple_switcher_node" name="simple_switcher_node" output="screen">
+    <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
     <param from="$(var param_file)"/>
   </node>
 </launch>

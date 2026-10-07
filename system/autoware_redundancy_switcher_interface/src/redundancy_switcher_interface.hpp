@@ -24,13 +24,15 @@
 #include "redundancy_switcher_interface/plugin/event_gateway.hpp"
 #include "redundancy_switcher_interface/plugin/i_adapter_plugin.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
+
 #include <memory>
 #include <vector>
 
 namespace autoware::redundancy_switcher
 {
 
-class RedundancySwitcherInterface : public rclcpp::Node
+class RedundancySwitcherInterface : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit RedundancySwitcherInterface(const rclcpp::NodeOptions & options = rclcpp::NodeOptions());

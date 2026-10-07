@@ -16,7 +16,9 @@
 // Requires rclcpp (node is passed to initialize() for logging only).
 
 #include "non_redundant_adapter.hpp"
+#include "portable_test_executor.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <redundancy_switcher_interface/core_logic/i_processor.hpp>
 #include <redundancy_switcher_interface/plugin/command_bus.hpp>
@@ -59,9 +61,11 @@ class NonRedundantAdapterTest : public ::testing::Test
 protected:
   void SetUp() override
   {
+    if (agnocast_node_construction_untestable()) GTEST_SKIP();
     rclcpp::NodeOptions options;
     options.parameter_overrides({rclcpp::Parameter("is_main_ecu", true)});
-    node_ = std::make_shared<rclcpp::Node>("test_non_redundant_adapter", options);
+    node_ =
+      std::make_shared<autoware::agnocast_wrapper::Node>("test_non_redundant_adapter", options);
     processor_ = std::make_shared<RecordingProcessor>();
     bus_ = std::make_shared<CommandBus>();
     gateway_ = std::make_shared<EventGateway>(processor_, bus_);
@@ -69,7 +73,7 @@ protected:
     adapter_->initialize(node_.get(), gateway_);
   }
 
-  rclcpp::Node::SharedPtr node_;
+  autoware::agnocast_wrapper::Node::SharedPtr node_;
   std::shared_ptr<RecordingProcessor> processor_;
   std::shared_ptr<CommandBus> bus_;
   std::shared_ptr<EventGateway> gateway_;

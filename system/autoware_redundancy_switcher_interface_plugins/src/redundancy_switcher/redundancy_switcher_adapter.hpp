@@ -18,7 +18,8 @@
 #include "uds_sender.hpp"
 #include "uds_types.hpp"
 
-#include <diagnostic_updater/diagnostic_updater.hpp>
+#include <autoware/agnocast_wrapper/diagnostic_updater.hpp>
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <redundancy_switcher_interface/plugin/event_gateway.hpp>
 #include <redundancy_switcher_interface/plugin/i_adapter_plugin.hpp>
@@ -43,7 +44,8 @@ public:
   RedundancySwitcherAdapter() = default;
   ~RedundancySwitcherAdapter() override;
 
-  void initialize(rclcpp::Node * node, std::shared_ptr<EventGateway> gateway) override;
+  void initialize(
+    autoware::agnocast_wrapper::Node * node, std::shared_ptr<EventGateway> gateway) override;
   void execute(const OutputCommand & command) override;
 
 private:
@@ -52,6 +54,7 @@ private:
   void check_election_status_timeout();
   void check_switcher_connection();
   void uds_receive_loop();
+
   bool no_data(
     const std::optional<ElectionStatus> & status,
     diagnostic_updater::DiagnosticStatusWrapper & stat) const;
@@ -82,7 +85,7 @@ private:
   void update_main_vcu_to_sub_vcu_link_fault_diag(
     diagnostic_updater::DiagnosticStatusWrapper & stat);
 
-  rclcpp::Node * node_{nullptr};
+  autoware::agnocast_wrapper::Node * node_{nullptr};
   std::shared_ptr<EventGateway> gateway_;
 
   std::unique_ptr<UdsSender<ElectionRequest>> uds_sender_;
@@ -105,9 +108,9 @@ private:
   mutable std::mutex policy_mutex_;
   mutable std::mutex fault_mutex_;
 
-  rclcpp::TimerBase::SharedPtr timer_;
+  AUTOWARE_TIMER_PTR timer_;
 
-  std::unique_ptr<diagnostic_updater::Updater> updater_;
+  std::unique_ptr<autoware::agnocast_wrapper::diagnostic_updater::Updater> updater_;
 };
 
 }  // namespace autoware::redundancy_switcher
