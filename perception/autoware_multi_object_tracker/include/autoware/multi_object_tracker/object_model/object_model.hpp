@@ -339,7 +339,7 @@ public:
         initial_covariance.pos_x = sq(2.0);
         initial_covariance.pos_y = sq(2.0);
         initial_covariance.yaw = sq(deg2rad(1000.0));
-        initial_covariance.vel_long = sq(kmph2mps(120.0));
+        initial_covariance.vel_long = sq(kmph2mps(100.0));
         initial_covariance.yaw_rate = sq(deg2rad(360.0));
 
         // measurement noise model

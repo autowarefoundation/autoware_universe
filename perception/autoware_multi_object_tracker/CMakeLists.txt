@@ -110,6 +110,7 @@ if(BUILD_TESTING)
     test/test_vehicle_tracker.cpp
     test/test_uuid_generator.cpp
     test/test_tracker_overlap_manager.cpp
+    test/test_object_model.cpp
   )
   add_definitions(-D_SRC_RESOURCES_DIR_PATH="${PROJECT_SOURCE_DIR}/test/data/")
   ament_add_ros_isolated_gtest(test_multi_object_tracker ${test_files})
