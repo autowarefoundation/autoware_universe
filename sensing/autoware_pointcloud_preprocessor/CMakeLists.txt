@@ -69,14 +69,38 @@ ament_target_dependencies(faster_voxel_grid_downsample_filter
   sensor_msgs
 )
 
-add_library(concatenate_data SHARED
-  src/concatenate_data/combine_cloud_handler_base.cpp
+# ROS-runtime-free core (no rclcpp/tf/pcl_ros). Links message targets directly to keep it that way.
+add_library(concatenate_core SHARED
   src/concatenate_data/combine_cloud_handler.cpp
-  src/concatenate_data/cloud_collector.cpp
-  src/concatenate_data/collector_matcher.cpp
+  src/concatenate_data/combine_cloud_handler_base.cpp
+  src/concatenate_data/concatenation_diagnostics.cpp
+  src/concatenate_data/cloud_concatenator.cpp
   src/concatenate_data/matching_policy.cpp
+)
+target_include_directories(concatenate_core PUBLIC
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+  "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>"
+)
+# Header-only dependencies (tf2 is used for LinearMath only).
+target_include_directories(concatenate_core SYSTEM PUBLIC
+  ${autoware_utils_INCLUDE_DIRS}
+  ${autoware_point_types_INCLUDE_DIRS}
+  ${point_cloud_msg_wrapper_INCLUDE_DIRS}
+  ${tf2_INCLUDE_DIRS}
+)
+target_link_libraries(concatenate_core PUBLIC
+  ${sensor_msgs_TARGETS}
+  ${geometry_msgs_TARGETS}
+  ${nav_msgs_TARGETS}
+  ${autoware_sensing_msgs_TARGETS}
+  ${builtin_interfaces_TARGETS}
+  ${diagnostic_msgs_TARGETS}
+)
+
+add_library(concatenate_data SHARED
   src/concatenate_data/concatenate_pointclouds.cpp
 )
+target_link_libraries(concatenate_data concatenate_core)
 
 target_include_directories(concatenate_data PUBLIC
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
@@ -310,7 +334,7 @@ install(
 )
 
 install(
-  TARGETS concatenate_data EXPORT export_${PROJECT_NAME}
+  TARGETS concatenate_core concatenate_data EXPORT export_${PROJECT_NAME}
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
@@ -356,9 +380,15 @@ if(BUILD_TESTING)
 
   ament_add_gtest(test_matching_policy
     test/test_matching_policy.cpp
-    src/concatenate_data/matching_policy.cpp
   )
-  target_include_directories(test_matching_policy PRIVATE include)
+
+  ament_add_gtest(test_concatenation_diagnostics
+    test/test_concatenation_diagnostics.cpp
+  )
+
+  ament_add_gtest(test_cloud_concatenator
+    test/test_cloud_concatenator.cpp
+  )
 
   ament_add_gtest(test_polar_voxel_noise_filter_node
     test/test_polar_voxel_noise_filter_node.cpp
@@ -401,6 +431,10 @@ if(BUILD_TESTING)
   target_link_libraries(test_concatenate_node_unit pointcloud_preprocessor_filter)
   target_link_libraries(test_pickup_based_voxel_grid_downsample_filter_node pointcloud_preprocessor_filter)
   target_link_libraries(test_concatenation_info concatenate_data)
+  target_link_libraries(test_matching_policy concatenate_core)
+  target_link_libraries(test_concatenation_diagnostics concatenate_core)
+  target_link_libraries(test_cloud_concatenator concatenate_core)
+  target_link_libraries(test_polar_voxel_outlier_filter_node pointcloud_preprocessor_filter)
   target_link_libraries(test_polar_voxel_noise_filter_node pointcloud_preprocessor_filter)
   target_link_libraries(test_blockage_diag pointcloud_preprocessor_filter)
   target_link_libraries(test_pointcloud2_to_depth_image pointcloud_preprocessor_filter)
