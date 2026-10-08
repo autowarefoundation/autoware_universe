@@ -27,6 +27,14 @@ rclcpp_components_register_node(${PROJECT_NAME}
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   ament_lint_auto_find_test_dependencies()
+  find_package(ament_cmake_gtest REQUIRED)
+  ament_add_gtest(test_lidar_marker_localizer test/test_lidar_marker_localizer.cpp)
+  target_include_directories(test_lidar_marker_localizer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+  target_link_libraries(test_lidar_marker_localizer
+    ${PROJECT_NAME}
+    ${PCL_LIBRARIES}
+  )
+  ament_target_dependencies(test_lidar_marker_localizer rclcpp rclcpp_components)
 endif()
 
 ament_auto_package(INSTALL_TO_SHARE
