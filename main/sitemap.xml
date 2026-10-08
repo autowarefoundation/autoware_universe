@@ -261,6 +261,10 @@
          <lastmod>2026-10-08</lastmod>
     </url>
     <url>
+         <loc>https://autowarefoundation.github.io/autoware_universe/main/localization/autoware_pose_initialization_requester/</loc>
+         <lastmod>2026-10-08</lastmod>
+    </url>
+    <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/main/localization/autoware_pose_instability_detector/</loc>
          <lastmod>2026-10-08</lastmod>
     </url>
@@ -1134,10 +1138,6 @@
     </url>
     <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/main/system/autoware_component_state_monitor/</loc>
-         <lastmod>2026-10-08</lastmod>
-    </url>
-    <url>
-         <loc>https://autowarefoundation.github.io/autoware_universe/main/system/autoware_default_adapi_helpers/autoware_automatic_pose_initializer/</loc>
          <lastmod>2026-10-08</lastmod>
     </url>
     <url>
