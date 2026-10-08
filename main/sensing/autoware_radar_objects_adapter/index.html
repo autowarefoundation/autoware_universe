@@ -23804,7 +23804,7 @@
 
 <div><h1 id="autoware_radar_objects_adapter">autoware_radar_objects_adapter<a class="headerlink" href="#autoware_radar_objects_adapter" title="Permanent link">#</a></h1>
 <h2 id="purpose">Purpose<a class="headerlink" href="#purpose" title="Permanent link">#</a></h2>
-<p>This package converts <code>autoware_sensing_msgs::msg::RadarObjects</code> into <code>autoware_perception_msgs::msg::DetectedObjects</code>, acting as a simple integration of radars into the perception pipeline.</p>
+<p>This package converts <code>autoware_sensing_msgs::msg::RadarObjects</code> into <code>autoware_perception_msgs::msg::DetectedObjects</code> and <code>autoware_perception_msgs::msg::TrackedObjects</code>, acting as a simple integration of radars into the perception pipeline.</p>
 <h2 id="radarobjectsadapter">RadarObjectsAdapter<a class="headerlink" href="#radarobjectsadapter" title="Permanent link">#</a></h2>
 <p>A node that converts radar objects from the sensing definition into a perception friendly format with no filtering involved.</p>
 <h3 id="parameter-classification_remap">Parameter: classification_remap<a class="headerlink" href="#parameter-classification_remap" title="Permanent link">#</a></h3>
@@ -23846,9 +23846,14 @@ This does not violate any logic in Autoware but may be worth monitoring.</p>
 </thead>
 <tbody>
 <tr>
-<td>~/output/objects</td>
+<td>~/output/detections</td>
 <td>autoware_perception_msgs::msg::DetectedObjects</td>
-<td>Output radar objects in the perception format.</td>
+<td>Output radar objects as detections.</td>
+</tr>
+<tr>
+<td>~/output/tracks</td>
+<td>autoware_perception_msgs::msg::TrackedObjects</td>
+<td>Output radar objects as tracks, keeping the radar's object ids (made unique per input topic as UUIDs).</td>
 </tr>
 </tbody>
 </table>
