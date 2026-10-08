@@ -514,8 +514,15 @@ int unmount_device_with_lazy(boost::archive::text_iarchive & ia, boost::archive:
     boost::process::ipstream is_out;
     boost::process::ipstream is_err;
 
+    if (!validate_unmount_device_name(unmount_device.part_device_)) {
+      syslog(LOG_ERR, "Invalid mount device path. %s\n", unmount_device.part_device_.c_str());
+      ret = -1;
+      responses.push_back(ret);
+      continue;
+    }
+
     boost::process::child c(
-      "/bin/sh", "-c", fmt::format("umount -l {}", unmount_device.part_device_.c_str()),
+      "/usr/bin/umount", "-l", unmount_device.part_device_.c_str(),
       boost::process::std_out > is_out, boost::process::std_err > is_err);
     c.wait();
 
