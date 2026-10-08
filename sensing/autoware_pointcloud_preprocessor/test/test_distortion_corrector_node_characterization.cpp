@@ -17,10 +17,6 @@
 // Records what the node currently does, seen from outside, so a rewrite of the internals is
 // provably invisible to the rest of the system. The core classes are already unit-tested by
 // test_distortion_corrector_node.cpp; this file covers the ROS node layer instead.
-//
-// A "...KnownIssue..." test pins behavior that is arguably wrong, so that fixing it is a
-// deliberate change. One case is deliberately not pinned -- see
-// StillPublishesWhenTheImuTransformIsMissing.
 
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp_components/component_manager.hpp>
@@ -1231,8 +1227,7 @@ TEST_F(DistortionCorrectorCharacterizationTest, StillPublishesWhenTheImuTransfor
 }
 
 TEST_F(
-  DistortionCorrectorCharacterizationTest,
-  KnownIssueFirstResolvedCloudTransformIsReusedForEveryLaterFrame)
+  DistortionCorrectorCharacterizationTest, FirstResolvedCloudTransformIsReusedForEveryLaterFrame)
 {
   // Arrange
   // A base_link cloud resolves an identity transform and latches it. Asserted as a
@@ -1251,10 +1246,9 @@ TEST_F(
   const auto second = await_output_cloud(2);
 
   // Assert
-  // This is a bug:
-  // The lookup is skipped because a transform is cached, so this cloud is corrected as though
-  // it too were in base_link: the shift stays along x instead of becoming -y. Recorded as a
-  // bug so fixing it is deliberate; compare UndistortsCloudGivenInTheLidarFrame.
+  // This is a bug: the lookup is skipped because a transform is already cached, so this cloud
+  // is corrected as though it too were in base_link -- the shift stays along x instead of
+  // becoming -y. Compare UndistortsCloudGivenInTheLidarFrame.
   expect_points_shifted_by(second, linear_shifts(speed), exact_tolerance);
 }
 
