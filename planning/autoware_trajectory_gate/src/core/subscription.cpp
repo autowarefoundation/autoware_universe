@@ -19,7 +19,8 @@
 namespace autoware::trajectory_gate
 {
 
-TrajectorySubscription::TrajectorySubscription(const std::string & name, rclcpp::Node & node)
+TrajectorySubscription::TrajectorySubscription(
+  const std::string & name, autoware::agnocast_wrapper::Node & node)
 {
   using std::placeholders::_1;
 
@@ -28,9 +29,9 @@ TrajectorySubscription::TrajectorySubscription(const std::string & name, rclcpp:
     std::bind(&TrajectorySubscription::on_msg, this, _1));
 }
 
-void TrajectorySubscription::on_msg(const Trajectory & msg)
+void TrajectorySubscription::on_msg(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(Trajectory) & msg)
 {
-  TrajectorySender::send(msg);
+  TrajectorySender::send(*msg);
 }
 
 }  // namespace autoware::trajectory_gate

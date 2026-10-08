@@ -18,7 +18,8 @@
 #include "core/interface.hpp"
 #include "core/selector.hpp"
 
-#include <diagnostic_updater/diagnostic_updater.hpp>
+#include <autoware/agnocast_wrapper/diagnostic_updater.hpp>
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <tier4_system_msgs/msg/trajectory_source_status.hpp>
@@ -30,7 +31,7 @@
 namespace autoware::trajectory_gate
 {
 
-class TrajectoryGate : public rclcpp::Node
+class TrajectoryGate : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit TrajectoryGate(const rclcpp::NodeOptions & options);
@@ -39,14 +40,14 @@ private:
   using TrajectorySourceStatus = tier4_system_msgs::msg::TrajectorySourceStatus;
   using ChangeTrajectorySource = tier4_system_msgs::srv::ChangeTrajectorySource;
 
-  diagnostic_updater::Updater diag_;
+  autoware::agnocast_wrapper::diagnostic_updater::Updater diag_;
 
   TrajectorySelector selector_;
   std::vector<std::unique_ptr<TrajectorySender>> subscriptions_;
   std::vector<std::unique_ptr<TrajectoryReceiver>> receivers_;
 
-  rclcpp::Publisher<TrajectorySourceStatus>::SharedPtr pub_source_;
-  rclcpp::Service<ChangeTrajectorySource>::SharedPtr srv_source_;
+  AUTOWARE_PUBLISHER_PTR(TrajectorySourceStatus) pub_source_;
+  AUTOWARE_SERVICE_PTR(ChangeTrajectorySource) srv_source_;
 
   void publish_source() const;
   void on_change_source(
