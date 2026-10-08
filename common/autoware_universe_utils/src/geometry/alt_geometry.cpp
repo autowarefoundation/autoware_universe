@@ -14,6 +14,8 @@
 
 #include "autoware/universe_utils/geometry/alt_geometry.hpp"
 
+#include <stdio.h>
+
 #include <algorithm>
 #include <limits>
 #include <utility>
@@ -185,6 +187,12 @@ std::optional<alt::ConvexPolygon2d> convex_hull(const alt::Points2d & points)
       if (points.empty()) {
         return;
       }
+
+      // For detection of infinite recursive calls in make_hull lambda
+      printf(
+        "make_hull: p1=(%f, %f), p2=(%f, %f), points.size=%zu\n", p1.x(), p1.y(), p2.x(), p2.y(),
+        points.size());
+      fflush(stdout);
 
       const auto & farthest = *find_farthest(points, p1, p2);
 
