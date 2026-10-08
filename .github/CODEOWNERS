@@ -51,7 +51,6 @@ localization/autoware_landmark_based_localizer/autoware_ar_tag_based_localizer/*
 localization/autoware_landmark_based_localizer/autoware_landmark_manager/** anh.nguyen.2@tier4.jp masahiro.sakamoto@tier4.jp taiki.yamada@tier4.jp yamato.ando@tier4.jp
 localization/autoware_landmark_based_localizer/autoware_lidar_marker_localizer/** yamato.ando@tier4.jp
 localization/autoware_localization_error_monitor/** anh.nguyen.2@tier4.jp masahiro.sakamoto@tier4.jp taiki.yamada@tier4.jp yamato.ando@tier4.jp
-localization/autoware_pose2twist/** anh.nguyen.2@tier4.jp masahiro.sakamoto@tier4.jp taiki.yamada@tier4.jp yamato.ando@tier4.jp
 localization/autoware_pose_covariance_modifier/** melike@leodrive.ai
 localization/autoware_pose_estimator_arbiter/** anh.nguyen.2@tier4.jp kento.yabuuchi.2@tier4.jp masahiro.sakamoto@tier4.jp taiki.yamada@tier4.jp yamato.ando@tier4.jp
 localization/autoware_pose_instability_detector/** anh.nguyen.2@tier4.jp masahiro.sakamoto@tier4.jp taiki.yamada@tier4.jp yamato.ando@tier4.jp
