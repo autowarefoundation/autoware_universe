@@ -142,7 +142,8 @@ public:
     double max_slow_down_accel;
     double no_relax_velocity;
     // param for stuck vehicle
-    bool enable_obstruction_prevention{false};
+    bool enable_obstruction_prevention{true};
+    bool ignore_in_intersection{true};
     double target_vehicle_velocity;
     double required_lateral_clearance;
     double required_clearance;
