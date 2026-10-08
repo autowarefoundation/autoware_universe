@@ -183,6 +183,82 @@ void swap_char(std::string & str, size_t size)
 }
 
 /**
+ * @brief remove the bytes which must never reach the serialized message from a device string
+ * @param [in] data a pointer to the raw device string
+ * @param [in] size size of the raw device string
+ * @return sanitized string
+ * @note A device which does not execute the command leaves the buffer untouched, so the raw
+ * string can be filled with NUL or with arbitrary binary data. NUL is not whitespace and
+ * therefore survives a plain trim, which then truncates the message on the receiving side.
+ */
+std::string sanitize_device_string(const char * data, size_t size)
+{
+  std::string sanitized;
+  sanitized.reserve(size);
+
+  for (size_t i = 0; i < size; ++i) {
+    const auto character = static_cast<unsigned char>(data[i]);
+    // Keep printable ASCII only, drop NUL, control characters and non-ASCII bytes
+    if ((character >= 0x20) && (character <= 0x7E)) {
+      sanitized.push_back(static_cast<char>(character));
+    }
+  }
+
+  boost::trim(sanitized);
+
+  return sanitized;
+}
+
+/**
+ * @brief check the result of a SCSI generic command and log it if the device rejected it
+ * @param [in] hdr a reference to the control structure of the command
+ * @param [in] command_name name of the command to log
+ * @return 0 when the device has executed the command, otherwise error
+ * @note ioctl(SG_IO) reports whether the command has been delivered, not whether the device
+ * executed it. Without this check a device which does not support the command, for example a
+ * USB bridge without ATA PASS-THROUGH, is reported as a healthy device with an empty result.
+ */
+int check_sg_io_result(const sg_io_hdr_t & hdr, const char * command_name)
+{
+  // Whether the device accepted the command is reported by these status fields, for example a
+  // USB bridge which does not support ATA PASS-THROUGH answers with a check condition
+  if (
+    (hdr.status == 0) && (hdr.masked_status == 0) && (hdr.host_status == 0) &&
+    (hdr.driver_status == 0)) {
+    return EXIT_SUCCESS;
+  }
+
+  syslog(
+    LOG_ERR,
+    "The device rejected %s. status=0x%02X masked_status=0x%02X host_status=0x%04X "
+    "driver_status=0x%04X\n",
+    command_name, hdr.status, hdr.masked_status, hdr.host_status, hdr.driver_status);
+
+  return EIO;
+}
+
+/**
+ * @brief check the result of an NVMe admin command and log it if the device rejected it
+ * @param [in] ret value returned by ioctl(NVME_IOCTL_ADMIN_CMD), must not be negative
+ * @param [in] command_name name of the command to log
+ * @return 0 when the device has executed the command, otherwise error
+ * @note ioctl(NVME_IOCTL_ADMIN_CMD) has three outcomes. A negative value means that the
+ * command never reached the device and errno is set, zero means that the controller completed
+ * it with Successful Completion, and a positive value is the status the controller answered
+ * with. A rejected command leaves the data buffer untouched.
+ */
+int check_nvme_admin_result(int ret, const char * command_name)
+{
+  if (ret == 0) {
+    return EXIT_SUCCESS;
+  }
+
+  syslog(LOG_ERR, "The device rejected %s. status=0x%04X\n", command_name, ret);
+
+  return EIO;
+}
+
+/**
  * @brief get IDENTIFY DEVICE for ATA drive
  * @param [in] fd file descriptor to device
  * @param [out] info a pointer to HDD information
@@ -223,16 +299,23 @@ int get_ata_identify(int fd, HddInfo * info)
     return errno;
   }
 
+  // A rejected command leaves the data buffer untouched, the fields below would all be read
+  // from zeroed memory
+  int ret = check_sg_io_result(hdr, "IDENTIFY DEVICE");
+  if (ret != EXIT_SUCCESS) {
+    return ret;
+  }
+
   // IDENTIFY DEVICE
   // Word 10..19 Serial number
-  info->serial_ = std::string(reinterpret_cast<char *>(data) + 20, 20);
-  swap_char(info->serial_, 20);
-  boost::trim(info->serial_);
+  std::string serial(reinterpret_cast<char *>(data) + 20, 20);
+  swap_char(serial, 20);
+  info->serial_ = sanitize_device_string(serial.data(), serial.size());
 
   // Word 27..46 Model number
-  info->model_ = std::string(reinterpret_cast<char *>(data) + 54, 40);
-  swap_char(info->model_, 40);
-  boost::trim(info->model_);
+  std::string model(reinterpret_cast<char *>(data) + 54, 40);
+  swap_char(model, 40);
+  info->model_ = sanitize_device_string(model.data(), model.size());
 
   return EXIT_SUCCESS;
 }
@@ -284,6 +367,13 @@ int get_ata_smart_data(int fd, HddInfo * info, const HddDevice & device)
   // send SCSI command to device
   if (ioctl(fd, SG_IO, &hdr) < 0) {
     return errno;
+  }
+
+  // A rejected command leaves the data buffer untouched, the attributes below would all be
+  // read from zeroed memory
+  int ret = check_sg_io_result(hdr, "SMART READ DATA");
+  if (ret != EXIT_SUCCESS) {
+    return ret;
   }
 
   info->is_valid_temp_ = false;
@@ -345,14 +435,19 @@ int get_nvme_identify(int fd, HddInfo * info)
     return errno;
   }
 
+  // A rejected command leaves the data buffer untouched, the fields below would all be read
+  // from zeroed memory
+  const int status = check_nvme_admin_result(ret, "Identify");
+  if (status != EXIT_SUCCESS) {
+    return status;
+  }
+
   // Identify Controller Data Structure
   // Bytes 23:04 Serial Number (SN)
-  info->serial_ = std::string(data + 4, 20);
-  boost::trim(info->serial_);
+  info->serial_ = sanitize_device_string(data + 4, 20);
 
   // Bytes 63:24 Model Number (MN)
-  info->model_ = std::string(data + 24, 40);
-  boost::trim(info->model_);
+  info->model_ = sanitize_device_string(data + 24, 40);
 
   return EXIT_SUCCESS;
 }
@@ -384,6 +479,13 @@ int get_nvme_smart_data(int fd, HddInfo * info)
   int ret = ioctl(fd, NVME_IOCTL_ADMIN_CMD, &cmd);
   if (ret < 0) {
     return errno;
+  }
+
+  // A rejected command leaves the data buffer untouched, the values below would all be read
+  // from zeroed memory and 0 DegC would be reported as a measured temperature
+  const int status = check_nvme_admin_result(ret, "Get Log Page");
+  if (status != EXIT_SUCCESS) {
+    return status;
   }
 
   // Bytes 2:1 Composite Temperature
@@ -437,7 +539,11 @@ int get_hdd_info(boost::archive::text_iarchive & ia, boost::archive::text_oarchi
     int fd = open(hdd_device.name_.c_str(), O_RDONLY);
     if (fd < 0) {
       info.error_code_ = errno;
-      syslog(LOG_ERR, "Failed to open a file. %s\n", strerror(info.error_code_));
+      syslog(
+        LOG_ERR, "Failed to open a file. %s %s\n", hdd_device.name_.c_str(),
+        strerror(info.error_code_));
+      // The error is reported for this device only, the remaining devices are still read
+      list[hdd_device.name_] = info;
       continue;
     }
 
@@ -449,6 +555,7 @@ int get_hdd_info(boost::archive::text_iarchive & ia, boost::archive::text_oarchi
         syslog(
           LOG_ERR, "Failed to get IDENTIFY DEVICE for ATA drive. %s\n", strerror(info.error_code_));
         close(fd);
+        list[hdd_device.name_] = info;
         continue;
       }
       // Get SMART DATA for ATA drive
@@ -456,6 +563,7 @@ int get_hdd_info(boost::archive::text_iarchive & ia, boost::archive::text_oarchi
       if (info.error_code_ != 0) {
         syslog(LOG_ERR, "Failed to get SMART LOG for ATA drive. %s\n", strerror(info.error_code_));
         close(fd);
+        list[hdd_device.name_] = info;
         continue;
       }
     } else if (boost::starts_with(hdd_device.name_.c_str(), "/dev/nvme")) {  // NVMe device
@@ -464,6 +572,7 @@ int get_hdd_info(boost::archive::text_iarchive & ia, boost::archive::text_oarchi
       if (info.error_code_ != 0) {
         syslog(LOG_ERR, "Failed to get Identify for NVMe drive. %s\n", strerror(info.error_code_));
         close(fd);
+        list[hdd_device.name_] = info;
         continue;
       }
       // Get SMART / Health Information for NVMe drive
@@ -473,8 +582,17 @@ int get_hdd_info(boost::archive::text_iarchive & ia, boost::archive::text_oarchi
           LOG_ERR, "Failed to get SMART / Health Information for NVMe drive. %s\n",
           strerror(info.error_code_));
         close(fd);
+        list[hdd_device.name_] = info;
         continue;
       }
+    } else {
+      // The device type is derived from the device name, so a device attached by an unknown
+      // transport has to be reported as unsupported instead of as an empty success
+      info.error_code_ = ENOTSUP;
+      syslog(LOG_ERR, "Unsupported device. %s\n", hdd_device.name_.c_str());
+      close(fd);
+      list[hdd_device.name_] = info;
+      continue;
     }
 
     // Close the file descriptor FD
@@ -603,8 +721,10 @@ void run(const std::string & socket_path)
     }
 
     // Receive list of device from a socket
+    // If there are many devices, the buffer may not be enough and the data may be cut off.
     char buf[1024]{};
-    ret = recv(new_sock, buf, sizeof(buf) - 1, 0);
+    const int received = recv(new_sock, buf, sizeof(buf) - 1, 0);
+    ret = received;
     if (ret < 0) {
       syslog(LOG_ERR, "Failed to receive. %s\n", strerror(errno));
       close(new_sock);
@@ -623,8 +743,9 @@ void run(const std::string & socket_path)
 
     uint8_t request_id;
 
-    buf[sizeof(buf) - 1] = '\0';
-    std::istringstream iss(buf);
+    // The request is not a C string. Constructing the stream from the pointer would stop at
+    // the first NUL and cut the archive in the middle of a token.
+    std::istringstream iss(std::string(buf, received));
     boost::archive::text_iarchive ia(iss);
 
     try {
