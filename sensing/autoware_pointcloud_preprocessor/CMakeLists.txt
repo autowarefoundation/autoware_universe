@@ -342,6 +342,13 @@ if(BUILD_TESTING)
     test/test_distortion_corrector_node.cpp
   )
 
+  # Black-box characterization test used as a refactoring safety net for the
+  # distortion_corrector module. See the comment at the top of the test for details.
+  ament_add_gtest(test_distortion_corrector_node_characterization
+    test/test_distortion_corrector_node_characterization.cpp
+    TIMEOUT 180
+  )
+
   ament_add_gtest(test_concatenate_node_unit
     test/test_concatenate_node_unit.cpp
   )
@@ -398,6 +405,8 @@ if(BUILD_TESTING)
 
   target_link_libraries(test_utilities pointcloud_preprocessor_filter)
   target_link_libraries(test_distortion_corrector_node pointcloud_preprocessor_filter)
+  target_link_libraries(test_distortion_corrector_node_characterization pointcloud_preprocessor_filter)
+  ament_target_dependencies(test_distortion_corrector_node_characterization rclcpp_components tf2_ros)
   target_link_libraries(test_concatenate_node_unit pointcloud_preprocessor_filter)
   target_link_libraries(test_pickup_based_voxel_grid_downsample_filter_node pointcloud_preprocessor_filter)
   target_link_libraries(test_concatenation_info concatenate_data)
