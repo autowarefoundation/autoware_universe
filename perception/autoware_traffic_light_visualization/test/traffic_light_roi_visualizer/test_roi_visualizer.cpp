@@ -520,6 +520,9 @@ TEST(TrafficLightRoiVisualizer, RoiAtOriginGetsFrameButNoLabelBox)
   EXPECT_EQ(inside_the_roi, background_rgb);
 }
 
+// The label box must fit inside the image, and draw_shape() tests all four of its edges in one
+// if. Each term gets a case of its own below, including the one no ROI can reach today: the guard
+// is the drawing's own contract, and the message types that feed it are free to change.
 TEST(TrafficLightRoiVisualizer, RoiTooCloseToTopGetsNoLabelBox)
 {
   // Arrange: the label box goes above the ROI, so a ROI within its height of the top edge leaves no
@@ -538,6 +541,69 @@ TEST(TrafficLightRoiVisualizer, RoiTooCloseToTopGetsNoLabelBox)
 
   // The strip above it stays background: no box, not even a clipped one
   const auto above_the_roi = pixel_at(*output, near_the_top.x + 30, near_the_top.y - 5);
+  EXPECT_EQ(above_the_roi, background_rgb);
+}
+
+TEST(TrafficLightRoiVisualizer, RoiTooCloseToRightGetsNoLabelBox)
+{
+  // Arrange: the box runs to the right of the ROI, so a ROI within its width of the right edge
+  // leaves no room. The box is about 86 px wide for one shape at 87%, so 600 is inside the margin.
+  constexpr Box near_the_right{600, 150, 40, 90};
+  const auto rois = make_rois(signal_id, {near_the_right});
+  const auto visualizer = make_visualizer();
+
+  // Act
+  const auto output = visualizer.visualize(background_image, rois, green_signal);
+  ASSERT_NE(output, nullptr);
+
+  // Assert: the frame is drawn, clipped at the right edge
+  const auto frame_corner = pixel_at(*output, near_the_right.x, near_the_right.y);
+  EXPECT_EQ(frame_corner, green_signal_rgb);
+
+  // The strip above it stays background: no box, not even a clipped one
+  const auto above_the_roi = label_box_pixel(*output, near_the_right);
+  EXPECT_EQ(above_the_roi, background_rgb);
+}
+
+TEST(TrafficLightRoiVisualizer, RoiPastBottomGetsNoLabelBox)
+{
+  // Arrange: a ROI below the bottom edge. Nothing of it is on the image, so this is the one case
+  // of the four where the frame does not appear either.
+  constexpr Box past_the_bottom{200, 500, 40, 90};
+  const auto rois = make_rois(signal_id, {past_the_bottom});
+  const auto visualizer = make_visualizer();
+
+  // Act: the guard is what keeps this from throwing. Without it the box is cut from the image by
+  // a rectangle that reaches past its last row, and OpenCV raises rather than clipping.
+  const auto output = visualizer.visualize(background_image, rois, green_signal);
+  ASSERT_NE(output, nullptr);
+
+  // Assert
+  EXPECT_EQ(count_pixels_differing_from(*output, background_rgb), 0u);
+}
+
+TEST(TrafficLightRoiVisualizer, RoiPastLeftGetsNoLabelBox)
+{
+  // Arrange: the box starts at the ROI's own left edge, so this term needs a negative x, and
+  // x_offset is uint32 in the message: no ROI can state one. The term is tested all the same,
+  // because the guard belongs to the drawing rather than to the type that happens to feed it
+  // today. A negative offset does reach draw_shape(): it wraps into the uint32 field and wraps
+  // back when cv::Point holds it as an int, so -16 arrives as -16.
+  constexpr Box past_the_left{-16, 150, 40, 90};
+  const auto rois = make_rois(signal_id, {past_the_left});
+  const auto visualizer = make_visualizer();
+
+  // Act
+  const auto output = visualizer.visualize(background_image, rois, green_signal);
+  ASSERT_NE(output, nullptr);
+
+  // Assert: the frame is drawn, clipped at the left edge, so x = 10 is on its top side
+  const auto frame_top_side = pixel_at(*output, 10, past_the_left.y);
+  EXPECT_EQ(frame_top_side, green_signal_rgb);
+
+  // The strip above it stays background: no box, not even a clipped one. The box would have
+  // covered this point, reaching from the ROI's left edge to 70 px right of it.
+  const auto above_the_roi = pixel_at(*output, 10, past_the_left.y - 25);
   EXPECT_EQ(above_the_roi, background_rgb);
 }
 
