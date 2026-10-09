@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__TRAJECTORY_RANKER__CAMP_RANKER_HPP_
-#define AUTOWARE__TRAJECTORY_RANKER__CAMP_RANKER_HPP_
+#ifndef AUTOWARE__CAMP_SELECTOR__CAMP_RANKER_HPP_
+#define AUTOWARE__CAMP_SELECTOR__CAMP_RANKER_HPP_
 
 #include <array>
 #include <cstddef>
@@ -22,7 +22,7 @@
 #include <string_view>
 #include <vector>
 
-namespace autoware::trajectory_ranker
+namespace autoware::camp_selector
 {
 
 inline constexpr std::size_t kCampAtomCount = 16;
@@ -78,6 +78,6 @@ CampRankingResult rank_camp_candidates(
   const CampFixedWeightModel & model, const CampStatusPattern & status,
   const std::vector<CampAtomVector> & raw_atoms);
 
-}  // namespace autoware::trajectory_ranker
+}  // namespace autoware::camp_selector
 
-#endif  // AUTOWARE__TRAJECTORY_RANKER__CAMP_RANKER_HPP_
+#endif  // AUTOWARE__CAMP_SELECTOR__CAMP_RANKER_HPP_

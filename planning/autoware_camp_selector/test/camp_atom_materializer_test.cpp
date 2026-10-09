@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/diffusion_planner/camp_atom_materializer.hpp"
+#include "autoware/camp_selector/camp_atom_materializer.hpp"
 
-#include "autoware/diffusion_planner/dimensions.hpp"
+#include "autoware/camp_selector/tensor_dimensions.hpp"
 
 #include <gtest/gtest.h>
 
@@ -24,7 +24,7 @@
 #include <cstdint>
 #include <vector>
 
-namespace autoware::diffusion_planner
+namespace autoware::camp_selector
 {
 namespace
 {
@@ -104,11 +104,11 @@ TEST(CampAtomMaterializer, StraightPoolMatchesFixedWeightRankingContract)
   const auto materialized = materialize_camp_atoms(make_straight_input(), transition_scales);
 
   ASSERT_EQ(materialized.raw_atoms.size(), 8U);
-  EXPECT_EQ(materialized.status.at(3), trajectory_ranker::CampAtomStatus::Observed);
-  EXPECT_EQ(materialized.status.at(4), trajectory_ranker::CampAtomStatus::Observed);
-  EXPECT_EQ(materialized.status.at(6), trajectory_ranker::CampAtomStatus::NotApplicable);
-  EXPECT_EQ(materialized.status.at(7), trajectory_ranker::CampAtomStatus::NotApplicable);
-  EXPECT_EQ(materialized.status.at(15), trajectory_ranker::CampAtomStatus::NotApplicable);
+  EXPECT_EQ(materialized.status.at(3), CampAtomStatus::Observed);
+  EXPECT_EQ(materialized.status.at(4), CampAtomStatus::Observed);
+  EXPECT_EQ(materialized.status.at(6), CampAtomStatus::NotApplicable);
+  EXPECT_EQ(materialized.status.at(7), CampAtomStatus::NotApplicable);
+  EXPECT_EQ(materialized.status.at(15), CampAtomStatus::NotApplicable);
   for (const auto & atoms : materialized.raw_atoms) {
     EXPECT_TRUE(std::isnan(atoms.at(6)));
     EXPECT_TRUE(std::isnan(atoms.at(7)));
@@ -132,9 +132,8 @@ TEST(CampAtomMaterializer, StraightPoolMatchesFixedWeightRankingContract)
       10.0 * static_cast<double>(materialized.raw_atoms.size() - candidate - 1), 1.0e-9);
   }
 
-  const auto model = trajectory_ranker::load_camp_fixed_weight_model(CAMP_TEST_MODEL_PATH);
-  const auto ranking =
-    trajectory_ranker::rank_camp_candidates(model, materialized.status, materialized.raw_atoms);
+  const auto model = load_camp_fixed_weight_model(CAMP_TEST_MODEL_PATH);
+  const auto ranking = rank_camp_candidates(model, materialized.status, materialized.raw_atoms);
   EXPECT_EQ(ranking.selected_index, 7U);
 }
 
@@ -147,7 +146,7 @@ TEST(CampAtomMaterializer, PreviousPlanActivatesContinuityAtom)
   second_input.previous_plan = CampPreviousPlan{0.0, first.candidate_world_plans.front()};
   const auto second = materialize_camp_atoms(second_input, transition_scales);
 
-  EXPECT_EQ(second.status.at(15), trajectory_ranker::CampAtomStatus::Observed);
+  EXPECT_EQ(second.status.at(15), CampAtomStatus::Observed);
   EXPECT_NEAR(second.raw_atoms.front().at(15), 0.0, 1.0e-12);
   EXPECT_NEAR(second.raw_atoms.at(1).at(15), 0.27000403286881997, 1.0e-9);
 }
@@ -161,17 +160,16 @@ TEST(CampAtomMaterializer, PreservesTypedMissingEndpointSemantics)
   input.tensor_context.route_has_traffic_light = true;
   const auto materialized = materialize_camp_atoms(input, transition_scales);
 
-  EXPECT_EQ(materialized.status.at(3), trajectory_ranker::CampAtomStatus::TypedMissing);
-  EXPECT_EQ(materialized.status.at(6), trajectory_ranker::CampAtomStatus::TypedMissing);
-  EXPECT_EQ(materialized.status.at(7), trajectory_ranker::CampAtomStatus::TypedMissing);
+  EXPECT_EQ(materialized.status.at(3), CampAtomStatus::TypedMissing);
+  EXPECT_EQ(materialized.status.at(6), CampAtomStatus::TypedMissing);
+  EXPECT_EQ(materialized.status.at(7), CampAtomStatus::TypedMissing);
   for (const auto & atoms : materialized.raw_atoms) {
     EXPECT_TRUE(std::isnan(atoms.at(3)));
     EXPECT_TRUE(std::isnan(atoms.at(6)));
     EXPECT_TRUE(std::isnan(atoms.at(7)));
   }
-  const auto model = trajectory_ranker::load_camp_fixed_weight_model(CAMP_TEST_MODEL_PATH);
-  EXPECT_NO_THROW(
-    trajectory_ranker::rank_camp_candidates(model, materialized.status, materialized.raw_atoms));
+  const auto model = load_camp_fixed_weight_model(CAMP_TEST_MODEL_PATH);
+  EXPECT_NO_THROW(rank_camp_candidates(model, materialized.status, materialized.raw_atoms));
 }
 
 TEST(CampAtomMaterializer, NonzeroAtomsMatchTheFrozenReferenceFormulas)
@@ -215,4 +213,4 @@ TEST(CampAtomMaterializer, NonzeroAtomsMatchTheFrozenReferenceFormulas)
 }
 
 }  // namespace
-}  // namespace autoware::diffusion_planner
+}  // namespace autoware::camp_selector

@@ -15,9 +15,6 @@
         decoder_onnx_model_filename: diffusion_planner_decoder.onnx
         turn_indicator_onnx_model_filename: diffusion_planner_turn_indicator.onnx
         dpm_solver_steps: 10
-    camp:
-      enabled: false
-      fixed_weight_model_path: $(find-pkg-share autoware_trajectory_ranker)/config/camp_v26_k8_50k.json
     guidance:
       start_guidance:
         reference_distance_m: 10.0

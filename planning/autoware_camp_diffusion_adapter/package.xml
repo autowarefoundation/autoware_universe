@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>autoware_camp_diffusion_adapter</name>
+  <version>0.1.0</version>
+  <description>Independent ROS host connecting upstream Diffusion Planner to the CAMP selector.</description>
+  <maintainer email="antares170157@gmail.com">Xinchen Lin</maintainer>
+  <license>Apache License 2.0</license>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <depend>autoware_camp_selector</depend>
+  <depend>autoware_diffusion_planner</depend>
+  <depend>autoware_internal_planning_msgs</depend>
+  <depend>autoware_lanelet2_utils</depend>
+  <depend>autoware_map_msgs</depend>
+  <depend>autoware_perception_msgs</depend>
+  <depend>autoware_planning_factor_interface</depend>
+  <depend>autoware_planning_msgs</depend>
+  <depend>autoware_utils_uuid</depend>
+  <depend>autoware_vehicle_info_utils</depend>
+  <depend>autoware_vehicle_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>lanelet2_core</depend>
+  <depend>nav_msgs</depend>
+  <depend>rcl_interfaces</depend>
+  <depend>rclcpp</depend>
+  <depend>std_msgs</depend>
+  <depend>std_srvs</depend>
+  <depend>unique_identifier_msgs</depend>
+  <exec_depend>autoware_tensorrt_plugins</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <export><build_type>ament_cmake</build_type></export>
+</package>

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/trajectory_ranker/camp_ranker.hpp"
+#include "autoware/camp_selector/camp_ranker.hpp"
 
 #include <nlohmann/json.hpp>
 
@@ -23,7 +23,7 @@
 #include <string>
 #include <vector>
 
-namespace autoware::trajectory_ranker
+namespace autoware::camp_selector
 {
 namespace
 {
@@ -139,10 +139,9 @@ CampFixedWeightModel load_camp_fixed_weight_model(const std::filesystem::path & 
   model.transition_component_scales = parse_transition_scales(root.at("transition_scales"));
 
   for (const auto & pattern_json : root.at("patterns")) {
-    model.patterns.push_back(
-      CampPatternWeights{
-        parse_status_pattern(pattern_json.at("status")),
-        parse_atom_vector(pattern_json.at("weights"), "pattern weights")});
+    model.patterns.push_back(CampPatternWeights{
+      parse_status_pattern(pattern_json.at("status")),
+      parse_atom_vector(pattern_json.at("weights"), "pattern weights")});
   }
 
   validate_model(model);
@@ -191,4 +190,4 @@ CampRankingResult rank_camp_candidates(
   return result;
 }
 
-}  // namespace autoware::trajectory_ranker
+}  // namespace autoware::camp_selector

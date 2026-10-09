@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/trajectory_ranker/camp_ranker.hpp"
+#include "autoware/camp_selector/camp_ranker.hpp"
 
 #include <gtest/gtest.h>
 
@@ -21,7 +21,7 @@
 #include <stdexcept>
 #include <vector>
 
-namespace autoware::trajectory_ranker
+namespace autoware::camp_selector
 {
 namespace
 {
@@ -140,4 +140,4 @@ TEST(CampRanker, RejectsTheWrongCandidatePoolSize)
     std::invalid_argument);
 }
 
-}  // namespace autoware::trajectory_ranker
+}  // namespace autoware::camp_selector

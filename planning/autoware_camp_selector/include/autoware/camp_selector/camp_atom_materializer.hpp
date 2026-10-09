@@ -12,13 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__DIFFUSION_PLANNER__CAMP_ATOM_MATERIALIZER_HPP_
-#define AUTOWARE__DIFFUSION_PLANNER__CAMP_ATOM_MATERIALIZER_HPP_
-
-#include "autoware/diffusion_planner/conversion/lanelet.hpp"
+#ifndef AUTOWARE__CAMP_SELECTOR__CAMP_ATOM_MATERIALIZER_HPP_
+#define AUTOWARE__CAMP_SELECTOR__CAMP_ATOM_MATERIALIZER_HPP_
 
 #include <Eigen/Core>
-#include <autoware/trajectory_ranker/camp_ranker.hpp>
+#include <autoware/camp_selector/camp_ranker.hpp>
 
 #include <array>
 #include <cstddef>
@@ -26,7 +24,7 @@
 #include <optional>
 #include <vector>
 
-namespace autoware::diffusion_planner
+namespace autoware::camp_selector
 {
 
 inline constexpr std::size_t kCampHorizonSteps = 80;
@@ -63,6 +61,13 @@ struct CampTensorContext
   bool route_has_traffic_light{false};
 };
 
+// Boundaries from the host's authoritative map, in original map coordinates/order.
+struct CampLaneBoundary
+{
+  std::vector<Eigen::Vector3d> left_boundary;
+  std::vector<Eigen::Vector3d> right_boundary;
+};
+
 struct CampAtomMaterializationInput
 {
   std::vector<float> denormalized_predictions;
@@ -70,7 +75,7 @@ struct CampAtomMaterializationInput
   std::int64_t agent_count{0};
   std::array<CampActorShape, kCampActorCount> actor_shapes{};
   CampTensorContext tensor_context;
-  const LaneletMap * lanelet_map{nullptr};
+  const std::vector<CampLaneBoundary> * lane_boundaries{nullptr};
   Eigen::Matrix4d ego_to_map{Eigen::Matrix4d::Identity()};
   double ego_wheelbase_m{0.0};
   double ego_length_m{0.0};
@@ -81,8 +86,8 @@ struct CampAtomMaterializationInput
 
 struct CampAtomMaterializationResult
 {
-  trajectory_ranker::CampStatusPattern status;
-  std::vector<trajectory_ranker::CampAtomVector> raw_atoms;
+  CampStatusPattern status;
+  std::vector<CampAtomVector> raw_atoms;
   std::vector<CampWorldPlan> candidate_world_plans;
 };
 
@@ -90,6 +95,6 @@ CampAtomMaterializationResult materialize_camp_atoms(
   const CampAtomMaterializationInput & input,
   const std::array<double, 3> & transition_component_scales);
 
-}  // namespace autoware::diffusion_planner
+}  // namespace autoware::camp_selector
 
-#endif  // AUTOWARE__DIFFUSION_PLANNER__CAMP_ATOM_MATERIALIZER_HPP_
+#endif  // AUTOWARE__CAMP_SELECTOR__CAMP_ATOM_MATERIALIZER_HPP_

@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/diffusion_planner/camp_atom_materializer.hpp"
+#include "autoware/camp_selector/camp_atom_materializer.hpp"
 
-#include "autoware/diffusion_planner/dimensions.hpp"
+#include "autoware/camp_selector/tensor_dimensions.hpp"
 
 #include <Eigen/LU>
 
@@ -33,7 +33,7 @@
 #include <utility>
 #include <vector>
 
-namespace autoware::diffusion_planner
+namespace autoware::camp_selector
 {
 namespace
 {
@@ -266,12 +266,12 @@ std::optional<BgPolygon> lane_polygon(const std::vector<float> & tensor, const s
 }
 
 std::optional<BgPolygon> lane_segment_polygon(
-  const LaneSegment & segment, const Eigen::Matrix4d & map_to_ego)
+  const CampLaneBoundary & segment, const Eigen::Matrix4d & map_to_ego)
 {
   if (segment.left_boundary.size() < 2 || segment.right_boundary.size() < 2) {
     return std::nullopt;
   }
-  const auto transform = [&map_to_ego](const LanePoint & point) {
+  const auto transform = [&map_to_ego](const Eigen::Vector3d & point) {
     const Eigen::Vector4d local =
       map_to_ego * Eigen::Vector4d(point.x(), point.y(), point.z(), 1.0);
     return BgPoint{local.x(), local.y()};
@@ -495,9 +495,9 @@ std::optional<BgMultiPolygon> build_drivable_area(
     return true;
   };
   try {
-    if (input.lanelet_map != nullptr) {
+    if (input.lane_boundaries != nullptr) {
       const Eigen::Matrix4d map_to_ego = input.ego_to_map.inverse();
-      for (const auto & segment : input.lanelet_map->lane_segments) {
+      for (const auto & segment : *input.lane_boundaries) {
         if (!add_polygon(lane_segment_polygon(segment, map_to_ego))) return std::nullopt;
       }
     } else {
@@ -540,7 +540,7 @@ bool footprint_is_covered(const BgPolygon & footprint, const std::vector<BgPolyg
 void materialize_actor_atoms(
   const PredictionView & prediction, const CampAtomMaterializationInput & input,
   const std::vector<Trajectory> & trajectories, const RouteProjection & route,
-  std::vector<trajectory_ranker::CampAtomVector> & atoms)
+  std::vector<CampAtomVector> & atoms)
 {
   for (std::size_t candidate = 0; candidate < trajectories.size(); ++candidate) {
     const Velocity ego_velocity = trajectory_velocity(trajectories.at(candidate));
@@ -634,7 +634,7 @@ void materialize_actor_atoms(
 
 void materialize_route_atoms(
   const std::vector<Trajectory> & trajectories, const RouteProjection & route,
-  std::vector<trajectory_ranker::CampAtomVector> & atoms)
+  std::vector<CampAtomVector> & atoms)
 {
   std::vector<double> progress(trajectories.size(), 0.0);
   for (std::size_t candidate = 0; candidate < trajectories.size(); ++candidate) {
@@ -668,8 +668,7 @@ void materialize_route_atoms(
 
 void materialize_road_atom(
   const std::vector<Trajectory> & trajectories, const CampAtomMaterializationInput & input,
-  const std::optional<BgMultiPolygon> & drivable,
-  std::vector<trajectory_ranker::CampAtomVector> & atoms)
+  const std::optional<BgMultiPolygon> & drivable, std::vector<CampAtomVector> & atoms)
 {
   if (!drivable) return;
   for (std::size_t candidate = 0; candidate < trajectories.size(); ++candidate) {
@@ -686,8 +685,7 @@ void materialize_road_atom(
 }
 
 void materialize_comfort_atoms(
-  const std::vector<Trajectory> & trajectories,
-  std::vector<trajectory_ranker::CampAtomVector> & atoms)
+  const std::vector<Trajectory> & trajectories, std::vector<CampAtomVector> & atoms)
 {
   for (std::size_t candidate = 0; candidate < trajectories.size(); ++candidate) {
     const auto & trajectory = trajectories.at(candidate);
@@ -784,7 +782,7 @@ CampPlanState interpolate_plan(
 
 bool materialize_transition_atom(
   const CampAtomMaterializationInput & input, const std::vector<CampWorldPlan> & plans,
-  const std::array<double, 3> & scales, std::vector<trajectory_ranker::CampAtomVector> & atoms)
+  const std::array<double, 3> & scales, std::vector<CampAtomVector> & atoms)
 {
   if (!input.previous_plan) return false;
   const double previous_start = input.previous_plan->origin_seconds + kDt;
@@ -857,8 +855,8 @@ CampAtomMaterializationResult materialize_camp_atoms(
   const auto drivable = build_drivable_area(input, trajectories);
 
   CampAtomMaterializationResult output;
-  output.status.fill(trajectory_ranker::CampAtomStatus::Observed);
-  output.raw_atoms.assign(candidate_count, trajectory_ranker::CampAtomVector{});
+  output.status.fill(CampAtomStatus::Observed);
+  output.raw_atoms.assign(candidate_count, CampAtomVector{});
   output.candidate_world_plans.reserve(candidate_count);
 
   materialize_actor_atoms(prediction, input, trajectories, route, output.raw_atoms);
@@ -867,14 +865,14 @@ CampAtomMaterializationResult materialize_camp_atoms(
   materialize_comfort_atoms(trajectories, output.raw_atoms);
 
   if (!route.speed_observed) {
-    output.status.at(3) = trajectory_ranker::CampAtomStatus::TypedMissing;
+    output.status.at(3) = CampAtomStatus::TypedMissing;
   }
   if (!drivable) {
-    output.status.at(4) = trajectory_ranker::CampAtomStatus::TypedMissing;
+    output.status.at(4) = CampAtomStatus::TypedMissing;
   }
   output.status.at(6) = input.tensor_context.route_has_traffic_light
-                          ? trajectory_ranker::CampAtomStatus::TypedMissing
-                          : trajectory_ranker::CampAtomStatus::NotApplicable;
+                          ? CampAtomStatus::TypedMissing
+                          : CampAtomStatus::NotApplicable;
   output.status.at(7) = output.status.at(6);
 
   for (const auto & trajectory : trajectories) {
@@ -882,12 +880,12 @@ CampAtomMaterializationResult materialize_camp_atoms(
   }
   if (!materialize_transition_atom(
         input, output.candidate_world_plans, transition_component_scales, output.raw_atoms)) {
-    output.status.at(15) = trajectory_ranker::CampAtomStatus::NotApplicable;
+    output.status.at(15) = CampAtomStatus::NotApplicable;
   }
 
   for (auto & candidate : output.raw_atoms) {
     for (std::size_t atom = 0; atom < candidate.size(); ++atom) {
-      if (output.status.at(atom) != trajectory_ranker::CampAtomStatus::Observed) {
+      if (output.status.at(atom) != CampAtomStatus::Observed) {
         candidate.at(atom) = std::numeric_limits<double>::quiet_NaN();
       } else if (!std::isfinite(candidate.at(atom)) || candidate.at(atom) < 0.0) {
         throw std::runtime_error("CAMP produced an invalid observed atom");
@@ -897,4 +895,4 @@ CampAtomMaterializationResult materialize_camp_atoms(
   return output;
 }
 
-}  // namespace autoware::diffusion_planner
+}  // namespace autoware::camp_selector
