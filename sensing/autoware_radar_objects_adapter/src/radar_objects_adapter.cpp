@@ -139,12 +139,45 @@ MissingRadarInfo::MissingRadarInfo()
 {
 }
 
+ClassificationRemap perception_friendly_classification_remap()
+{
+  return ClassificationRemap{
+    {RadarClassification::HAZARD, ObjectClassification::UNKNOWN},
+    {RadarClassification::OVER_DRIVABLE, ObjectClassification::UNKNOWN},
+    {RadarClassification::UNDER_DRIVABLE, ObjectClassification::UNKNOWN}};
+}
+
+ClassificationRemapper::ClassificationRemapper(
+  const ClassificationRemap & perception_friendly, const ClassificationRemap & sensor_dependent)
+: combined_(perception_friendly)
+{
+  for (const auto & [radar_label, perception_label] : sensor_dependent) {
+    combined_[radar_label] = perception_label;
+  }
+}
+
+std::vector<autoware_perception_msgs::msg::ObjectClassification> ClassificationRemapper::operator()(
+  const std::vector<autoware_sensing_msgs::msg::RadarClassification> & classifications) const
+{
+  std::vector<ObjectClassification> output;
+  output.reserve(classifications.size());
+  for (const auto & classification : classifications) {
+    ObjectClassification remapped;
+    // class remap based on policy defined in parameter; if no remap rule matched, set UNKNOWN
+    const auto it = combined_.find(classification.label);
+    remapped.label = it != combined_.end() ? it->second : ObjectClassification::UNKNOWN;
+    remapped.probability = classification.probability;
+    output.push_back(remapped);
+  }
+  return output;
+}
+
 RadarObjectsAdapter::RadarObjectsAdapter(
   const RadarObjectsAdapterParams & params, const ClassificationRemap & classification_remap,
   const std::string & topic_name)
 : params_(params),
   generate_uuid_(ObjectUUIDGenerator(topic_name)),
-  classification_remap_(classification_remap)
+  classification_remapper_(perception_friendly_classification_remap(), classification_remap)
 {
   required_attributes_ = {
     "existence_probability", "position_x",     "position_y", "velocity_x", "velocity_y",
@@ -355,27 +388,6 @@ void RadarObjectsAdapter::populate_common_fields(
   }
 }
 
-void RadarObjectsAdapter::populate_classifications(
-  const std::vector<autoware_sensing_msgs::msg::RadarClassification> & input_classifications,
-  std::vector<autoware_perception_msgs::msg::ObjectClassification> & output_classifications) const
-{
-  for (const auto & input_classification : input_classifications) {
-    // class remap based on policy defined in parameter
-    if (classification_remap_.count(input_classification.label)) {
-      ObjectClassification output_classification;
-      output_classification.label = classification_remap_.at(input_classification.label);
-      output_classification.probability = input_classification.probability;
-      output_classifications.push_back(output_classification);
-    } else {
-      // if no remap rule matched, set UNKNOWN
-      ObjectClassification output_classification;
-      output_classification.label = ObjectClassification::UNKNOWN;
-      output_classification.probability = input_classification.probability;
-      output_classifications.push_back(output_classification);
-    }
-  }
-}
-
 autoware_perception_msgs::msg::DetectedObjects RadarObjectsAdapter::to_detected_objects(
   const autoware_sensing_msgs::msg::RadarObjects & input_msg) const
 {
@@ -399,7 +411,7 @@ autoware_perception_msgs::msg::DetectedObjects RadarObjectsAdapter::to_detected_
     output_object.kinematics.has_twist_covariance = true;
 
     // Set classification
-    populate_classifications(input_object.classifications, output_object.classification);
+    output_object.classification = classification_remapper_(input_object.classifications);
 
     output_msg.objects.push_back(output_object);
   }
@@ -432,7 +444,7 @@ autoware_perception_msgs::msg::TrackedObjects RadarObjectsAdapter::to_tracked_ob
       autoware_sensing_msgs::msg::RadarObject::MOVEMENT_STATUS_DYNAMIC;
 
     // Populate classification
-    populate_classifications(input_object.classifications, output_object.classification);
+    output_object.classification = classification_remapper_(input_object.classifications);
 
     output_msg.objects.push_back(output_object);
   }
