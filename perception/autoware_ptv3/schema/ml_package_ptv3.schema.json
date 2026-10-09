@@ -67,6 +67,16 @@
           "description": "Encoder feature channels per stage, finest to deepest (pooling_strides size + 1 entries).",
           "default": [32, 64, 128, 256, 512],
           "minItems": 2
+        },
+        "patch_sizes": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "description": "Attention window per encoder stage, finest to deepest (pooling_strides size + 1 entries). Sizes the padded patch_order inputs.",
+          "default": [512, 512, 512, 512, 512],
+          "minItems": 2
         }
       },
       "required": [
@@ -75,7 +85,8 @@
         "max_points_per_voxel",
         "serialization_orders",
         "pooling_strides",
-        "enc_channels"
+        "enc_channels",
+        "patch_sizes"
       ],
       "additionalProperties": false
     },
