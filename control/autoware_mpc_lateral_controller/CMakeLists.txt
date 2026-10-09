@@ -33,11 +33,9 @@ if(BUILD_TESTING)
     test/test_lowpass_filter.cpp
   )
   set(TEST_LATERAL_CONTROLLER_EXE test_lateral_controller)
-  # Each test in test_mpc_lateral_controller.cpp builds a node and declares the parameters
-  # of the controller on it, which a coverage build makes about ten times slower. The whole
-  # executable then runs for around ninety seconds and passes the sixty second default.
-  # Extracting the logic out of the node removes the node from these tests and with it the
-  # reason for this timeout.
+  # Several tests in test_mpc_lateral_controller.cpp run the controller for up to 69 cycles.
+  # A coverage build makes one cycle about 27 times slower, from 6 ms to 160 ms, so the whole
+  # executable runs for around 75 seconds and passes the sixty second default.
   ament_add_ros_isolated_gtest(${TEST_LATERAL_CONTROLLER_EXE} ${TEST_LAT_SOURCES} TIMEOUT 300)
   target_link_libraries(${TEST_LATERAL_CONTROLLER_EXE} ${MPC_LAT_CON_LIB})
   ament_target_dependencies(${TEST_LATERAL_CONTROLLER_EXE} ament_index_cpp)
