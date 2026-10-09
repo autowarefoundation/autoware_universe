@@ -7,7 +7,7 @@ package:
   provider: autoware
 
 launch:
-  plugin: autoware::RadarObjectsAdapter
+  plugin: autoware::radar_objects_adapter::RadarObjectsAdapterNode
   executable: radar_objects_adapter_node
 
 # interfaces

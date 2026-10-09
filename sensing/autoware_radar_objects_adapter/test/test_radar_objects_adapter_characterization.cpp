@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// Characterization tests for RadarObjectsAdapter.
+// Characterization tests for RadarObjectsAdapterNode.
 //
 // These tests pin the behavior of the node as it is today, before its logic is separated from the
 // node class. They drive the node over its real topics: a radar info message and radar objects are
@@ -22,7 +22,7 @@
 // specify every corner of the node's behavior. Once the logic is covered by unit tests, this file
 // is replaced by a small integration test.
 
-#include "radar_objects_adapter.hpp"
+#include "radar_objects_adapter_node.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -49,7 +49,7 @@
 
 namespace
 {
-using autoware::RadarObjectsAdapter;
+using autoware::radar_objects_adapter::RadarObjectsAdapterNode;
 using autoware_perception_msgs::msg::DetectedObject;
 using autoware_perception_msgs::msg::DetectedObjectKinematics;
 using autoware_perception_msgs::msg::DetectedObjects;
@@ -295,7 +295,7 @@ protected:
 
   void start_node(const rclcpp::NodeOptions & options = DefaultParameters{}.to_options())
   {
-    node_ = std::make_shared<RadarObjectsAdapter>(options);
+    node_ = std::make_shared<RadarObjectsAdapterNode>(options);
     peer_ = std::make_shared<rclcpp::Node>("characterization_peer");
 
     // The node subscribes to both inputs with sensor data QoS.
@@ -409,7 +409,7 @@ protected:
     return options;
   }
 
-  std::shared_ptr<RadarObjectsAdapter> node_;
+  std::shared_ptr<RadarObjectsAdapterNode> node_;
   std::shared_ptr<rclcpp::Node> peer_;
   rclcpp::Publisher<RadarObjects>::SharedPtr objects_pub_;
   rclcpp::Publisher<RadarInfo>::SharedPtr radar_info_pub_;
@@ -432,7 +432,7 @@ TEST_F(RadarObjectsAdapterCharacterization, Construct_DefaultParameterMissing_Th
     const rclcpp::NodeOptions options = DefaultParameters{}.to_options_without(name);
 
     // Act and assert
-    EXPECT_THROW(std::make_shared<RadarObjectsAdapter>(options), std::exception);
+    EXPECT_THROW(std::make_shared<RadarObjectsAdapterNode>(options), std::exception);
   }
 }
 
@@ -445,7 +445,7 @@ TEST_F(RadarObjectsAdapterCharacterization, Construct_RemapParametersOmitted_Con
   const rclcpp::NodeOptions options = DefaultParameters{}.to_options();
 
   // Act and assert
-  EXPECT_NO_THROW(std::make_shared<RadarObjectsAdapter>(options));
+  EXPECT_NO_THROW(std::make_shared<RadarObjectsAdapterNode>(options));
 }
 
 // ---------------------------------------------------------------------------------------------
