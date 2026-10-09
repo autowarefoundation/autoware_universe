@@ -42,9 +42,7 @@ struct TrafficLightShapeInfo
   std::vector<std::string> shapes;  //!< Shape names.
 };
 
-// The word a TrafficLightElement code contributes to a label. A code that is not listed yields an
-// empty string, as the std::map this replaces did through operator[] - except that operator[] also
-// inserted the empty entry into the map, which made the lookup mutate the node's state.
+// The word a TrafficLightElement code contributes to a label.
 std::string state_to_label(int state)
 {
   using tier4_perception_msgs::msg::TrafficLightElement;
@@ -70,7 +68,7 @@ std::string state_to_label(int state)
   };
 
   const auto found = table.find(state);
-  return found == table.end() ? std::string{} : found->second;
+  return found == table.end() ? table.at(TrafficLightElement::UNKNOWN) : found->second;
 }
 
 /**
@@ -238,18 +236,26 @@ sensor_msgs::msg::Image::SharedPtr TrafficLightRoiVisualizer::visualize_with_rou
     tier4_perception_msgs::msg::TrafficLightRoi tl_roi;
     bool has_correspond_roi = get_roi_from_id(tl_rough_roi.traffic_light_id, rois, tl_roi);
 
-    draw_roi_with_id(cv_ptr->image, tl_rough_roi, extract_shape_info(result.label).color);
+    if (has_correspond_roi) {
+      draw_roi_with_id(cv_ptr->image, tl_rough_roi, extract_shape_info(result.label).color);
 
-    if (has_correspond_roi && has_correspond_traffic_signal) {
-      // has fine detection and classification results
-      draw_roi_with_label(cv_ptr->image, tl_roi, result);
-    } else if (has_correspond_roi && !has_correspond_traffic_signal) {
-      // has fine detection result and does not have classification result
-      draw_roi_with_id(cv_ptr->image, tl_roi, cv::Scalar(255, 255, 255));
-    } else if (!has_correspond_roi && has_correspond_traffic_signal) {
-      // does not have fine detection result and has classification result
-      draw_roi_with_label(cv_ptr->image, tl_rough_roi, result);
+      if (has_correspond_traffic_signal) {
+        // has fine detection and classification results
+        draw_roi_with_label(cv_ptr->image, tl_roi, result);
+      } else {
+        // has fine detection result and does not have classification result
+        draw_roi_with_id(cv_ptr->image, tl_roi, cv::Scalar(255, 255, 255));
+      }
     } else {
+      // these cases are not expected, but could happen on some unpredictable conditions
+
+      if (has_correspond_traffic_signal) {
+        // does not have fine detection result and has classification result: the label goes on
+        // the rough ROI, so it takes the place of the id rather than being painted over it
+        draw_roi_with_label(cv_ptr->image, tl_rough_roi, result);
+      } else {
+        draw_roi_with_id(cv_ptr->image, tl_rough_roi, extract_shape_info(result.label).color);
+      }
     }
   }
 
