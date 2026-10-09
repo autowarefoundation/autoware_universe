@@ -65,6 +65,35 @@ ClassificationRemapParseResult make_classification_remap_from_string_pair(
   return {classification_remap, unknown_perception_labels};
 }
 
+ObjectUUIDGenerator::ObjectUUIDGenerator(const std::string & topic_name)
+{
+  const std::size_t hash_code = std::hash<std::string>{}(topic_name);
+  for (std::size_t i = 0; i < sizeof(std::size_t); ++i) {
+    topic_hash_code_[i] = static_cast<std::uint8_t>((hash_code >> (i * 8)) & 0xFF);
+  }
+}
+
+unique_identifier_msgs::msg::UUID::_uuid_type ObjectUUIDGenerator::operator()(
+  const std::uint32_t object_id) const
+{
+  unique_identifier_msgs::msg::UUID::_uuid_type uuid;
+
+  uuid[0] = static_cast<uint8_t>((object_id >> 0) & 0xFF);
+  uuid[1] = static_cast<uint8_t>((object_id >> 8) & 0xFF);
+  uuid[2] = static_cast<uint8_t>((object_id >> 16) & 0xFF);
+  uuid[3] = static_cast<uint8_t>((object_id >> 24) & 0xFF);
+
+  for (std::size_t i = 4; i < uuid.size(); ++i) {
+    if (i - 4 < topic_hash_code_.size()) {
+      uuid[i] = topic_hash_code_[i - 4];
+    } else {
+      uuid[i] = 0;
+    }
+  }
+
+  return uuid;
+}
+
 namespace
 {
 
@@ -113,17 +142,13 @@ MissingRadarInfo::MissingRadarInfo()
 RadarObjectsAdapter::RadarObjectsAdapter(
   const RadarObjectsAdapterParams & params, const ClassificationRemap & classification_remap,
   const std::string & topic_name)
-: params_(params), classification_remap_(classification_remap)
+: params_(params),
+  generate_uuid_(ObjectUUIDGenerator(topic_name)),
+  classification_remap_(classification_remap)
 {
   required_attributes_ = {
     "existence_probability", "position_x",     "position_y", "velocity_x", "velocity_y",
     "acceleration_x",        "acceleration_y", "orientation"};
-
-  std::size_t hash_code = std::hash<std::string>{}(topic_name);
-
-  for (std::size_t i = 0; i < sizeof(std::size_t); ++i) {
-    topic_hash_code_[i] = static_cast<std::uint8_t>((hash_code >> (i * 8)) & 0xFF);
-  }
 }
 
 tl::expected<ConversionConfiguration, InvalidRadarInfo> RadarObjectsAdapter::update_radar_info(
@@ -393,18 +418,7 @@ autoware_perception_msgs::msg::TrackedObjects RadarObjectsAdapter::to_tracked_ob
   for (const auto & input_object : input_msg.objects) {
     autoware_perception_msgs::msg::TrackedObject output_object;
 
-    output_object.object_id.uuid[0] = static_cast<uint8_t>((input_object.object_id >> 0) & 0xFF);
-    output_object.object_id.uuid[1] = static_cast<uint8_t>((input_object.object_id >> 8) & 0xFF);
-    output_object.object_id.uuid[2] = static_cast<uint8_t>((input_object.object_id >> 16) & 0xFF);
-    output_object.object_id.uuid[3] = static_cast<uint8_t>((input_object.object_id >> 24) & 0xFF);
-
-    for (std::size_t i = 4; i < output_object.object_id.uuid.size(); ++i) {
-      if (i - 4 < topic_hash_code_.size()) {
-        output_object.object_id.uuid[i] = topic_hash_code_[i - 4];
-      } else {
-        output_object.object_id.uuid[i] = 0;
-      }
-    }
+    output_object.object_id.set__uuid(generate_uuid_(input_object.object_id));
 
     // Populate common fields
     const auto & yaw = input_object.orientation;
