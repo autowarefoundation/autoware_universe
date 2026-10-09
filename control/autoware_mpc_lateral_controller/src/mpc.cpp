@@ -360,15 +360,33 @@ void MPC::setReferenceTrajectory(
   const Trajectory & trajectory_msg, const TrajectoryFilteringParam & param,
   const Odometry & current_kinematics)
 {
-  const size_t nearest_seg_idx =
-    autoware::motion_utils::findFirstNearestSegmentIndexWithSoftConstraints(
-      trajectory_msg.points, current_kinematics.pose.pose, ego_nearest_dist_threshold,
-      ego_nearest_yaw_threshold);
-  const double ego_offset_to_segment = autoware::motion_utils::calcLongitudinalOffsetToSegment(
-    trajectory_msg.points, nearest_seg_idx, current_kinematics.pose.pose.position);
-
+  // A rejected reference must never leave the previous moving path active.
+  m_reference_trajectory.clear();
   const auto mpc_traj_raw =
     MPCUtils::convertToMPCTrajectory(trajectory_msg, m_use_temporal_trajectory);
+  if (
+    mpc_traj_raw.size() < 2 ||
+    (!m_use_temporal_trajectory && MPCUtils::calcMPCTrajectoryArcLength(mpc_traj_raw) <= 1e-6)) {
+    return;
+  }
+  auto nearest_seg_idx = autoware::motion_utils::findFirstNearestSegmentIndexWithSoftConstraints(
+    trajectory_msg.points, current_kinematics.pose.pose, ego_nearest_dist_threshold,
+    ego_nearest_yaw_threshold);
+  const auto overlaps = [&](size_t i) {
+    return std::abs(mpc_traj_raw.x.at(i + 1) - mpc_traj_raw.x.at(i)) < 1e-8 &&
+           std::abs(mpc_traj_raw.y.at(i + 1) - mpc_traj_raw.y.at(i)) < 1e-8;
+  };
+  if (!m_use_temporal_trajectory && overlaps(nearest_seg_idx)) {
+    auto index = nearest_seg_idx;
+    while (index > 0 && overlaps(index)) --index;
+    if (overlaps(index)) {
+      while (index + 1 < mpc_traj_raw.size() - 1 && overlaps(index)) ++index;
+    }
+    if (overlaps(index)) return;
+    nearest_seg_idx = index;
+  }
+  const double ego_offset_to_segment = autoware::motion_utils::calcLongitudinalOffsetToSegment(
+    trajectory_msg.points, nearest_seg_idx, current_kinematics.pose.pose.position);
 
   // resampling
   // Note: For temporal trajectories, skip distance-based resampling to preserve timestamps.
@@ -379,7 +397,7 @@ void MPC::setReferenceTrajectory(
   } else {
     const auto [success_resample, resampled] = MPCUtils::resampleMPCTrajectoryByDistance(
       mpc_traj_raw, param.traj_resample_dist, nearest_seg_idx, ego_offset_to_segment);
-    if (!success_resample) {
+    if (!success_resample || resampled.size() < 2) {
       warn_throttle("[setReferenceTrajectory] spline error when resampling by distance");
       return;
     }

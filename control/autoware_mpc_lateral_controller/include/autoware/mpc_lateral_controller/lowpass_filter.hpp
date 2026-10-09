@@ -67,6 +67,15 @@ public:
    */
   void initialize(const double & dt, const double & f_cutoff_hz, const double initial_value = 0.0);
 
+  /** @brief Reset only input/output history, preserving every filter coefficient. */
+  void reset(const double initial_value)
+  {
+    m_y1 = initial_value;
+    m_y2 = initial_value;
+    m_u2 = initial_value;
+    m_u1 = initial_value;
+  }
+
   /**
    * @brief filtering (call this function at each sampling time with input)
    * @param [in] u scalar input for filter

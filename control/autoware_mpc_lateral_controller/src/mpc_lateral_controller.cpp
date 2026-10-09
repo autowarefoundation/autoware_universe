@@ -303,6 +303,29 @@ trajectory_follower::LateralOutput MpcLateralController::run(
     m_is_ctrl_cmd_prev_initialized = true;
   }
 
+  if (m_is_degenerate_stop_reference) {
+    // Keep Controller::run active so the native PID can continue braking.
+    // No spatial path exists on which to optimize lateral motion.
+    const auto held = getInitialControlCommand();
+    m_mpc->resetPrevResult(m_current_steering);
+    m_mpc->resetSteeringCommandFilter(held.steering_tire_angle);
+    for (auto & value : m_mpc->m_input_buffer) value = held.steering_tire_angle;
+    trajectory_follower::LateralOutput output;
+    auto physical_hold = held;
+    physical_hold.steering_tire_angle -= static_cast<float>(m_steering_offset_filtered_);
+    m_ctrl_cmd_prev = physical_hold;
+    output.control_cmd = createCtrlCmdMsg(physical_hold, stamp);
+    trajectory_follower::LateralHorizon horizon{};
+    horizon.time_step_ms = m_mpc->m_ctrl_period * 1000.0;
+    horizon.controls.push_back(output.control_cmd);
+    output.control_cmd_horizon = createCtrlCmdHorizonMsg(horizon, stamp);
+    // This is measured-angle hold, not a claim that an MPC problem was solved.
+    output.sync_data.is_steer_converged = false;
+    m_mpc_solved_status = MpcResult{false};
+    m_mpc_solved_status.reason = "degenerate stop reference: steering hold";
+    return output;
+  }
+
   auto mpc_solved_status =
     m_mpc->calculateMPC(m_current_steering, m_current_kinematic_state, stamp);
   Lateral ctrl_cmd = mpc_solved_status.ctrl_cmd;
@@ -392,6 +415,12 @@ bool MpcLateralController::isReady(const trajectory_follower::InputData & input_
   m_current_kinematic_state = input_data.current_odometry;
   m_current_steering = input_data.current_steering;
 
+  if (
+    m_is_degenerate_stop_reference &&
+    (!std::isfinite(m_current_steering.steering_tire_angle) ||
+     !std::isfinite(m_mpc->m_ctrl_period) || m_mpc->m_ctrl_period <= 0.0)) {
+    return false;
+  }
   if (!m_mpc->hasVehicleModel()) {
     info_throttle("MPC does not have a vehicle model");
     return false;
@@ -400,7 +429,7 @@ bool MpcLateralController::isReady(const trajectory_follower::InputData & input_
     info_throttle("MPC does not have a QP solver");
     return false;
   }
-  if (m_mpc->m_reference_trajectory.empty()) {
+  if (m_mpc->m_reference_trajectory.empty() && !m_is_degenerate_stop_reference) {
     info_throttle("trajectory size is zero.");
     return false;
   }
@@ -412,6 +441,8 @@ void MpcLateralController::setTrajectory(
   const Trajectory & msg, const Odometry & current_kinematics)
 {
   m_current_trajectory = msg;
+  m_is_degenerate_stop_reference = false;
+  m_mpc->m_reference_trajectory.clear();
 
   if (msg.points.size() < 3) {
     RCLCPP_DEBUG(logger_, "received path size is < 3, not enough.");
@@ -423,7 +454,11 @@ void MpcLateralController::setTrajectory(
     return;
   }
 
-  m_mpc->setReferenceTrajectory(msg, m_trajectory_filtering_param, current_kinematics);
+  m_is_degenerate_stop_reference =
+    !m_mpc->m_use_temporal_trajectory && MPCUtils::isDegenerateStopTrajectory(msg);
+  if (!m_is_degenerate_stop_reference) {
+    m_mpc->setReferenceTrajectory(msg, m_trajectory_filtering_param, current_kinematics);
+  }
 
   // update trajectory buffer to check the trajectory shape change.
   m_trajectory_buffer.push_back(m_current_trajectory);

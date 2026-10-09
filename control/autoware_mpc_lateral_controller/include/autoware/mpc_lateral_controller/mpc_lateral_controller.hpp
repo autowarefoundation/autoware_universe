@@ -138,6 +138,7 @@ private:
   SteeringReport m_current_steering;  // Measured steering information.
 
   Trajectory m_current_trajectory;  // Current reference trajectory for path following.
+  bool m_is_degenerate_stop_reference{false};
 
   double m_steer_cmd_prev = 0.0;  // MPC output in the previous period.
 
