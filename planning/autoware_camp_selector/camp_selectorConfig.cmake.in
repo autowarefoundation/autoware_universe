@@ -1,0 +1,8 @@
+@PACKAGE_INIT@
+include(CMakeFindDependencyMacro)
+if(@CAMP_BUILD_TENSOR_MATERIALIZER@)
+  find_dependency(Eigen3)
+  find_dependency(Boost)
+endif()
+find_dependency(nlohmann_json)
+include("${CMAKE_CURRENT_LIST_DIR}/camp_selector_targets.cmake")

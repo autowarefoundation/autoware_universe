@@ -122,57 +122,120 @@ double calcMPCTrajectoryArcLength(const MPCTrajectory & trajectory)
   return length;
 }
 
+bool isDegenerateStopTrajectory(const Trajectory & trajectory)
+{
+  if (trajectory.points.size() < 2) return false;
+  constexpr double epsilon = 1e-6;
+  const auto & first = trajectory.points.front();
+  const double first_yaw = tf2::getYaw(first.pose.orientation);
+  double length = 0.0;
+  for (size_t i = 0; i < trajectory.points.size(); ++i) {
+    const auto & point = trajectory.points.at(i);
+    const auto & p = point.pose.position;
+    const double yaw = tf2::getYaw(point.pose.orientation);
+    if (
+      !std::isfinite(p.x) || !std::isfinite(p.y) || !std::isfinite(p.z) || !std::isfinite(yaw) ||
+      !std::isfinite(point.longitudinal_velocity_mps) || !std::isfinite(point.acceleration_mps2) ||
+      !std::isfinite(point.lateral_velocity_mps) || !std::isfinite(point.heading_rate_rps) ||
+      std::abs(normalize_radian(yaw - first_yaw)) > epsilon ||
+      std::abs(p.z - first.pose.position.z) > epsilon) {
+      return false;
+    }
+    if (i == 0) {
+      // The first sample may describe current motion and a braking command.
+      if (point.longitudinal_velocity_mps * point.acceleration_mps2 > epsilon) return false;
+    } else {
+      const auto & previous = trajectory.points.at(i - 1).pose.position;
+      length += std::hypot(p.x - previous.x, p.y - previous.y);
+      if (
+        length > epsilon || std::abs(point.longitudinal_velocity_mps) > epsilon ||
+        std::abs(point.acceleration_mps2) > epsilon ||
+        std::abs(point.lateral_velocity_mps) > epsilon ||
+        std::abs(point.heading_rate_rps) > epsilon) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
 std::pair<bool, MPCTrajectory> resampleMPCTrajectoryByDistance(
   const MPCTrajectory & input, const double resample_interval_dist, const size_t nearest_seg_idx,
   const double ego_offset_to_segment)
 {
   MPCTrajectory output;
-
-  if (input.empty()) {
-    return {true, output};
-  }
-  std::vector<double> input_arclength;
-  calcMPCTrajectoryArcLength(input, input_arclength);
-
-  if (input_arclength.empty()) {
+  const size_t count = input.x.size();
+  if (
+    count < 2 || nearest_seg_idx >= count || !std::isfinite(resample_interval_dist) ||
+    resample_interval_dist <= 0.0 || !std::isfinite(ego_offset_to_segment)) {
     return {false, output};
   }
+  for (const auto * values :
+       {&input.x, &input.y, &input.z, &input.yaw, &input.vx, &input.k, &input.smooth_k,
+        &input.relative_time}) {
+    if (values->size() != count || !std::all_of(values->begin(), values->end(), [](double v) {
+          return std::isfinite(v);
+        })) {
+      return {false, output};
+    }
+  }
+
+  std::vector<double> raw_arclength;
+  calcMPCTrajectoryArcLength(input, raw_arclength);
+  if (!std::isfinite(raw_arclength.back()) || raw_arclength.back() <= 1e-6) {
+    return {false, output};
+  }
+  // Resolve the ego arc in the original indexing before compacting coincident samples.
+  const double ego_arc = raw_arclength.at(nearest_seg_idx) + ego_offset_to_segment;
+  if (!std::isfinite(ego_arc)) return {false, output};
+  std::vector<size_t> indices;
+  std::vector<double> input_arclength;
+  for (size_t i = 0; i < count; ++i) {
+    if (!input_arclength.empty() && raw_arclength.at(i) == input_arclength.back()) {
+      // Retain the complete later endpoint, including the terminal zero speed and time.
+      indices.back() = i;
+    } else {
+      indices.push_back(i);
+      input_arclength.push_back(raw_arclength.at(i));
+    }
+  }
+  MPCTrajectory spatial;
+  for (const auto i : indices) spatial.push_back(input.at(i));
 
   std::vector<double> output_arclength;
-  // To accurately sample the ego point, resample separately in the forward direction and the
-  // backward direction from the current position.
-  for (double s = std::clamp(
-         input_arclength.at(nearest_seg_idx) + ego_offset_to_segment, 0.0,
-         input_arclength.back() - 1e-6);
-       0 <= s; s -= resample_interval_dist) {
+  for (double s = std::clamp(ego_arc, 0.0, input_arclength.back() - 1e-6); 0 <= s;
+       s -= resample_interval_dist) {
     output_arclength.push_back(s);
   }
   std::reverse(output_arclength.begin(), output_arclength.end());
-  for (double s = std::max(input_arclength.at(nearest_seg_idx) + ego_offset_to_segment, 0.0) +
-                  resample_interval_dist;
-       s < input_arclength.back(); s += resample_interval_dist) {
+  for (double s = std::max(ego_arc, 0.0) + resample_interval_dist; s < input_arclength.back();
+       s += resample_interval_dist) {
     output_arclength.push_back(s);
   }
-
-  std::vector<double> input_yaw = input.yaw;
+  if (output_arclength.size() == 1) {
+    // Use an existing endpoint for short paths; never manufacture a displacement.
+    output_arclength.push_back(input_arclength.back());
+  }
+  std::vector<double> input_yaw = spatial.yaw;
   convertEulerAngleToMonotonic(input_yaw);
-
-  const auto lerp_arc_length = [&](const auto & input_value) {
-    return autoware::interpolation::lerp(input_arclength, input_value, output_arclength);
+  const auto lerp_arc_length = [&](const auto & values) {
+    return autoware::interpolation::lerp(input_arclength, values, output_arclength);
   };
-  const auto spline_arc_length = [&](const auto & input_value) {
-    return autoware::interpolation::spline(input_arclength, input_value, output_arclength);
+  const auto spline_arc_length = [&](const auto & values) {
+    return autoware::interpolation::spline(input_arclength, values, output_arclength);
   };
-
-  output.x = spline_arc_length(input.x);
-  output.y = spline_arc_length(input.y);
-  output.z = spline_arc_length(input.z);
-  output.yaw = spline_arc_length(input_yaw);
-  output.vx = lerp_arc_length(input.vx);  // must be linear
-  output.k = spline_arc_length(input.k);
-  output.smooth_k = spline_arc_length(input.smooth_k);
-  output.relative_time = lerp_arc_length(input.relative_time);  // must be linear
-
+  try {
+    output.x = spline_arc_length(spatial.x);
+    output.y = spline_arc_length(spatial.y);
+    output.z = spline_arc_length(spatial.z);
+    output.yaw = spline_arc_length(input_yaw);
+    output.vx = lerp_arc_length(spatial.vx);
+    output.k = spline_arc_length(spatial.k);
+    output.smooth_k = spline_arc_length(spatial.smooth_k);
+    output.relative_time = lerp_arc_length(spatial.relative_time);
+  } catch (const std::invalid_argument &) {
+    return {false, MPCTrajectory{}};
+  }
   return {true, output};
 }
 

@@ -80,6 +80,26 @@ Pose calcPoseAfterTimeDelay(
   const Pose & current_pose, const double delay_time, const double current_vel,
   const double current_acc);
 
+/** @brief Remove overlapping positions without discarding the original terminal motion state. */
+template <class T>
+T removeOverlapPointsKeepingLast(const T & points)
+{
+  auto result = autoware::motion_utils::removeOverlapPoints(points);
+  if (result.empty()) {
+    return result;
+  }
+  result.back() = points.back();
+  while (result.size() > 1) {
+    const auto & previous = result.at(result.size() - 2).pose.position;
+    const auto & terminal = result.back().pose.position;
+    if (!(std::abs(previous.x - terminal.x) < 1e-8 && std::abs(previous.y - terminal.y) < 1e-8)) {
+      break;
+    }
+    result.erase(result.end() - 2);
+  }
+  return result;
+}
+
 /**
  * @brief apply linear interpolation to trajectory point that is nearest to a certain point
  * @param [in] points trajectory points
@@ -93,10 +113,16 @@ std::pair<TrajectoryPoint, size_t> lerpTrajectoryPoint(
   const size_t seg_idx = autoware::motion_utils::findFirstNearestSegmentIndexWithSoftConstraints(
     points, pose, max_dist, max_yaw);
 
-  const double len_to_interpolated =
-    autoware::motion_utils::calcLongitudinalOffsetToSegment(points, seg_idx, pose.position);
   const double len_segment =
     autoware::motion_utils::calcSignedArcLength(points, seg_idx, seg_idx + 1);
+  const auto & start = points.at(seg_idx).pose.position;
+  const auto & end = points.at(seg_idx + 1).pose.position;
+  if (std::abs(start.x - end.x) < 1e-8 && std::abs(start.y - end.y) < 1e-8) {
+    // A coincident segment has no interpolation ratio; retain its later motion state.
+    return std::make_pair(points.at(seg_idx + 1), seg_idx);
+  }
+  const double len_to_interpolated =
+    autoware::motion_utils::calcLongitudinalOffsetToSegment(points, seg_idx, pose.position);
   const double interpolate_ratio = std::clamp(len_to_interpolated / len_segment, 0.0, 1.0);
 
   {

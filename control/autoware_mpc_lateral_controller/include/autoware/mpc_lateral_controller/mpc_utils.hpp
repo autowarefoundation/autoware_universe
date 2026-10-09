@@ -45,6 +45,9 @@ using geometry_msgs::msg::Pose;
 /**
  * @brief calculate 2d distance from trajectory[idx1] to trajectory[idx2]
  */
+// A finite stop request with no usable spatial arc; handled without spatial MPC.
+bool isDegenerateStopTrajectory(const Trajectory & trajectory);
+
 double calcDistance2d(const MPCTrajectory & trajectory, const size_t idx1, const size_t idx2);
 
 /**

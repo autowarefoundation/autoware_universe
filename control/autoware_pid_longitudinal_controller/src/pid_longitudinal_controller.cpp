@@ -173,6 +173,21 @@ PidLongitudinalController::ControlData PidLongitudinalController::getControlData
   if (control_data.interpolated_traj.points.size() < 2) {
     return control_data;
   }
+  bool has_overlap_points = false;
+  auto original_shift = m_prev_shift;
+  if (!config.use_temporal_trajectory) {
+    const auto spatial_points =
+      longitudinal_utils::removeOverlapPointsKeepingLast(m_last_valid_trajectory.points);
+    has_overlap_points = spatial_points.size() != m_last_valid_trajectory.points.size();
+    control_data.target_idx = 0;
+    original_shift = getCurrentShift(control_data);
+    if (
+      spatial_points.size() == 1 &&
+      m_last_valid_trajectory.points.back().longitudinal_velocity_mps == 0.0f) {
+      // Preserve the terminal stop state instead of an overlapping first point's speed.
+      control_data.interpolated_traj.points = {m_last_valid_trajectory.points.back()};
+    }
+  }
   const double traj_start_time =
     rclcpp::Duration(control_data.interpolated_traj.points.front().time_from_start).seconds();
   const double traj_end_time =
@@ -232,7 +247,14 @@ PidLongitudinalController::ControlData PidLongitudinalController::getControlData
     target_point = target_interpolated_point.first;
   } else if (control_data.state_after_delay.running_distance > min_running_dist) {
     control_data.interpolated_traj.points =
-      autoware::motion_utils::removeOverlapPoints(control_data.interpolated_traj.points);
+      has_overlap_points
+        ? longitudinal_utils::removeOverlapPointsKeepingLast(control_data.interpolated_traj.points)
+        : autoware::motion_utils::removeOverlapPoints(control_data.interpolated_traj.points);
+    if (has_overlap_points) {
+      control_data.nearest_idx = autoware::motion_utils::findFirstNearestIndexWithSoftConstraints(
+        control_data.interpolated_traj.points, nearest_point.pose,
+        config.ego_nearest_dist_threshold, config.ego_nearest_yaw_threshold);
+    }
     const auto target_pose = longitudinal_utils::findTrajectoryPoseAfterDistance(
       control_data.nearest_idx, control_data.state_after_delay.running_distance,
       control_data.interpolated_traj);
@@ -254,7 +276,9 @@ PidLongitudinalController::ControlData PidLongitudinalController::getControlData
   // Spatial-only de-duplication and index re-acquisition after inserting interpolated points.
   if (!config.use_temporal_trajectory) {
     control_data.interpolated_traj.points =
-      autoware::motion_utils::removeOverlapPoints(control_data.interpolated_traj.points);
+      has_overlap_points
+        ? longitudinal_utils::removeOverlapPointsKeepingLast(control_data.interpolated_traj.points)
+        : autoware::motion_utils::removeOverlapPoints(control_data.interpolated_traj.points);
     control_data.nearest_idx = autoware::motion_utils::findFirstNearestIndexWithSoftConstraints(
       control_data.interpolated_traj.points, nearest_point.pose, config.ego_nearest_dist_threshold,
       config.ego_nearest_yaw_threshold);
@@ -270,16 +294,28 @@ PidLongitudinalController::ControlData PidLongitudinalController::getControlData
     control_data.interpolated_traj.points.at(control_data.target_idx).longitudinal_velocity_mps);
 
   // shift
-  control_data.shift = getCurrentShift(control_data);
+  const bool single_point_stop =
+    !config.use_temporal_trajectory && control_data.interpolated_traj.points.size() == 1 &&
+    m_last_valid_trajectory.points.back().longitudinal_velocity_mps == 0.0f;
+  control_data.shift = single_point_stop ? original_shift : getCurrentShift(control_data);
   if (control_data.shift != m_prev_shift) {
     m_pid_vel.reset();
   }
   m_prev_shift = control_data.shift;
 
   // distance to stopline
-  control_data.stop_dist = longitudinal_utils::calcStopDistance(
-    current_pose, control_data.interpolated_traj, config.ego_nearest_dist_threshold,
-    config.ego_nearest_yaw_threshold);
+  if (!config.use_temporal_trajectory && control_data.interpolated_traj.points.size() == 1) {
+    const auto & stop_pose = control_data.interpolated_traj.points.front().pose;
+    const double yaw = tf2::getYaw(stop_pose.orientation);
+    const double shift_sign = control_data.shift == Shift::Reverse ? -1.0 : 1.0;
+    control_data.stop_dist =
+      shift_sign * ((stop_pose.position.x - current_pose.position.x) * std::cos(yaw) +
+                    (stop_pose.position.y - current_pose.position.y) * std::sin(yaw));
+  } else {
+    control_data.stop_dist = longitudinal_utils::calcStopDistance(
+      current_pose, control_data.interpolated_traj, config.ego_nearest_dist_threshold,
+      config.ego_nearest_yaw_threshold);
+  }
 
   // pitch
   // NOTE: getPitchByTraj() calculates the pitch angle as defined in
@@ -305,9 +341,11 @@ PidLongitudinalController::ControlData PidLongitudinalController::getControlData
       control_data.current_motion.vel < config.adaptive_trajectory_velocity_th &&
       config.slope_source == PidLongitudinalControllerConfig::SlopeSource::TRAJECTORY_ADAPTIVE;
 
-    const double goal_dist = autoware::motion_utils::calcSignedArcLength(
-      control_data.interpolated_traj.points, current_pose.position,
-      control_data.interpolated_traj.points.size() - 1);
+    const double goal_dist = control_data.interpolated_traj.points.size() == 1
+                               ? control_data.stop_dist
+                               : autoware::motion_utils::calcSignedArcLength(
+                                   control_data.interpolated_traj.points, current_pose.position,
+                                   control_data.interpolated_traj.points.size() - 1);
     const bool is_close_to_trajectory_end =
       goal_dist < config.wheel_base &&
       config.slope_source == PidLongitudinalControllerConfig::SlopeSource::TRAJECTORY_GOAL_ADAPTIVE;

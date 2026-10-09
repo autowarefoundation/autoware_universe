@@ -1,0 +1,14 @@
+<launch>
+  <arg name="fixed_weight_model_path" default="$(find-pkg-share autoware_camp_selector)/config/camp_v26_k8_50k.json"/>
+  <arg name="candidate_pool_topic" default="/planning/camp/candidate_pool"/>
+  <arg name="trajectory_topic" default="/planning/camp/trajectory"/>
+  <arg name="turn_indicators_topic" default="/planning/camp/turn_indicators"/>
+  <arg name="selection_topic" default="/planning/camp/selection"/>
+  <node pkg="autoware_camp_selector" exec="camp_selector_node" name="camp_selector" output="screen">
+    <param name="fixed_weight_model_path" value="$(var fixed_weight_model_path)"/>
+    <remap from="~/input/candidate_pool" to="$(var candidate_pool_topic)"/>
+    <remap from="~/output/trajectory" to="$(var trajectory_topic)"/>
+    <remap from="~/output/turn_indicators" to="$(var turn_indicators_topic)"/>
+    <remap from="~/output/selection" to="$(var selection_topic)"/>
+  </node>
+</launch>

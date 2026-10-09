@@ -1,0 +1,51 @@
+/**:
+  ros__parameters:
+    model:
+      type: multi_step
+      backend: tensorrt
+      precision: fp32
+      use_cuda_graph: false
+      args_filename: diffusion_planner.param.json
+      single_step_model:
+        onnx_model_filename: diffusion_planner.onnx
+      multi_step_model:
+        encoder_onnx_model_filename: diffusion_planner_encoder.onnx
+        decoder_onnx_model_filename: diffusion_planner_decoder.onnx
+        turn_indicator_onnx_model_filename: diffusion_planner_turn_indicator.onnx
+        dpm_solver_steps: 10
+    planning_frequency_hz: 10.0
+    ignore_neighbors: false
+    remap_unsupported_objects_to_pedestrian: false
+    traffic_light_group_msg_timeout_seconds: 0.2
+    batch_size: 8
+    temperature: [0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+    velocity_smoothing_window: 8
+    stopping_threshold: 0.3
+    turn_indicator_keep_offset: -1.25
+    turn_indicator_hold_duration: 1.0
+    shift_x: false
+    delay_step: 0
+    line_string_max_step_m: 5.0
+    use_time_interpolation: false
+    object_motion_resampling:
+      enable: true
+      max_extrapolation_time: 0.5
+    ego_snap_to_prev_trajectory:
+      enable: false
+      max_position_error_m: 0.3
+      max_yaw_error_deg: 5.0
+      max_search_segment_count: 5
+    guidance:
+      start_guidance:
+        reference_distance_m: 10.0
+        max_scale: 30.0
+      stop_guidance:
+        stop_acceleration_mps2: 1.0
+      centerline_guidance:
+        start_time_s: 2.0
+    planning_factor:
+      enable_stop: true
+      enable_slowdown: false
+      stop_keep_duration_threshold: 1.0
+      stop_velocity_threshold: 0.1
+      slowdown_accel_threshold: -0.3

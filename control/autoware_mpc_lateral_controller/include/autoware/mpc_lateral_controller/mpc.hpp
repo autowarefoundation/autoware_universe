@@ -523,6 +523,9 @@ public:
    */
   void resetPrevResult(const SteeringReport & current_steer);
 
+  /** @brief Seed steering command filter history in its compensated steering domain. */
+  void resetSteeringCommandFilter(const double held_steer) { m_lpf_steering_cmd.reset(held_steer); }
+
   /**
    * @brief Set the vehicle model for this MPC.
    * @param vehicle_model_ptr Pointer to the vehicle model.
