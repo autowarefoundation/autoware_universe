@@ -15,15 +15,20 @@
 #include "autoware/cuda_pointcloud_preprocessor/cuda_concatenate_data/cuda_combine_cloud_handler_kernel.hpp"
 
 #include <autoware/cuda_utils/cuda_check_error.hpp>
+#include <autoware/point_types/types.hpp>
 
 #include <cuda_runtime.h>
+
+#include <cstdint>
+#include <type_traits>
 
 namespace autoware::pointcloud_preprocessor
 {
 
+template <typename PointT>
 __global__ void transform_kernel(
-  const PointTypeStruct * input_points, int num_points, TransformStruct transform,
-  PointTypeStruct * output_points)
+  const PointT * input_points, int num_points, TransformStruct transform,
+  std::uint32_t time_offset_ns, PointT * output_points)
 {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
   if (idx < num_points) {
@@ -40,12 +45,16 @@ __global__ void transform_kernel(
     output_points[idx].intensity = input_points[idx].intensity;
     output_points[idx].return_type = input_points[idx].return_type;
     output_points[idx].channel = input_points[idx].channel;
+    if constexpr (std::is_same_v<PointT, autoware::point_types::PointXYZIRCT>) {
+      output_points[idx].time_stamp = input_points[idx].time_stamp + time_offset_ns;
+    }
   }
 }
 
+template <typename PointT>
 void transform_launch(
-  const PointTypeStruct * input_points, int num_points, TransformStruct transform,
-  PointTypeStruct * output_points, cudaStream_t & stream)
+  const PointT * input_points, int num_points, TransformStruct transform,
+  std::uint32_t time_offset_ns, PointT * output_points, cudaStream_t & stream)
 {
   // `num_points <= 0` would result in an invalid number of `blocks_per_grid`,
   // causing a `cudaErrorInvalidConfiguration`. Exit early instead.
@@ -57,8 +66,15 @@ void transform_launch(
   const int block_per_grid = (num_points + threads_per_block - 1) / threads_per_block;
 
   transform_kernel<<<block_per_grid, threads_per_block, 0, stream>>>(
-    input_points, num_points, transform, output_points);
+    input_points, num_points, transform, time_offset_ns, output_points);
   CHECK_CUDA_ERROR(cudaGetLastError());
 }
+
+template void transform_launch<autoware::point_types::PointXYZIRC>(
+  const autoware::point_types::PointXYZIRC *, int, TransformStruct, std::uint32_t,
+  autoware::point_types::PointXYZIRC *, cudaStream_t &);
+template void transform_launch<autoware::point_types::PointXYZIRCT>(
+  const autoware::point_types::PointXYZIRCT *, int, TransformStruct, std::uint32_t,
+  autoware::point_types::PointXYZIRCT *, cudaStream_t &);
 
 }  // namespace autoware::pointcloud_preprocessor

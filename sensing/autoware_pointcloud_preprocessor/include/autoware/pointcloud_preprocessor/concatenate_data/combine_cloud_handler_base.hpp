@@ -17,6 +17,7 @@
 #include "concatenation_info_manager.hpp"
 #include "traits.hpp"
 
+#include <cstdint>
 #include <deque>
 #include <memory>
 #include <optional>
@@ -25,6 +26,8 @@
 #include <vector>
 
 // ROS includes
+#include <autoware/point_types/memory.hpp>
+#include <autoware/point_types/types.hpp>
 #include <managed_transform_buffer/managed_transform_buffer.hpp>
 
 #include <autoware_sensing_msgs/msg/concatenated_point_cloud_info.hpp>
@@ -34,6 +37,10 @@
 
 namespace autoware::pointcloud_preprocessor
 {
+
+/// Point type of the published clouds. XYZIRCT keeps each point's time_stamp, rebased onto the
+/// concatenated cloud's header stamp.
+enum class OutputPointType { XYZIRC, XYZIRCT };
 
 template <typename MsgTraits>
 struct ConcatenatedCloudResult
@@ -51,13 +58,21 @@ public:
   CombineCloudHandlerBase(
     rclcpp::Node & node, const std::vector<std::string> & input_topics, std::string output_frame,
     bool is_motion_compensated, bool publish_synchronized_pointcloud,
-    bool keep_input_frame_in_synchronized_pointcloud)
+    bool keep_input_frame_in_synchronized_pointcloud, OutputPointType output_point_type)
   : node_(node),
     input_topics_(input_topics),
     output_frame_(output_frame),
     is_motion_compensated_(is_motion_compensated),
     publish_synchronized_pointcloud_(publish_synchronized_pointcloud),
     keep_input_frame_in_synchronized_pointcloud_(keep_input_frame_in_synchronized_pointcloud),
+    output_point_type_(output_point_type),
+    output_fields_(
+      output_point_type == OutputPointType::XYZIRCT
+        ? autoware::point_types::create_fields_point_xyzirct()
+        : autoware::point_types::create_fields_point_xyzirc()),
+    output_point_step_(
+      output_point_type == OutputPointType::XYZIRCT ? sizeof(autoware::point_types::PointXYZIRCT)
+                                                    : sizeof(autoware::point_types::PointXYZIRC)),
     managed_tf_buffer_(std::make_unique<managed_transform_buffer::ManagedTransformBuffer>()),
     concatenation_info_manager_(
       node.get_parameter("matching_strategy.type").as_string(), input_topics)
@@ -76,6 +91,10 @@ public:
 
   virtual void allocate_pointclouds() = 0;
 
+  /// Whether `cloud` can be consumed for the configured output point type. Checked per input
+  /// message before it enters a collector.
+  virtual bool is_input_layout_supported(const sensor_msgs::msg::PointCloud2 & cloud) const = 0;
+
 protected:
   rclcpp::Node & node_;
   std::vector<std::string> input_topics_;
@@ -83,6 +102,9 @@ protected:
   bool is_motion_compensated_;
   bool publish_synchronized_pointcloud_;
   bool keep_input_frame_in_synchronized_pointcloud_;
+  OutputPointType output_point_type_;
+  std::vector<sensor_msgs::msg::PointField> output_fields_;
+  std::uint32_t output_point_step_;
   std::unique_ptr<managed_transform_buffer::ManagedTransformBuffer> managed_tf_buffer_{nullptr};
   ConcatenationInfoManager concatenation_info_manager_;
 
