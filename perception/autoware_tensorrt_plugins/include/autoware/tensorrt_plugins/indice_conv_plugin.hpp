@@ -18,6 +18,8 @@
 #include <NvInferRuntime.h>
 #include <NvInferRuntimePlugin.h>
 #include <cuda_runtime.h>
+#include <spconvlib/spconv/csrc/sparse/alloc/StaticAllocator.h>
+#include <spconvlib/spconv/csrc/sparse/convops/SimpleExternalSpconvMatmul.h>
 #include <spconvlib/spconv/csrc/sparse/convops/gemmops/GemmTunerSimple.h>  // cSpell:ignore spconvlib
 #include <spconvlib/spconv/csrc/sparse/convops/spops/ConvGemmOps.h>
 
@@ -48,6 +50,9 @@ class IndiceConvPlugin : public IPluginV3,
 {
 public:
   using GemmTunerSimple = spconvlib::spconv::csrc::sparse::convops::spops::GemmTuner;
+  using StaticAllocator = spconvlib::spconv::csrc::sparse::alloc::StaticAllocator;
+  using SimpleExternalSpconvMatmul =
+    spconvlib::spconv::csrc::sparse::convops::SimpleExternalSpconvMatmul;
   IndiceConvPlugin(const std::string & name, IndiceConvParameters const & params);
 
   ~IndiceConvPlugin() override = default;
@@ -124,6 +129,18 @@ private:
 
   std::unique_ptr<GemmTunerSimple> tuner_fp32_ptr_{};
   std::unique_ptr<GemmTunerSimple> tuner_fp16_ptr_{};
+
+  // The matmul helper owns a cuBLASLt handle, whose creation allocates and is therefore rejected
+  // while TensorRT captures the stream to time tactics during engine build. Keeping it alive for
+  // the lifetime of the plugin moves that creation out of enqueue(), which also spares every
+  // inference call a cublasLtCreate()/cublasLtDestroy() pair. The allocator it references is
+  // retargeted at the current bindings on each call via set_new_tensor_dict().
+  std::unique_ptr<StaticAllocator> matmul_allocator_ptr_{};
+  std::unique_ptr<SimpleExternalSpconvMatmul> matmul_ptr_{};
+
+  // Set once the zero-output CUDA-graph-capture path has been reported, so engine builds do not
+  // repeat the warning for every timed tactic.
+  bool stream_capture_warned_{false};
 };
 
 }  // namespace nvinfer1::plugin
