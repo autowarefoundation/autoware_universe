@@ -436,6 +436,17 @@ private:
   bool buildEngineFromOnnx();
 
   /**
+   * @brief Load the cached engine, or build one, whichever the cache allows.
+   *
+   * Rebuilds whenever the cached engine cannot be used as it is: a plan from
+   * another TensorRT version, one that will not deserialize on this device, or
+   * one whose tensor shapes no longer match the configuration.
+   *
+   * @return Whether the engine is ready.
+   */
+  bool prepareEngine();
+
+  /**
    * @brief Validate the TensorRT engine.
    *
    * @return Whether the TensorRT version used for building engine is compatible.
