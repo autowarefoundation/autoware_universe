@@ -93,18 +93,21 @@ bool ObstacleMetricsCalculator::isDataReady() const
 
 void ObstacleMetricsCalculator::PreprocessEgoTrajectory()
 {
+  const auto & ego_odometry = getEgoOdometry();
+  const auto & trajectory = getTrajectory();
+  const auto & vehicle_info = getVehicleInfo();
+
   ego_trajectory_points_.clear();
   ego_max_reachable_distance_ = 0.0;
-  double vel_curr = ego_odometry_->twist.twist.linear.x;
+  double vel_curr = ego_odometry.twist.twist.linear.x;
 
   // Find closest point to ego pose and trim past trajectory
   size_t p0_index = 0;
-  double last_dist_to_ego =
-    calc_distance2d(ego_odometry_->pose.pose, trajectory_->points.front().pose);
+  double last_dist_to_ego = calc_distance2d(ego_odometry.pose.pose, trajectory.points.front().pose);
 
-  for (size_t i = 1; i < trajectory_->points.size(); ++i) {
+  for (size_t i = 1; i < trajectory.points.size(); ++i) {
     const double dist_to_ego =
-      calc_distance2d(ego_odometry_->pose.pose, trajectory_->points.at(i).pose);
+      calc_distance2d(ego_odometry.pose.pose, trajectory.points.at(i).pose);
     if (dist_to_ego > last_dist_to_ego) {
       break;
     }
@@ -113,14 +116,14 @@ void ObstacleMetricsCalculator::PreprocessEgoTrajectory()
   }
 
   // Insert first point at ego pose
-  ego_trajectory_points_.emplace_back(ego_odometry_->pose.pose, vel_curr, 0.0, 0.0);
+  ego_trajectory_points_.emplace_back(ego_odometry.pose.pose, vel_curr, 0.0, 0.0);
 
   // Process trajectory points
   double time_from_start_s = 0.0;
   double distance_from_start_m = 0.0;
 
-  for (size_t i = p0_index + 1; i < trajectory_->points.size(); ++i) {
-    const auto & p_curr = trajectory_->points.at(i);
+  for (size_t i = p0_index + 1; i < trajectory.points.size(); ++i) {
+    const auto & p_curr = trajectory.points.at(i);
     const auto & trajectory_point_prev = ego_trajectory_points_.back();
 
     // Skip if segment distance is too small
@@ -171,31 +174,34 @@ void ObstacleMetricsCalculator::PreprocessEgoTrajectory()
 
     // update max reachable distance if the ego trajectory point is before the first stop point.
     if (std::isfinite(time_from_start_s)) {
-      const double dist_from_ego = calc_distance2d(ego_odometry_->pose.pose, p_curr.pose);
+      const double dist_from_ego = calc_distance2d(ego_odometry.pose.pose, p_curr.pose);
       ego_max_reachable_distance_ = std::max(ego_max_reachable_distance_, dist_from_ego);
     }
   }
 
   // set polygon for all ego trajectory points
   for (auto & ego_trajectory_point : ego_trajectory_points_) {
-    ego_trajectory_point.setPolygon(*vehicle_info_);
+    ego_trajectory_point.setPolygon(vehicle_info);
   }
 }
 
 void ObstacleMetricsCalculator::ProcessObstaclesTrajectory()
 {
+  const auto & predicted_objects = getPredictedObjects();
+  const auto & vehicle_info = getVehicleInfo();
+
   // calculate ego margin using the first ego trajectory point's pose and polygon
   if (ego_trajectory_points_.empty()) {
     return;
   }
 
-  const auto & first_ego_point = ego_trajectory_points_.front();
+  auto & first_ego_point = ego_trajectory_points_.front();
 
   const auto [ego_margin_min, ego_margin_max] =
     metrics::utils::calculate_point_to_polygon_boundary_distances(
-      first_ego_point.pose, first_ego_point.polygon.value());
+      first_ego_point.pose, first_ego_point.getPolygon(vehicle_info));
 
-  for (const auto & object : predicted_objects_->objects) {
+  for (const auto & object : predicted_objects.objects) {
     // ------------------------------------------------------------------------------------------------
     // 1. initialize
     obstacle_trajectory_points_.clear();
@@ -329,7 +335,7 @@ void ObstacleMetricsCalculator::ProcessObstaclesTrajectory()
       auto & obstacle_trajectory_point = obstacle_trajectory_points_[i];
 
       for (size_t j = 0; j < ego_trajectory_points_.size(); ++j) {
-        const auto & ego_trajectory_point = ego_trajectory_points_[j];
+        auto & ego_trajectory_point = ego_trajectory_points_[j];
 
         if (!std::isfinite(ego_trajectory_point.time_from_start_s)) {
           break;
@@ -343,9 +349,9 @@ void ObstacleMetricsCalculator::ProcessObstaclesTrajectory()
         } else if (dist > ego_margin_max + obstacle_margin_max + parameters.collision_thr_m) {
           is_overlapping = false;
         } else {
-          obstacle_trajectory_point.setPolygon(object.shape);
           is_overlapping = metrics::utils::polygon_intersects(
-            ego_trajectory_point.polygon.value(), obstacle_trajectory_point.polygon.value());
+            ego_trajectory_point.getPolygon(vehicle_info),
+            obstacle_trajectory_point.getPolygon(object.shape));
         }
 
         if (is_overlapping) {
