@@ -870,34 +870,15 @@ bool PTv3TRT::preProcess(
   });
   allocateSegOutputMessages();
 
-  clear_async(
-    num_points_per_voxel_d_.get(), static_cast<std::size_t>(config_.max_num_voxels_), stream_);
-  clear_async(grid_coord_d_.get(), static_cast<std::size_t>(config_.max_num_voxels_) * 3, stream_);
-  clear_async(
-    serialized_code_d_.get(), static_cast<std::size_t>(config_.max_num_voxels_) * 2, stream_);
-  if (should_run_seg3d) {
-    clear_async(pred_labels_d_.get(), static_cast<std::size_t>(config_.max_num_voxels_), stream_);
+  // Only reconstructed_probs under FULL reconstruction needs a per-frame clear:
+  // reconstructFullKernel leaves the probability rows of points without a valid voxel
+  // unwritten, and markFilteredKeepKernel reads every row. Every other buffer is written
+  // densely over the prefix its consumers read, so stale data past that prefix is never seen.
+  if (should_run_seg3d && config_.source_reconstruction_ == SourceReconstruction::FULL) {
     clear_async(
-      pred_probs_d_.get(),
-      static_cast<std::size_t>(config_.max_num_voxels_) * config_.segmentation_class_names_.size(),
+      reconstructed_probs_d_.get(),
+      static_cast<std::size_t>(config_.cloud_capacity_) * config_.segmentation_class_names_.size(),
       stream_);
-    if (config_.source_reconstruction_ == SourceReconstruction::PARTIAL) {
-      clear_async(
-        cropped_source_points_d_.get(),
-        static_cast<std::size_t>(config_.cloud_capacity_) * sizeof(CloudPointTypeXYZIRCAEDT),
-        stream_);
-    }
-    if (config_.source_reconstruction_ != SourceReconstruction::NONE) {
-      clear_async(
-        inverse_map_d_.get(), static_cast<std::size_t>(config_.densified_cloud_capacity_), stream_);
-      clear_async(
-        reconstructed_labels_d_.get(), static_cast<std::size_t>(config_.cloud_capacity_), stream_);
-      clear_async(
-        reconstructed_probs_d_.get(),
-        static_cast<std::size_t>(config_.cloud_capacity_) *
-          config_.segmentation_class_names_.size(),
-        stream_);
-    }
   }
 
   std::size_t num_cropped_points = 0;

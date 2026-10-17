@@ -543,6 +543,93 @@ TEST_F(PreprocessKernelTest, Base10AlignedBordersStayWithinSerializationDepth)
   EXPECT_EQ(serialized_code[1], serialize_coord(2047, 2047, 2047, depth, false));
 }
 
+TEST_F(PreprocessKernelTest, ReusedOutputBuffersDoNotLeakBetweenFrames)
+{
+  // The node hands the same output buffers to every frame without clearing them.
+  initializePreprocess(PTv3ConfigParams{});
+  const auto & config = *config_;
+  const auto max_voxels = static_cast<std::size_t>(config.max_num_voxels_);
+  constexpr auto kMax32 = std::numeric_limits<std::int32_t>::max();
+  constexpr auto kMax64 = std::numeric_limits<std::int64_t>::max();
+
+  // 5 floats per point (x, y, z, intensity, time lag 0): eight cells of the bottom slab, then
+  // two cells the big frame leaves empty.
+  std::vector<float> big;
+  for (int i = 0; i < 8; ++i) {
+    big.insert(
+      big.end(), {-0.5F + static_cast<float>(i % 4), -0.5F + static_cast<float>(i / 4), -0.5F,
+                  1.0F + static_cast<float>(i), 0.0F});
+  }
+  const std::vector<float> small{
+    1.5F, 1.5F, 1.5F, 9.0F,  0.0F,  //
+    2.5F, 2.5F, 2.5F, 10.0F, 0.0F,
+  };
+
+  // Output buffers filled with a poison instead of zeros, so that stale entries stay visible.
+  const auto poisoned = [&](auto value, const std::size_t count) {
+    auto buffer = makeDeviceBuffer<decltype(value)>(count);
+    copyToDevice(buffer.get(), std::vector<decltype(value)>(count, value));
+    return buffer;
+  };
+  const auto allocate = [&] {
+    GenerateVoxelsResult r;
+    r.voxels_d = poisoned(kNaN, max_voxels * config.max_points_per_voxel_ * kNumFeatures);
+    r.num_points_per_voxel_d = poisoned(kMax32, max_voxels);
+    r.voxel_coords_d = poisoned(kMax32, max_voxels * 3);
+    r.serialized_code_d = poisoned(kMax64, max_voxels * 2);
+    r.inverse_map_d = poisoned(kMax64, config.densified_cloud_capacity_);
+    return r;
+  };
+  const auto generate = [&](const std::vector<float> & points, GenerateVoxelsResult & r) {
+    auto points_d = makeDeviceBuffer<float>(points.size());
+    copyToDevice(points_d.get(), points);
+    const auto n = points.size() / kNumFeatures;
+    r.num_voxels = preprocess_->generateVoxels(
+      points_d.get(), n, n, r.voxels_d.get(), r.num_points_per_voxel_d.get(),
+      r.voxel_coords_d.get(), r.serialized_code_d.get(), r.inverse_map_d.get(),
+      &r.num_cropped_points, &r.num_cropped_current_points);
+    return cudaStreamSynchronize(stream_) == cudaSuccess;
+  };
+
+  // 1. Feed the big frame: all max_num_voxels entries of the voxel arrays get written.
+  auto reused = allocate();
+  ASSERT_TRUE(generate(big, reused));
+  ASSERT_EQ(reused.num_voxels, max_voxels);
+
+  // 2. Feed the small frame into the same buffers, and into fresh ones as reference.
+  ASSERT_TRUE(generate(small, reused));
+  auto fresh = allocate();
+  ASSERT_TRUE(generate(small, fresh));
+
+  // 3. Check that nothing of the big frame leaked into what the small frame reports.
+  ASSERT_EQ(reused.num_voxels, fresh.num_voxels);
+  ASSERT_EQ(reused.num_cropped_points, fresh.num_cropped_points);
+  const auto num_voxels = fresh.num_voxels;
+  const auto num_cropped = fresh.num_cropped_points;
+  EXPECT_EQ(num_voxels, 2U);
+  expectFloatVectorEq(
+    copyToHost(reused.voxels_d.get(), num_voxels * config.max_points_per_voxel_ * kNumFeatures),
+    copyToHost(fresh.voxels_d.get(), num_voxels * config.max_points_per_voxel_ * kNumFeatures));
+  EXPECT_EQ(
+    copyToHost(reused.num_points_per_voxel_d.get(), num_voxels),
+    copyToHost(fresh.num_points_per_voxel_d.get(), num_voxels));
+  EXPECT_EQ(
+    copyToHost(reused.voxel_coords_d.get(), num_voxels * 3),
+    copyToHost(fresh.voxel_coords_d.get(), num_voxels * 3));
+  EXPECT_EQ(
+    copyToHost(reused.serialized_code_d.get(), num_voxels * 2),
+    copyToHost(fresh.serialized_code_d.get(), num_voxels * 2));
+  EXPECT_EQ(
+    copyToHost(reused.inverse_map_d.get(), num_cropped),
+    copyToHost(fresh.inverse_map_d.get(), num_cropped));
+
+  // Past the prefix the reused buffer still holds the big frame, the fresh one the poison: the
+  // prefix match above is not because the buffers happen to be equal everywhere.
+  const auto reused_tail = copyToHost(reused.num_points_per_voxel_d.get(), max_voxels);
+  const auto fresh_tail = copyToHost(fresh.num_points_per_voxel_d.get(), max_voxels);
+  EXPECT_NE(reused_tail[num_voxels], fresh_tail[num_voxels]);
+}
+
 TEST_F(PreprocessKernelTest, RejectsEmptyOrOversizedCurrentFrame)
 {
   initializePreprocess(PTv3ConfigParams{});
