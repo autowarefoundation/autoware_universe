@@ -236,6 +236,16 @@ Two things to keep in mind when using this mode:
 If the bridge cannot keep up with the incoming cadence it drops the frames it has fallen behind on
 and reports how many it skipped through a throttled warning.
 
+### Scenario closed loop
+
+`scenario_mode:=true` runs Autoware closed loop against a CARLA scenario run from outside this launch, by the [`autoware_carla_scenario`](https://github.com/autowarefoundation/autoware_carla_scenario) framework. The framework loads the world, spawns the ego, drives the simulation clock and hands Autoware its mission; it starts this launch once per scenario, so every scenario of a batch gets a fresh Autoware. In scenario mode the interface:
+
+- adopts the world the scenario drives instead of loading one, once synchronous mode is on and ticks are arriving (`scenario_world_wait_timeout`);
+- attaches to the scenario's ego, found by the role name `Ego`, instead of spawning one (`ego_attach_timeout`);
+- follows the scenario's ticks (`tick_follower`) and leaves the moving actors to it (no traffic manager).
+
+What drives Autoware's startup -- localization initialization, the route and engaging from the scenario's mission -- runs on the framework's side, through the AD API. Leaving `scenario_mode` off (the default) keeps the interface's own world, ego and clock.
+
 ### Sensor Configuration
 
 The interface uses the **`carla_sensor_kit`** which provides 6 cameras for 360-degree coverage, LiDAR, IMU, and GNSS sensors. Sensor configurations are dynamically loaded from Autoware sensor kit calibration files through two configuration files:

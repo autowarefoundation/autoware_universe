@@ -22,6 +22,8 @@ import time
 import carla
 
 from .carla_ros import carla_ros2_interface
+from .modules import scenario_world
+from .modules import vehicle_physics
 from .modules.carla_data_provider import CarlaDataProvider
 from .modules.carla_data_provider import GameTime
 from .modules.carla_utils import project_point_to_ground
@@ -34,7 +36,6 @@ class CarlaWorldLoadError(RuntimeError):
 
 
 class SensorLoop(object):
-
     def __init__(self):
         self.start_game_time = None
         self.start_system_time = None
@@ -63,7 +64,6 @@ class SensorLoop(object):
 
 
 class InitializeInterface(object):
-
     def __init__(self):
         self.interface = carla_ros2_interface()
         self.param_ = self.interface.get_param()
@@ -90,6 +90,12 @@ class InitializeInterface(object):
         self.spawn_point_ground_offset_z = self.param_["spawn_point_ground_offset_z"]
         self.force_load_world = self.param_["force_load_world"]
         self.no_rendering_mode = self.param_["no_rendering_mode"]
+        # Scenario mode: the CARLA scenario runner owns the world (loads/reloads
+        # the map and owns the clock), so the interface adopts that world instead
+        # of loading its own (see load_world / _wait_for_external_world).
+        self.scenario_mode = self.param_["scenario_mode"]
+        self.scenario_world_wait_timeout = self.param_["scenario_world_wait_timeout"]
+        self.ego_attach_timeout = self.param_["ego_attach_timeout"]
 
     def _parse_spawn_point(self):
         """Parse spawn point string and return transform with randomize flag."""
@@ -151,28 +157,6 @@ class InitializeInterface(object):
             flush=True,
         )
         return snapped
-
-    def _flatten_steering_curve(self):
-        """Replace the vehicle's speed-based steering curve with an identity curve.
-
-        CARLA 0.10 ships corrupt steering-curve data (duplicated, unsorted
-        points such as (10, 0.5); the curve's speed axis is mph on Chaos) which
-        the simulator applies internally, attenuating the achievable steering
-        angle at driving speeds. Writing a flat curve back removes the
-        server-side attenuation so the commanded steer fraction maps directly to
-        the wheel angle.
-        """
-        try:
-            physics = self.ego_actor.get_physics_control()
-            physics.steering_curve = [
-                carla.Vector2D(0.0, 1.0),
-                carla.Vector2D(120.0, 1.0),
-            ]
-            self.ego_actor.apply_physics_control(physics)
-            self.interface.physics_control = physics
-            print("INFO: Applied a flat steering curve to the ego vehicle.")
-        except RuntimeError as error:
-            print(f"WARNING: Failed to flatten the steering curve: {error}")
 
     def _reload_world(self, client):
         """Reload the world via client.load_world(); return the failure, if any."""
@@ -384,8 +368,31 @@ class InitializeInterface(object):
         settings.no_rendering_mode = self.no_rendering_mode
         self.world.apply_settings(settings)
 
+    def _wait_for_external_world(self, client):
+        """Adopt the scenario runner's world (see modules.scenario_world)."""
+        self.world = scenario_world.wait_for_external_world(
+            client, self.carla_map, self.scenario_world_wait_timeout, self.logger
+        )
+
     def _spawn_ego_actor(self):
-        """Spawn the ego vehicle at the configured (optionally ground-snapped) spawn point."""
+        """Obtain the ego vehicle: attach to the scenario's, or spawn our own.
+
+        A scenario knows where its run starts -- it is what placed the ego, at
+        the pose it also hands over as the mission's initial pose -- so in
+        scenario mode this node takes that actor and never makes one. Spawning
+        here as well would put two actors under the same ``role_name``, and the
+        sensors would be attached to whichever the lookup happened to return.
+        A scenario that never places an ego is a broken setup, so that case
+        fails loudly rather than quietly starting from somewhere else.
+
+        Outside scenario mode the ego is spawned at the configured (optionally
+        ground-snapped) spawn point as before.
+        """
+        if self.scenario_mode:
+            return scenario_world.attach_to_scenario_ego(
+                self.world, self.agent_role_name, self.ego_attach_timeout, self.logger
+            )
+
         spawn_point, randomize = self._parse_spawn_point()
         if not randomize:
             spawn_point = self._snap_spawn_point_to_ground(spawn_point)
@@ -403,23 +410,39 @@ class InitializeInterface(object):
 
     def load_world(self):
         client = self._connect_client()
-        map_verified = self._load_carla_world(client)
-        if not map_verified:
-            # After a failed OpenDRIVE parse, libcarla keeps serving the previous
-            # episode's cached map through this client, so world.get_map() would
-            # return a stale (wrong) map instead of raising. Reconnect with a fresh
-            # client so the mapless world reports honestly downstream
-            # (CarlaDataProvider.set_world then runs its map-optional fallbacks).
-            self.logger.warning(
-                "Reconnecting the CARLA client to discard the stale map cache "
-                "of the previous episode."
-            )
-            client = self._connect_client()
+        if self.scenario_mode:
+            # The scenario runner owns the world: it loads/reloads the map and
+            # owns the clock. Loading the map or applying world settings here
+            # would fight the runner, and its reload would invalidate the ego and
+            # sensors we spawn, so adopt the runner's world instead of loading
+            # our own (see the #13319 review on world/ego ownership).
+            self._wait_for_external_world(client)
+        else:
+            map_verified = self._load_carla_world(client)
+            if not map_verified:
+                # After a failed OpenDRIVE parse, libcarla keeps serving the previous
+                # episode's cached map through this client, so world.get_map() would
+                # return a stale (wrong) map instead of raising. Reconnect with a fresh
+                # client so the mapless world reports honestly downstream
+                # (CarlaDataProvider.set_world then runs its map-optional fallbacks).
+                self.logger.warning(
+                    "Reconnecting the CARLA client to discard the stale map cache "
+                    "of the previous episode."
+                )
+                client = self._connect_client()
 
-        self._wait_for_world(client)
-        self._apply_world_settings()
+            self._wait_for_world(client)
+            self._apply_world_settings()
+
         CarlaDataProvider.set_world(self.world)
         CarlaDataProvider.set_client(client)
+        if self.scenario_mode:
+            # The runner owns and drives the clock (it ticks while waiting for our
+            # ego to appear). Spawn by waiting for the runner's ticks
+            # (wait_for_tick) rather than driving our own world.tick(), so this
+            # node stays a pure follower and never double-advances the runner's
+            # synchronous simulation.
+            CarlaDataProvider.set_runtime_init_mode(True)
         # Vehicle physics differ between CARLA 0.9.x and 0.10 (Chaos); let the
         # interface derive its capability flags (e.g. whether the wheel steer
         # angle is reported) from the server version.
@@ -427,9 +450,10 @@ class InitializeInterface(object):
 
         self.ego_actor = self._spawn_ego_actor()
         self.interface.ego_actor = self.ego_actor  # TODO improve design
-        self.interface.physics_control = self.ego_actor.get_physics_control()
+        self.interface.set_physics_control(self.ego_actor.get_physics_control())
+        vehicle_physics.apply(self.ego_actor, self.interface)
         if self.interface.param_values.get("flatten_steering_curve", False):
-            self._flatten_steering_curve()
+            vehicle_physics.flatten_steering_curve(self.ego_actor, self.interface)
 
         self.sensor_wrapper = SensorWrapper(self.interface)
         self.sensor_wrapper.setup_sensors(self.ego_actor, False)
@@ -554,8 +578,13 @@ class InitializeInterface(object):
             print(f"Warning: ROS interface shutdown failed: {e}")
 
     def _cleanup_ego_actor(self):
-        """Destroy ego vehicle, continuing on error."""
+        """Destroy the ego vehicle, unless it belongs to the scenario."""
         if not self.ego_actor:
+            return
+        if self.scenario_mode:
+            # The scenario spawned it and destroys it; doing so here too would
+            # race its cleanup for the same actor.
+            self.ego_actor = None
             return
         try:
             self.ego_actor.destroy()
