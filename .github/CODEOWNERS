@@ -206,7 +206,6 @@ system/autoware_command_mode_decider_plugins/** isamu.takagi@tier4.jp
 system/autoware_command_mode_switcher/** isamu.takagi@tier4.jp
 system/autoware_command_mode_switcher_plugins/** isamu.takagi@tier4.jp
 system/autoware_command_mode_types/** isamu.takagi@tier4.jp
-system/autoware_component_monitor/** baris@leodrive.ai memin@leodrive.ai yavuz@leodrive.ai
 system/autoware_component_state_monitor/** isamu.takagi@tier4.jp junya.sasaki@tier4.jp
 system/autoware_default_adapi_helpers/autoware_adapi_visualizers/** isamu.takagi@tier4.jp junya.sasaki@tier4.jp ryohsuke.mitsudome@tier4.jp yukihiro.saito@tier4.jp
 system/autoware_default_adapi_universe/** isamu.takagi@tier4.jp junya.sasaki@tier4.jp ryohsuke.mitsudome@tier4.jp yukihiro.saito@tier4.jp
