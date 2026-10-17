@@ -187,7 +187,7 @@ sensing/autoware_image_diagnostics/** dai.nguyen@tier4.jp masato.saeki@tier4.jp 
 sensing/autoware_image_transport_decompressor/** kenzo.lobos@tier4.jp yukihiro.saito@tier4.jp
 sensing/autoware_imu_corrector/** manato.hirabayashi@tier4.jp sergioreyes.sanchez@tier4.jp taiki.yamada@tier4.jp yamato.ando@tier4.jp yoshi.ri@tier4.jp
 sensing/autoware_pcl_extensions/** amadeusz.szymko.2@tier4.jp david.wong@tier4.jp
-sensing/autoware_pointcloud_preprocessor/** abrahammonrroy@yahoo.com dai.nguyen@tier4.jp david.wong@tier4.jp kaan.colak.dev@gmail.com kenzo.lobos@tier4.jp kyoichi.sugahara@tier4.jp max.schmeller@tier4.jp melike@leodrive.ai yihsiang.fang@tier4.jp yoshi.ri@tier4.jp yukihiro.saito@tier4.jp
+sensing/autoware_pointcloud_preprocessor/** abrahammonrroy@yahoo.com dai.nguyen@tier4.jp david.wong@tier4.jp junya.sasaki@tier4.jp kaan.colak.dev@gmail.com kenzo.lobos@tier4.jp kyoichi.sugahara@tier4.jp max.schmeller@tier4.jp melike@leodrive.ai yihsiang.fang@tier4.jp yoshi.ri@tier4.jp yukihiro.saito@tier4.jp
 sensing/autoware_radar_objects_adapter/** taekjin.lee@tier4.jp yoshi.ri@tier4.jp
 sensing/autoware_radar_scan_to_pointcloud2/** taekjin.lee@tier4.jp yoshi.ri@tier4.jp
 sensing/autoware_radar_static_pointcloud_filter/** taekjin.lee@tier4.jp yoshi.ri@tier4.jp
@@ -206,7 +206,7 @@ system/autoware_command_mode_decider_plugins/** isamu.takagi@tier4.jp
 system/autoware_command_mode_switcher/** isamu.takagi@tier4.jp
 system/autoware_command_mode_switcher_plugins/** isamu.takagi@tier4.jp
 system/autoware_command_mode_types/** isamu.takagi@tier4.jp
-system/autoware_component_monitor/** baris@leodrive.ai memin@leodrive.ai yavuz@leodrive.ai
+system/autoware_component_monitor/** mehmeteminbasoglu@hotmail.com yvzksgl@proton.me
 system/autoware_component_state_monitor/** isamu.takagi@tier4.jp junya.sasaki@tier4.jp
 system/autoware_default_adapi_helpers/autoware_adapi_visualizers/** isamu.takagi@tier4.jp junya.sasaki@tier4.jp ryohsuke.mitsudome@tier4.jp yukihiro.saito@tier4.jp
 system/autoware_default_adapi_universe/** isamu.takagi@tier4.jp junya.sasaki@tier4.jp ryohsuke.mitsudome@tier4.jp yukihiro.saito@tier4.jp
