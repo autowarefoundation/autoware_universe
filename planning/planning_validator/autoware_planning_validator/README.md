@@ -42,6 +42,8 @@ It outputs the following:
 
 ## Parameters
 
+{{ json_to_markdown("planning/autoware_planning_validator/schema/planning_validator.schema.json") }}
+
 The following parameters can be set for the `autoware_planning_validator`:
 
 | Name                         | Type   | Description                                                                                                                                                                                      | Default value |
