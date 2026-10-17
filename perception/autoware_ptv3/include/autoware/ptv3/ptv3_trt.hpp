@@ -78,6 +78,8 @@ protected:
   void initDetection3DHeadTrt(const tensorrt_common::TrtCommonConfig & trt_config);
   void createPointFields();
   void allocateSegOutputMessages();
+  std::unique_ptr<const cuda_blackboard::CudaPointCloud2> sizedCopy(
+    const cuda_blackboard::CudaPointCloud2 & staging);
   void allocateSerializedPoolingBuffers();
   void bindSerializedPoolingAddresses();
   void precomputeSerializedPoolingMetadata();

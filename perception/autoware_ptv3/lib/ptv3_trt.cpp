@@ -111,6 +111,24 @@ void PTv3TRT::setPublishFilteredPointcloud(
   publish_filtered_pointcloud_ = std::move(func);
 }
 
+std::unique_ptr<const cuda_blackboard::CudaPointCloud2> PTv3TRT::sizedCopy(
+  const cuda_blackboard::CudaPointCloud2 & staging)
+{
+  auto msg = std::make_unique<cuda_blackboard::CudaPointCloud2>();
+  static_cast<sensor_msgs::msg::PointCloud2 &>(*msg) =
+    static_cast<const sensor_msgs::msg::PointCloud2 &>(staging);
+  const std::size_t num_bytes =
+    static_cast<std::size_t>(msg->height) * msg->width * msg->point_step;
+  msg->data = cuda_blackboard::make_unique<std::uint8_t[]>(std::max<std::size_t>(num_bytes, 1));
+  if (num_bytes > 0) {
+    CHECK_CUDA_ERROR(cudaMemcpyAsync(
+      msg->data.get(), staging.data.get(), num_bytes, cudaMemcpyDeviceToDevice, stream_));
+  }
+  // The publisher reads the copy on another stream.
+  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
+  return msg;
+}
+
 void PTv3TRT::allocateSegOutputMessages()
 {
   if (!config_.use_seg3d_head_) {
@@ -1104,8 +1122,7 @@ bool PTv3TRT::postProcess(
     segmented_points_msg_ptr_->width = static_cast<std::uint32_t>(num_segmented_points);
     segmented_points_msg_ptr_->row_step =
       segmented_points_msg_ptr_->width * segmented_points_msg_ptr_->point_step;
-    publish_segmented_pointcloud_(std::move(segmented_points_msg_ptr_));
-    segmented_points_msg_ptr_ = nullptr;
+    publish_segmented_pointcloud_(sizedCopy(*segmented_points_msg_ptr_));
   }
 
   // Visualization pointcloud
@@ -1119,8 +1136,7 @@ bool PTv3TRT::postProcess(
     visualization_points_msg_ptr_->width = static_cast<std::uint32_t>(num_visualization_points);
     visualization_points_msg_ptr_->row_step =
       visualization_points_msg_ptr_->width * visualization_points_msg_ptr_->point_step;
-    publish_visualization_pointcloud_(std::move(visualization_points_msg_ptr_));
-    visualization_points_msg_ptr_ = nullptr;
+    publish_visualization_pointcloud_(sizedCopy(*visualization_points_msg_ptr_));
   }
 
   if (should_publish_filtered_pointcloud) {
@@ -1134,8 +1150,7 @@ bool PTv3TRT::postProcess(
     filtered_points_msg_ptr_->width = num_filtered_points;
     filtered_points_msg_ptr_->row_step =
       filtered_points_msg_ptr_->width * filtered_points_msg_ptr_->point_step;
-    publish_filtered_pointcloud_(std::move(filtered_points_msg_ptr_));
-    filtered_points_msg_ptr_ = nullptr;
+    publish_filtered_pointcloud_(sizedCopy(*filtered_points_msg_ptr_));
   }
 
   allocateSegOutputMessages();
