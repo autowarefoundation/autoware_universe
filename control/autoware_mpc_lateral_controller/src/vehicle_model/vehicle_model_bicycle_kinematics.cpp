@@ -79,11 +79,6 @@ MPCTrajectory KinematicsBicycleModel::calculatePredictedTrajectoryInWorldCoordin
   // Relative coordinate state = [lat_err, yaw_err, steer]
   // World coordinate state_w = [x, y, yaw]
 
-  // Note: Ideally, the first-order delay of the steering should be considered, as in the control
-  // model. However, significant accuracy degradation was observed when discretizing with a long dt,
-  // so it has been ignored here. If the accuracy of the discretization improves,an appropriate
-  // model should be considered.
-
   const auto & t = reference_trajectory;
 
   // create initial state in the world coordinate
@@ -97,16 +92,20 @@ MPCTrajectory KinematicsBicycleModel::calculatePredictedTrajectoryInWorldCoordin
     return state;
   }();
 
+  const auto dt_ratio = std::min(dt / m_steer_tau, 1.0);
+  auto current_steer = x0(2);
+
   // update state in the world coordinate
   const auto updateState = [&](
                              const Eigen::Vector3d & state_w, const double & input, const double dt,
                              const double velocity) {
     const auto yaw = state_w(2);
+    current_steer += (input - current_steer) * dt_ratio;  // first-order delay
 
     Eigen::Vector3d dstate = Eigen::Vector3d::Zero();
     dstate(0) = velocity * std::cos(yaw);
     dstate(1) = velocity * std::sin(yaw);
-    dstate(2) = velocity * std::tan(input) / m_wheelbase;
+    dstate(2) = velocity * std::tan(current_steer) / m_wheelbase;
 
     // Note: don't do "return state_w + dstate * dt", which does not work due to the lazy evaluation
     // in Eigen.
