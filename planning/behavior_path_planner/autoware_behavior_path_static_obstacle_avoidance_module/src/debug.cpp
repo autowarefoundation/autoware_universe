@@ -668,6 +668,7 @@ MarkerArray createDebugMarkerArray(
     addObjects(data.other_objects, ObjectInfo::IS_NOT_PARKING_OBJECT);
     addObjects(data.other_objects, ObjectInfo::MOVING_OBJECT);
     addObjects(data.other_objects, ObjectInfo::CROSSWALK_USER);
+    addObjects(data.other_objects, ObjectInfo::SEPARATED_BY_UNCROSSABLE_BOUNDARY);
     addObjects(data.other_objects, ObjectInfo::OUT_OF_TARGET_AREA);
     addObjects(data.other_objects, ObjectInfo::ENOUGH_LATERAL_DISTANCE);
     addObjects(data.other_objects, ObjectInfo::LESS_THAN_EXECUTION_THRESHOLD);
