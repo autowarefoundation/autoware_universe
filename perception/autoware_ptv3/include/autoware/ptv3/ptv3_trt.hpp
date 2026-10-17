@@ -138,6 +138,7 @@ protected:
     CudaUniquePtr<std::int64_t[]> serialized_code{nullptr};
     CudaUniquePtr<std::int64_t[]> serialized_order{nullptr};
     CudaUniquePtr<std::int64_t[]> serialized_inverse{nullptr};
+    CudaUniquePtr<std::int64_t[]> patch_order{nullptr};
   };
 
   std::vector<SerializedPoolingDeviceStage> serialized_pooling_stages_d_;
