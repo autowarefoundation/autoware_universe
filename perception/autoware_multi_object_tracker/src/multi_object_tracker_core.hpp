@@ -130,9 +130,9 @@ std::optional<autoware_perception_msgs::msg::DetectedObjects> get_merged_objects
   const MultiObjectTrackerInternalState & state, const rclcpp::Logger & logger);
 
 //// Low-level processing functions
+template <typename MsgT>
 MeasurementProcessingResult process_measurement(
-  const size_t channel_index,
-  AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_perception_msgs::msg::DetectedObjects) msg,
+  const size_t channel_index, AUTOWARE_MESSAGE_CONST_SHARED_PTR(MsgT) msg,
   const rclcpp::Time & current_time, MultiObjectTrackerInternalState & state,
   TrackerDebugger & debugger);
 
