@@ -37,11 +37,16 @@ a throttled warning.
 
 ## Processing Flow
 
+Processing is divided into two stages. `PointCloudPreprocessor` owns ROS message validation,
+conversion, and probability filtering. `LabelBasedEuclideanCluster` operates on the resulting typed
+PCL cloud and owns label-based clustering, merging, and shape estimation.
+
 1. Validate that the incoming pointcloud is a densely packed `autoware::point_types::PointXYZCPE` cloud.
-2. Interpret `class_id` values as `PointCloudClassification`.
-3. Send object-compatible classifications through clustering and copy non-object or unknown classifications to `output_segments`.
-4. Drop points with `probability < min_probability`.
-5. Split object-compatible points into buckets keyed by the Autoware object label.
+2. Convert the ROS pointcloud to `pcl::PointCloud<PointXYZCPE>` and preserve its density metadata.
+3. Drop points with `probability < min_probability`.
+4. Interpret the remaining `class_id` values as `PointCloudClassification`.
+5. Split object-compatible points into buckets keyed by the Autoware object label, and copy
+   non-object or unknown classifications to `~/output/pointcloud`.
 6. Run `VoxelGridBasedEuclideanCluster` independently for each label bucket, using the per-label parameter overrides from `label_cluster_params.*` where configured and the global defaults otherwise.
 7. Merge over-segmented clusters across labels that belong to the same confusable label group (`confusable_label_groups.*`).
 8. Compute the average semantic probability for each output cluster from the points that ended up in that cluster. This uses the source-point indices returned by the clustering backend for the per-label filtered cloud, rather than rematching points by coordinate.
