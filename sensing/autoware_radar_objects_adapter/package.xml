@@ -19,6 +19,7 @@
   <depend>autoware_utils_geometry</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
+  <depend>tl_expected</depend>
 
   <test_depend>ament_cmake_ros</test_depend>
   <test_depend>ament_lint_auto</test_depend>
