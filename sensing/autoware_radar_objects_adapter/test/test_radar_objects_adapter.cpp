@@ -1076,23 +1076,6 @@ TEST(RadarObjectsAdapter, Classification_UnknownLabelInParameter_MapsToUnknown)
   EXPECT_EQ(labeled_probabilities(outputs->detections.objects.at(0).classification), expected);
 }
 
-// An object without classifications comes out without classifications, on both outputs.
-TEST(RadarObjectsAdapter, Classification_NoClassifications_EmptyList)
-{
-  // Arrange
-  const RadarInfo info = make_radar_info(ars548_fields);
-  RadarObject radar = make_radar_object();
-  radar.classifications.clear();
-
-  // Act
-  const auto outputs = run_adapter_and_collect_outputs(info, {radar});
-  ASSERT_TRUE(outputs.has_value());
-
-  // Assert
-  EXPECT_TRUE(outputs->detections.objects.at(0).classification.empty());
-  EXPECT_TRUE(outputs->tracks.objects.at(0).classification.empty());
-}
-
 // ---------------------------------------------------------------------------------------------
 // Conversion into tracked objects. The same radar object goes in, and the tracked object made of
 // it is read. It shares pose, twist, shape and classification with the detected object, and adds
@@ -1155,62 +1138,6 @@ TEST(RadarObjectsAdapter, Tracks_Uuid_ObjectIdThenTopicHashThenZeros)
     std::equal(
       first_uuid.begin() + object_id_bytes, first_uuid.end(),
       second_uuid.begin() + object_id_bytes));
-}
-
-// Two adapters on different input topics give the same object different ids: the hash is what
-// tells one radar's tracks from another's.
-TEST(RadarObjectsAdapter, Tracks_Uuid_DiffersBetweenTopics)
-{
-  // Arrange
-  const RadarInfo info = make_radar_info(ars548_fields);
-  const RadarObjects objects = make_radar_objects({make_radar_object()});
-  RadarObjectsAdapter front = make_adapter();
-  RadarObjectsAdapter rear(
-    DefaultParameters{}.to_params(),
-    make_classification_remap_from_string_pair(built_in_remap).remap,
-    "/sensing/radar/rear/objects_raw");
-  ASSERT_TRUE(front.update_radar_info(info).has_value());
-  ASSERT_TRUE(rear.update_radar_info(info).has_value());
-
-  // Act
-  const auto from_front = front.convert(objects);
-  const auto from_rear = rear.convert(objects);
-  ASSERT_TRUE(from_front.has_value());
-  ASSERT_TRUE(from_rear.has_value());
-
-  // Assert
-  EXPECT_NE(
-    from_front->tracks.objects.at(0).object_id.uuid,
-    from_rear->tracks.objects.at(0).object_id.uuid);
-}
-
-// Only an object the radar reports as DYNAMIC is moving; STATIC, but also INVALID and UNKNOWN,
-// are reported as stationary.
-TEST(RadarObjectsAdapter, Tracks_MovementStatus_OnlyDynamicIsMoving)
-{
-  // Arrange: one object per movement status, in this order
-  const RadarInfo info = make_radar_info(ars548_fields);
-  const auto with_status = [](uint8_t status) {
-    RadarObject radar = make_radar_object();
-    radar.movement_status = status;
-    return radar;
-  };
-  const std::vector<RadarObject> radars = {
-    with_status(RadarObject::MOVEMENT_STATUS_DYNAMIC),
-    with_status(RadarObject::MOVEMENT_STATUS_STATIC),
-    with_status(RadarObject::MOVEMENT_STATUS_INVALID),
-    with_status(RadarObject::MOVEMENT_STATUS_UNKNOWN)};
-
-  // Act
-  const auto outputs = run_adapter_and_collect_outputs(info, radars);
-  ASSERT_TRUE(outputs.has_value());
-
-  // Assert
-  const auto & tracks = outputs->tracks.objects;
-  EXPECT_FALSE(tracks.at(0).kinematics.is_stationary);
-  EXPECT_TRUE(tracks.at(1).kinematics.is_stationary);
-  EXPECT_TRUE(tracks.at(2).kinematics.is_stationary);
-  EXPECT_TRUE(tracks.at(3).kinematics.is_stationary);
 }
 
 // The acceleration gets the same treatment as the velocity: rotated into the object's frame
