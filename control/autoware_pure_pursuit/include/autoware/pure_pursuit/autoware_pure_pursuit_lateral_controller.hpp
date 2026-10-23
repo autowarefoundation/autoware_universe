@@ -31,7 +31,6 @@
 #define AUTOWARE__PURE_PURSUIT__AUTOWARE_PURE_PURSUIT_LATERAL_CONTROLLER_HPP_
 
 #include "autoware/pure_pursuit/autoware_pure_pursuit.hpp"
-#include "autoware/pure_pursuit/autoware_pure_pursuit_viz.hpp"
 #include "autoware/pure_pursuit/log_writer.hpp"
 #include "autoware/trajectory_follower_base/lateral_controller_base.hpp"
 #include "rclcpp/time.hpp"
@@ -89,11 +88,6 @@ struct PurePursuitLateralControllerConfig
   int path_filter_moving_ave_num;
 };
 
-struct DebugData
-{
-  geometry_msgs::msg::Point next_target;
-};
-
 /// What one cycle of PurePursuitLateralController returns. The node publishes the messages.
 struct PurePursuitLateralControllerResult
 {
@@ -125,8 +119,6 @@ private:
   void setResampledTrajectory();
 
   geometry_msgs::msg::Pose current_pose_;
-
-  void publishDebugMarker() const;
 
   Lateral generateCtrlCmdMsg(const double target_curvature, const rclcpp::Time & stamp);
 
@@ -163,9 +155,6 @@ private:
   double calcCurvature(const size_t closest_idx);
 
   void averageFilterTrajectory(autoware_planning_msgs::msg::Trajectory & u);
-
-  // Debug
-  mutable DebugData debug_data_;
 };
 
 }  // namespace autoware::pure_pursuit

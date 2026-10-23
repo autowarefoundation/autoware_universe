@@ -66,7 +66,6 @@ public:
 
   // getter
   geometry_msgs::msg::Point getLocationOfNextWaypoint() const { return loc_next_wp_; }
-  geometry_msgs::msg::Point getLocationOfNextTarget() const { return loc_next_tgt_; }
 
   bool isDataReady();
   std::pair<bool, double> run();  // calculate curvature
@@ -74,7 +73,6 @@ public:
 private:
   // variables for debug
   geometry_msgs::msg::Point loc_next_wp_;
-  geometry_msgs::msg::Point loc_next_tgt_;
 
   // variables got from outside
   const LogWriter * writer_{&no_log};

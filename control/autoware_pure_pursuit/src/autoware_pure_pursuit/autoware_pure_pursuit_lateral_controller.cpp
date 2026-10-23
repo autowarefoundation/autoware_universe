@@ -30,7 +30,6 @@
 
 #include "autoware/pure_pursuit/autoware_pure_pursuit_lateral_controller.hpp"
 
-#include "autoware/pure_pursuit/autoware_pure_pursuit_viz.hpp"
 #include "autoware/pure_pursuit/util/planning_utils.hpp"
 
 #include <autoware_utils/geometry/geometry.hpp>
@@ -346,7 +345,6 @@ Lateral PurePursuitLateralController::generateOutputControlCmd(
   if (pp_output) {
     output_cmd = generateCtrlCmdMsg(pp_output->curvature, stamp);
     prev_cmd_ = std::optional<Lateral>(output_cmd);
-    publishDebugMarker();
   } else {
     AW_PP_WARN_THROTTLE(
       writer_, 5.0, "failed to solve pure_pursuit for control command calculation");
@@ -371,15 +369,6 @@ Lateral PurePursuitLateralController::generateCtrlCmdMsg(
 
   // pub_ctrl_cmd_->publish(cmd);
   return cmd;
-}
-
-void PurePursuitLateralController::publishDebugMarker() const
-{
-  visualization_msgs::msg::MarkerArray marker_array;
-
-  marker_array.markers.push_back(createNextTargetMarker(debug_data_.next_target));
-  marker_array.markers.push_back(
-    createTrajectoryCircleMarker(debug_data_.next_target, current_odometry_.pose.pose));
 }
 
 std::optional<PpOutput> PurePursuitLateralController::calcTargetCurvature(
@@ -439,10 +428,6 @@ std::optional<PpOutput> PurePursuitLateralController::calcTargetCurvature(
 
   const auto kappa = pure_pursuit_result.second;
 
-  // Set debug data
-  if (is_control_output) {
-    debug_data_.next_target = pure_pursuit_->getLocationOfNextTarget();
-  }
   PpOutput output{};
   output.curvature = kappa;
   if (!is_control_output) {

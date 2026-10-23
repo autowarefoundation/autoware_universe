@@ -61,7 +61,6 @@ private:
   RosLogWriter writer_;
 
   // Debug Publisher
-  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr pub_debug_marker_;
   rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float32MultiArrayStamped>::SharedPtr
     pub_debug_values_;
   // Predicted Trajectory publish
