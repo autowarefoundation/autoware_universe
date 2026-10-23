@@ -21,6 +21,7 @@
 
 #include <autoware/landmark_manager/landmark_manager.hpp>
 #include <autoware_utils/ros/diagnostics_interface.hpp>
+#include <builtin_interfaces/msg/time.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <tf2_eigen/tf2_eigen.hpp>
 
@@ -109,7 +110,11 @@ private:
   std::array<double, 36> rotate_covariance(
     const std::array<double, 36> & src_covariance, const Eigen::Matrix3d & rotation) const;
   template <typename PointT>
-  void save_intensity(const PointCloud2::ConstSharedPtr & points_msg_ptr, const Pose marker_pose);
+  void output_detected_marker(
+    const PointCloud2::ConstSharedPtr & points_msg_ptr, const Pose marker_pose);
+  void save_detected_marker_csv(
+    const pcl::PointCloud<pcl::PointXYZI> & marker_points, const std::vector<uint16_t> & ring_ids,
+    const builtin_interfaces::msg::Time & stamp) const;
 
   void transform_sensor_measurement(
     const std::string & source_frame, const std::string & target_frame,

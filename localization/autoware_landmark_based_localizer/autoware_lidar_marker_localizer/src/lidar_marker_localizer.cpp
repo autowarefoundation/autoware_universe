@@ -29,6 +29,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
@@ -352,10 +353,10 @@ void LidarMarkerLocalizer::main_process(const PointCloud2::ConstSharedPtr & poin
     get_nearest_landmark(self_pose, detected_landmarks);
 
   if (is_xyziradrt) {
-    save_intensity<autoware::point_types::PointXYZIRADRT>(
+    output_detected_marker<autoware::point_types::PointXYZIRADRT>(
       points_msg_ptr, nearest_detected_landmark.pose);
   } else {
-    save_intensity<autoware::point_types::PointXYZIRC>(
+    output_detected_marker<autoware::point_types::PointXYZIRC>(
       points_msg_ptr, nearest_detected_landmark.pose);
   }
 
@@ -469,30 +470,24 @@ std::array<double, 36> LidarMarkerLocalizer::rotate_covariance(
 }
 
 template <typename PointT>
-void LidarMarkerLocalizer::save_intensity(
+void LidarMarkerLocalizer::output_detected_marker(
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr & points_msg_ptr, const Pose marker_pose)
 {
   // convert from ROSMsg to PCL
   typename pcl::PointCloud<PointT>::Ptr points_ptr(new pcl::PointCloud<PointT>);
   pcl::fromROSMsg(*points_msg_ptr, *points_ptr);
 
-  typename pcl::PointCloud<PointT>::Ptr marker_points_ptr(new pcl::PointCloud<PointT>);
   pcl::PointCloud<pcl::PointXYZI>::Ptr marker_points_xyzi_ptr(new pcl::PointCloud<pcl::PointXYZI>);
-  std::vector<int> ring_array;
+  std::vector<uint16_t> ring_ids;
 
   // extract marker pointcloud
   for (const auto & point : points_ptr->points) {
-    double xy_distance = std::sqrt(
-      std::pow(point.x - marker_pose.position.x, 2.0) +
-      std::pow(point.y - marker_pose.position.y, 2.0));
-    if (param_.detection.road_surface_mode) {
-      xy_distance = std::sqrt(
-        std::pow(point.x - marker_pose.position.x, 2.0) +
-        std::pow(point.z - marker_pose.position.z, 2.0));
-    }
-    if (xy_distance < param_.radius_for_extracting_marker_pointcloud) {
-      marker_points_ptr->push_back(point);
-
+    const double dx = point.x - marker_pose.position.x;
+    // road surface markers are extracted on the x-z plane, wall markers on the x-y plane
+    const double distance = param_.detection.road_surface_mode
+                              ? std::hypot(dx, point.z - marker_pose.position.z)
+                              : std::hypot(dx, point.y - marker_pose.position.y);
+    if (distance < param_.radius_for_extracting_marker_pointcloud) {
       pcl::PointXYZI xyzi;
       xyzi.x = point.x;
       xyzi.y = point.y;
@@ -500,7 +495,7 @@ void LidarMarkerLocalizer::save_intensity(
       xyzi.intensity = point.intensity;
       marker_points_xyzi_ptr->push_back(xyzi);
 
-      ring_array.push_back(get_ring_id(point));
+      ring_ids.push_back(get_ring_id(point));
     }
   }
 
@@ -534,26 +529,32 @@ void LidarMarkerLocalizer::save_intensity(
 
   pub_marker_pointcloud_->publish(viz_pointcloud_msg);
 
-  if (!param_.enable_save_log) {
-    return;
+  if (param_.enable_save_log) {
+    save_detected_marker_csv(
+      *marker_points_sensor_frame_ptr, ring_ids, points_msg_ptr->header.stamp);
   }
+}
 
+void LidarMarkerLocalizer::save_detected_marker_csv(
+  const pcl::PointCloud<pcl::PointXYZI> & marker_points, const std::vector<uint16_t> & ring_ids,
+  const builtin_interfaces::msg::Time & stamp) const
+{
   // to csv format
   std::stringstream log_message;
   size_t i = 0;
   log_message << "point.position.x,point.position.y,point.position.z,point.intensity,point.ring"
               << std::endl;
-  for (const auto & point : marker_points_sensor_frame_ptr->points) {
+  for (const auto & point : marker_points.points) {
     log_message << point.x;
     log_message << "," << point.y;
     log_message << "," << point.z;
     log_message << "," << point.intensity;
-    log_message << "," << ring_array.at(i++);
+    log_message << "," << ring_ids.at(i++);
     log_message << std::endl;
   }
 
   // create file name
-  const double times_seconds = rclcpp::Time(points_msg_ptr->header.stamp).seconds();
+  const double times_seconds = rclcpp::Time(stamp).seconds();
   double time_integer_tmp = 0.0;
   double time_decimal = std::modf(times_seconds, &time_integer_tmp);
   auto time_integer = static_cast<int64_t>(time_integer_tmp);
@@ -609,9 +610,9 @@ template std::vector<landmark_manager::Landmark> LidarMarkerLocalizer::detect_la
   autoware::point_types::PointXYZIRC>(const PointCloud2::ConstSharedPtr &);
 template std::vector<landmark_manager::Landmark> LidarMarkerLocalizer::detect_landmarks<
   autoware::point_types::PointXYZIRADRT>(const PointCloud2::ConstSharedPtr &);
-template void LidarMarkerLocalizer::save_intensity<autoware::point_types::PointXYZIRC>(
+template void LidarMarkerLocalizer::output_detected_marker<autoware::point_types::PointXYZIRC>(
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr &, const Pose);
-template void LidarMarkerLocalizer::save_intensity<autoware::point_types::PointXYZIRADRT>(
+template void LidarMarkerLocalizer::output_detected_marker<autoware::point_types::PointXYZIRADRT>(
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr &, const Pose);
 
 }  // namespace autoware::lidar_marker_localizer
