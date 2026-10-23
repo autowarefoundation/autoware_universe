@@ -37,7 +37,6 @@
 
 #include "autoware_internal_debug_msgs/msg/float32_multi_array_stamped.hpp"
 #include "autoware_planning_msgs/msg/trajectory.hpp"
-#include "nav_msgs/msg/odometry.hpp"
 
 #include <memory>
 
@@ -65,10 +64,6 @@ private:
     pub_debug_values_;
   // Predicted Trajectory publish
   rclcpp::Publisher<autoware_planning_msgs::msg::Trajectory>::SharedPtr pub_predicted_trajectory_;
-
-  void onTrajectory(const autoware_planning_msgs::msg::Trajectory::ConstSharedPtr msg);
-
-  void onCurrentOdometry(const nav_msgs::msg::Odometry::ConstSharedPtr msg);
 
   std::unique_ptr<PurePursuitLateralController> controller_;
 
