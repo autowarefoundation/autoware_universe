@@ -18,7 +18,6 @@
 #define EIGEN_MPL2_ONLY
 
 #include "autoware/pure_pursuit/log_writer.hpp"
-#include "interpolate.hpp"
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>

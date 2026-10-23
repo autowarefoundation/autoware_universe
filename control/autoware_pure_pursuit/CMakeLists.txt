@@ -16,7 +16,6 @@ include_directories(
 ament_auto_add_library(${PROJECT_NAME}_core SHARED
   src/${PROJECT_NAME}_core/planning_utils.cpp
   src/${PROJECT_NAME}_core/${PROJECT_NAME}.cpp
-  src/${PROJECT_NAME}_core/interpolate.cpp
 )
 
 # autoware_pure_pursuit
