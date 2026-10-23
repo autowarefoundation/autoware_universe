@@ -116,10 +116,9 @@ private:
     const pcl::PointCloud<pcl::PointXYZI> & marker_points, const std::vector<uint16_t> & ring_ids,
     const builtin_interfaces::msg::Time & stamp) const;
 
-  void transform_sensor_measurement(
-    const std::string & source_frame, const std::string & target_frame,
-    const sensor_msgs::msg::PointCloud2::SharedPtr & sensor_points_input_ptr,
-    sensor_msgs::msg::PointCloud2::SharedPtr & sensor_points_output_ptr);
+  void transform_marker_pointcloud(
+    const std::string & target_frame, const std::string & source_frame,
+    const pcl::PointCloud<pcl::PointXYZI> & input, pcl::PointCloud<pcl::PointXYZI> & output);
 
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
   std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
