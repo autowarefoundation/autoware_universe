@@ -29,11 +29,6 @@ target_link_libraries(${PROJECT_NAME}_lateral_controller
   ${PROJECT_NAME}_core
 )
 
-rclcpp_components_register_node(${PROJECT_NAME}_lateral_controller
-  PLUGIN "autoware::pure_pursuit::PurePursuitLateralControllerNode"
-  EXECUTABLE ${PROJECT_NAME}_lateral_controller_exe
-)
-
 if(BUILD_TESTING)
   set(TEST_LATERAL_CONTROLLER_EXE test_pure_pursuit_lateral_controller)
   ament_add_ros_isolated_gtest(${TEST_LATERAL_CONTROLLER_EXE}
@@ -44,6 +39,5 @@ if(BUILD_TESTING)
 endif()
 
 ament_auto_package(INSTALL_TO_SHARE
-  launch
   config
 )
