@@ -15,6 +15,7 @@
 # limitations under the License.
 
 """Inspect live wiring without changing any running node."""
+
 import time
 
 import rclpy

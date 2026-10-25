@@ -19,6 +19,7 @@
 The parser is streaming with respect to JSONL input and caches each candidate geometry only once.
 It writes CSV summaries plus optional cycle PNGs under analysis_candidate_bank/.
 """
+
 from __future__ import annotations
 
 import argparse

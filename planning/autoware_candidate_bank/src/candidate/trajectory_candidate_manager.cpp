@@ -1429,8 +1429,9 @@ double min_clearance_to_object_m(
     return signed_point_to_polygon_clearance_m(center, ego_polygon.value()) - radius;
   }
 
-  if (const auto object_polygon = make_object_polygon(shape, object_pose);
-      object_polygon.has_value()) {
+  if (
+    const auto object_polygon = make_object_polygon(shape, object_pose);
+    object_polygon.has_value()) {
     return signed_polygon_clearance_m(ego_polygon.value(), object_polygon.value());
   }
 

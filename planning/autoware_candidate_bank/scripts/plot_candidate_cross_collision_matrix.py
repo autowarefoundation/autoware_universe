@@ -15,6 +15,7 @@
 # limitations under the License.
 
 """Plot one Candidate Bank E_i x O_j cross-collision matrix from analyzer CSV."""
+
 from __future__ import annotations
 
 import argparse

@@ -20,6 +20,7 @@ Consumes internal_events.jsonl containing candidate_static_clearance events prod
 CANDIDATE_BANK_STATIC_CLEARANCE_DEBUG_V1.  It never recomputes collision clearance;
 all reported distances and witness poses come directly from the C++ evaluator.
 """
+
 from __future__ import annotations
 
 import argparse
