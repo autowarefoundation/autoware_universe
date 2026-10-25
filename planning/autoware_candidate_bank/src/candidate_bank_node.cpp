@@ -325,12 +325,10 @@ public:
       throw std::invalid_argument("invalid bank distance/time limits");
     if (c.mode != "select" && c.mode != "evaluate" && c.mode != "observe" && c.mode != "off")
       throw std::invalid_argument("invalid bank.mode");
-    // CB_SAME_SETTINGS_PARITY_V01_BEGIN
     if (
       c.collision_geometry_mode != "polygon" && c.collision_geometry_mode != "three_circle" &&
       c.collision_geometry_mode != "single_circle")
       throw std::invalid_argument("invalid bank.collision_geometry_mode");
-    // CB_SAME_SETTINGS_PARITY_V01_END
     if (c.traffic_signal_scope_mode != "route_nearest")
       throw std::invalid_argument("only route_nearest signal scope is implemented");
     const auto vehicle = autoware::vehicle_info_utils::VehicleInfoUtils(*this).getVehicleInfo();
@@ -346,8 +344,6 @@ public:
     observation_age_ = declare_parameter<double>("input.max_observation_age_sec", 0.5);
     future_tolerance_ = declare_parameter<double>("input.future_tolerance_sec", 0.1);
     jump_m_ = declare_parameter<double>("input.reset_distance_m", 10.0);
-
-    // CB_TRAJECTORY_TRIGGERED_ADAPTER_V01_BEGIN
     // The raw CandidateTrajectories callback is the only normal decision trigger.
     // Odometry / TrackedObjects / PredictedObjects / TrafficSignals callbacks only
     // write bounded timestamp buffers.  The default one-slot trajectory buffer
@@ -359,7 +355,6 @@ public:
       declare_parameter<int64_t>("input.trajectory_buffer_size", 1),
       "input.trajectory_buffer_size");
     batch_ready_generations_ = declare_parameter<bool>("input.batch_ready_generations", false);
-    // CB_TRAJECTORY_TRIGGERED_ADAPTER_V01_END
 
     // Legacy parameters are kept so existing YAMLs remain loadable.  In trajectory-triggered
     // mode they no longer define the decision clock.
@@ -406,8 +401,6 @@ public:
     markers_ = create_publisher<Markers>("~/debug/markers", 1);
     status_ = create_publisher<std_msgs::msg::String>("~/debug/status", 1);
     matrix_ = create_publisher<std_msgs::msg::String>("~/debug/cross_matrix", 1);
-
-    // CB_TRAJECTORY_TRIGGERED_ADAPTER_V01_BEGIN
     // DiffusionPlanner publishes CandidateTrajectories before PredictedObjects in the same planner
     // cycle.  Therefore this callback processes the previous ready generation, then stores the
     // just-arrived generation.  With a one-slot trajectory buffer this creates one-generation
@@ -462,7 +455,6 @@ public:
     candidates_sub_ = create_subscription<Candidates>(
       "~/input/trajectories", trajectory_qos,
       [this](Candidates::ConstSharedPtr msg) { on_trajectory(msg); });
-    // CB_TRAJECTORY_TRIGGERED_ADAPTER_V01_END
     reset_service_ = create_service<std_srvs::srv::Trigger>(
       "~/reset", [this](
                    const std::shared_ptr<std_srvs::srv::Trigger::Request>,
@@ -752,8 +744,6 @@ private:
       return {};
     }
     if (!batch_ready_generations_ && ready.size() > 1) ready.resize(1);
-
-    // CB_TRAJECTORY_TRIGGERED_LATEST_ODOM_V02
     // Candidate/Prediction generation stamp is for exact association and candidate age.
     // Candidate Bank evaluation uses the newest buffered Odometry available when this
     // trajectory callback runs, matching the previously-working standalone semantics.
@@ -1012,7 +1002,7 @@ private:
 
   void publish_debug(const RuleSnapshot & snapshot, const rclcpp::Time & t)
   {
-    // CB_TRAJECTORY_TRIGGERED_ADAPTER_V01: when debug.publish_markers=false, skip both the
+    // when debug.publish_markers=false, skip both the
     // expensive cross-matrix JSON construction and RViz marker construction.
     if (!debug_) return;
     Json cells = Json::array();
@@ -1111,7 +1101,7 @@ private:
   CandidateBankConfig config_;
   RuleContext context_;
   std::unique_ptr<TrajectoryCandidateManager> manager_;
-  // CB_TRAJECTORY_TRIGGERED_ADAPTER_V01: bounded timestamp buffers.
+  // bounded timestamp buffers.
   std::deque<std::pair<int64_t, Candidates::ConstSharedPtr>> trajectory_buffer_;
   std::deque<std::pair<int64_t, Prediction::ConstSharedPtr>> prediction_buffer_;
   std::deque<std::pair<int64_t, Odometry::ConstSharedPtr>> odometry_buffer_;

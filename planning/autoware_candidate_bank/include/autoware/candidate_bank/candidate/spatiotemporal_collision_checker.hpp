@@ -14,8 +14,6 @@
 
 #ifndef AUTOWARE__CANDIDATE_BANK__CANDIDATE__SPATIOTEMPORAL_COLLISION_CHECKER_HPP_
 #define AUTOWARE__CANDIDATE_BANK__CANDIDATE__SPATIOTEMPORAL_COLLISION_CHECKER_HPP_
-
-// CANDIDATE_BANK_XYT_CROSS_COLLISION_V1_BEGIN
 //
 // This file intentionally contains the complete geometry kernel used by the
 // Candidate Bank cross-scenario evaluator.  Keeping the mathematics in one
@@ -108,9 +106,7 @@ constexpr double kPi = 3.14159265358979323846;
 struct Config
 {
   bool enabled{false};
-  // CANDIDATE_BANK_TOI_V1_BEGIN
   bool compute_toi{true};
-  // CANDIDATE_BANK_TOI_V1_END
 
   // q=(x/D,y/D,t/T).  rho <= conflict_rho is reported as an XYT conflict.
   double spatial_scale_m{1.0};
@@ -128,15 +124,12 @@ struct Config
 
   // Optional additional spatial margin used only in the XYT clearance metric.
   double xyt_spatial_margin_m{0.0};
-
-  // CANDIDATE_BANK_CROSS_FOLLOWING_COST_V1_BEGIN
   // Soft front-clearance risk used by the existing E_i x O_j cross aggregation.
   // This is independent of legacy candidate_bank.safety.dynamic.
   bool following_enabled{false};
   double following_preferred_clearance_m{3.0};
   double following_lateral_margin_m{0.5};
   double following_risk_weight{1.0};
-  // CANDIDATE_BANK_CROSS_FOLLOWING_COST_V1_END
 
   // Reuse Candidate Bank's normal confidence threshold for paired paths.
   double min_prediction_confidence{0.05};
@@ -168,8 +161,6 @@ struct Result
   bool same_time_collision{false};
   bool xyt_conflict{false};
   bool trajectory_conflict{false};
-
-  // CANDIDATE_BANK_TOI_V1_BEGIN
   // Earliest same-time continuous swept-circle contact in CURRENT-relative time.
   // Infinity means no physical collision was found.  The contact threshold uses
   // the same hard margin and adaptive-circle under-coverage compensation as the
@@ -180,18 +171,14 @@ struct Result
   double first_collision_path_confidence{0.0};
   int first_collision_ego_circle_index{-1};
   int first_collision_object_circle_index{-1};
-  // CANDIDATE_BANK_TOI_V1_END
 
   // Minimum nominal circle clearance among trajectory intervals that survive
   // the configured collision/proximity relevance bounds.  Far-away pairs may
   // therefore leave this as infinity.  The hard collision decision additionally
   // uses the known per-body under-coverage compensation described above.
   double min_same_time_clearance_m{std::numeric_limits<double>::infinity()};
-
-  // CANDIDATE_BANK_CROSS_FOLLOWING_COST_V1_BEGIN
   double min_forward_clearance_m{std::numeric_limits<double>::infinity()};
   double following_risk{0.0};
-  // CANDIDATE_BANK_CROSS_FOLLOWING_COST_V1_END
 
   // Minimum body-aware XYT score FOUND inside conflict_rho.  If no relevant
   // branch survives the lower bounds, this remains infinity.
@@ -827,8 +814,6 @@ inline double swept_circle_clearance(
   }
   return std::sqrt(norm2(add(r0, mul(v, alpha)))) - ego_radius - object_radius;
 }
-
-// CANDIDATE_BANK_TOI_V1_BEGIN
 // Earliest contact parameter for two circles whose centres move linearly over
 // the SAME physical time interval.  This solve is called only after minimum
 // clearance has already proved that a collision exists, keeping the added work
@@ -855,7 +840,6 @@ inline std::optional<double> swept_circle_toi_alpha(
   if (root < -kEpsilon || root > 1.0 + kEpsilon) return std::nullopt;
   return std::clamp(root, 0.0, 1.0);
 }
-// CANDIDATE_BANK_TOI_V1_END
 
 inline void evaluate_same_time_circle_pair(
   const CircleTrack & ego, const CircleTrack & object, const int ego_circle_index,
@@ -915,7 +899,6 @@ inline void evaluate_same_time_circle_pair(
       // reported nominal clearance used for parallel-lane analysis.
       if (clearance <= compensated_margin) {
         result.same_time_collision = true;
-        // CANDIDATE_BANK_TOI_V1_BEGIN
         if (config.compute_toi) {
           const double contact_center_distance_m = e.radius_m + o.radius_m + compensated_margin;
           const auto alpha = swept_circle_toi_alpha(e0, e1, o0, o1, contact_center_distance_m);
@@ -931,7 +914,6 @@ inline void evaluate_same_time_circle_pair(
             }
           }
         }
-        // CANDIDATE_BANK_TOI_V1_END
       }
     }
 
@@ -1039,8 +1021,6 @@ inline void evaluate_xyt_circle_pair(
     }
   }
 }
-
-// CANDIDATE_BANK_CROSS_FOLLOWING_COST_V1_BEGIN
 // Evaluate only the longitudinal front corridor. Geometry already prepared for cross collision is
 // reused: first/last ego circles define the vehicle longitudinal axis, and object circle tracks are
 // already age-aligned to current-relative time.
@@ -1140,7 +1120,6 @@ inline void evaluate_following_path(
     std::max(0.0, config.following_risk_weight) * confidence * normalized * normalized, 0.0, 1.0);
   result.following_risk = std::max(result.following_risk, risk);
 }
-// CANDIDATE_BANK_CROSS_FOLLOWING_COST_V1_END
 
 inline Result evaluate(
   const PreparedBodyTrajectory & ego, const PreparedScenario & scenario, const Config & config)
@@ -1168,10 +1147,7 @@ inline Result evaluate(
           scenario_path.confidence, config, result);
       }
     }
-
-    // CANDIDATE_BANK_CROSS_FOLLOWING_COST_V1_BEGIN
     evaluate_following_path(ego, scenario_path.body, scenario_path.confidence, config, result);
-    // CANDIDATE_BANK_CROSS_FOLLOWING_COST_V1_END
 
     // This AABB contains nominal circle radii.  If the two complete spatial
     // sweeps are farther apart than D*rho, this path cannot affect the configured
@@ -1200,7 +1176,5 @@ inline Result evaluate(
 }
 
 }  // namespace autoware::candidate_bank::spatiotemporal_collision
-
-// CANDIDATE_BANK_XYT_CROSS_COLLISION_V1_END
 
 #endif  // AUTOWARE__CANDIDATE_BANK__CANDIDATE__SPATIOTEMPORAL_COLLISION_CHECKER_HPP_

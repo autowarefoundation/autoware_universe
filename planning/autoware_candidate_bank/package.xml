@@ -36,10 +36,6 @@
   <depend>std_srvs</depend>
   <depend>visualization_msgs</depend>
 
-  <exec_depend>python3-matplotlib</exec_depend>
-  <exec_depend>python3-numpy</exec_depend>
-  <exec_depend>rclpy</exec_depend>
-
   <test_depend>ament_cmake_ros</test_depend>
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>autoware_lint_common</test_depend>

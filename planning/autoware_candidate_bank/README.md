@@ -81,18 +81,7 @@ Most parameters are read at startup, so the node has to be restarted after chang
 ros2 launch autoware_candidate_bank candidate_bank.launch.xml
 ```
 
-## Tools
-
-The following offline analysis scripts are installed to `lib/autoware_candidate_bank`.
-
-| Script                                     | Description                                               |
-| ------------------------------------------ | --------------------------------------------------------- |
-| `inspect_graph.py`                         | inspect the live topic wiring around the node             |
-| `analyze_candidate_bank_internal_log.py`   | analyze the internal debug event log                      |
-| `analyze_static_clearance.py`              | visualize static-clearance decisions                      |
-| `plot_candidate_cross_collision_matrix.py` | plot a cross-collision matrix from `~/debug/cross_matrix` |
-
 ## Assumptions / Known limits
 
 - The bank only selects among trajectories given by the DiffusionPlanner.
-- Parts of the implementation are adapted from `autoware_diffusion_planner`. The source mapping is recorded in [UPSTREAM_FILES.json](UPSTREAM_FILES.json).
+- Parts of the implementation are adapted from `autoware_diffusion_planner`.

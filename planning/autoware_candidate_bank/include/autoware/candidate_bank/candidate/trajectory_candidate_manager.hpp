@@ -15,7 +15,7 @@
 #ifndef AUTOWARE__CANDIDATE_BANK__CANDIDATE__TRAJECTORY_CANDIDATE_MANAGER_HPP_
 #define AUTOWARE__CANDIDATE_BANK__CANDIDATE__TRAJECTORY_CANDIDATE_MANAGER_HPP_
 
-// CANDIDATE_BANK_EXPERIMENT_V1_BEGIN: persistent map-frame trajectory bank and evaluator.
+// persistent map-frame trajectory bank and evaluator.
 
 #include "autoware/candidate_bank/candidate/map_conflict_context.hpp"
 
@@ -67,8 +67,6 @@ struct CandidateBankConfig
   // Can be enabled only for explicit A/B experiments.
   bool temporal_alignment_enabled{false};
   double temporal_alignment_search_window_sec{0.75};
-
-  // CANDIDATE_BANK_COLLISION_GEOMETRY_V1_BEGIN
   // Collision checking defaults to the exact oriented polygon model used by the
   // post-0011 experiments. Legacy single_circle/three_circle code is retained
   // only for log compatibility; the standalone node rejects those modes.
@@ -77,11 +75,8 @@ struct CandidateBankConfig
   double ego_length_m{4.8};
   double ego_width_m{1.8};
   double ego_base_link_to_center_m{1.4};
-  // CANDIDATE_BANK_COLLISION_GEOMETRY_V1_END
   double static_velocity_threshold_mps{0.3};
   std::size_t evaluation_stride{1};
-
-  // CANDIDATE_BANK_SOFT_COLLISION_V1_BEGIN
   // `enabled` controls whether obstacle clearance/collision costs are evaluated.
   // `hard_reject_enabled=false` keeps the measurement and soft cost but does NOT
   // set candidate.safe=false when the collision margin is violated.
@@ -93,22 +88,18 @@ struct CandidateBankConfig
   bool dynamic_safety_enabled{false};
   bool dynamic_hard_reject_enabled{true};
   double dynamic_collision_margin_m{0.5};
-  // CANDIDATE_BANK_SOFT_COLLISION_V1_END
   double dynamic_preferred_clearance_m{1.5};
   double dynamic_conflict_distance_m{2.5};
   double dynamic_preferred_time_gap_sec{2.0};
-  // CANDIDATE_BANK_TTC_COST_V1_BEGIN
   // legacy_time_gap: preserve the 0012 all-(ego_i, object_j) accumulated time-gap score.
   // ttc: disable that accumulated score and use one confidence-weighted predicted TTC cost
   //      per predicted path. min_dynamic_time_gap_sec is still measured for diagnostics.
   std::string dynamic_temporal_cost_mode{"ttc"};
   double dynamic_ttc_threshold_sec{1.5};
-  // CANDIDATE_BANK_TTC_COST_V1_END
   double dynamic_time_uncertainty_sec{0.2};
   double velocity_uncertainty_gain{1.0};
   double acceleration_uncertainty_gain{0.25};
   double min_prediction_confidence{0.05};
-  // CANDIDATE_BANK_DYNAMIC_NORMALIZATION_V1_BEGIN
   // normalized_path_max removes trajectory-sampling and PredictedPath-count scaling from
   // dynamic soft cost. legacy_sum reproduces the 0013a accumulation behavior.
   std::string dynamic_soft_cost_aggregation_mode{"normalized_path_max"};
@@ -120,9 +111,6 @@ struct CandidateBankConfig
   // 0.0 preserves the existing "any qualifying path may hard reject" behavior.
   // Set >0 to require at least this raw PredictedPath confidence for hard rejection.
   double dynamic_hard_reject_min_path_confidence{0.0};
-  // CANDIDATE_BANK_DYNAMIC_NORMALIZATION_V1_END
-
-  // CANDIDATE_BANK_XYT_CROSS_COLLISION_V1_BEGIN
   // E_i x O_j cross-scenario trajectory conflict evaluation.
   // 0013a7 behavior remains observer-only unless aggregation apply_* options are enabled.
   bool cross_collision_enabled{false};
@@ -134,27 +122,17 @@ struct CandidateBankConfig
   std::size_t cross_collision_max_circles_per_body{10};
   double cross_collision_hard_collision_margin_m{0.0};
   double cross_collision_xyt_spatial_margin_m{0.0};
-
-  // CANDIDATE_BANK_CROSS_FOLLOWING_COST_V1_BEGIN
   bool cross_following_enabled{false};
   double cross_following_preferred_clearance_m{3.0};
   double cross_following_lateral_margin_m{0.5};
   double cross_following_risk_weight{1.0};
-  // CANDIDATE_BANK_CROSS_FOLLOWING_COST_V1_END
-  // CANDIDATE_BANK_TOI_V1_BEGIN
   bool cross_collision_compute_toi{true};
-  // CANDIDATE_BANK_TOI_V1_END
-  // CANDIDATE_BANK_CONTINGENCY_AGGREGATION_V1_BEGIN
   bool cross_aggregation_enabled{false};
   std::string cross_aggregation_weight_mode{"uniform"};
   bool cross_aggregation_apply_to_score{false};
   bool cross_aggregation_apply_short_horizon_hard_reject{false};
   double cross_aggregation_score_weight{1.0};
   double cross_aggregation_short_horizon_sec{1.5};
-  // CANDIDATE_BANK_CONTINGENCY_AGGREGATION_V1_END
-  // CANDIDATE_BANK_XYT_CROSS_COLLISION_V1_END
-
-  // CANDIDATE_BANK_MAP_CONFLICT_FILTER_V1_BEGIN
   // all: preserve current behavior. map_conflict_reachable: evaluate full dynamic risk only for
   // same-route lead traffic or map competing-lane traffic whose conflict arrival time overlaps.
   std::string dynamic_scope_mode{"all"};
@@ -173,7 +151,6 @@ struct CandidateBankConfig
   bool map_conflict_immediate_guard_enabled{true};
   double map_conflict_immediate_guard_horizon_sec{1.0};
   double map_conflict_immediate_guard_collision_margin_m{0.2};
-  // CANDIDATE_BANK_MAP_CONFLICT_FILTER_V1_END
 
   // Lower total score is better.
   double progress_weight{1.0};
@@ -182,8 +159,6 @@ struct CandidateBankConfig
   double clearance_weight{2.0};
   double dynamic_margin_weight{2.0};
   double comfort_weight{0.2};
-
-  // CANDIDATE_BANK_ROUTE_RULE_COST_V1_BEGIN
   // Reduce route-centerline tracking pressure only where the current route reference itself
   // contains a sharp/index-local discontinuity compared with a short moving-average reference.
   bool route_deviation_adaptive_weight_enabled{false};
@@ -198,18 +173,13 @@ struct CandidateBankConfig
   double traffic_signal_stop_speed_weight{10.0};
   double traffic_signal_stop_velocity_threshold_mps{0.2};
   double traffic_signal_approach_distance_m{2.0};
-  // CANDIDATE_BANK_SIGNAL_OVERRUN_SPEED_HOLD_V1_BEGIN
   // Added Candidate Bank traffic-signal soft terms. Defaults preserve prior behavior.
   double traffic_signal_overrun_weight{0.0};
   double traffic_signal_post_stop_hold_distance_m{0.0};
-  // CANDIDATE_BANK_SIGNAL_OVERRUN_SPEED_HOLD_V1_END
-  // CANDIDATE_BANK_TRAJECTORY_SANITIZATION_V1_BEGIN
   // Crossing is considered at stop_line_s - crossing_margin_m. The speed term remains off.
   double traffic_signal_crossing_margin_m{0.5};
   // When enabled, a point whose route progress decreases copies the previous corrected pose.
   bool clip_backward_points_enabled{false};
-  // CANDIDATE_BANK_TRAJECTORY_SANITIZATION_V1_END
-  // CANDIDATE_BANK_CURRENT_LANE_RULE_V1_BEGIN
   // route_nearest preserves 0012 behavior. current_lane restricts the traffic-light candidates to
   // the lane currently occupied by ego before projecting its stop line onto the route reference.
   std::string traffic_signal_scope_mode{"route_nearest"};
@@ -219,8 +189,6 @@ struct CandidateBankConfig
   double lane_boundary_prolonged_straddling_threshold_sec{1.5};
   double lane_boundary_prolonged_straddling_weight{5.0};
   double lane_boundary_terminal_straddling_penalty{20.0};
-
-  // CANDIDATE_BANK_LANE_CHANGE_DEADLINE_V1_BEGIN
   // Lightweight maneuver semantics layered on top of the existing boundary geometry.
   // The feature is soft-cost only so it remains compatible with the current no-safe fallback.
   bool lane_change_deadline_enabled{false};
@@ -235,11 +203,6 @@ struct CandidateBankConfig
   double lane_change_fallback_stop_penalty{25.0};
   double lane_change_fallback_stop_max_distance_m{8.0};
   double lane_change_target_lane_signal_search_distance_m{80.0};
-  // CANDIDATE_BANK_LANE_CHANGE_DEADLINE_V1_END
-  // CANDIDATE_BANK_CURRENT_LANE_RULE_V1_END
-  // CANDIDATE_BANK_ROUTE_RULE_COST_V1_END
-
-  // CANDIDATE_BANK_SAFETY_TIER_SELECTOR_V1_BEGIN
   // Hierarchical selector: safety class is compared before the normal trajectory score.
   // SAFE candidates use the existing score + hysteresis.  If none are SAFE, CAUTION and then
   // UNSAFE candidates are retained and compared by relative safety rather than returning nullopt.
@@ -250,51 +213,37 @@ struct CandidateBankConfig
   bool safety_tier_use_same_time_collision{true};
   bool safety_tier_use_xyt_conflict_for_caution{true};
   bool safety_tier_prefer_stop_seed_when_non_safe{true};
-  // CANDIDATE_BANK_SAFETY_TIER_SELECTOR_V1_END
 
   // Keep the current selected candidate unless a new one is clearly better.
   bool hysteresis_enabled{true};
   double switch_margin{0.2};
 };
-
-// CANDIDATE_BANK_ROUTE_RULE_COST_V1_BEGIN
-// CANDIDATE_BANK_CURRENT_LANE_RULE_V1_BEGIN
 struct CandidateLaneBoundaryGeometry
 {
   std::int64_t boundary_id{0};
   std::int64_t adjacent_lane_id{0};
   std::vector<geometry_msgs::msg::Point> points_map;
-  // CANDIDATE_BANK_LANE_CHANGE_DEADLINE_V1_BEGIN
   bool adjacent_signal_present{false};
   bool adjacent_signal_stop_active{false};
   double adjacent_signal_stop_line_s_m{0.0};
   double adjacent_signal_target_stop_s_m{0.0};
   std::int64_t adjacent_traffic_light_id{0};
   std::uint8_t adjacent_traffic_light_color{0};
-  // CANDIDATE_BANK_LANE_CHANGE_DEADLINE_V1_END
 };
-// CANDIDATE_BANK_CURRENT_LANE_RULE_V1_END
 
 struct CandidateTrafficRuleContext
 {
-  // CANDIDATE_BANK_CURRENT_LANE_RULE_V1_BEGIN
   std::string traffic_signal_scope_mode{"route_nearest"};
   bool current_lane_valid{false};
   std::int64_t current_lane_id{0};
   std::vector<CandidateLaneBoundaryGeometry> shared_lane_boundaries_map;
-  // CANDIDATE_BANK_CURRENT_LANE_RULE_V1_END
-  // CANDIDATE_BANK_LANE_CHANGE_DEADLINE_V1_BEGIN
   bool traffic_signal_present{false};
-  // CANDIDATE_BANK_LANE_CHANGE_DEADLINE_V1_END
   bool traffic_signal_stop_active{false};
   double traffic_signal_stop_line_s_m{0.0};
   double traffic_signal_target_stop_s_m{0.0};
   std::int64_t traffic_light_id{0};
   std::uint8_t traffic_light_color{0};
 };
-// CANDIDATE_BANK_ROUTE_RULE_COST_V1_END
-
-// CANDIDATE_BANK_COLLISION_GEOMETRY_V1_BEGIN
 struct CandidateCollisionCircleDebug
 {
   geometry_msgs::msg::Point center;
@@ -307,9 +256,6 @@ struct CandidateObstacleGeometryDebug
   std::vector<CandidateCollisionCircleDebug> circles;
   std::vector<geometry_msgs::msg::Point> polygon;
 };
-// CANDIDATE_BANK_COLLISION_GEOMETRY_V1_END
-
-// CANDIDATE_BANK_DYNAMIC_ANALYSIS_V1_BEGIN
 // Per-cycle transient diagnostics for the exact same-time dynamic evaluation.
 // These fields never participate in scoring/selection; they are retained only until select()
 // logs the selected and highest-progress candidates for offline visualization.
@@ -329,9 +275,6 @@ struct CandidateDynamicSampleDebug
   double clearance_soft_cost{0.0};
   bool collision_margin_violated{false};
 };
-
-// CANDIDATE_BANK_MAP_CONFLICT_FILTER_V1_BEGIN
-// CANDIDATE_BANK_MAP_FILTER_VISUALIZATION_V1_BEGIN
 struct CandidateLaneHypothesisDebug
 {
   std::int64_t lane_id{0};
@@ -342,7 +285,6 @@ struct CandidateLaneHypothesisDebug
   double heading_error_deg{std::numeric_limits<double>::infinity()};
   double predicted_path_fit_m{std::numeric_limits<double>::infinity()};
 };
-// CANDIDATE_BANK_MAP_FILTER_VISUALIZATION_V1_END
 
 struct CandidateMapConflictDecisionDebug
 {
@@ -351,12 +293,10 @@ struct CandidateMapConflictDecisionDebug
   bool immediate_guard_only{false};
   bool immediate_guard_violated{false};
   std::string reason{"not_evaluated"};
-  // CANDIDATE_BANK_MAP_FILTER_VISUALIZATION_V1_BEGIN
   bool lane_associated{false};
   std::vector<CandidateLaneHypothesisDebug> lane_hypotheses;
   double motion_heading_yaw{0.0};
   double motion_heading_reliability{0.0};
-  // CANDIDATE_BANK_MAP_FILTER_VISUALIZATION_V1_END
   std::int64_t best_lane_id{0};
   double best_lane_confidence{0.0};
   double best_lane_lateral_distance_m{std::numeric_limits<double>::infinity()};
@@ -372,7 +312,6 @@ struct CandidateMapConflictDecisionDebug
   double ego_arrival_time_sec{std::numeric_limits<double>::infinity()};
   double object_arrival_time_sec{std::numeric_limits<double>::infinity()};
 };
-// CANDIDATE_BANK_MAP_CONFLICT_FILTER_V1_END
 
 struct CandidateDynamicEvaluationDebug
 {
@@ -390,20 +329,16 @@ struct CandidateDynamicEvaluationDebug
   std::size_t worst_sample_index{0};
   std::vector<CandidateDynamicSampleDebug> samples;
 };
-// CANDIDATE_BANK_DYNAMIC_ANALYSIS_V1_END
 
 struct TrajectoryCandidate
 {
   std::uint64_t id{0};
   CandidateSource source{CandidateSource::LEGACY_OUTPUT};
   autoware_planning_msgs::msg::Trajectory trajectory_map;
-
-  // CANDIDATE_BANK_PAIRED_JOINT_PREDICTION_V1_BEGIN
   // Joint prediction generated by the same Diffusion Planner sample as trajectory_map.
   // This is observation-only in 0013a6; safety/score/selection still use the CURRENT prediction.
   autoware_perception_msgs::msg::PredictedObjects paired_predicted_objects;
   std::int64_t paired_prediction_batch_index{0};
-  // CANDIDATE_BANK_PAIRED_JOINT_PREDICTION_V1_END
 
   rclcpp::Time generation_time;
   rclcpp::Time last_evaluation_time;
@@ -411,11 +346,9 @@ struct TrajectoryCandidate
   bool valid{true};
   bool safe{true};
   bool selected{false};
-  // CANDIDATE_BANK_SOFT_COLLISION_V1_BEGIN
   // These flags remain observable even when hard rejection is disabled.
   bool static_collision_margin_violated{false};
   bool dynamic_collision_margin_violated{false};
-  // CANDIDATE_BANK_SOFT_COLLISION_V1_END
   std::size_t live_start_index{0};
 
   double score{0.0};
@@ -424,37 +357,26 @@ struct TrajectoryCandidate
   double min_static_clearance_m{std::numeric_limits<double>::infinity()};
   double min_dynamic_clearance_m{std::numeric_limits<double>::infinity()};
   double min_dynamic_time_gap_sec{std::numeric_limits<double>::infinity()};
-  // CANDIDATE_BANK_TTC_COST_V1_BEGIN
   double min_dynamic_ttc_sec{std::numeric_limits<double>::infinity()};
   double dynamic_clearance_soft_cost{0.0};
   double dynamic_legacy_time_gap_soft_cost{0.0};
   double dynamic_ttc_soft_cost{0.0};
-  // CANDIDATE_BANK_TTC_COST_V1_END
-  // CANDIDATE_BANK_DYNAMIC_NORMALIZATION_V1_BEGIN
   double max_dynamic_closing_rate_mps{0.0};
   double max_dynamic_uncertainty_margin_m{0.0};
   std::size_t dynamic_prediction_path_count{0};
   double dynamic_prediction_confidence_sum{0.0};
-  // CANDIDATE_BANK_DYNAMIC_NORMALIZATION_V1_END
-  // CANDIDATE_BANK_DYNAMIC_ANALYSIS_V1_BEGIN
   CandidateDynamicEvaluationDebug dynamic_analysis_debug;
-  // CANDIDATE_BANK_DYNAMIC_ANALYSIS_V1_END
-  // CANDIDATE_BANK_MAP_CONFLICT_FILTER_V1_BEGIN
   std::vector<CandidateMapConflictDecisionDebug> map_conflict_decisions_debug;
-  // CANDIDATE_BANK_MAP_CONFLICT_FILTER_V1_END
   double path_length_m{0.0};
   double progress_m{0.0};
   double route_deviation_rms_m{0.0};
   double comfort_cost{0.0};
-
-  // CANDIDATE_BANK_ROUTE_RULE_COST_V1_BEGIN
   double route_reference_weight_mean{1.0};
   double route_reference_max_roughness_m{0.0};
   bool traffic_signal_stop_active{false};
   bool traffic_signal_crossed{false};
   double traffic_signal_max_stop_zone_speed_mps{0.0};
   double traffic_rule_cost{0.0};
-  // CANDIDATE_BANK_CURRENT_LANE_RULE_V1_BEGIN
   std::string traffic_signal_scope_mode{"route_nearest"};
   bool current_lane_valid{false};
   std::int64_t current_lane_id{0};
@@ -463,7 +385,6 @@ struct TrajectoryCandidate
   double prolonged_straddling_cost{0.0};
   double terminal_straddling_cost{0.0};
   double lane_boundary_cost{0.0};
-  // CANDIDATE_BANK_LANE_CHANGE_DEADLINE_V1_BEGIN
   bool lane_change_deadline_active{false};
   bool lane_change_attempted{false};
   bool lane_change_completed{false};
@@ -475,30 +396,18 @@ struct TrajectoryCandidate
   double lane_change_completion_s_m{std::numeric_limits<double>::infinity()};
   double lane_change_slack_m{-std::numeric_limits<double>::infinity()};
   double lane_change_deadline_cost{0.0};
-  // CANDIDATE_BANK_LANE_CHANGE_DEADLINE_V1_END
-  // CANDIDATE_BANK_CURRENT_LANE_RULE_V1_END
-  // CANDIDATE_BANK_ROUTE_RULE_COST_V1_END
 
-  // CANDIDATE_BANK_DIAGNOSTICS_V2_BEGIN: weighted score decomposition for logging/analysis.
+  // weighted score decomposition for logging/analysis.
   double score_progress{0.0};
   double score_route_deviation{0.0};
   double score_path_efficiency{0.0};
   double score_static_clearance{0.0};
   double score_dynamic_margin{0.0};
   double score_comfort{0.0};
-  // CANDIDATE_BANK_ROUTE_RULE_COST_V1_BEGIN
   double score_traffic_rules{0.0};
-  // CANDIDATE_BANK_CURRENT_LANE_RULE_V1_BEGIN
   double score_lane_boundary{0.0};
-  // CANDIDATE_BANK_LANE_CHANGE_DEADLINE_V1_BEGIN
   double score_lane_change_deadline{0.0};
-  // CANDIDATE_BANK_LANE_CHANGE_DEADLINE_V1_END
-  // CANDIDATE_BANK_CURRENT_LANE_RULE_V1_END
-  // CANDIDATE_BANK_ROUTE_RULE_COST_V1_END
-  // CANDIDATE_BANK_DIAGNOSTICS_V2_END
 };
-
-// CANDIDATE_BANK_XYT_CROSS_COLLISION_V1_BEGIN
 struct CandidateCrossCollisionResult
 {
   std::uint64_t ego_candidate_id{0};
@@ -509,18 +418,14 @@ struct CandidateCrossCollisionResult
   bool same_time_collision{false};
   bool xyt_conflict{false};
   bool trajectory_conflict{false};
-  // CANDIDATE_BANK_TOI_V1_BEGIN
   double first_collision_time_sec{std::numeric_limits<double>::infinity()};
   std::string first_collision_object_id;
   int first_collision_path_index{-1};
   double first_collision_path_confidence{0.0};
   int first_collision_ego_circle_index{-1};
   int first_collision_object_circle_index{-1};
-  // CANDIDATE_BANK_TOI_V1_END
-  // CANDIDATE_BANK_CONTINGENCY_AGGREGATION_V1_BEGIN
   double scenario_weight{1.0};
   double scenario_risk{0.0};
-  // CANDIDATE_BANK_CONTINGENCY_AGGREGATION_V1_END
   double min_same_time_clearance_m{std::numeric_limits<double>::infinity()};
   double min_xyt_rho{std::numeric_limits<double>::infinity()};
   double xyt_spatial_distance_m{std::numeric_limits<double>::infinity()};
@@ -536,8 +441,6 @@ struct CandidateCrossCollisionResult
   std::size_t valid_path_count{0};
   double evaluation_us{0.0};
 };
-
-// CANDIDATE_BANK_CONTINGENCY_AGGREGATION_V1_BEGIN
 struct CandidateCrossAggregateResult
 {
   std::uint64_t candidate_id{0};
@@ -564,32 +467,19 @@ struct CandidateCrossAggregateResult
   bool selector_score_enabled{false};
   bool selector_hard_rejected{false};
   bool selector_eligible{false};
-  // CANDIDATE_BANK_SAFETY_TIER_SELECTOR_V1_BEGIN
   std::string safety_tier{"DISABLED"};
-  // CANDIDATE_BANK_SAFETY_TIER_SELECTOR_V1_END
   bool shadow_best{false};
 };
-// CANDIDATE_BANK_CONTINGENCY_AGGREGATION_V1_END
-
-// CANDIDATE_BANK_XYT_CROSS_COLLISION_V1_END
 
 struct CandidateBankDebugInfo
 {
   std::string mode{"off"};
-  // CANDIDATE_BANK_COLLISION_GEOMETRY_V1_BEGIN
   std::string collision_geometry_mode{"polygon"};
-  // CANDIDATE_BANK_COLLISION_GEOMETRY_V1_END
-  // CANDIDATE_BANK_TTC_COST_V1_BEGIN
   std::string dynamic_temporal_cost_mode{"ttc"};
-  // CANDIDATE_BANK_TTC_COST_V1_END
-  // CANDIDATE_BANK_DYNAMIC_NORMALIZATION_V1_BEGIN
   std::string dynamic_soft_cost_aggregation_mode{"normalized_path_max"};
   std::string dynamic_uncertainty_mode{"closing_rate"};
-  // CANDIDATE_BANK_DYNAMIC_NORMALIZATION_V1_END
-  // CANDIDATE_BANK_MAP_CONFLICT_FILTER_V1_BEGIN
   std::string dynamic_scope_mode{"all"};
   std::size_t map_conflict_count{0};
-  // CANDIDATE_BANK_MAP_CONFLICT_FILTER_V1_END
   std::size_t bank_size{0};
   std::size_t safe_count{0};
   std::size_t purged_last_cycle{0};
@@ -601,27 +491,18 @@ struct CandidateBankDebugInfo
   double selected_static_clearance_m{std::numeric_limits<double>::infinity()};
   double selected_dynamic_clearance_m{std::numeric_limits<double>::infinity()};
   double selected_dynamic_time_gap_sec{std::numeric_limits<double>::infinity()};
-  // CANDIDATE_BANK_TTC_COST_V1_BEGIN
   double selected_dynamic_ttc_sec{std::numeric_limits<double>::infinity()};
   double selected_dynamic_clearance_soft_cost{0.0};
   double selected_dynamic_legacy_time_gap_soft_cost{0.0};
   double selected_dynamic_ttc_soft_cost{0.0};
-  // CANDIDATE_BANK_TTC_COST_V1_END
-  // CANDIDATE_BANK_DYNAMIC_NORMALIZATION_V1_BEGIN
   double selected_max_dynamic_closing_rate_mps{0.0};
   double selected_max_dynamic_uncertainty_margin_m{0.0};
   std::size_t selected_dynamic_prediction_path_count{0};
   double selected_dynamic_prediction_confidence_sum{0.0};
-  // CANDIDATE_BANK_DYNAMIC_NORMALIZATION_V1_END
-
-  // CANDIDATE_BANK_SOFT_COLLISION_V1_BEGIN
   bool static_hard_reject_enabled{true};
   bool dynamic_hard_reject_enabled{true};
   bool selected_static_collision_margin_violated{false};
   bool selected_dynamic_collision_margin_violated{false};
-  // CANDIDATE_BANK_SOFT_COLLISION_V1_END
-
-  // CANDIDATE_BANK_ROUTE_RULE_COST_V1_BEGIN
   bool route_deviation_adaptive_weight_enabled{false};
   double selected_route_reference_weight_mean{1.0};
   double selected_route_reference_max_roughness_m{0.0};
@@ -629,26 +510,19 @@ struct CandidateBankDebugInfo
   bool selected_traffic_signal_stop_active{false};
   bool selected_traffic_signal_crossed{false};
   double selected_traffic_rule_cost{0.0};
-  // CANDIDATE_BANK_CURRENT_LANE_RULE_V1_BEGIN
   std::string traffic_signal_scope_mode{"route_nearest"};
   bool current_lane_valid{false};
   std::int64_t current_lane_id{0};
   bool lane_boundary_enabled{false};
-  // CANDIDATE_BANK_LANE_CHANGE_DEADLINE_V1_BEGIN
   bool lane_change_deadline_enabled{false};
   std::string lane_change_deadline_activation_mode{"ego_straddling"};
   bool selected_lane_change_deadline_active{false};
   bool selected_lane_change_completed_before_deadline{false};
   bool selected_lane_change_fallback_stop_satisfied{false};
   double selected_lane_change_deadline_cost{0.0};
-  // CANDIDATE_BANK_LANE_CHANGE_DEADLINE_V1_END
   double selected_max_continuous_straddling_sec{0.0};
   bool selected_terminal_straddling{false};
   double selected_lane_boundary_cost{0.0};
-  // CANDIDATE_BANK_CURRENT_LANE_RULE_V1_END
-  // CANDIDATE_BANK_ROUTE_RULE_COST_V1_END
-
-  // CANDIDATE_BANK_DIAGNOSTICS_V2_BEGIN
   std::string newest_source{"none"};
   std::string best_source{"none"};
   std::string selected_source{"none"};
@@ -656,18 +530,13 @@ struct CandidateBankDebugInfo
   bool selection_switched{false};
   bool hysteresis_kept{false};
   std::string selection_reason{"none"};
-  // CANDIDATE_BANK_SAFETY_TIER_SELECTOR_V1_BEGIN
   bool safety_tier_enabled{false};
   std::size_t safety_tier_safe_count{0};
   std::size_t safety_tier_caution_count{0};
   std::size_t safety_tier_unsafe_count{0};
   std::string best_safety_tier{"DISABLED"};
   std::string selected_safety_tier{"DISABLED"};
-  // CANDIDATE_BANK_SAFETY_TIER_SELECTOR_V1_END
-  // CANDIDATE_BANK_DIAGNOSTICS_V2_END
 };
-
-// CB_UNIFIED_TRACE_V01_BEGIN
 void cb_compare_trace_trajectory_event(
   const char * stage, const char * mode, const nav_msgs::msg::Odometry & ego,
   const autoware_planning_msgs::msg::Trajectory & trajectory, const rclcpp::Time & eval_time,
@@ -676,7 +545,6 @@ void cb_compare_trace_trajectory_event(
 void cb_compare_trace_bank_summary(
   const char * phase, const nav_msgs::msg::Odometry & ego, const CandidateBankDebugInfo & debug,
   const rclcpp::Time & eval_time, std::size_t admitted_now = 0);
-// CB_UNIFIED_TRACE_V01_END
 
 class TrajectoryCandidateManager
 {
@@ -720,31 +588,22 @@ public:
 
   const CandidateBankDebugInfo & debug_info() const { return debug_info_; }
 
-  // CANDIDATE_BANK_DIAGNOSTICS_V2_BEGIN: immutable view used only by RViz/log diagnostics.
+  // immutable view used only by RViz/log diagnostics.
   const std::vector<TrajectoryCandidate> & candidates() const { return candidates_; }
-  // CANDIDATE_BANK_DIAGNOSTICS_V2_END
-
-  // CANDIDATE_BANK_XYT_CROSS_COLLISION_V1_BEGIN
   // Last E_i x O_j matrix.  Raw matrix values remain available even when selector connection is
   // enabled.
   const std::vector<CandidateCrossCollisionResult> & cross_collision_results() const
   {
     return cross_collision_results_;
   }
-  // CANDIDATE_BANK_CONTINGENCY_AGGREGATION_V1_BEGIN
   const std::vector<CandidateCrossAggregateResult> & cross_aggregate_results() const
   {
     return cross_aggregate_results_;
   }
-  // CANDIDATE_BANK_CONTINGENCY_AGGREGATION_V1_END
-  // CANDIDATE_BANK_XYT_CROSS_COLLISION_V1_END
-
-  // CANDIDATE_BANK_COLLISION_GEOMETRY_V1_BEGIN
   const std::vector<CandidateObstacleGeometryDebug> & obstacle_geometry_debug() const
   {
     return obstacle_geometry_debug_;
   }
-  // CANDIDATE_BANK_COLLISION_GEOMETRY_V1_END
 
 private:
   struct ObjectHistorySample
@@ -765,28 +624,18 @@ private:
   CandidateBankConfig config_;
   std::vector<TrajectoryCandidate> candidates_;
   CandidateBankDebugInfo debug_info_;
-  // CANDIDATE_BANK_XYT_CROSS_COLLISION_V1_BEGIN
   std::vector<CandidateCrossCollisionResult> cross_collision_results_;
-  // CANDIDATE_BANK_CONTINGENCY_AGGREGATION_V1_BEGIN
   std::vector<CandidateCrossAggregateResult> cross_aggregate_results_;
-  // CANDIDATE_BANK_CONTINGENCY_AGGREGATION_V1_END
-  // CANDIDATE_BANK_XYT_CROSS_COLLISION_V1_END
-  // CANDIDATE_BANK_COLLISION_GEOMETRY_V1_BEGIN
   std::vector<CandidateObstacleGeometryDebug> obstacle_geometry_debug_;
-  // CANDIDATE_BANK_COLLISION_GEOMETRY_V1_END
   std::optional<std::uint64_t> incumbent_id_;
   std::uint64_t next_id_{1};
-  // CANDIDATE_BANK_MAP_FILTER_VISUALIZATION_V1_BEGIN
   bool has_logged_map_context_signature_{false};
   std::uint64_t last_logged_map_context_signature_{0};
-  // CANDIDATE_BANK_MAP_FILTER_VISUALIZATION_V1_END
-  // CANDIDATE_BANK_MAP_CONFLICT_FILTER_V1_BEGIN
   std::unordered_map<std::string, std::deque<ObjectHistorySample>> object_history_;
-  // CANDIDATE_BANK_MAP_CONFLICT_FILTER_V1_END
 };
 
 }  // namespace autoware::candidate_bank
 
-// CANDIDATE_BANK_EXPERIMENT_V1_END: persistent map-frame trajectory bank and evaluator.
+// persistent map-frame trajectory bank and evaluator.
 
 #endif  // AUTOWARE__CANDIDATE_BANK__CANDIDATE__TRAJECTORY_CANDIDATE_MANAGER_HPP_

@@ -93,7 +93,6 @@ void append_array(
   }
   out << ']';
 }
-// CANDIDATE_BANK_DIAGNOSTICS_V2_BEGIN
 void append_double(std::ostringstream & out, const double value)
 {
   if (std::isfinite(value)) {
@@ -107,8 +106,6 @@ void append_bool(std::ostringstream & out, const bool value)
 {
   out << (value ? "true" : "false");
 }
-
-// CANDIDATE_BANK_PAIRED_JOINT_PREDICTION_V1_BEGIN
 template <typename UUIDT>
 std::string uuid_hex(const UUIDT & id)
 {
@@ -129,8 +126,6 @@ double quaternion_yaw(const geometry_msgs::msg::Quaternion & q)
   const double cosy_cosp = 1.0 - 2.0 * (q.y * q.y + q.z * q.z);
   return std::atan2(siny_cosp, cosy_cosp);
 }
-// CANDIDATE_BANK_PAIRED_JOINT_PREDICTION_V1_END
-// CANDIDATE_BANK_DIAGNOSTICS_V2_END
 void write_line(const std::string & line)
 {
   if (!g_config.enabled) return;
@@ -267,8 +262,6 @@ void record_mid_replacement(
       << ",\"beta\":" << beta << ",\"skip_reason\":\"" << escape_json(reason) << "\"}";
   write_line(out.str());
 }
-
-// CANDIDATE_BANK_DIAGNOSTICS_V2_BEGIN
 void record_candidate_generated(
   const std::uint64_t cycle_id, const std::uint64_t candidate_id, const std::string & source,
   const autoware_planning_msgs::msg::Trajectory & trajectory_map)
@@ -295,8 +288,6 @@ void record_candidate_generated(
   out << "]}";
   write_line(out.str());
 }
-
-// CANDIDATE_BANK_PAIRED_JOINT_PREDICTION_V1_BEGIN
 void record_candidate_joint_prediction(
   const std::uint64_t cycle_id, const std::uint64_t candidate_id, const std::string & source,
   const autoware_perception_msgs::msg::PredictedObjects & predicted_objects,
@@ -373,9 +364,6 @@ void record_candidate_joint_prediction(
   out << "]}";
   write_line(out.str());
 }
-// CANDIDATE_BANK_PAIRED_JOINT_PREDICTION_V1_END
-
-// CANDIDATE_BANK_XYT_CROSS_COLLISION_V1_BEGIN
 void record_candidate_cross_collision(
   const std::uint64_t cycle_id, const CandidateCrossCollisionLog & c)
 {
@@ -398,7 +386,6 @@ void record_candidate_cross_collision(
   append_bool(out, c.xyt_conflict);
   out << ",\"trajectory_conflict\":";
   append_bool(out, c.trajectory_conflict);
-  // CANDIDATE_BANK_TOI_V1_BEGIN
   out << ",\"first_collision_time_sec\":";
   append_double(out, c.first_collision_time_sec);
   out << ",\"first_collision_object_id\":\"" << escape_json(c.first_collision_object_id) << "\""
@@ -407,13 +394,10 @@ void record_candidate_cross_collision(
   append_double(out, c.first_collision_path_confidence);
   out << ",\"first_collision_ego_circle_index\":" << c.first_collision_ego_circle_index
       << ",\"first_collision_object_circle_index\":" << c.first_collision_object_circle_index;
-  // CANDIDATE_BANK_TOI_V1_END
-  // CANDIDATE_BANK_CONTINGENCY_AGGREGATION_V1_BEGIN
   out << ",\"scenario_weight\":";
   append_double(out, c.scenario_weight);
   out << ",\"scenario_risk\":";
   append_double(out, c.scenario_risk);
-  // CANDIDATE_BANK_CONTINGENCY_AGGREGATION_V1_END
   out << ",\"min_same_time_clearance_m\":";
   append_double(out, c.min_same_time_clearance_m);
   out << ",\"min_xyt_rho\":";
@@ -449,8 +433,6 @@ void record_candidate_cross_collision(
   out << '}';
   write_line(out.str());
 }
-
-// CANDIDATE_BANK_CONTINGENCY_AGGREGATION_V1_BEGIN
 void record_candidate_cross_aggregate(
   const std::uint64_t cycle_id, const CandidateCrossAggregateLog & a)
 {
@@ -510,17 +492,12 @@ void record_candidate_cross_aggregate(
   append_bool(out, a.selector_hard_rejected);
   out << ",\"selector_eligible\":";
   append_bool(out, a.selector_eligible);
-  // CANDIDATE_BANK_SAFETY_TIER_SELECTOR_V1_BEGIN
   out << ",\"safety_tier\":\"" << escape_json(a.safety_tier) << "\"";
-  // CANDIDATE_BANK_SAFETY_TIER_SELECTOR_V1_END
   out << ",\"shadow_best\":";
   append_bool(out, a.shadow_best);
   out << '}';
   write_line(out.str());
 }
-// CANDIDATE_BANK_CONTINGENCY_AGGREGATION_V1_END
-
-// CANDIDATE_BANK_XYT_CROSS_COLLISION_V1_END
 
 void record_candidate_observation(
   const std::uint64_t cycle_id, const double ego_x, const double ego_y, const double ego_yaw,
@@ -553,11 +530,9 @@ void record_candidate_observation(
     if (i != 0) out << ',';
     const auto & object = obstacles[i];
     out << '{';
-    // CANDIDATE_BANK_DYNAMIC_ANALYSIS_V1_BEGIN
     out << "\"object_id\":\"" << escape_json(object.object_id) << "\"";
     out << ",\"x\":";
     append_double(out, object.x);
-    // CANDIDATE_BANK_DYNAMIC_ANALYSIS_V1_END
     out << ",\"y\":";
     append_double(out, object.y);
     out << ",\"radius_m\":";
@@ -602,8 +577,6 @@ void record_candidate_observation(
   out << "]}";
   write_line(out.str());
 }
-
-// CANDIDATE_BANK_MAP_FILTER_VISUALIZATION_V1_BEGIN
 void record_candidate_map_context(
   const std::uint64_t cycle_id, const CandidateMapContextLog & context)
 {
@@ -661,9 +634,6 @@ void record_candidate_map_context(
   out << "]}";
   write_line(out.str());
 }
-// CANDIDATE_BANK_MAP_FILTER_VISUALIZATION_V1_END
-
-// CANDIDATE_BANK_STATIC_CLEARANCE_DEBUG_V1_BEGIN
 namespace
 {
 void append_static_clearance_witness(
@@ -756,7 +726,6 @@ void record_candidate_static_clearance(
   out << '}';
   write_line(out.str());
 }
-// CANDIDATE_BANK_STATIC_CLEARANCE_DEBUG_V1_END
 
 void record_candidate_evaluation(const std::uint64_t cycle_id, const CandidateEvaluationLog & e)
 {
@@ -770,12 +739,10 @@ void record_candidate_evaluation(const std::uint64_t cycle_id, const CandidateEv
   append_bool(out, e.valid);
   out << ",\"safe\":";
   append_bool(out, e.safe);
-  // CANDIDATE_BANK_SOFT_COLLISION_V1_BEGIN
   out << ",\"static_collision_margin_violated\":";
   append_bool(out, e.static_collision_margin_violated);
   out << ",\"dynamic_collision_margin_violated\":";
   append_bool(out, e.dynamic_collision_margin_violated);
-  // CANDIDATE_BANK_SOFT_COLLISION_V1_END
   out << ",\"live_start_index\":" << e.live_start_index;
   out << ",\"age_sec\":";
   append_double(out, e.age_sec);
@@ -789,7 +756,6 @@ void record_candidate_evaluation(const std::uint64_t cycle_id, const CandidateEv
   append_double(out, e.progress_m);
   out << ",\"route_deviation_rms_m\":";
   append_double(out, e.route_deviation_rms_m);
-  // CANDIDATE_BANK_ROUTE_RULE_COST_V1_BEGIN
   out << ",\"route_reference_weight_mean\":";
   append_double(out, e.route_reference_weight_mean);
   out << ",\"route_reference_max_roughness_m\":";
@@ -802,7 +768,6 @@ void record_candidate_evaluation(const std::uint64_t cycle_id, const CandidateEv
   append_double(out, e.traffic_signal_max_stop_zone_speed_mps);
   out << ",\"traffic_rule_cost\":";
   append_double(out, e.traffic_rule_cost);
-  // CANDIDATE_BANK_CURRENT_LANE_RULE_V1_BEGIN
   out << ",\"traffic_signal_scope_mode\":\"" << escape_json(e.traffic_signal_scope_mode) << "\"";
   out << ",\"current_lane_valid\":";
   append_bool(out, e.current_lane_valid);
@@ -817,7 +782,6 @@ void record_candidate_evaluation(const std::uint64_t cycle_id, const CandidateEv
   append_double(out, e.terminal_straddling_cost);
   out << ",\"lane_boundary_cost\":";
   append_double(out, e.lane_boundary_cost);
-  // CANDIDATE_BANK_LANE_CHANGE_DEADLINE_V1_BEGIN
   out << ",\"lane_change_deadline_active\":";
   append_bool(out, e.lane_change_deadline_active);
   out << ",\"lane_change_attempted\":";
@@ -838,9 +802,6 @@ void record_candidate_evaluation(const std::uint64_t cycle_id, const CandidateEv
   append_double(out, e.lane_change_slack_m);
   out << ",\"lane_change_deadline_cost\":";
   append_double(out, e.lane_change_deadline_cost);
-  // CANDIDATE_BANK_LANE_CHANGE_DEADLINE_V1_END
-  // CANDIDATE_BANK_CURRENT_LANE_RULE_V1_END
-  // CANDIDATE_BANK_ROUTE_RULE_COST_V1_END
   out << ",\"comfort_cost\":";
   append_double(out, e.comfort_cost);
   out << ",\"min_static_clearance_m\":";
@@ -849,7 +810,6 @@ void record_candidate_evaluation(const std::uint64_t cycle_id, const CandidateEv
   append_double(out, e.min_dynamic_clearance_m);
   out << ",\"min_dynamic_time_gap_sec\":";
   append_double(out, e.min_dynamic_time_gap_sec);
-  // CANDIDATE_BANK_TTC_COST_V1_BEGIN
   out << ",\"dynamic_temporal_cost_mode\":\"" << escape_json(e.dynamic_temporal_cost_mode) << "\"";
   out << ",\"min_dynamic_ttc_sec\":";
   append_double(out, e.min_dynamic_ttc_sec);
@@ -859,8 +819,6 @@ void record_candidate_evaluation(const std::uint64_t cycle_id, const CandidateEv
   append_double(out, e.dynamic_legacy_time_gap_soft_cost);
   out << ",\"dynamic_ttc_soft_cost\":";
   append_double(out, e.dynamic_ttc_soft_cost);
-  // CANDIDATE_BANK_TTC_COST_V1_END
-  // CANDIDATE_BANK_DYNAMIC_NORMALIZATION_V1_BEGIN
   out << ",\"dynamic_soft_cost_aggregation_mode\":\""
       << escape_json(e.dynamic_soft_cost_aggregation_mode) << "\"";
   out << ",\"dynamic_uncertainty_mode\":\"" << escape_json(e.dynamic_uncertainty_mode) << "\"";
@@ -871,7 +829,6 @@ void record_candidate_evaluation(const std::uint64_t cycle_id, const CandidateEv
   out << ",\"dynamic_prediction_path_count\":" << e.dynamic_prediction_path_count;
   out << ",\"dynamic_prediction_confidence_sum\":";
   append_double(out, e.dynamic_prediction_confidence_sum);
-  // CANDIDATE_BANK_DYNAMIC_NORMALIZATION_V1_END
   out << ",\"score\":";
   append_double(out, e.score);
   out << ",\"score_terms\":{";
@@ -887,23 +844,15 @@ void record_candidate_evaluation(const std::uint64_t cycle_id, const CandidateEv
   append_double(out, e.score_dynamic_margin);
   out << ",\"comfort\":";
   append_double(out, e.score_comfort);
-  // CANDIDATE_BANK_ROUTE_RULE_COST_V1_BEGIN
   out << ",\"traffic_rules\":";
   append_double(out, e.score_traffic_rules);
-  // CANDIDATE_BANK_CURRENT_LANE_RULE_V1_BEGIN
   out << ",\"lane_boundary\":";
   append_double(out, e.score_lane_boundary);
-  // CANDIDATE_BANK_LANE_CHANGE_DEADLINE_V1_BEGIN
   out << ",\"lane_change_deadline\":";
   append_double(out, e.score_lane_change_deadline);
-  // CANDIDATE_BANK_LANE_CHANGE_DEADLINE_V1_END
-  // CANDIDATE_BANK_CURRENT_LANE_RULE_V1_END
-  // CANDIDATE_BANK_ROUTE_RULE_COST_V1_END
   out << "}}";
   write_line(out.str());
 }
-
-// CANDIDATE_BANK_DYNAMIC_ANALYSIS_V1_BEGIN
 void record_candidate_dynamic_analysis(
   const std::uint64_t cycle_id, const CandidateDynamicAnalysisLog & e)
 {
@@ -1003,7 +952,6 @@ void record_candidate_dynamic_analysis(
     out << ",\"immediate_guard_violated\":";
     append_bool(out, d.immediate_guard_violated);
     out << ",\"reason\":\"" << escape_json(d.reason) << "\"";
-    // CANDIDATE_BANK_MAP_FILTER_VISUALIZATION_V1_BEGIN
     out << ",\"lane_associated\":";
     append_bool(out, d.lane_associated);
     out << ",\"motion_heading_yaw\":";
@@ -1031,7 +979,6 @@ void record_candidate_dynamic_analysis(
       out << '}';
     }
     out << ']';
-    // CANDIDATE_BANK_MAP_FILTER_VISUALIZATION_V1_END
     out << ",\"best_lane_id\":" << d.best_lane_id;
     out << ",\"best_lane_confidence\":";
     append_double(out, d.best_lane_confidence);
@@ -1061,7 +1008,6 @@ void record_candidate_dynamic_analysis(
   out << "]}";
   write_line(out.str());
 }
-// CANDIDATE_BANK_DYNAMIC_ANALYSIS_V1_END
 
 void record_candidate_purged(
   const std::uint64_t cycle_id, const std::uint64_t candidate_id, const std::string & source,
@@ -1103,10 +1049,8 @@ void record_candidate_selection(
   append_double(out, best_score);
   out << ",\"selected_score\":";
   append_double(out, selected_score);
-  // CANDIDATE_BANK_SAFETY_TIER_SELECTOR_V1_BEGIN
   out << ",\"best_safety_tier\":\"" << escape_json(best_safety_tier) << "\"";
   out << ",\"selected_safety_tier\":\"" << escape_json(selected_safety_tier) << "\"";
-  // CANDIDATE_BANK_SAFETY_TIER_SELECTOR_V1_END
   out << '}';
   write_line(out.str());
 }
@@ -1123,8 +1067,6 @@ void record_candidate_seed_selection(
       << ",\"effective_reference_source\":\"" << escape_json(effective_reference_source) << "\"}";
   write_line(out.str());
 }
-
-// CANDIDATE_BANK_OUTPUT_BRIDGE_V1_BEGIN
 void record_candidate_output_handoff(
   const std::uint64_t cycle_id, const bool bridge_applied, const std::uint64_t selected_id,
   const std::string & selected_source, const std::string & reason,
@@ -1164,6 +1106,4 @@ void record_candidate_output_handoff(
   out << "}";
   write_line(out.str());
 }
-// CANDIDATE_BANK_OUTPUT_BRIDGE_V1_END
-// CANDIDATE_BANK_DIAGNOSTICS_V2_END
 }  // namespace autoware::candidate_bank::internal_debug

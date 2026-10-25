@@ -14,15 +14,12 @@
 
 #include "autoware/candidate_bank/candidate/trajectory_candidate_manager.hpp"
 
-// CANDIDATE_BANK_XYT_CROSS_COLLISION_V1_BEGIN
 #include "autoware/candidate_bank/candidate/spatiotemporal_collision_checker.hpp"
-// CANDIDATE_BANK_XYT_CROSS_COLLISION_V1_END
 
-// CANDIDATE_BANK_DIAGNOSTICS_V2_BEGIN: reuse the existing internal JSONL logger.
+// reuse the existing internal JSONL logger.
 #include "autoware/candidate_bank/internal_debug/internal_debug_logger.hpp"
-// CANDIDATE_BANK_DIAGNOSTICS_V2_END
 
-// CANDIDATE_BANK_EXPERIMENT_V1_BEGIN: concrete staged evaluation implementation.
+// concrete staged evaluation implementation.
 // NOTE: Candidate Bank still uses circle-based footprint distance, but BOUNDING_BOX
 // obstacles are refined to a three-circle conservative approximation by 0010.
 // Replacing it with oriented polygon distance later does not require changing DiffusionPlannerCore.
@@ -31,33 +28,28 @@
 
 #include <autoware_perception_msgs/msg/shape.hpp>
 
-// CANDIDATE_BANK_COLLISION_GEOMETRY_V1_BEGIN
 #include <boost/geometry.hpp>
 #include <boost/geometry/geometries/multi_point.hpp>
 #include <boost/geometry/geometries/point_xy.hpp>
 #include <boost/geometry/geometries/polygon.hpp>
 #include <boost/geometry/geometries/segment.hpp>
-// CANDIDATE_BANK_COLLISION_GEOMETRY_V1_END
 
 #include <algorithm>
 #include <array>
 #include <chrono>
 #include <cmath>
-#include <limits>
-#include <memory>
-#include <numeric>
-#include <set>
-#include <string>
-#include <utility>
-#include <vector>
-
-// CB_COMPARE_TRACE_V1_BEGIN
 #include <cstdlib>
 #include <fstream>
 #include <iomanip>
+#include <limits>
+#include <memory>
 #include <mutex>
+#include <numeric>
+#include <set>
 #include <sstream>
-// CB_COMPARE_TRACE_V1_END
+#include <string>
+#include <utility>
+#include <vector>
 
 namespace autoware::candidate_bank
 {
@@ -74,8 +66,6 @@ using geometry_msgs::msg::Point;
 using geometry_msgs::msg::Pose;
 
 constexpr double kEpsilon = 1.0e-6;
-
-// CB_COMPARE_TRACE_V1_BEGIN
 bool cb_ct_on()
 {
   static const bool v = []() {
@@ -233,9 +223,6 @@ void cb_ct_select(
   o << '}';
   cb_ct_write(o.str());
 }
-// CB_COMPARE_TRACE_V1_END
-
-// CB_UNIFIED_TRACE_V01_BEGIN
 void cb_ct_candidate_detail(
   const TrajectoryCandidate & c, const nav_msgs::msg::Odometry & ego, const rclcpp::Time & now)
 {
@@ -334,9 +321,6 @@ void cb_ct_cross_aggregate(const CandidateCrossAggregateResult & a, const rclcpp
     << ",\"safety_tier\":\"" << a.safety_tier << "\"}";
   cb_ct_write(o.str());
 }
-// CB_UNIFIED_TRACE_V01_END
-
-// CANDIDATE_BANK_DIAGNOSTICS_V2_BEGIN
 const char * candidate_source_name(const CandidateSource source)
 {
   switch (source) {
@@ -357,7 +341,6 @@ const char * candidate_source_name(const CandidateSource source)
   }
   return "unknown";
 }
-// CANDIDATE_BANK_XYT_CROSS_COLLISION_V1_BEGIN
 spatiotemporal_collision::Config make_cross_collision_config(const CandidateBankConfig & config)
 {
   spatiotemporal_collision::Config out;
@@ -370,15 +353,11 @@ spatiotemporal_collision::Config make_cross_collision_config(const CandidateBank
   out.max_circles_per_body = config.cross_collision_max_circles_per_body;
   out.hard_collision_margin_m = config.cross_collision_hard_collision_margin_m;
   out.xyt_spatial_margin_m = config.cross_collision_xyt_spatial_margin_m;
-  // CANDIDATE_BANK_CROSS_FOLLOWING_COST_V1_BEGIN
   out.following_enabled = config.cross_following_enabled;
   out.following_preferred_clearance_m = config.cross_following_preferred_clearance_m;
   out.following_lateral_margin_m = config.cross_following_lateral_margin_m;
   out.following_risk_weight = config.cross_following_risk_weight;
-  // CANDIDATE_BANK_CROSS_FOLLOWING_COST_V1_END
-  // CANDIDATE_BANK_TOI_V1_BEGIN
   out.compute_toi = config.cross_collision_compute_toi;
-  // CANDIDATE_BANK_TOI_V1_END
   out.min_prediction_confidence = config.min_prediction_confidence;
   out.ego_length_m = config.ego_length_m;
   out.ego_width_m = config.ego_width_m;
@@ -433,15 +412,12 @@ std::vector<CandidateCrossCollisionResult> evaluate_and_log_cross_collision_matr
       matrix_entry.same_time_collision = result.same_time_collision;
       matrix_entry.xyt_conflict = result.xyt_conflict;
       matrix_entry.trajectory_conflict = result.trajectory_conflict;
-      // CANDIDATE_BANK_TOI_V1_BEGIN
       matrix_entry.first_collision_time_sec = result.first_collision_time_sec;
       matrix_entry.first_collision_object_id = result.first_collision_object_id;
       matrix_entry.first_collision_path_index = result.first_collision_path_index;
       matrix_entry.first_collision_path_confidence = result.first_collision_path_confidence;
       matrix_entry.first_collision_ego_circle_index = result.first_collision_ego_circle_index;
       matrix_entry.first_collision_object_circle_index = result.first_collision_object_circle_index;
-      // CANDIDATE_BANK_TOI_V1_END
-      // CANDIDATE_BANK_CONTINGENCY_AGGREGATION_V1_BEGIN
       matrix_entry.scenario_weight = result.valid ? 1.0 : 0.0;
       if (result.same_time_collision) {
         matrix_entry.scenario_risk = 1.0;
@@ -451,15 +427,12 @@ std::vector<CandidateCrossCollisionResult> evaluate_and_log_cross_collision_matr
           1.0 - result.min_xyt_rho / std::max(bank_config.cross_collision_conflict_rho, 1.0e-9));
         matrix_entry.scenario_risk = normalized * normalized;
       }
-      // CANDIDATE_BANK_CROSS_FOLLOWING_COST_V1_BEGIN
       if (bank_config.cross_following_enabled) {
         // Keep scenario_risk in [0,1]. Collision/XYT and following-distance risk are alternative
         // reasons to disfavor the same E_i x O_j cell, so take the stronger one rather than
         // summing.
         matrix_entry.scenario_risk = std::max(matrix_entry.scenario_risk, result.following_risk);
       }
-      // CANDIDATE_BANK_CROSS_FOLLOWING_COST_V1_END
-      // CANDIDATE_BANK_CONTINGENCY_AGGREGATION_V1_END
       matrix_entry.min_same_time_clearance_m = result.min_same_time_clearance_m;
       matrix_entry.min_xyt_rho = result.min_xyt_rho;
       matrix_entry.xyt_spatial_distance_m = result.xyt_spatial_distance_m;
@@ -488,18 +461,14 @@ std::vector<CandidateCrossCollisionResult> evaluate_and_log_cross_collision_matr
       log.same_time_collision = result.same_time_collision;
       log.xyt_conflict = result.xyt_conflict;
       log.trajectory_conflict = result.trajectory_conflict;
-      // CANDIDATE_BANK_TOI_V1_BEGIN
       log.first_collision_time_sec = result.first_collision_time_sec;
       log.first_collision_object_id = result.first_collision_object_id;
       log.first_collision_path_index = result.first_collision_path_index;
       log.first_collision_path_confidence = result.first_collision_path_confidence;
       log.first_collision_ego_circle_index = result.first_collision_ego_circle_index;
       log.first_collision_object_circle_index = result.first_collision_object_circle_index;
-      // CANDIDATE_BANK_TOI_V1_END
-      // CANDIDATE_BANK_CONTINGENCY_AGGREGATION_V1_BEGIN
       log.scenario_weight = matrix_entry.scenario_weight;
       log.scenario_risk = matrix_entry.scenario_risk;
-      // CANDIDATE_BANK_CONTINGENCY_AGGREGATION_V1_END
       log.min_same_time_clearance_m = result.min_same_time_clearance_m;
       log.min_xyt_rho = result.min_xyt_rho;
       log.xyt_spatial_distance_m = result.xyt_spatial_distance_m;
@@ -530,8 +499,6 @@ std::vector<CandidateCrossCollisionResult> evaluate_and_log_cross_collision_matr
   }
   return matrix;
 }
-
-// CANDIDATE_BANK_CONTINGENCY_AGGREGATION_V1_BEGIN
 const CandidateCrossAggregateResult * find_cross_aggregate(
   const std::vector<CandidateCrossAggregateResult> & aggregates, const std::uint64_t candidate_id)
 {
@@ -540,8 +507,6 @@ const CandidateCrossAggregateResult * find_cross_aggregate(
   });
   return it == aggregates.end() ? nullptr : &(*it);
 }
-
-// CANDIDATE_BANK_SAFETY_TIER_SELECTOR_V1_BEGIN
 enum class CandidateSafetyTier : int {
   SAFE = 0,
   CAUTION = 1,
@@ -637,7 +602,6 @@ bool candidate_is_preferred(
   const TrajectoryCandidate & lhs, const TrajectoryCandidate & rhs,
   const std::vector<CandidateCrossAggregateResult> & aggregates,
   const CandidateBankConfig & config);
-// CANDIDATE_BANK_SAFETY_TIER_SELECTOR_V1_END
 
 double selector_effective_score(
   const TrajectoryCandidate & candidate,
@@ -655,11 +619,9 @@ bool selector_effective_eligible(
   const TrajectoryCandidate & candidate,
   const std::vector<CandidateCrossAggregateResult> & aggregates, const CandidateBankConfig & config)
 {
-  // CANDIDATE_BANK_SAFETY_TIER_SELECTOR_V1_BEGIN
   // Safety-tier mode never drops an otherwise valid trajectory solely because all candidates
   // violate a margin.  This prevents the old all-rejected -> nullopt -> raw Diffusion fallback.
   if (config.safety_tier_enabled) return candidate.valid;
-  // CANDIDATE_BANK_SAFETY_TIER_SELECTOR_V1_END
   if (!candidate.valid || !candidate.safe) return false;
   if (
     !config.cross_aggregation_enabled ||
@@ -669,8 +631,6 @@ bool selector_effective_eligible(
   const auto * aggregate = find_cross_aggregate(aggregates, candidate.id);
   return aggregate == nullptr || !aggregate->short_horizon_hard_reject;
 }
-
-// CANDIDATE_BANK_SAFETY_TIER_SELECTOR_V1_BEGIN
 bool candidate_is_preferred(
   const TrajectoryCandidate & lhs, const TrajectoryCandidate & rhs,
   const std::vector<CandidateCrossAggregateResult> & aggregates, const CandidateBankConfig & config)
@@ -726,7 +686,6 @@ bool candidate_is_preferred(
   return selector_effective_score(lhs, aggregates, config) <
          selector_effective_score(rhs, aggregates, config);
 }
-// CANDIDATE_BANK_SAFETY_TIER_SELECTOR_V1_END
 
 std::vector<CandidateCrossAggregateResult> aggregate_cross_collision(
   const std::vector<TrajectoryCandidate> & candidates,
@@ -828,12 +787,10 @@ void finalize_and_log_cross_aggregates(
     aggregate.selector_effective_score = config.cross_aggregation_apply_to_score
                                            ? aggregate.score_after_cross
                                            : aggregate.score_before_cross;
-    // CANDIDATE_BANK_SAFETY_TIER_SELECTOR_V1_BEGIN
     aggregate.safety_tier =
       config.safety_tier_enabled
         ? safety_tier_name(assess_candidate_safety(*it, aggregates, config).tier)
         : "DISABLED";
-    // CANDIDATE_BANK_SAFETY_TIER_SELECTOR_V1_END
     aggregate.shadow_best = false;
   }
 
@@ -892,18 +849,11 @@ void finalize_and_log_cross_aggregates(
     log.selector_score_enabled = aggregate.selector_score_enabled;
     log.selector_hard_rejected = aggregate.selector_hard_rejected;
     log.selector_eligible = aggregate.selector_eligible;
-    // CANDIDATE_BANK_SAFETY_TIER_SELECTOR_V1_BEGIN
     log.safety_tier = aggregate.safety_tier;
-    // CANDIDATE_BANK_SAFETY_TIER_SELECTOR_V1_END
     log.shadow_best = aggregate.shadow_best;
     internal_debug::record_candidate_cross_aggregate(internal_debug::current_cycle_id(), log);
   }
 }
-// CANDIDATE_BANK_CONTINGENCY_AGGREGATION_V1_END
-
-// CANDIDATE_BANK_XYT_CROSS_COLLISION_V1_END
-
-// CANDIDATE_BANK_DYNAMIC_ANALYSIS_V1_BEGIN
 std::string tracked_object_id_string(const TrackedObject & object)
 {
   static constexpr char kHex[] = "0123456789abcdef";
@@ -916,8 +866,6 @@ std::string tracked_object_id_string(const TrackedObject & object)
   }
   return out;
 }
-// CANDIDATE_BANK_DYNAMIC_ANALYSIS_V1_END
-// CANDIDATE_BANK_DIAGNOSTICS_V2_END
 
 double distance_xy(const Point & a, const Point & b)
 {
@@ -1048,8 +996,6 @@ double path_length_m(const Trajectory & trajectory, const std::size_t start_inde
 
 double yaw_from_pose(const Pose & pose);
 double tracked_speed_mps(const TrackedObject & object);
-
-// CANDIDATE_BANK_COLLISION_GEOMETRY_V1_BEGIN
 //
 // Runtime-selectable geometry used by both collision-margin checks and soft
 // clearance cost:
@@ -1440,7 +1386,6 @@ double min_clearance_to_object_m(
   const double radius = legacy_object_radius_m(shape);
   return signed_point_to_polygon_clearance_m(center, ego_polygon.value()) - radius;
 }
-// CANDIDATE_BANK_COLLISION_GEOMETRY_V1_END
 
 double tracked_speed_mps(const TrackedObject & object)
 {
@@ -1512,9 +1457,7 @@ struct ReferenceProjection
 {
   double s{0.0};
   double distance{std::numeric_limits<double>::infinity()};
-  // CANDIDATE_BANK_ROUTE_RULE_COST_V1_BEGIN
   std::size_t segment_index{0};
-  // CANDIDATE_BANK_ROUTE_RULE_COST_V1_END
 };
 
 std::optional<ReferenceProjection> project_to_reference(
@@ -1550,15 +1493,11 @@ std::optional<ReferenceProjection> project_to_reference(
     if (distance < best.distance) {
       best.distance = distance;
       best.s = cumulative[i - 1] + ratio * std::sqrt(length_squared);
-      // CANDIDATE_BANK_ROUTE_RULE_COST_V1_BEGIN
       best.segment_index = i;
-      // CANDIDATE_BANK_ROUTE_RULE_COST_V1_END
     }
   }
   return std::isfinite(best.distance) ? std::make_optional(best) : std::nullopt;
 }
-
-// CANDIDATE_BANK_ROUTE_RULE_COST_V1_BEGIN
 struct RouteDeviationResult
 {
   double rms_m{0.0};
@@ -1658,7 +1597,6 @@ RouteDeviationResult route_deviation(
     sample_count > 0 ? sample_weight_sum / static_cast<double>(sample_count) : 1.0;
   return result;
 }
-// CANDIDATE_BANK_ROUTE_RULE_COST_V1_END
 
 double route_progress_m(
   const Trajectory & candidate, const std::size_t start_index,
@@ -1678,8 +1616,6 @@ double route_progress_m(
   return distance_xy(
     candidate.points[start_index].pose.position, candidate.points.back().pose.position);
 }
-
-// CANDIDATE_BANK_TRAJECTORY_SANITIZATION_V1_BEGIN
 // Temporary forward-only sanitizer. Candidate geometry is position-primary downstream, so when
 // route progress would decrease, hold the pose at the previous corrected point. time_from_start
 // and kinematic fields are intentionally preserved; the downstream optimizer derives kinematics
@@ -1710,9 +1646,6 @@ std::size_t clip_backward_points_in_place(
   }
   return clipped_count;
 }
-// CANDIDATE_BANK_TRAJECTORY_SANITIZATION_V1_END
-
-// CANDIDATE_BANK_ROUTE_RULE_COST_V1_BEGIN
 struct TrafficRuleEvaluation
 {
   bool signal_stop_active{false};
@@ -1737,9 +1670,7 @@ TrafficRuleEvaluation evaluate_traffic_rules(
   result.signal_stop_active = true;
   constexpr double kCrossingToleranceM = 0.05;
   double max_speed_excess_mps = 0.0;
-  // CANDIDATE_BANK_SIGNAL_OVERRUN_SPEED_HOLD_V1_BEGIN
   double max_stop_line_overrun_m = 0.0;
-  // CANDIDATE_BANK_SIGNAL_OVERRUN_SPEED_HOLD_V1_END
   const double effective_crossing_s_m =
     context.traffic_signal_stop_line_s_m - config.traffic_signal_crossing_margin_m;
   for (std::size_t i = start_index; i < candidate.points.size(); ++i) {
@@ -1748,12 +1679,9 @@ TrafficRuleEvaluation evaluate_traffic_rules(
     if (!projection.has_value()) {
       continue;
     }
-
-    // CANDIDATE_BANK_SIGNAL_OVERRUN_SPEED_HOLD_V1_BEGIN
     const double stop_line_overrun_m =
       std::max(0.0, projection->s - context.traffic_signal_stop_line_s_m);
     max_stop_line_overrun_m = std::max(max_stop_line_overrun_m, stop_line_overrun_m);
-    // CANDIDATE_BANK_SIGNAL_OVERRUN_SPEED_HOLD_V1_END
 
     if (projection->s > effective_crossing_s_m + kCrossingToleranceM) {
       result.signal_crossed = true;
@@ -1777,16 +1705,12 @@ TrafficRuleEvaluation evaluate_traffic_rules(
   if (result.signal_crossed) {
     result.cost += config.traffic_signal_crossing_penalty;
   }
-  // CANDIDATE_BANK_SIGNAL_OVERRUN_SPEED_HOLD_V1_BEGIN
   result.cost +=
     config.traffic_signal_overrun_weight * max_stop_line_overrun_m * max_stop_line_overrun_m;
-  // CANDIDATE_BANK_SIGNAL_OVERRUN_SPEED_HOLD_V1_END
   result.cost +=
     config.traffic_signal_stop_speed_weight * max_speed_excess_mps * max_speed_excess_mps;
   return result;
 }
-
-// CANDIDATE_BANK_CURRENT_LANE_RULE_V1_BEGIN
 struct LaneBoundaryEvaluation
 {
   double max_continuous_straddling_sec{0.0};
@@ -1857,9 +1781,6 @@ LaneBoundaryEvaluation evaluate_lane_boundary(
   result.total_cost = result.prolonged_straddling_cost + result.terminal_straddling_cost;
   return result;
 }
-// CANDIDATE_BANK_CURRENT_LANE_RULE_V1_END
-
-// CANDIDATE_BANK_LANE_CHANGE_DEADLINE_V1_BEGIN
 struct LaneChangeDeadlineEvaluation
 {
   bool active{false};
@@ -2065,8 +1986,6 @@ LaneChangeDeadlineEvaluation evaluate_lane_change_deadline(
   }
   return result;
 }
-// CANDIDATE_BANK_LANE_CHANGE_DEADLINE_V1_END
-// CANDIDATE_BANK_ROUTE_RULE_COST_V1_END
 
 double comfort_cost(const Trajectory & candidate, const std::size_t start_index)
 {
@@ -2082,8 +2001,6 @@ double comfort_cost(const Trajectory & candidate, const std::size_t start_index)
   }
   return count > 0 ? sum / static_cast<double>(count) : 0.0;
 }
-
-// CANDIDATE_BANK_STATIC_CLEARANCE_DEBUG_V1_BEGIN
 struct StaticClearanceWitnessDebug
 {
   bool valid{false};
@@ -2100,43 +2017,30 @@ struct StaticClearanceWitnessDebug
   std::vector<Point> ego_polygon;
   CandidateObstacleGeometryDebug object_geometry;
 };
-// CANDIDATE_BANK_STATIC_CLEARANCE_DEBUG_V1_END
 
 struct SafetyResult
 {
   bool safe{true};
-  // CANDIDATE_BANK_SOFT_COLLISION_V1_BEGIN
   bool static_collision_margin_violated{false};
   bool dynamic_collision_margin_violated{false};
-  // CANDIDATE_BANK_SOFT_COLLISION_V1_END
   double min_static_clearance_m{std::numeric_limits<double>::infinity()};
   double min_dynamic_clearance_m{std::numeric_limits<double>::infinity()};
   double min_dynamic_time_gap_sec{std::numeric_limits<double>::infinity()};
-  // CANDIDATE_BANK_TTC_COST_V1_BEGIN
   double min_dynamic_ttc_sec{std::numeric_limits<double>::infinity()};
   double dynamic_clearance_soft_cost{0.0};
   double dynamic_legacy_time_gap_soft_cost{0.0};
   double dynamic_ttc_soft_cost{0.0};
-  // CANDIDATE_BANK_TTC_COST_V1_END
-  // CANDIDATE_BANK_DYNAMIC_NORMALIZATION_V1_BEGIN
   double max_dynamic_closing_rate_mps{0.0};
   double max_dynamic_uncertainty_margin_m{0.0};
   std::size_t dynamic_prediction_path_count{0};
   double dynamic_prediction_confidence_sum{0.0};
-  // CANDIDATE_BANK_DYNAMIC_NORMALIZATION_V1_END
-  // CANDIDATE_BANK_DYNAMIC_ANALYSIS_V1_BEGIN
   CandidateDynamicEvaluationDebug dynamic_analysis_debug;
-  // CANDIDATE_BANK_DYNAMIC_ANALYSIS_V1_END
-  // CANDIDATE_BANK_STATIC_CLEARANCE_DEBUG_V1_BEGIN
   StaticClearanceWitnessDebug static_argmin;
   StaticClearanceWitnessDebug static_first_margin_violation;
   StaticClearanceWitnessDebug static_first_overlap;
-  // CANDIDATE_BANK_STATIC_CLEARANCE_DEBUG_V1_END
   double static_soft_cost{0.0};
   double dynamic_soft_cost{0.0};
 };
-
-// CANDIDATE_BANK_STATIC_CLEARANCE_DEBUG_V1_BEGIN
 void capture_static_clearance_witness(
   StaticClearanceWitnessDebug & witness, const TrajectoryCandidate & candidate,
   const TrackedObject & object, const CandidateBankConfig & config, const std::size_t point_index,
@@ -2161,7 +2065,6 @@ void capture_static_clearance_witness(
   }
   witness.object_geometry = make_obstacle_geometry_debug(object, config);
 }
-// CANDIDATE_BANK_STATIC_CLEARANCE_DEBUG_V1_END
 
 void evaluate_static_object(
   const TrajectoryCandidate & candidate, const TrackedObject & object,
@@ -2177,7 +2080,6 @@ void evaluate_static_object(
        i += stride) {
     const double clearance = min_clearance_to_object_m(
       candidate.trajectory_map.points[i].pose, object.shape, object_pose, config);
-    // CANDIDATE_BANK_STATIC_CLEARANCE_DEBUG_V1_BEGIN
     const double future_time_sec =
       live_time_sec(candidate.trajectory_map, candidate.live_start_index, i);
     if (!result.static_argmin.valid || clearance < result.static_argmin.signed_clearance_m) {
@@ -2203,23 +2105,17 @@ void evaluate_static_object(
       capture_static_clearance_witness(
         result.static_first_overlap, candidate, object, config, i, clearance);
     }
-    // CANDIDATE_BANK_STATIC_CLEARANCE_DEBUG_V1_END
     result.min_static_clearance_m = std::min(result.min_static_clearance_m, clearance);
     if (clearance <= config.static_collision_margin_m) {
-      // CANDIDATE_BANK_SOFT_COLLISION_V1_BEGIN
       result.static_collision_margin_violated = true;
       if (config.static_hard_reject_enabled) {
         result.safe = false;
       }
-      // CANDIDATE_BANK_SOFT_COLLISION_V1_END
     }
     const double deficit = std::max(0.0, config.static_preferred_clearance_m - clearance);
     result.static_soft_cost += deficit * deficit;
   }
 }
-
-// CANDIDATE_BANK_TTC_COST_V1_BEGIN
-// CANDIDATE_BANK_DYNAMIC_NORMALIZATION_V1_BEGIN
 struct DynamicPathEvaluation
 {
   bool collision_margin_violated{false};
@@ -2229,10 +2125,8 @@ struct DynamicPathEvaluation
   double max_closing_rate_mps{0.0};
   double max_uncertainty_margin_m{0.0};
   std::optional<double> ttc_sec;
-  // CANDIDATE_BANK_DYNAMIC_ANALYSIS_V1_BEGIN
   std::size_t worst_sample_index{0};
   std::vector<CandidateDynamicSampleDebug> samples;
-  // CANDIDATE_BANK_DYNAMIC_ANALYSIS_V1_END
 };
 
 // Evaluate one object prediction path against one ego candidate at matching future times.
@@ -2349,8 +2243,6 @@ DynamicPathEvaluation evaluate_dynamic_same_time_path(
         path_result.worst_sample_index = path_result.samples.size();
       }
     }
-
-    // CANDIDATE_BANK_DYNAMIC_ANALYSIS_V1_BEGIN
     if (collect_debug_samples) {
       CandidateDynamicSampleDebug sample;
       sample.time_sec = time_sec;
@@ -2368,7 +2260,6 @@ DynamicPathEvaluation evaluate_dynamic_same_time_path(
       sample.collision_margin_violated = collision_margin_violated;
       path_result.samples.push_back(sample);
     }
-    // CANDIDATE_BANK_DYNAMIC_ANALYSIS_V1_END
 
     previous_time_sec = time_sec;
     previous_geometric_clearance_m = geometric_clearance;
@@ -2376,8 +2267,6 @@ DynamicPathEvaluation evaluate_dynamic_same_time_path(
 
   return path_result;
 }
-// CANDIDATE_BANK_DYNAMIC_NORMALIZATION_V1_END
-// CANDIDATE_BANK_TTC_COST_V1_END
 
 void accumulate_predicted_path_time_gap(
   const TrajectoryCandidate & candidate, const TrackedObject & tracked,
@@ -2444,9 +2333,6 @@ void accumulate_fallback_time_gap(
     }
   }
 }
-
-// CANDIDATE_BANK_MAP_CONFLICT_FILTER_V1_BEGIN
-// CANDIDATE_BANK_MAP_FILTER_VISUALIZATION_V1_BEGIN
 std::uint64_t map_context_debug_signature(
   const CandidateMapConflictContext & context, const CandidateBankConfig & config)
 {
@@ -2477,7 +2363,6 @@ std::uint64_t map_context_debug_signature(
   }
   return hash;
 }
-// CANDIDATE_BANK_MAP_FILTER_VISUALIZATION_V1_END
 
 struct MapLaneProjection
 {
@@ -2815,7 +2700,6 @@ DynamicScopeDecision decide_dynamic_scope(
     tracked, predicted, map_context, config, history_heading, motion_heading, ambiguous);
   decision.debug.motion_heading_source = motion_heading.source;
   decision.debug.lane_association_ambiguous = ambiguous;
-  // CANDIDATE_BANK_MAP_FILTER_VISUALIZATION_V1_BEGIN
   decision.debug.lane_associated = !hypotheses.empty();
   decision.debug.motion_heading_yaw = motion_heading.yaw;
   decision.debug.motion_heading_reliability = motion_heading.reliability;
@@ -2831,7 +2715,6 @@ DynamicScopeDecision decide_dynamic_scope(
     logged_hypothesis.predicted_path_fit_m = hypothesis.predicted_path_fit_m;
     decision.debug.lane_hypotheses.push_back(std::move(logged_hypothesis));
   }
-  // CANDIDATE_BANK_MAP_FILTER_VISUALIZATION_V1_END
   if (!hypotheses.empty()) {
     decision.debug.best_lane_id = hypotheses.front().lane_id;
     decision.debug.best_lane_confidence = hypotheses.front().confidence;
@@ -2966,7 +2849,6 @@ bool evaluate_dynamic_immediate_guard(
   }
   return false;
 }
-// CANDIDATE_BANK_MAP_CONFLICT_FILTER_V1_END
 
 void evaluate_dynamic_object(
   const TrajectoryCandidate & candidate, const TrackedObject & tracked,
@@ -3024,8 +2906,6 @@ void evaluate_dynamic_object(
         result.dynamic_soft_cost += ttc_cost;
       }
     }
-
-    // CANDIDATE_BANK_DYNAMIC_ANALYSIS_V1_BEGIN
     // Keep only the strongest same-time/TTC contributor for this candidate.  The samples are the
     // exact values used above, so the offline analyzer never re-implements collision math.
     const double path_total_cost = clearance_cost + (use_ttc_cost ? ttc_cost : 0.0);
@@ -3056,7 +2936,6 @@ void evaluate_dynamic_object(
       debug.samples = path_result.samples;
       result.dynamic_analysis_debug = std::move(debug);
     }
-    // CANDIDATE_BANK_DYNAMIC_ANALYSIS_V1_END
   };
 
   const PredictedObject * predicted = find_predicted_object(predicted_objects, tracked);
@@ -3106,8 +2985,6 @@ void evaluate_dynamic_object(
   merge_path_result(fallback_result, 1.0, 1.0, true, -1);
   accumulate_fallback_time_gap(candidate, tracked, config, use_legacy_time_gap_cost, result);
 }
-
-// CANDIDATE_BANK_DYNAMIC_ANALYSIS_V1_BEGIN
 void record_dynamic_analysis_candidate(
   const std::uint64_t cycle_id, const TrajectoryCandidate & candidate, const std::string & role,
   const CandidateBankConfig & config)
@@ -3127,7 +3004,6 @@ void record_dynamic_analysis_candidate(
   logged.collision_margin_m = config.dynamic_collision_margin_m;
   logged.preferred_clearance_m = config.dynamic_preferred_clearance_m;
   logged.ttc_threshold_sec = config.dynamic_ttc_threshold_sec;
-  // CANDIDATE_BANK_MAP_CONFLICT_FILTER_V1_BEGIN
   logged.dynamic_scope_mode = config.dynamic_scope_mode;
   logged.map_filter_decisions.reserve(candidate.map_conflict_decisions_debug.size());
   for (const auto & decision : candidate.map_conflict_decisions_debug) {
@@ -3137,7 +3013,6 @@ void record_dynamic_analysis_candidate(
     out.immediate_guard_only = decision.immediate_guard_only;
     out.immediate_guard_violated = decision.immediate_guard_violated;
     out.reason = decision.reason;
-    // CANDIDATE_BANK_MAP_FILTER_VISUALIZATION_V1_BEGIN
     out.lane_associated = decision.lane_associated;
     out.motion_heading_yaw = decision.motion_heading_yaw;
     out.motion_heading_reliability = decision.motion_heading_reliability;
@@ -3153,7 +3028,6 @@ void record_dynamic_analysis_candidate(
       logged_hypothesis.predicted_path_fit_m = hypothesis.predicted_path_fit_m;
       out.lane_hypotheses.push_back(std::move(logged_hypothesis));
     }
-    // CANDIDATE_BANK_MAP_FILTER_VISUALIZATION_V1_END
     out.best_lane_id = decision.best_lane_id;
     out.best_lane_confidence = decision.best_lane_confidence;
     out.best_lane_lateral_distance_m = decision.best_lane_lateral_distance_m;
@@ -3170,7 +3044,6 @@ void record_dynamic_analysis_candidate(
     out.object_arrival_time_sec = decision.object_arrival_time_sec;
     logged.map_filter_decisions.push_back(std::move(out));
   }
-  // CANDIDATE_BANK_MAP_CONFLICT_FILTER_V1_END
 
   const auto & debug = candidate.dynamic_analysis_debug;
   logged.detail_valid = debug.valid;
@@ -3221,11 +3094,8 @@ std::vector<TrajectoryCandidate>::const_iterator highest_progress_candidate(
       return lhs.progress_m < rhs.progress_m;
     });
 }
-// CANDIDATE_BANK_DYNAMIC_ANALYSIS_V1_END
 
 }  // namespace
-
-// CB_UNIFIED_TRACE_V01_BEGIN
 void cb_compare_trace_trajectory_event(
   const char * stage, const char * mode, const nav_msgs::msg::Odometry & ego,
   const autoware_planning_msgs::msg::Trajectory & trajectory, const rclcpp::Time & eval_time,
@@ -3327,36 +3197,23 @@ void cb_compare_trace_bank_summary(
   o << '}';
   cb_ct_write(o.str());
 }
-// CB_UNIFIED_TRACE_V01_END
 
 TrajectoryCandidateManager::TrajectoryCandidateManager(const CandidateBankConfig & config)
 : config_(config)
 {
   debug_info_.mode = config_.mode;
   debug_info_.collision_geometry_mode = config_.collision_geometry_mode;
-  // CANDIDATE_BANK_TTC_COST_V1_BEGIN
   debug_info_.dynamic_temporal_cost_mode = config_.dynamic_temporal_cost_mode;
-  // CANDIDATE_BANK_TTC_COST_V1_END
-  // CANDIDATE_BANK_DYNAMIC_NORMALIZATION_V1_BEGIN
   debug_info_.dynamic_soft_cost_aggregation_mode = config_.dynamic_soft_cost_aggregation_mode;
   debug_info_.dynamic_uncertainty_mode = config_.dynamic_uncertainty_mode;
-  // CANDIDATE_BANK_DYNAMIC_NORMALIZATION_V1_END
-  // CANDIDATE_BANK_MAP_CONFLICT_FILTER_V1_BEGIN
   debug_info_.dynamic_scope_mode = config_.dynamic_scope_mode;
-  // CANDIDATE_BANK_MAP_CONFLICT_FILTER_V1_END
-  // CANDIDATE_BANK_ROUTE_RULE_COST_V1_BEGIN
   debug_info_.route_deviation_adaptive_weight_enabled =
     config_.route_deviation_adaptive_weight_enabled;
   debug_info_.traffic_signal_rule_enabled = config_.traffic_signal_rule_enabled;
-  // CANDIDATE_BANK_CURRENT_LANE_RULE_V1_BEGIN
   debug_info_.traffic_signal_scope_mode = "route_nearest";
   debug_info_.lane_boundary_enabled = config_.lane_boundary_enabled;
-  // CANDIDATE_BANK_LANE_CHANGE_DEADLINE_V1_BEGIN
   debug_info_.lane_change_deadline_enabled = config_.lane_change_deadline_enabled;
   debug_info_.lane_change_deadline_activation_mode = config_.lane_change_deadline_activation_mode;
-  // CANDIDATE_BANK_LANE_CHANGE_DEADLINE_V1_END
-  // CANDIDATE_BANK_CURRENT_LANE_RULE_V1_END
-  // CANDIDATE_BANK_ROUTE_RULE_COST_V1_END
 }
 
 void TrajectoryCandidateManager::set_config(const CandidateBankConfig & config)
@@ -3365,22 +3222,14 @@ void TrajectoryCandidateManager::set_config(const CandidateBankConfig & config)
   config_ = config;
   debug_info_.mode = config_.mode;
   debug_info_.collision_geometry_mode = config_.collision_geometry_mode;
-  // CANDIDATE_BANK_TTC_COST_V1_BEGIN
   debug_info_.dynamic_temporal_cost_mode = config_.dynamic_temporal_cost_mode;
-  // CANDIDATE_BANK_TTC_COST_V1_END
-  // CANDIDATE_BANK_DYNAMIC_NORMALIZATION_V1_BEGIN
   debug_info_.dynamic_soft_cost_aggregation_mode = config_.dynamic_soft_cost_aggregation_mode;
   debug_info_.dynamic_uncertainty_mode = config_.dynamic_uncertainty_mode;
-  // CANDIDATE_BANK_DYNAMIC_NORMALIZATION_V1_END
-  // CANDIDATE_BANK_MAP_CONFLICT_FILTER_V1_BEGIN
   debug_info_.dynamic_scope_mode = config_.dynamic_scope_mode;
-  // CANDIDATE_BANK_MAP_CONFLICT_FILTER_V1_END
-  // CANDIDATE_BANK_LANE_CHANGE_DEADLINE_V1_BEGIN
   debug_info_.traffic_signal_scope_mode = "route_nearest";
   debug_info_.lane_boundary_enabled = config_.lane_boundary_enabled;
   debug_info_.lane_change_deadline_enabled = config_.lane_change_deadline_enabled;
   debug_info_.lane_change_deadline_activation_mode = config_.lane_change_deadline_activation_mode;
-  // CANDIDATE_BANK_LANE_CHANGE_DEADLINE_V1_END
   if (was_enabled && !enabled()) {
     clear();
   }
@@ -3392,16 +3241,12 @@ void TrajectoryCandidateManager::clear()
 {
   candidates_.clear();
   cross_collision_results_.clear();
-  // CANDIDATE_BANK_CONTINGENCY_AGGREGATION_V1_BEGIN
   cross_aggregate_results_.clear();
-  // CANDIDATE_BANK_CONTINGENCY_AGGREGATION_V1_END
   obstacle_geometry_debug_.clear();
   object_history_.clear();
   incumbent_id_.reset();
-  // CANDIDATE_BANK_MAP_FILTER_VISUALIZATION_V1_BEGIN
   has_logged_map_context_signature_ = false;
   last_logged_map_context_signature_ = 0;
-  // CANDIDATE_BANK_MAP_FILTER_VISUALIZATION_V1_END
   debug_info_ = CandidateBankDebugInfo{};
   debug_info_.mode = config_.mode;
   debug_info_.collision_geometry_mode = config_.collision_geometry_mode;
@@ -3488,48 +3333,37 @@ void TrajectoryCandidateManager::add(
   if (!enabled() || trajectory_map.points.size() < 2 || trajectory_map.header.frame_id != "map") {
     return;
   }
-
-  // CANDIDATE_BANK_COLLISION_GEOMETRY_V1_BEGIN
   // Prevent stale obstacle geometry from remaining visible in observe-only mode.
   obstacle_geometry_debug_.clear();
-  // CANDIDATE_BANK_COLLISION_GEOMETRY_V1_END
 
-  // CANDIDATE_BANK_DIAGNOSTICS_V2_BEGIN: add() is called once per planner cycle.
+  // add() is called once per planner cycle.
   // Reset this per-cycle counter before the first purge; evaluate() may call purge() again.
   debug_info_.purged_last_cycle = 0;
-  // CANDIDATE_BANK_DIAGNOSTICS_V2_END
 
   TrajectoryCandidate candidate;
   candidate.id = next_id_++;
   candidate.source = source;
   candidate.trajectory_map = trajectory_map;
-  // CANDIDATE_BANK_TRAJECTORY_SANITIZATION_V1_BEGIN
   if (config_.clip_backward_points_enabled) {
     clip_backward_points_in_place(candidate.trajectory_map, route_reference_map);
   }
-  // CANDIDATE_BANK_TRAJECTORY_SANITIZATION_V1_END
-  // CANDIDATE_BANK_PAIRED_JOINT_PREDICTION_V1_BEGIN
   candidate.paired_predicted_objects = paired_predicted_objects;
   candidate.paired_prediction_batch_index = paired_prediction_batch_index;
-  // CANDIDATE_BANK_PAIRED_JOINT_PREDICTION_V1_END
   candidate.generation_time = now;
   candidate.last_evaluation_time = now;
   candidates_.push_back(std::move(candidate));
   cb_ct_add(candidates_.back(), now);
 
-  // CANDIDATE_BANK_DIAGNOSTICS_V2_BEGIN: geometry is written once, not every cycle.
+  // geometry is written once, not every cycle.
   internal_debug::record_candidate_generated(
     internal_debug::current_cycle_id(), candidates_.back().id,
     candidate_source_name(candidates_.back().source), candidates_.back().trajectory_map);
-  // CANDIDATE_BANK_PAIRED_JOINT_PREDICTION_V1_BEGIN
   // Log the paired other-agent future exactly once at candidate generation.  Re-evaluation events
   // refer to candidate_id and do not duplicate the trajectory arrays every planning cycle.
   internal_debug::record_candidate_joint_prediction(
     internal_debug::current_cycle_id(), candidates_.back().id,
     candidate_source_name(candidates_.back().source), candidates_.back().paired_predicted_objects,
     candidates_.back().paired_prediction_batch_index);
-  // CANDIDATE_BANK_PAIRED_JOINT_PREDICTION_V1_END
-  // CANDIDATE_BANK_DIAGNOSTICS_V2_END
 
   debug_info_.newest_candidate_id = candidates_.back().id;
   debug_info_.newest_source = candidate_source_name(candidates_.back().source);
@@ -3561,7 +3395,7 @@ void TrajectoryCandidateManager::purge(
                       candidate.remaining_horizon_sec >= config_.min_remaining_horizon_sec;
     cb_ct_state("purge", candidate, ego, now);
 
-    // CANDIDATE_BANK_DIAGNOSTICS_V2_BEGIN: record the first invalidation reason.
+    // record the first invalidation reason.
     if (!candidate.valid) {
       std::string purge_reason{"unknown"};
       if (age_sec > config_.max_generation_age_sec) {
@@ -3575,7 +3409,6 @@ void TrajectoryCandidateManager::purge(
         internal_debug::current_cycle_id(), candidate.id, candidate_source_name(candidate.source),
         purge_reason, age_sec, candidate.projection_error_m, candidate.remaining_horizon_sec);
     }
-    // CANDIDATE_BANK_DIAGNOSTICS_V2_END
   }
 
   candidates_.erase(
@@ -3610,30 +3443,21 @@ void TrajectoryCandidateManager::evaluate(
   }
 
   purge(ego, now);
-  // CANDIDATE_BANK_MAP_CONFLICT_FILTER_V1_BEGIN
   update_object_history(tracked_objects, now);
   debug_info_.dynamic_scope_mode = config_.dynamic_scope_mode;
   debug_info_.map_conflict_count = map_conflict_context.conflicts.size();
-  // CANDIDATE_BANK_MAP_CONFLICT_FILTER_V1_END
-
-  // CANDIDATE_BANK_XYT_CROSS_COLLISION_V1_BEGIN
   // Cross-pairs are deliberately diagnostic in 0013a7: E_i is tested against the
   // complete paired scene O_j, but the result does not modify score/safe/selection.
   // This lets us first verify whether counterfactual historical hypotheses are
   // useful before assigning calibrated probabilities or hard planner authority.
   cross_collision_results_ = evaluate_and_log_cross_collision_matrix(candidates_, config_, now);
-  // CANDIDATE_BANK_CONTINGENCY_AGGREGATION_V1_BEGIN
   cross_aggregate_results_ =
     aggregate_cross_collision(candidates_, cross_collision_results_, config_);
-  // CANDIDATE_BANK_CONTINGENCY_AGGREGATION_V1_END
-  // CANDIDATE_BANK_XYT_CROSS_COLLISION_V1_END
 
-  // CANDIDATE_BANK_DIAGNOSTICS_V2_BEGIN: one compact environment snapshot per evaluation cycle.
+  // one compact environment snapshot per evaluation cycle.
   std::vector<internal_debug::CandidateObstacleLog> logged_obstacles;
   std::vector<internal_debug::CandidateObstaclePointLog> logged_ego_polygon;
   obstacle_geometry_debug_.clear();
-
-  // CANDIDATE_BANK_MAP_FILTER_VISUALIZATION_V1A_BEGIN
   // Always log the configured ego box for offline visualization, independent of the collision
   // geometry mode selected for evaluation. This is diagnostics-only and does not change safety.
   if (const auto ego_polygon = make_ego_polygon(ego.pose.pose, config_); ego_polygon.has_value()) {
@@ -3644,7 +3468,6 @@ void TrajectoryCandidateManager::evaluate(
       logged_ego_polygon.push_back(logged_point);
     }
   }
-  // CANDIDATE_BANK_MAP_FILTER_VISUALIZATION_V1A_END
 
   if (tracked_objects) {
     logged_obstacles.reserve(tracked_objects->objects.size());
@@ -3654,9 +3477,7 @@ void TrajectoryCandidateManager::evaluate(
       obstacle_geometry_debug_.push_back(geometry_debug);
 
       internal_debug::CandidateObstacleLog logged;
-      // CANDIDATE_BANK_DYNAMIC_ANALYSIS_V1_BEGIN
       logged.object_id = tracked_object_id_string(object);
-      // CANDIDATE_BANK_DYNAMIC_ANALYSIS_V1_END
       const Pose & object_pose = object.kinematics.pose_with_covariance.pose;
       logged.x = object_pose.position.x;
       logged.y = object_pose.position.y;
@@ -3687,8 +3508,6 @@ void TrajectoryCandidateManager::evaluate(
     internal_debug::current_cycle_id(), ego.pose.pose.position.x, ego.pose.pose.position.y,
     yaw_from_pose(ego.pose.pose), config_.collision_geometry_mode, logged_ego_polygon,
     logged_obstacles);
-
-  // CANDIDATE_BANK_MAP_FILTER_VISUALIZATION_V1_BEGIN
   // Map geometry is static for a given lane/conflict set, so write it only when that set changes.
   // The offline analyzer carries the most recent context forward to following cycles.
   if (internal_debug::config().enabled && config_.dynamic_scope_mode == "map_conflict_reachable") {
@@ -3744,8 +3563,6 @@ void TrajectoryCandidateManager::evaluate(
       last_logged_map_context_signature_ = signature;
     }
   }
-  // CANDIDATE_BANK_MAP_FILTER_VISUALIZATION_V1_END
-  // CANDIDATE_BANK_DIAGNOSTICS_V2_END
 
   for (auto & candidate : candidates_) {
     candidate.last_evaluation_time = now;
@@ -3753,29 +3570,20 @@ void TrajectoryCandidateManager::evaluate(
     candidate.min_static_clearance_m = std::numeric_limits<double>::infinity();
     candidate.min_dynamic_clearance_m = std::numeric_limits<double>::infinity();
     candidate.min_dynamic_time_gap_sec = std::numeric_limits<double>::infinity();
-    // CANDIDATE_BANK_TTC_COST_V1_BEGIN
     candidate.min_dynamic_ttc_sec = std::numeric_limits<double>::infinity();
     candidate.dynamic_clearance_soft_cost = 0.0;
     candidate.dynamic_legacy_time_gap_soft_cost = 0.0;
     candidate.dynamic_ttc_soft_cost = 0.0;
-    // CANDIDATE_BANK_TTC_COST_V1_END
-    // CANDIDATE_BANK_DYNAMIC_NORMALIZATION_V1_BEGIN
     candidate.max_dynamic_closing_rate_mps = 0.0;
     candidate.max_dynamic_uncertainty_margin_m = 0.0;
     candidate.dynamic_prediction_path_count = 0;
     candidate.dynamic_prediction_confidence_sum = 0.0;
-    // CANDIDATE_BANK_DYNAMIC_NORMALIZATION_V1_END
-    // CANDIDATE_BANK_DYNAMIC_ANALYSIS_V1_BEGIN
     candidate.dynamic_analysis_debug = CandidateDynamicEvaluationDebug{};
-    // CANDIDATE_BANK_DYNAMIC_ANALYSIS_V1_END
-    // CANDIDATE_BANK_MAP_CONFLICT_FILTER_V1_BEGIN
     candidate.map_conflict_decisions_debug.clear();
-    // CANDIDATE_BANK_MAP_CONFLICT_FILTER_V1_END
 
     candidate.path_length_m = path_length_m(candidate.trajectory_map, candidate.live_start_index);
     candidate.progress_m =
       route_progress_m(candidate.trajectory_map, candidate.live_start_index, route_reference_map);
-    // CANDIDATE_BANK_ROUTE_RULE_COST_V1_BEGIN
     const RouteDeviationResult route_deviation_result =
       route_reference_map.has_value() ? route_deviation(
                                           candidate.trajectory_map, candidate.live_start_index,
@@ -3792,7 +3600,6 @@ void TrajectoryCandidateManager::evaluate(
     candidate.traffic_signal_max_stop_zone_speed_mps =
       traffic_rule_evaluation.max_stop_zone_speed_mps;
     candidate.traffic_rule_cost = traffic_rule_evaluation.cost;
-    // CANDIDATE_BANK_CURRENT_LANE_RULE_V1_BEGIN
     candidate.traffic_signal_scope_mode = traffic_rule_context.traffic_signal_scope_mode;
     candidate.current_lane_valid = traffic_rule_context.current_lane_valid;
     candidate.current_lane_id = traffic_rule_context.current_lane_id;
@@ -3804,7 +3611,6 @@ void TrajectoryCandidateManager::evaluate(
     candidate.prolonged_straddling_cost = lane_boundary_evaluation.prolonged_straddling_cost;
     candidate.terminal_straddling_cost = lane_boundary_evaluation.terminal_straddling_cost;
     candidate.lane_boundary_cost = lane_boundary_evaluation.total_cost;
-    // CANDIDATE_BANK_LANE_CHANGE_DEADLINE_V1_BEGIN
     const LaneChangeDeadlineEvaluation lane_change_evaluation = evaluate_lane_change_deadline(
       candidate.trajectory_map, candidate.live_start_index, ego.pose.pose, route_reference_map,
       traffic_rule_context, config_);
@@ -3820,9 +3626,6 @@ void TrajectoryCandidateManager::evaluate(
     candidate.lane_change_completion_s_m = lane_change_evaluation.completion_s_m;
     candidate.lane_change_slack_m = lane_change_evaluation.slack_m;
     candidate.lane_change_deadline_cost = lane_change_evaluation.cost;
-    // CANDIDATE_BANK_LANE_CHANGE_DEADLINE_V1_END
-    // CANDIDATE_BANK_CURRENT_LANE_RULE_V1_END
-    // CANDIDATE_BANK_ROUTE_RULE_COST_V1_END
     candidate.comfort_cost = comfort_cost(candidate.trajectory_map, candidate.live_start_index);
 
     SafetyResult safety;
@@ -3832,8 +3635,6 @@ void TrajectoryCandidateManager::evaluate(
           evaluate_static_object(candidate, object, config_, safety);
           continue;
         }
-
-        // CANDIDATE_BANK_MAP_CONFLICT_FILTER_V1_BEGIN
         if (!config_.dynamic_safety_enabled) {
           continue;
         }
@@ -3851,38 +3652,29 @@ void TrajectoryCandidateManager::evaluate(
             evaluate_dynamic_immediate_guard(candidate, object, predicted_objects, config_, safety);
         }
         candidate.map_conflict_decisions_debug.push_back(std::move(scope.debug));
-        // CANDIDATE_BANK_MAP_CONFLICT_FILTER_V1_END
       }
     }
 
     candidate.safe = safety.safe;
-    // CANDIDATE_BANK_SOFT_COLLISION_V1_BEGIN
     candidate.static_collision_margin_violated = safety.static_collision_margin_violated;
     candidate.dynamic_collision_margin_violated = safety.dynamic_collision_margin_violated;
-    // CANDIDATE_BANK_SOFT_COLLISION_V1_END
     candidate.min_static_clearance_m = safety.min_static_clearance_m;
     candidate.min_dynamic_clearance_m = safety.min_dynamic_clearance_m;
     candidate.min_dynamic_time_gap_sec = safety.min_dynamic_time_gap_sec;
-    // CANDIDATE_BANK_TTC_COST_V1_BEGIN
     candidate.min_dynamic_ttc_sec = safety.min_dynamic_ttc_sec;
     candidate.dynamic_clearance_soft_cost = safety.dynamic_clearance_soft_cost;
     candidate.dynamic_legacy_time_gap_soft_cost = safety.dynamic_legacy_time_gap_soft_cost;
     candidate.dynamic_ttc_soft_cost = safety.dynamic_ttc_soft_cost;
-    // CANDIDATE_BANK_TTC_COST_V1_END
-    // CANDIDATE_BANK_DYNAMIC_NORMALIZATION_V1_BEGIN
     candidate.max_dynamic_closing_rate_mps = safety.max_dynamic_closing_rate_mps;
     candidate.max_dynamic_uncertainty_margin_m = safety.max_dynamic_uncertainty_margin_m;
     candidate.dynamic_prediction_path_count = safety.dynamic_prediction_path_count;
     candidate.dynamic_prediction_confidence_sum = safety.dynamic_prediction_confidence_sum;
-    // CANDIDATE_BANK_DYNAMIC_NORMALIZATION_V1_END
-    // CANDIDATE_BANK_DYNAMIC_ANALYSIS_V1_BEGIN
     candidate.dynamic_analysis_debug = std::move(safety.dynamic_analysis_debug);
-    // CANDIDATE_BANK_DYNAMIC_ANALYSIS_V1_END
 
     const double path_efficiency_penalty =
       std::max(0.0, candidate.path_length_m - candidate.progress_m);
 
-    // CANDIDATE_BANK_DIAGNOSTICS_V2_BEGIN: keep each weighted contribution separately.
+    // keep each weighted contribution separately.
     candidate.score_progress = -config_.progress_weight * candidate.progress_m;
     candidate.score_route_deviation =
       config_.route_deviation_weight * candidate.route_deviation_rms_m;
@@ -3890,22 +3682,14 @@ void TrajectoryCandidateManager::evaluate(
     candidate.score_static_clearance = config_.clearance_weight * safety.static_soft_cost;
     candidate.score_dynamic_margin = config_.dynamic_margin_weight * safety.dynamic_soft_cost;
     candidate.score_comfort = config_.comfort_weight * candidate.comfort_cost;
-    // CANDIDATE_BANK_ROUTE_RULE_COST_V1_BEGIN
     candidate.score_traffic_rules = candidate.traffic_rule_cost;
-    // CANDIDATE_BANK_CURRENT_LANE_RULE_V1_BEGIN
     candidate.score_lane_boundary = candidate.lane_boundary_cost;
-    // CANDIDATE_BANK_LANE_CHANGE_DEADLINE_V1_BEGIN
     candidate.score_lane_change_deadline = candidate.lane_change_deadline_cost;
-    // CANDIDATE_BANK_LANE_CHANGE_DEADLINE_V1_END
-    // CANDIDATE_BANK_CURRENT_LANE_RULE_V1_END
-    // CANDIDATE_BANK_ROUTE_RULE_COST_V1_END
     candidate.score = candidate.score_progress + candidate.score_route_deviation +
                       candidate.score_path_efficiency + candidate.score_static_clearance +
                       candidate.score_dynamic_margin + candidate.score_comfort +
                       candidate.score_traffic_rules + candidate.score_lane_boundary +
                       candidate.score_lane_change_deadline;
-
-    // CANDIDATE_BANK_STATIC_CLEARANCE_DEBUG_V1_BEGIN
     if (safety.static_argmin.valid) {
       internal_debug::CandidateStaticClearanceLog static_log;
       static_log.candidate_id = candidate.id;
@@ -3960,7 +3744,6 @@ void TrajectoryCandidateManager::evaluate(
       internal_debug::record_candidate_static_clearance(
         internal_debug::current_cycle_id(), static_log);
     }
-    // CANDIDATE_BANK_STATIC_CLEARANCE_DEBUG_V1_END
 
     cb_ct_state("evaluate", candidate, ego, now, tracked_objects, &predicted_objects);
     cb_ct_candidate_detail(candidate, ego, now);
@@ -3970,10 +3753,8 @@ void TrajectoryCandidateManager::evaluate(
     logged.was_incumbent = incumbent_id_.has_value() && incumbent_id_.value() == candidate.id;
     logged.valid = candidate.valid;
     logged.safe = candidate.safe;
-    // CANDIDATE_BANK_SOFT_COLLISION_V1_BEGIN
     logged.static_collision_margin_violated = candidate.static_collision_margin_violated;
     logged.dynamic_collision_margin_violated = candidate.dynamic_collision_margin_violated;
-    // CANDIDATE_BANK_SOFT_COLLISION_V1_END
     logged.live_start_index = candidate.live_start_index;
     logged.age_sec = (now - candidate.generation_time).seconds();
     logged.projection_error_m = candidate.projection_error_m;
@@ -3981,7 +3762,6 @@ void TrajectoryCandidateManager::evaluate(
     logged.path_length_m = candidate.path_length_m;
     logged.progress_m = candidate.progress_m;
     logged.route_deviation_rms_m = candidate.route_deviation_rms_m;
-    // CANDIDATE_BANK_ROUTE_RULE_COST_V1_BEGIN
     logged.route_reference_weight_mean = candidate.route_reference_weight_mean;
     logged.route_reference_max_roughness_m = candidate.route_reference_max_roughness_m;
     logged.traffic_signal_stop_active = candidate.traffic_signal_stop_active;
@@ -3989,7 +3769,6 @@ void TrajectoryCandidateManager::evaluate(
     logged.traffic_signal_max_stop_zone_speed_mps =
       candidate.traffic_signal_max_stop_zone_speed_mps;
     logged.traffic_rule_cost = candidate.traffic_rule_cost;
-    // CANDIDATE_BANK_CURRENT_LANE_RULE_V1_BEGIN
     logged.traffic_signal_scope_mode = candidate.traffic_signal_scope_mode;
     logged.current_lane_valid = candidate.current_lane_valid;
     logged.current_lane_id = candidate.current_lane_id;
@@ -3998,7 +3777,6 @@ void TrajectoryCandidateManager::evaluate(
     logged.prolonged_straddling_cost = candidate.prolonged_straddling_cost;
     logged.terminal_straddling_cost = candidate.terminal_straddling_cost;
     logged.lane_boundary_cost = candidate.lane_boundary_cost;
-    // CANDIDATE_BANK_LANE_CHANGE_DEADLINE_V1_BEGIN
     logged.lane_change_deadline_active = candidate.lane_change_deadline_active;
     logged.lane_change_attempted = candidate.lane_change_attempted;
     logged.lane_change_completed = candidate.lane_change_completed;
@@ -4010,28 +3788,21 @@ void TrajectoryCandidateManager::evaluate(
     logged.lane_change_completion_s_m = candidate.lane_change_completion_s_m;
     logged.lane_change_slack_m = candidate.lane_change_slack_m;
     logged.lane_change_deadline_cost = candidate.lane_change_deadline_cost;
-    // CANDIDATE_BANK_LANE_CHANGE_DEADLINE_V1_END
-    // CANDIDATE_BANK_CURRENT_LANE_RULE_V1_END
-    // CANDIDATE_BANK_ROUTE_RULE_COST_V1_END
     logged.comfort_cost = candidate.comfort_cost;
     logged.min_static_clearance_m = candidate.min_static_clearance_m;
     logged.min_dynamic_clearance_m = candidate.min_dynamic_clearance_m;
     logged.min_dynamic_time_gap_sec = candidate.min_dynamic_time_gap_sec;
-    // CANDIDATE_BANK_TTC_COST_V1_BEGIN
     logged.dynamic_temporal_cost_mode = config_.dynamic_temporal_cost_mode;
     logged.min_dynamic_ttc_sec = candidate.min_dynamic_ttc_sec;
     logged.dynamic_clearance_soft_cost = candidate.dynamic_clearance_soft_cost;
     logged.dynamic_legacy_time_gap_soft_cost = candidate.dynamic_legacy_time_gap_soft_cost;
     logged.dynamic_ttc_soft_cost = candidate.dynamic_ttc_soft_cost;
-    // CANDIDATE_BANK_TTC_COST_V1_END
-    // CANDIDATE_BANK_DYNAMIC_NORMALIZATION_V1_BEGIN
     logged.dynamic_soft_cost_aggregation_mode = config_.dynamic_soft_cost_aggregation_mode;
     logged.dynamic_uncertainty_mode = config_.dynamic_uncertainty_mode;
     logged.max_dynamic_closing_rate_mps = candidate.max_dynamic_closing_rate_mps;
     logged.max_dynamic_uncertainty_margin_m = candidate.max_dynamic_uncertainty_margin_m;
     logged.dynamic_prediction_path_count = candidate.dynamic_prediction_path_count;
     logged.dynamic_prediction_confidence_sum = candidate.dynamic_prediction_confidence_sum;
-    // CANDIDATE_BANK_DYNAMIC_NORMALIZATION_V1_END
     logged.score = candidate.score;
     logged.score_progress = candidate.score_progress;
     logged.score_route_deviation = candidate.score_route_deviation;
@@ -4039,26 +3810,16 @@ void TrajectoryCandidateManager::evaluate(
     logged.score_static_clearance = candidate.score_static_clearance;
     logged.score_dynamic_margin = candidate.score_dynamic_margin;
     logged.score_comfort = candidate.score_comfort;
-    // CANDIDATE_BANK_ROUTE_RULE_COST_V1_BEGIN
     logged.score_traffic_rules = candidate.score_traffic_rules;
-    // CANDIDATE_BANK_CURRENT_LANE_RULE_V1_BEGIN
     logged.score_lane_boundary = candidate.score_lane_boundary;
-    // CANDIDATE_BANK_LANE_CHANGE_DEADLINE_V1_BEGIN
     logged.score_lane_change_deadline = candidate.score_lane_change_deadline;
-    // CANDIDATE_BANK_LANE_CHANGE_DEADLINE_V1_END
-    // CANDIDATE_BANK_CURRENT_LANE_RULE_V1_END
-    // CANDIDATE_BANK_ROUTE_RULE_COST_V1_END
     internal_debug::record_candidate_evaluation(internal_debug::current_cycle_id(), logged);
-    // CANDIDATE_BANK_DIAGNOSTICS_V2_END
   }
-
-  // CANDIDATE_BANK_CONTINGENCY_AGGREGATION_V1_BEGIN
   // Finalize only after the baseline evaluator has written this cycle's score/safe.
   // This preserves the original score decomposition while still letting select()
   // use an effective CoPlanner-style score/eligibility state.
   finalize_and_log_cross_aggregates(candidates_, cross_aggregate_results_, config_);
   for (const auto & aggregate : cross_aggregate_results_) cb_ct_cross_aggregate(aggregate, now);
-  // CANDIDATE_BANK_CONTINGENCY_AGGREGATION_V1_END
 
   refresh_debug_info();
 }
@@ -4069,13 +3830,12 @@ std::optional<Trajectory> TrajectoryCandidateManager::select(const rclcpp::Time 
     return std::nullopt;
   }
 
-  // CANDIDATE_BANK_DIAGNOSTICS_V2_BEGIN: capture selection cause before changing incumbent_id_.
+  // capture selection cause before changing incumbent_id_.
   const std::uint64_t previous_selected_id = incumbent_id_.value_or(0);
   debug_info_.previous_selected_candidate_id = previous_selected_id;
   debug_info_.selection_switched = false;
   debug_info_.hysteresis_kept = false;
   debug_info_.selection_reason = "best";
-  // CANDIDATE_BANK_DIAGNOSTICS_V2_END
 
   auto best = candidates_.end();
   for (auto it = candidates_.begin(); it != candidates_.end(); ++it) {
@@ -4199,8 +3959,6 @@ std::optional<Trajectory> TrajectoryCandidateManager::select(const rclcpp::Time 
   }
   selected->selected = true;
   incumbent_id_ = selected->id;
-
-  // CANDIDATE_BANK_DIAGNOSTICS_V2_BEGIN
   debug_info_.selection_switched = previous_selected_id != selected->id;
   const auto selected_assessment =
     assess_candidate_safety(*selected, cross_aggregate_results_, config_);
@@ -4211,9 +3969,6 @@ std::optional<Trajectory> TrajectoryCandidateManager::select(const rclcpp::Time 
     selector_effective_score(*selected, cross_aggregate_results_, config_),
     config_.safety_tier_enabled ? safety_tier_name(best_assessment.tier) : "DISABLED",
     config_.safety_tier_enabled ? safety_tier_name(selected_assessment.tier) : "DISABLED");
-  // CANDIDATE_BANK_DIAGNOSTICS_V2_END
-
-  // CANDIDATE_BANK_DYNAMIC_ANALYSIS_V1_BEGIN
   // Log only two detailed traces per cycle to keep runtime logging bounded: the trajectory that
   // will actually be executed and the valid trajectory with the largest geometric progress.
   record_dynamic_analysis_candidate(
@@ -4225,7 +3980,6 @@ std::optional<Trajectory> TrajectoryCandidateManager::select(const rclcpp::Time 
     record_dynamic_analysis_candidate(
       internal_debug::current_cycle_id(), *highest_progress, "highest_progress", config_);
   }
-  // CANDIDATE_BANK_DYNAMIC_ANALYSIS_V1_END
 
   cb_ct_select(*selected, *best, debug_info_, now);
 
@@ -4263,11 +4017,9 @@ void TrajectoryCandidateManager::enforce_size_limit()
     if (oldest == candidates_.end()) {
       break;
     }
-    // CANDIDATE_BANK_DIAGNOSTICS_V2_BEGIN
     internal_debug::record_candidate_purged(
       internal_debug::current_cycle_id(), oldest->id, candidate_source_name(oldest->source),
       "bank_size_limit", 0.0, oldest->projection_error_m, oldest->remaining_horizon_sec);
-    // CANDIDATE_BANK_DIAGNOSTICS_V2_END
     candidates_.erase(oldest);
   }
 }
@@ -4276,20 +4028,15 @@ void TrajectoryCandidateManager::refresh_debug_info()
 {
   debug_info_.mode = config_.mode;
   debug_info_.collision_geometry_mode = config_.collision_geometry_mode;
-  // CANDIDATE_BANK_ROUTE_RULE_COST_V1_BEGIN
   debug_info_.route_deviation_adaptive_weight_enabled =
     config_.route_deviation_adaptive_weight_enabled;
   debug_info_.traffic_signal_rule_enabled = config_.traffic_signal_rule_enabled;
-  // CANDIDATE_BANK_ROUTE_RULE_COST_V1_END
-  // CANDIDATE_BANK_SOFT_COLLISION_V1_BEGIN
   debug_info_.static_hard_reject_enabled = config_.static_hard_reject_enabled;
   debug_info_.dynamic_hard_reject_enabled = config_.dynamic_hard_reject_enabled;
-  // CANDIDATE_BANK_SOFT_COLLISION_V1_END
   debug_info_.bank_size = candidates_.size();
   debug_info_.safe_count = static_cast<std::size_t>(std::count_if(
     candidates_.begin(), candidates_.end(),
     [](const TrajectoryCandidate & candidate) { return candidate.valid && candidate.safe; }));
-  // CANDIDATE_BANK_SAFETY_TIER_SELECTOR_V1_BEGIN
   debug_info_.safety_tier_enabled = config_.safety_tier_enabled;
   debug_info_.safety_tier_safe_count = 0;
   debug_info_.safety_tier_caution_count = 0;
@@ -4308,7 +4055,6 @@ void TrajectoryCandidateManager::refresh_debug_info()
         ++debug_info_.safety_tier_unsafe_count;
     }
   }
-  // CANDIDATE_BANK_SAFETY_TIER_SELECTOR_V1_END
 
   debug_info_.best_candidate_id = 0;
   debug_info_.best_score = std::numeric_limits<double>::infinity();
@@ -4339,118 +4085,88 @@ void TrajectoryCandidateManager::refresh_debug_info()
   debug_info_.selected_static_clearance_m = std::numeric_limits<double>::infinity();
   debug_info_.selected_dynamic_clearance_m = std::numeric_limits<double>::infinity();
   debug_info_.selected_dynamic_time_gap_sec = std::numeric_limits<double>::infinity();
-  // CANDIDATE_BANK_TTC_COST_V1_BEGIN
   debug_info_.dynamic_temporal_cost_mode = config_.dynamic_temporal_cost_mode;
   debug_info_.selected_dynamic_ttc_sec = std::numeric_limits<double>::infinity();
   debug_info_.selected_dynamic_clearance_soft_cost = 0.0;
   debug_info_.selected_dynamic_legacy_time_gap_soft_cost = 0.0;
   debug_info_.selected_dynamic_ttc_soft_cost = 0.0;
-  // CANDIDATE_BANK_TTC_COST_V1_END
-  // CANDIDATE_BANK_DYNAMIC_NORMALIZATION_V1_BEGIN
   debug_info_.dynamic_soft_cost_aggregation_mode = config_.dynamic_soft_cost_aggregation_mode;
   debug_info_.dynamic_uncertainty_mode = config_.dynamic_uncertainty_mode;
-  // CANDIDATE_BANK_MAP_CONFLICT_FILTER_V1_BEGIN
   debug_info_.dynamic_scope_mode = config_.dynamic_scope_mode;
-  // CANDIDATE_BANK_MAP_CONFLICT_FILTER_V1_END
   debug_info_.selected_max_dynamic_closing_rate_mps = 0.0;
   debug_info_.selected_max_dynamic_uncertainty_margin_m = 0.0;
   debug_info_.selected_dynamic_prediction_path_count = 0;
   debug_info_.selected_dynamic_prediction_confidence_sum = 0.0;
-  // CANDIDATE_BANK_DYNAMIC_NORMALIZATION_V1_END
-  // CANDIDATE_BANK_ROUTE_RULE_COST_V1_BEGIN
   debug_info_.selected_route_reference_weight_mean = 1.0;
   debug_info_.selected_route_reference_max_roughness_m = 0.0;
   debug_info_.selected_traffic_signal_stop_active = false;
   debug_info_.selected_traffic_signal_crossed = false;
   debug_info_.selected_traffic_rule_cost = 0.0;
-  // CANDIDATE_BANK_CURRENT_LANE_RULE_V1_BEGIN
   debug_info_.current_lane_valid = false;
   debug_info_.current_lane_id = 0;
   debug_info_.selected_max_continuous_straddling_sec = 0.0;
   debug_info_.selected_terminal_straddling = false;
   debug_info_.selected_lane_boundary_cost = 0.0;
-  // CANDIDATE_BANK_LANE_CHANGE_DEADLINE_V1_BEGIN
   debug_info_.lane_change_deadline_enabled = config_.lane_change_deadline_enabled;
   debug_info_.lane_change_deadline_activation_mode = config_.lane_change_deadline_activation_mode;
   debug_info_.selected_lane_change_deadline_active = false;
   debug_info_.selected_lane_change_completed_before_deadline = false;
   debug_info_.selected_lane_change_fallback_stop_satisfied = false;
   debug_info_.selected_lane_change_deadline_cost = 0.0;
-  // CANDIDATE_BANK_LANE_CHANGE_DEADLINE_V1_END
-  // CANDIDATE_BANK_CURRENT_LANE_RULE_V1_END
-  // CANDIDATE_BANK_ROUTE_RULE_COST_V1_END
-  // CANDIDATE_BANK_SOFT_COLLISION_V1_BEGIN
   debug_info_.selected_static_collision_margin_violated = false;
   debug_info_.selected_dynamic_collision_margin_violated = false;
-  // CANDIDATE_BANK_SOFT_COLLISION_V1_END
   if (incumbent_id_.has_value()) {
     const auto incumbent = std::find_if(
       candidates_.begin(), candidates_.end(),
       [&](const TrajectoryCandidate & candidate) { return candidate.id == incumbent_id_.value(); });
     if (incumbent != candidates_.end()) {
       debug_info_.selected_candidate_id = incumbent->id;
-      // CANDIDATE_BANK_CONTINGENCY_AGGREGATION_V1_BEGIN
       debug_info_.selected_score =
         selector_effective_score(*incumbent, cross_aggregate_results_, config_);
-      // CANDIDATE_BANK_CONTINGENCY_AGGREGATION_V1_END
       debug_info_.selected_source = candidate_source_name(incumbent->source);
-      // CANDIDATE_BANK_SAFETY_TIER_SELECTOR_V1_BEGIN
       if (config_.safety_tier_enabled) {
         debug_info_.selected_safety_tier = safety_tier_name(
           assess_candidate_safety(*incumbent, cross_aggregate_results_, config_).tier);
       }
-      // CANDIDATE_BANK_SAFETY_TIER_SELECTOR_V1_END
       debug_info_.selected_static_clearance_m = incumbent->min_static_clearance_m;
       debug_info_.selected_dynamic_clearance_m = incumbent->min_dynamic_clearance_m;
       debug_info_.selected_dynamic_time_gap_sec = incumbent->min_dynamic_time_gap_sec;
-      // CANDIDATE_BANK_TTC_COST_V1_BEGIN
       debug_info_.selected_dynamic_ttc_sec = incumbent->min_dynamic_ttc_sec;
       debug_info_.selected_dynamic_clearance_soft_cost = incumbent->dynamic_clearance_soft_cost;
       debug_info_.selected_dynamic_legacy_time_gap_soft_cost =
         incumbent->dynamic_legacy_time_gap_soft_cost;
       debug_info_.selected_dynamic_ttc_soft_cost = incumbent->dynamic_ttc_soft_cost;
-      // CANDIDATE_BANK_TTC_COST_V1_END
-      // CANDIDATE_BANK_DYNAMIC_NORMALIZATION_V1_BEGIN
       debug_info_.selected_max_dynamic_closing_rate_mps = incumbent->max_dynamic_closing_rate_mps;
       debug_info_.selected_max_dynamic_uncertainty_margin_m =
         incumbent->max_dynamic_uncertainty_margin_m;
       debug_info_.selected_dynamic_prediction_path_count = incumbent->dynamic_prediction_path_count;
       debug_info_.selected_dynamic_prediction_confidence_sum =
         incumbent->dynamic_prediction_confidence_sum;
-      // CANDIDATE_BANK_DYNAMIC_NORMALIZATION_V1_END
-      // CANDIDATE_BANK_ROUTE_RULE_COST_V1_BEGIN
       debug_info_.selected_route_reference_weight_mean = incumbent->route_reference_weight_mean;
       debug_info_.selected_route_reference_max_roughness_m =
         incumbent->route_reference_max_roughness_m;
       debug_info_.selected_traffic_signal_stop_active = incumbent->traffic_signal_stop_active;
       debug_info_.selected_traffic_signal_crossed = incumbent->traffic_signal_crossed;
       debug_info_.selected_traffic_rule_cost = incumbent->traffic_rule_cost;
-      // CANDIDATE_BANK_CURRENT_LANE_RULE_V1_BEGIN
       debug_info_.current_lane_valid = incumbent->current_lane_valid;
       debug_info_.current_lane_id = incumbent->current_lane_id;
       debug_info_.selected_max_continuous_straddling_sec = incumbent->max_continuous_straddling_sec;
       debug_info_.selected_terminal_straddling = incumbent->terminal_straddling;
       debug_info_.selected_lane_boundary_cost = incumbent->lane_boundary_cost;
-      // CANDIDATE_BANK_LANE_CHANGE_DEADLINE_V1_BEGIN
       debug_info_.selected_lane_change_deadline_active = incumbent->lane_change_deadline_active;
       debug_info_.selected_lane_change_completed_before_deadline =
         incumbent->lane_change_completed_before_deadline;
       debug_info_.selected_lane_change_fallback_stop_satisfied =
         incumbent->lane_change_fallback_stop_satisfied;
       debug_info_.selected_lane_change_deadline_cost = incumbent->lane_change_deadline_cost;
-      // CANDIDATE_BANK_LANE_CHANGE_DEADLINE_V1_END
-      // CANDIDATE_BANK_CURRENT_LANE_RULE_V1_END
-      // CANDIDATE_BANK_ROUTE_RULE_COST_V1_END
-      // CANDIDATE_BANK_SOFT_COLLISION_V1_BEGIN
       debug_info_.selected_static_collision_margin_violated =
         incumbent->static_collision_margin_violated;
       debug_info_.selected_dynamic_collision_margin_violated =
         incumbent->dynamic_collision_margin_violated;
-      // CANDIDATE_BANK_SOFT_COLLISION_V1_END
     }
   }
 }
 
 }  // namespace autoware::candidate_bank
 
-// CANDIDATE_BANK_EXPERIMENT_V1_END: concrete staged evaluation implementation.
+// concrete staged evaluation implementation.

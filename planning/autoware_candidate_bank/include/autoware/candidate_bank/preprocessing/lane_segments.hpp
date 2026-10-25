@@ -60,15 +60,11 @@ struct RouteTrafficSignalStop
   bool signal_observed{false};
   LanePoint stop_line_center_ego = LanePoint::Zero();
 };
-
-// CANDIDATE_BANK_CURRENT_LANE_RULE_V1_BEGIN
 struct CurrentLaneBoundary
 {
   lanelet::Id boundary_id{0};
-  // CANDIDATE_BANK_LANE_CHANGE_DEADLINE_V1_BEGIN
   lanelet::Id adjacent_lane_id{0};
   std::vector<RouteTrafficSignalStop> adjacent_traffic_signal_stops;
-  // CANDIDATE_BANK_LANE_CHANGE_DEADLINE_V1_END
   Polyline points_map;
 };
 
@@ -79,7 +75,6 @@ struct CurrentLaneRuleContext
   std::vector<RouteTrafficSignalStop> traffic_signal_stops;
   std::vector<CurrentLaneBoundary> shared_boundaries_map;
 };
-// CANDIDATE_BANK_CURRENT_LANE_RULE_V1_END
 
 /**
  * @brief Context class that encapsulates static lane segment processing data and operations.
@@ -165,8 +160,6 @@ public:
     const LaneletRoute & route, const double center_x, const double center_y, const double center_z,
     const Eigen::Matrix4d & map_to_ego_transform,
     const std::map<lanelet::Id, TrafficSignalStamped> & traffic_light_id_map) const;
-
-  // CANDIDATE_BANK_CURRENT_LANE_RULE_V1_BEGIN
   /**
    * @brief Resolve the lane currently occupied by the ego reference point and collect only that
    * lane's traffic-light stop lines plus boundaries shared with another lanelet.
@@ -178,9 +171,6 @@ public:
     const double center_x, const double center_y, const Eigen::Matrix4d & map_to_ego_transform,
     const std::map<lanelet::Id, TrafficSignalStamped> & traffic_light_id_map,
     double adjacent_signal_search_distance_m = 80.0) const;
-  // CANDIDATE_BANK_CURRENT_LANE_RULE_V1_END
-
-  // CANDIDATE_BANK_MAP_CONFLICT_FILTER_V1_BEGIN
   /**
    * @brief Build a compact route/competing-lane graph for dynamic-object relevance filtering.
    *
@@ -192,7 +182,6 @@ public:
   CandidateMapConflictContext create_candidate_map_conflict_context(
     const LaneletRoute & route, const double center_x, const double center_y, const double center_z,
     double forward_search_distance_m, double backtrace_distance_m) const;
-  // CANDIDATE_BANK_MAP_CONFLICT_FILTER_V1_END
 
   /**
    * @brief Get the mapping from lanelet ID to array index.
@@ -243,16 +232,10 @@ private:
   const std::shared_ptr<const lanelet::LaneletMap> lanelet_map_ptr_;
   const autoware::candidate_bank::LaneletMap lanelet_map_;
   const std::map<lanelet::Id, size_t> lanelet_id_to_array_index_;
-  // CANDIDATE_BANK_CURRENT_LANE_RULE_V1_BEGIN
   const std::map<lanelet::Id, std::vector<CurrentLaneBoundary>> shared_lane_boundaries_by_lane_id_;
   mutable std::optional<lanelet::Id> candidate_current_lane_id_;
-  // CANDIDATE_BANK_CURRENT_LANE_RULE_V1_END
-  // CANDIDATE_BANK_MAP_CONFLICT_FILTER_V1_BEGIN
   const std::map<lanelet::Id, std::vector<lanelet::Id>> predecessor_lane_ids_;
-  // CANDIDATE_BANK_LANE_CHANGE_DEADLINE_V1_BEGIN
   const std::map<lanelet::Id, std::vector<lanelet::Id>> successor_lane_ids_;
-  // CANDIDATE_BANK_LANE_CHANGE_DEADLINE_V1_END
-  // CANDIDATE_BANK_MAP_CONFLICT_FILTER_V1_END
 };
 
 }  // namespace autoware::candidate_bank::preprocess

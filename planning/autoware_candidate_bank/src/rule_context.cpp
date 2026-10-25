@@ -67,7 +67,7 @@ std::vector<std::array<float, 2>> extract_route_polyline(const std::vector<float
   return points;
 }
 
-// CANDIDATE_BANK_EXPERIMENT_V1_BEGIN: convert the existing ego-frame route tensor to a
+// convert the existing ego-frame route tensor to a
 // lightweight map-frame Trajectory used only for route deviation/progress scoring.
 std::optional<Trajectory> create_candidate_route_reference_map(
   const std::vector<float> & route_lanes, const Eigen::Matrix4d & ego_to_map_transform,
@@ -97,7 +97,6 @@ std::optional<Trajectory> create_candidate_route_reference_map(
   }
   return reference;
 }
-// CANDIDATE_BANK_EXPERIMENT_V1_END
 
 struct PolylineProjection
 {
@@ -192,9 +191,7 @@ struct SelectedTrafficSignalStop
   bool requires_stop{false};
   double effective_stop_distance_m{0.0};
   double lateral_projection_error_m{0.0};
-  // CANDIDATE_BANK_ROUTE_RULE_COST_V1_BEGIN
   double stop_line_s_m{0.0};
-  // CANDIDATE_BANK_ROUTE_RULE_COST_V1_END
 };
 
 std::optional<SelectedTrafficSignalStop> select_nearest_traffic_signal(
@@ -216,13 +213,11 @@ std::optional<SelectedTrafficSignalStop> select_nearest_traffic_signal(
     }
     const double raw_distance_m =
       static_cast<double>(projection->arc_length_m - geometry.ego_start_s_m);
-    // CANDIDATE_BANK_SIGNAL_OVERRUN_SPEED_HOLD_V1_BEGIN
     const double past_stop_line_limit_m =
       past_stop_line_hold_distance_m.value_or(params.stop_margin_m);
     if (raw_distance_m < -past_stop_line_limit_m) {
       continue;
     }
-    // CANDIDATE_BANK_SIGNAL_OVERRUN_SPEED_HOLD_V1_END
     const double effective_distance_m = std::max(0.0, raw_distance_m - params.stop_margin_m);
     if (!selected.has_value() || effective_distance_m < selected->effective_stop_distance_m) {
       selected = SelectedTrafficSignalStop{
@@ -259,28 +254,20 @@ RuleSnapshot RuleContext::build(
     map_to_ego_transform, signals_, indices, NUM_SEGMENTS_IN_ROUTE);
   const auto & route_lanes = data.first;
   RuleSnapshot result;
-  // CANDIDATE_BANK_EXPERIMENT_V1_BEGIN: route scoring reference does not affect model input.
+  // route scoring reference does not affect model input.
   result.route.reset();
   if (true) {
     result.route = create_candidate_route_reference_map(route_lanes, ego_to_map_transform, stamp);
   }
-
-  // CANDIDATE_BANK_MAP_CONFLICT_FILTER_V1_BEGIN
   result.conflicts = CandidateMapConflictContext{};
   if (true && bank.dynamic_scope_mode == "map_conflict_reachable") {
     result.conflicts = lanes_->create_candidate_map_conflict_context(
       route, center_x, center_y, center_z, bank.map_conflict_forward_search_distance_m,
       bank.map_conflict_backtrace_distance_m);
   }
-  // CANDIDATE_BANK_MAP_CONFLICT_FILTER_V1_END
-
-  // CANDIDATE_BANK_ROUTE_RULE_COST_V1_BEGIN
   result.rules = CandidateTrafficRuleContext{};
-  // CANDIDATE_BANK_CURRENT_LANE_RULE_V1_BEGIN
-  // CANDIDATE_BANK_LANE_CHANGE_DEADLINE_V1_BEGIN
   // 0015 restores the primary signal association to the original route-based behavior.
   result.rules.traffic_signal_scope_mode = "route_nearest";
-  // CANDIDATE_BANK_LANE_CHANGE_DEADLINE_V1_END
 
   std::optional<preprocess::CurrentLaneRuleContext> current_lane_context;
   if (
@@ -306,12 +293,10 @@ RuleSnapshot RuleContext::build(
       result.rules.shared_lane_boundaries_map.push_back(std::move(converted));
     }
   }
-  // CANDIDATE_BANK_CURRENT_LANE_RULE_V1_END
 
   if (true && (bank.traffic_signal_rule_enabled || bank.lane_change_deadline_enabled)) {
     const auto route_geometry = create_route_polyline_geometry(route_lanes);
     if (route_geometry.has_value()) {
-      // CANDIDATE_BANK_LANE_CHANGE_DEADLINE_V1_BEGIN
       // Restore 0012 semantics for the primary rule: always derive the relevant signal from the
       // route ahead. current_lane is retained as a compatibility parameter but is not used here.
       const auto signal_candidates = lanes_->get_route_traffic_signal_stops(
@@ -354,11 +339,8 @@ RuleSnapshot RuleContext::build(
           converted.adjacent_traffic_light_color = adjacent_selected->source.color;
         }
       }
-      // CANDIDATE_BANK_LANE_CHANGE_DEADLINE_V1_END
     }
   }
-  // CANDIDATE_BANK_ROUTE_RULE_COST_V1_END
-  // CANDIDATE_BANK_EXPERIMENT_V1_END
 
   return result;
 }

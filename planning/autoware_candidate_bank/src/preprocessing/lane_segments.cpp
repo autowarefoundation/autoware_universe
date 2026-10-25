@@ -49,8 +49,6 @@ std::map<lanelet::Id, size_t> create_lane_id_to_array_index_map(
 bool is_segment_inside(const LaneSegment & segment, const double center_x, const double center_y);
 uint8_t identify_current_light_status(
   const int64_t turn_direction, const std::vector<TrafficLightElement> & traffic_light_elements);
-
-// CANDIDATE_BANK_CURRENT_LANE_RULE_V1_BEGIN
 constexpr double kCurrentLaneInsideToleranceM = 0.08;
 constexpr double kCurrentLaneFallbackMaxDistanceM = 4.0;
 constexpr double kCurrentLaneMaxHeadingErrorRad = 75.0 * M_PI / 180.0;
@@ -166,14 +164,12 @@ std::map<lanelet::Id, std::vector<CurrentLaneBoundary>> create_shared_lane_bound
       }
       CurrentLaneBoundary boundary;
       boundary.boundary_id = boundary_id;
-      // CANDIDATE_BANK_LANE_CHANGE_DEADLINE_V1_BEGIN
       const auto adjacent_it = std::find_if(
         lanes_it->second.begin(), lanes_it->second.end(),
         [&](const lanelet::Id id) { return id != lane.id; });
       if (adjacent_it != lanes_it->second.end()) {
         boundary.adjacent_lane_id = *adjacent_it;
       }
-      // CANDIDATE_BANK_LANE_CHANGE_DEADLINE_V1_END
       boundary.points_map = points;
       result[lane.id].push_back(std::move(boundary));
     };
@@ -182,9 +178,6 @@ std::map<lanelet::Id, std::vector<CurrentLaneBoundary>> create_shared_lane_bound
   }
   return result;
 }
-// CANDIDATE_BANK_CURRENT_LANE_RULE_V1_END
-
-// CANDIDATE_BANK_MAP_CONFLICT_FILTER_V1_BEGIN
 constexpr double kMapJoinToleranceM = 1.5;
 constexpr double kMinConflictAngleRad = 8.0 * M_PI / 180.0;
 constexpr double kMaxJoinHeadingErrorRad = 100.0 * M_PI / 180.0;
@@ -288,8 +281,6 @@ std::map<lanelet::Id, std::vector<lanelet::Id>> create_predecessor_lane_map(
   }
   return predecessors;
 }
-
-// CANDIDATE_BANK_LANE_CHANGE_DEADLINE_V1_BEGIN
 std::map<lanelet::Id, std::vector<lanelet::Id>> create_successor_lane_map(
   const std::vector<LaneSegment> & lanes)
 {
@@ -302,7 +293,6 @@ std::map<lanelet::Id, std::vector<lanelet::Id>> create_successor_lane_map(
   }
   return successors;
 }
-// CANDIDATE_BANK_LANE_CHANGE_DEADLINE_V1_END
 
 struct CenterlineConflict
 {
@@ -380,7 +370,6 @@ CandidateMapLaneGeometry make_map_lane_geometry(
   }
   return result;
 }
-// CANDIDATE_BANK_MAP_CONFLICT_FILTER_V1_END
 }  // namespace
 
 // LaneSegmentContext implementation
@@ -390,16 +379,10 @@ LaneSegmentContext::LaneSegmentContext(
 : lanelet_map_ptr_(lanelet_map_ptr),
   lanelet_map_(convert_to_internal_lanelet_map(lanelet_map_ptr, line_string_max_step_m)),
   lanelet_id_to_array_index_(create_lane_id_to_array_index_map(lanelet_map_.lane_segments)),
-  // CANDIDATE_BANK_CURRENT_LANE_RULE_V1_BEGIN
   shared_lane_boundaries_by_lane_id_(
     create_shared_lane_boundary_map(lanelet_map_ptr, lanelet_map_.lane_segments)),
-  // CANDIDATE_BANK_CURRENT_LANE_RULE_V1_END
-  // CANDIDATE_BANK_MAP_CONFLICT_FILTER_V1_BEGIN
   predecessor_lane_ids_(create_predecessor_lane_map(lanelet_map_.lane_segments)),
-  // CANDIDATE_BANK_LANE_CHANGE_DEADLINE_V1_BEGIN
   successor_lane_ids_(create_successor_lane_map(lanelet_map_.lane_segments))
-// CANDIDATE_BANK_LANE_CHANGE_DEADLINE_V1_END
-// CANDIDATE_BANK_MAP_CONFLICT_FILTER_V1_END
 {
   if (lanelet_map_.lane_segments.empty()) {
     throw std::runtime_error("No lane segments found in the map");
@@ -562,8 +545,6 @@ std::vector<RouteTrafficSignalStop> LaneSegmentContext::get_route_traffic_signal
 
   return result;
 }
-
-// CANDIDATE_BANK_CURRENT_LANE_RULE_V1_BEGIN
 CurrentLaneRuleContext LaneSegmentContext::get_current_lane_rule_context(
   const double center_x, const double center_y, const Eigen::Matrix4d & map_to_ego_transform,
   const std::map<lanelet::Id, TrafficSignalStamped> & traffic_light_id_map,
@@ -672,8 +653,6 @@ CurrentLaneRuleContext LaneSegmentContext::get_current_lane_rule_context(
     }
     return stops;
   };
-
-  // CANDIDATE_BANK_LANE_CHANGE_DEADLINE_V1_BEGIN
   const auto traffic_stops_ahead_for_lane = [&](const lanelet::Id start_lane_id) {
     std::vector<RouteTrafficSignalStop> stops;
     if (start_lane_id == 0) return stops;
@@ -709,27 +688,21 @@ CurrentLaneRuleContext LaneSegmentContext::get_current_lane_rule_context(
     }
     return stops;
   };
-  // CANDIDATE_BANK_LANE_CHANGE_DEADLINE_V1_END
 
   const auto boundaries = shared_lane_boundaries_by_lane_id_.find(lane.id);
   if (boundaries != shared_lane_boundaries_by_lane_id_.end()) {
     context.shared_boundaries_map = boundaries->second;
-    // CANDIDATE_BANK_LANE_CHANGE_DEADLINE_V1_BEGIN
     for (auto & boundary : context.shared_boundaries_map) {
       if (boundary.adjacent_lane_id != 0) {
         boundary.adjacent_traffic_signal_stops =
           traffic_stops_ahead_for_lane(boundary.adjacent_lane_id);
       }
     }
-    // CANDIDATE_BANK_LANE_CHANGE_DEADLINE_V1_END
   }
 
   context.traffic_signal_stops = traffic_stops_for_lane(lane.id);
   return context;
 }
-// CANDIDATE_BANK_CURRENT_LANE_RULE_V1_END
-
-// CANDIDATE_BANK_MAP_CONFLICT_FILTER_V1_BEGIN
 CandidateMapConflictContext LaneSegmentContext::create_candidate_map_conflict_context(
   const LaneletRoute & route, const double center_x, const double center_y, const double center_z,
   const double forward_search_distance_m, const double backtrace_distance_m) const
@@ -857,7 +830,6 @@ CandidateMapConflictContext LaneSegmentContext::create_candidate_map_conflict_co
 
   return context;
 }
-// CANDIDATE_BANK_MAP_CONFLICT_FILTER_V1_END
 
 std::vector<int64_t> LaneSegmentContext::select_lane_segment_indices(
   const Eigen::Matrix4d & transform_matrix, const double center_x, const double center_y,

@@ -22,8 +22,6 @@
 
 namespace autoware::candidate_bank
 {
-
-// CANDIDATE_BANK_MAP_CONFLICT_FILTER_V1_BEGIN
 // Map-only data prepared by LaneSegmentContext.  CandidateManager intentionally receives
 // plain geometry/topology snapshots instead of Lanelet2 objects so the safety evaluator remains
 // testable without owning the HD-map subsystem.
@@ -60,7 +58,6 @@ struct CandidateMapConflictContext
   std::vector<CandidateMapLaneGeometry> lanes;
   std::vector<CandidateMapConflictPoint> conflicts;
 };
-// CANDIDATE_BANK_MAP_CONFLICT_FILTER_V1_END
 
 }  // namespace autoware::candidate_bank
 

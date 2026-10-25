@@ -31,14 +31,6 @@ if(BUILD_TESTING)
   target_link_libraries(test_${PROJECT_NAME} ${PROJECT_NAME}_core)
 endif()
 
-install(PROGRAMS
-  scripts/analyze_candidate_bank_internal_log.py
-  scripts/analyze_static_clearance.py
-  scripts/inspect_graph.py
-  scripts/plot_candidate_cross_collision_matrix.py
-  DESTINATION lib/${PROJECT_NAME}
-)
-
 ament_auto_package(
   INSTALL_TO_SHARE
     config
