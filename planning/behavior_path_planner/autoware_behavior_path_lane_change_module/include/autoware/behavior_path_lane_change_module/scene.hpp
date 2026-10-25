@@ -16,6 +16,7 @@
 
 #include "autoware/behavior_path_lane_change_module/base_class.hpp"
 #include "autoware/behavior_path_lane_change_module/structs/data.hpp"
+#include "autoware/behavior_path_planner_common/utils/path_safety_checker/safety_check.hpp"
 
 #include <memory>
 #include <string>
