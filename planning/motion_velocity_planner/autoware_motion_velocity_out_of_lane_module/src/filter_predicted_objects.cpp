@@ -28,6 +28,7 @@
 #include <lanelet2_core/primitives/BasicRegulatoryElements.h>
 
 #include <algorithm>
+#include <cmath>
 #include <vector>
 
 namespace autoware::motion_velocity_planner::out_of_lane
@@ -170,7 +171,7 @@ autoware_perception_msgs::msg::PredictedObjects filter_predicted_objects(
         lat_offset_to_current_ego <= predicted_object.shape.dimensions.y / 2.0 +
                                        std::max(
                                          params.left_offset + params.extra_left_offset,
-                                         params.right_offset + params.extra_right_offset);
+                                         std::abs(params.right_offset) + params.extra_right_offset);
       return is_low_confidence || is_crossing_ego;
     };
     auto & predicted_paths = filtered_object.kinematics.predicted_paths;

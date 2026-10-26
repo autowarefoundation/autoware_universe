@@ -35,6 +35,7 @@
 #include <lanelet2_routing/RoutingGraph.h>
 
 #include <algorithm>
+#include <cmath>
 #include <iterator>
 #include <vector>
 
@@ -148,8 +149,8 @@ void calculate_out_lanelet_rtree(
   const auto max_ego_footprint_offset = std::max({
     params.front_offset + params.extra_front_offset,
     params.left_offset + params.extra_left_offset,
-    params.right_offset + params.extra_right_offset,
-    params.rear_offset + params.extra_rear_offset,
+    std::abs(params.right_offset) + params.extra_right_offset,
+    std::abs(params.rear_offset) + params.extra_rear_offset,
   });
   autoware_utils::MultiPolygon2d trajectory_footprints;
   const boost::geometry::strategy::buffer::distance_symmetric<double> distance_strategy(
