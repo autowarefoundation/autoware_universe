@@ -70,6 +70,16 @@
     <let name="sensor_mapping_file_default" value="$(find-pkg-share autoware_carla_interface)/config/sensor_mapping.yaml" unless="$(var use_light_weight_sensor_mapping)"/>
     <arg name="sensor_mapping_file" default="$(var sensor_mapping_file_default)" description="Path to sensor mapping YAML"/>
     <arg name="max_wheel_steer_angle_deg" default="0.0" description="Override the wheel max steer angle [deg] used for steer normalization; 0 uses the physics value"/>
+    <arg
+      name="steering_lag_time_constant"
+      default="0.05"
+      description="Time constant [s] of the first-order lag on the steer command, standing in for the steering actuator. CARLA 0.10's own steering settles in ~0.1 s, so a larger value only adds delay the controller cannot see"
+    />
+    <arg
+      name="vehicle_physics_config"
+      default="$(find-pkg-share autoware_carla_interface)/config/vehicle_physics.yaml"
+      description="YAML with the physics written onto the ego after it spawns (mass, steering curve, per-axle wheel settings). CARLA 0.10 gives every car the same placeholder physics, which does not match the vehicle Autoware plans for. Applied only on CARLA 0.10+ (calibrated for its placeholder physics; a no-op on 0.9.x, whose vehicles keep their own physics). Empty keeps CARLA's own values"
+    />
     <arg name="flatten_steering_curve" default="false" description="Replace the ego vehicle's speed-based steering curve with an identity curve (CARLA 0.10 corrupt-curve workaround)"/>
     <arg name="wake_sleeping_physics" default="false" description="Nudge the ego physics body awake when launching from standstill (CARLA 0.10 sleeping-body workaround; not needed on 0.9.15)"/>
     <arg name="traffic_light.publish" default="false" description="Publish CARLA traffic-light states on /perception/traffic_light_recognition/traffic_signals"/>
@@ -87,6 +97,42 @@
       description="Optional override 'opendrive_id:group_id[|group_id...],...' that pins a CARLA signal id to one or more Autoware group ids, taking precedence over position matching"
     />
 
+    <!-- Scenario mode: closed loop with a CARLA scenario framework running
+         outside this launch (autoware_carla_scenario), which loads the world,
+         spawns the ego, drives the clock and hands Autoware its mission. -->
+    <arg
+      name="scenario_mode"
+      default="false"
+      description="Follow a CARLA scenario run from outside this launch: adopt its world instead of loading one, attach to its ego (role name 'Ego') instead of spawning one, follow its ticks, and leave the moving actors to it (no traffic manager). The scenario framework starts this launch with it, one fresh stack per scenario"
+    />
+    <arg name="scenario_world_wait_timeout" default="300.0" description="Seconds the interface waits for the scenario to drive its world before adopting it (scenario_mode only)"/>
+    <arg
+      name="ego_attach_timeout"
+      default="60.0"
+      description="Seconds to wait for the scenario's ego before giving up and failing (scenario_mode only; the scenario places the ego and this node attaches to it)"
+    />
+
+    <!-- Scenario-mode gates. In scenario mode the scenario owns the world (it
+         loads the map and drives the simulation clock) and finds the ego by the
+         exact role name "Ego". The interface must not compete for any of that,
+         so the scenario-safe values are derived here: the ego role name "Ego",
+         no traffic manager of the interface's own (the scenario owns the moving
+         actors, and the traffic manager would also claim synchronous mode), and
+         scenario_mode on the node so it adopts the scenario's world instead of
+         loading one. traffic_light.force_green is left as a user passthrough
+         (off by default): it competes with scenario-controlled lights, but
+         camera-less runs may still want it, so it stays an explicit opt-in. -->
+    <let name="is_scenario" value="$(eval &quot;'$(var scenario_mode)'.lower() == 'true'&quot;)"/>
+    <let name="ego_vehicle_role_name_resolved" value="Ego" if="$(var is_scenario)"/>
+    <let name="ego_vehicle_role_name_resolved" value="$(var ego_vehicle_role_name)" unless="$(var is_scenario)"/>
+    <let name="use_traffic_manager_resolved" value="False" if="$(var is_scenario)"/>
+    <let name="use_traffic_manager_resolved" value="$(var use_traffic_manager)" unless="$(var is_scenario)"/>
+    <!-- The scenario owns the simulation clock (it ticks the world), so
+         the interface must follow those ticks rather than drive its own; force
+         tick_follower on in scenario mode. -->
+    <let name="tick_follower_resolved" value="True" if="$(var is_scenario)"/>
+    <let name="tick_follower_resolved" value="$(var tick_follower)" unless="$(var is_scenario)"/>
+
     <!-- CARLA Interface -->
     <node pkg="autoware_carla_interface" exec="autoware_carla_interface" name="autoware_carla_interface" output="screen">
       <param name="host" value="$(var host)"/>
@@ -95,12 +141,15 @@
       <param name="sync_mode" value="$(var sync_mode)"/>
       <param name="fixed_delta_seconds" value="$(var fixed_delta_seconds)"/>
       <param name="carla_map" value="$(var carla_map_resolved)"/>
-      <param name="ego_vehicle_role_name" value="$(var ego_vehicle_role_name)"/>
+      <param name="ego_vehicle_role_name" value="$(var ego_vehicle_role_name_resolved)"/>
       <param name="spawn_point" value="$(var spawn_point)"/>
       <param name="vehicle_type" value="$(var vehicle_type)"/>
-      <param name="use_traffic_manager" value="$(var use_traffic_manager)"/>
+      <param name="use_traffic_manager" value="$(var use_traffic_manager_resolved)"/>
+      <param name="scenario_mode" value="$(var is_scenario)"/>
+      <param name="scenario_world_wait_timeout" value="$(var scenario_world_wait_timeout)"/>
+      <param name="ego_attach_timeout" value="$(var ego_attach_timeout)"/>
       <param name="max_real_delta_seconds" value="$(var max_real_delta_seconds)"/>
-      <param name="tick_follower" value="$(var tick_follower)"/>
+      <param name="tick_follower" value="$(var tick_follower_resolved)"/>
       <param name="spawn_point_ground_snap" value="$(var spawn_point_ground_snap)"/>
       <param name="spawn_point_ground_offset_z" value="$(var spawn_point_ground_offset_z)"/>
       <param name="initial_pose_ground_offset_z" value="$(var initial_pose_ground_offset_z)"/>
@@ -116,6 +165,8 @@
       <param name="publish_ground_truth_localization" value="$(var use_e2e_planning)"/>
       <param name="max_wheel_steer_angle_deg" value="$(var max_wheel_steer_angle_deg)"/>
       <param name="flatten_steering_curve" value="$(var flatten_steering_curve)"/>
+      <param name="vehicle_physics_config" value="$(var vehicle_physics_config)"/>
+      <param name="steering_lag_time_constant" value="$(var steering_lag_time_constant)"/>
       <param name="wake_sleeping_physics" value="$(var wake_sleeping_physics)"/>
       <param name="traffic_light.publish" value="$(var traffic_light.publish)"/>
       <param name="traffic_light.force_green" value="$(var traffic_light.force_green)"/>
