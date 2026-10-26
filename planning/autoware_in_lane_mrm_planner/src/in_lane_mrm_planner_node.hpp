@@ -28,7 +28,8 @@
 #include "trigger_edge_detector.hpp"
 #include "type_alias.hpp"
 
-#include <autoware_utils/ros/polling_subscriber.hpp>
+#include <autoware/agnocast_wrapper/node.hpp>
+#include <autoware/agnocast_wrapper/polling_subscriber.hpp>
 #include <autoware_utils_debug/time_keeper.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <in_lane_mrm_planner_parameters.hpp>
@@ -44,8 +45,9 @@
 
 namespace autoware::in_lane_mrm_planner
 {
+namespace namespace_polling = autoware::agnocast_wrapper::polling;
 
-class InLaneMrmPlannerNode : public rclcpp::Node
+class InLaneMrmPlannerNode : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit InLaneMrmPlannerNode(const rclcpp::NodeOptions & options);
@@ -111,28 +113,30 @@ private:
   PredictedObjectsLatcher objects_latcher_;
   TriggerEdgeDetector trigger_edge_detector_;
 
+  namespace_polling::PollingSubscriber<
+    LaneletRoute, namespace_polling::polling_policy::Newest>::SharedPtr route_subscriber_;
   LaneletRoute::ConstSharedPtr route_ptr_;
+
+  namespace_polling::PollingSubscriber<
+    LaneletMapBin, namespace_polling::polling_policy::Newest>::SharedPtr vector_map_subscriber_;
   LaneletMapBin::ConstSharedPtr lanelet_map_bin_ptr_;
+
+  namespace_polling::PollingSubscriber<Odometry>::SharedPtr kinematic_state_subscriber_;
   Odometry::ConstSharedPtr odometry_ptr_;
+
+  namespace_polling::PollingSubscriber<AccelWithCovarianceStamped>::SharedPtr
+    acceleration_subscriber_;
   AccelWithCovarianceStamped::ConstSharedPtr acceleration_ptr_;
+
+  namespace_polling::PollingSubscriber<PredictedObjects>::SharedPtr objects_subscriber_;
   PredictedObjects::ConstSharedPtr objects_ptr_;
+
+  namespace_polling::PollingSubscriber<InLaneStopTrigger>::SharedPtr trigger_subscriber_;
   InLaneStopTrigger::ConstSharedPtr trigger_ptr_;
 
-  autoware_utils::InterProcessPollingSubscriber<
-    LaneletRoute, autoware_utils::polling_policy::Newest>
-    route_subscriber_;
-  autoware_utils::InterProcessPollingSubscriber<
-    LaneletMapBin, autoware_utils::polling_policy::Newest>
-    vector_map_subscriber_;
-  autoware_utils::InterProcessPollingSubscriber<Odometry> kinematic_state_subscriber_;
-  autoware_utils::InterProcessPollingSubscriber<AccelWithCovarianceStamped>
-    acceleration_subscriber_;
-  autoware_utils::InterProcessPollingSubscriber<PredictedObjects> objects_subscriber_;
-  autoware_utils::InterProcessPollingSubscriber<InLaneStopTrigger> trigger_subscriber_;
-
-  rclcpp::Publisher<Trajectory>::SharedPtr pub_trajectory_;
-  rclcpp::Publisher<Float32MultiArrayStamped>::SharedPtr pub_debug_status_;
-  rclcpp::TimerBase::SharedPtr timer_;
+  AUTOWARE_PUBLISHER_PTR(Trajectory) pub_trajectory_;
+  AUTOWARE_PUBLISHER_PTR(Float32MultiArrayStamped) pub_debug_status_;
+  AUTOWARE_TIMER_PTR timer_;
 };
 
 }  // namespace autoware::in_lane_mrm_planner

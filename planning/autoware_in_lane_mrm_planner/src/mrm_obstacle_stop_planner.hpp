@@ -18,14 +18,13 @@
 #include "obstacle_stop_utils.hpp"
 #include "type_alias.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
+#include <autoware/agnocast_wrapper/tf2.hpp>
 #include <autoware/planning_factor_interface/planning_factor_interface.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_internal_debug_msgs/msg/string_stamped.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
-
-#include <tf2_ros/buffer.h>
-#include <tf2_ros/transform_listener.h>
 
 #include <memory>
 #include <optional>
@@ -50,7 +49,9 @@ using visualization_msgs::msg::MarkerArray;
 class MrmObstacleStopPlanner
 {
 public:
-  void initialize(rclcpp::Node * node, const VehicleInfo & vehicle_info, const Params & params);
+  void initialize(
+    autoware::agnocast_wrapper::Node * node, const VehicleInfo & vehicle_info,
+    const Params & params);
   void set_input(
     const Odometry & odom, const AccelWithCovarianceStamped & accel,
     const PredictedObjects & objects);
@@ -80,7 +81,7 @@ private:
   void publish_debug_string(bool is_safe) const;
   void publish_debug_data(const std::string & ns) const;
 
-  rclcpp::Node * node_{nullptr};
+  autoware::agnocast_wrapper::Node * node_{nullptr};
   VehicleInfo vehicle_info_;
   ObstacleStopParams params_;
 
@@ -89,8 +90,8 @@ private:
   PredictedObjects objects_;
   std::optional<PointCloud2> obstacle_pointcloud_;
 
-  std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
-  std::unique_ptr<tf2_ros::TransformListener> tf_listener_;
+  std::unique_ptr<autoware::agnocast_wrapper::Buffer> tf_buffer_;
+  std::unique_ptr<autoware::agnocast_wrapper::TransformListener> tf_listener_;
 
   struct CollisionPointBuffer
   {
@@ -112,12 +113,13 @@ private:
 
   ObjectDecelMap object_decel_map_;
 
-  std::unique_ptr<autoware::planning_factor_interface::PlanningFactorInterface>
+  std::unique_ptr<
+    autoware::planning_factor_interface::PlanningFactorInterfaceT<autoware::agnocast_wrapper::Node>>
     planning_factor_interface_;
 
-  rclcpp::Publisher<MarkerArray>::SharedPtr debug_viz_pub_;
-  rclcpp::Publisher<PointCloud2>::SharedPtr pub_clustered_pointcloud_;
-  rclcpp::Publisher<StringStamped>::SharedPtr pub_debug_text_;
+  AUTOWARE_PUBLISHER_PTR(MarkerArray) debug_viz_pub_;
+  AUTOWARE_PUBLISHER_PTR(PointCloud2) pub_clustered_pointcloud_;
+  AUTOWARE_PUBLISHER_PTR(StringStamped) pub_debug_text_;
 };
 
 }  // namespace autoware::in_lane_mrm_planner

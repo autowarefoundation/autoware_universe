@@ -14,12 +14,9 @@ By default, the controller instance with the `Controller` class as follows is us
 @startuml
 package autoware_trajectory_follower_base {
 abstract class LateralControllerBase {
-longitudinal_sync_data_
 
     virtual isReady(InputData)
     virtual run(InputData)
-    sync(LongitudinalSyncData)
-    reset()
 
 }
 abstract class LongitudinalControllerBase {
@@ -28,7 +25,6 @@ lateral_sync_data_
     virtual isReady(InputData)
     virtual run(InputData)
     sync(LateralSyncData)
-    reset()
 
 }
 
@@ -38,10 +34,8 @@ odometry
 steering
 accel
 }
-struct LongitudinalSyncData {
-is_steer_converged
-}
 struct LateralSyncData {
+is_steer_converged
 }
 }
 
@@ -78,9 +72,6 @@ PurePursuitLateralController --|> LateralControllerBase
 PIDLongitudinalController --|> LongitudinalControllerBase
 
 LateralSyncData --> LongitudinalControllerBase
-LateralSyncData --> LateralControllerBase
-LongitudinalSyncData --> LongitudinalControllerBase
-LongitudinalSyncData --> LateralControllerBase
 InputData ..> LateralControllerBase
 InputData ..> LongitudinalControllerBase
 
@@ -110,9 +101,8 @@ if (!is_lat_ready || !is_lon_ready) {
 const auto lat_out = lateral_controller_->run(*input_data);
 const auto lon_out = longitudinal_controller_->run(*input_data);
 
-// 4. sync with each other controllers
+// 4. sync the lateral result to the longitudinal controller
 longitudinal_controller_->sync(lat_out.sync_data);
-lateral_controller_->sync(lon_out.sync_data);
 
 // 5. publish control command
 control_cmd_pub_->publish(out);

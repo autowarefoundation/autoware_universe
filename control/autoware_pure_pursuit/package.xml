@@ -6,6 +6,7 @@
   <description>The pure_pursuit package</description>
   <maintainer email="takamasa.horibe@tier4.jp">Takamasa Horibe</maintainer>
   <maintainer email="takayuki.murooka@tier4.jp">Takayuki Murooka</maintainer>
+  <maintainer email="takumi.odashima@tier4.jp">Takumi Odashima</maintainer>
   <license>Apache License 2.0</license>
 
   <author email="berkay@leodrive.ai">Berkay Karaman</author>
@@ -35,6 +36,8 @@
   <depend>tf2_ros</depend>
   <depend>visualization_msgs</depend>
 
+  <test_depend>ament_cmake_ros</test_depend>
+  <test_depend>ament_index_cpp</test_depend>
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>autoware_lint_common</test_depend>
 

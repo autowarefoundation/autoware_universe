@@ -142,7 +142,7 @@ std::vector<const BoundarySegmentIndex::Entry *> BoundarySegmentIndex::query(
 // ---------------------------------------------------------------------------
 
 void MrmRoadBorderStopPlanner::initialize(
-  rclcpp::Node * node, const VehicleInfo & vehicle_info, const Params & params)
+  autoware::agnocast_wrapper::Node * node, const VehicleInfo & vehicle_info, const Params & params)
 {
   node_ = node;
   vehicle_info_ = vehicle_info;
@@ -150,8 +150,8 @@ void MrmRoadBorderStopPlanner::initialize(
 
   if (node_) {
     planning_factor_interface_ =
-      std::make_unique<autoware::planning_factor_interface::PlanningFactorInterface>(
-        node_, kModuleName);
+      std::make_unique<autoware::planning_factor_interface::PlanningFactorInterfaceT<
+        autoware::agnocast_wrapper::Node>>(node_, kModuleName);
     debug_marker_pub_ = node_->create_publisher<MarkerArray>("~/road_border_stop/debug/marker", 1);
   }
 }

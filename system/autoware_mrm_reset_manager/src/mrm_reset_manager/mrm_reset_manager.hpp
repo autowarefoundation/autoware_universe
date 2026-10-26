@@ -15,6 +15,7 @@
 #ifndef MRM_RESET_MANAGER__MRM_RESET_MANAGER_HPP_
 #define MRM_RESET_MANAGER__MRM_RESET_MANAGER_HPP_
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_adapi_v1_msgs/msg/localization_initialization_state.hpp>
@@ -31,7 +32,7 @@
 namespace autoware::mrm_reset_manager
 {
 
-class MrmResetManager : public rclcpp::Node
+class MrmResetManager : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit MrmResetManager(const rclcpp::NodeOptions & options);
@@ -75,7 +76,7 @@ private:
 
   /// Set an initializing flag through its service, and cache the value on success.
   bool set_initializing_flag(
-    const rclcpp::Client<SetBool>::SharedPtr & client, const char * label, bool initializing,
+    const AUTOWARE_CLIENT_PTR(SetBool) & client, const char * label, bool initializing,
     bool & flag);
   /// No-op when `is_redundant_` is false, since the switcher interface has nothing to set then.
   bool set_redundancy_switcher_interface_initializing(bool initializing);
@@ -97,19 +98,19 @@ private:
   rclcpp::CallbackGroup::SharedPtr cli_reset_redundancy_switcher_callback_group_;
   rclcpp::CallbackGroup::SharedPtr cli_reset_diag_graph_callback_group_;
 
-  rclcpp::Service<ResetMrm>::SharedPtr srv_reset_mrm_;
+  AUTOWARE_SERVICE_PTR(ResetMrm) srv_reset_mrm_;
 
-  rclcpp::Subscription<LocalizationState>::SharedPtr sub_localization_initialization_state_;
-  rclcpp::Subscription<RouteState>::SharedPtr sub_route_state_;
-  rclcpp::Subscription<OperationMode>::SharedPtr sub_operation_mode_state_;
+  AUTOWARE_SUBSCRIPTION_PTR(LocalizationState) sub_localization_initialization_state_;
+  AUTOWARE_SUBSCRIPTION_PTR(RouteState) sub_route_state_;
+  AUTOWARE_SUBSCRIPTION_PTR(OperationMode) sub_operation_mode_state_;
 
-  rclcpp::Client<SetBool>::SharedPtr cli_set_aggregator_initializing_;
-  rclcpp::Client<SetBool>::SharedPtr cli_set_redundancy_switcher_interface_initializing_;
-  rclcpp::Client<ResetRedundancySwitcher>::SharedPtr cli_reset_redundancy_switcher_;
-  rclcpp::Client<ResetDiagGraph>::SharedPtr cli_reset_diag_graph_;
+  AUTOWARE_CLIENT_PTR(SetBool) cli_set_aggregator_initializing_;
+  AUTOWARE_CLIENT_PTR(SetBool) cli_set_redundancy_switcher_interface_initializing_;
+  AUTOWARE_CLIENT_PTR(ResetRedundancySwitcher) cli_reset_redundancy_switcher_;
+  AUTOWARE_CLIENT_PTR(ResetDiagGraph) cli_reset_diag_graph_;
 
-  rclcpp::TimerBase::SharedPtr init_timer_;
-  rclcpp::TimerBase::SharedPtr reset_redundancy_switcher_timer_;
+  AUTOWARE_TIMER_PTR init_timer_;
+  AUTOWARE_TIMER_PTR reset_redundancy_switcher_timer_;
 
   mutable std::mutex state_mutex_;
   InitState init_state_{InitState::WAIT_SERVICES_READY};

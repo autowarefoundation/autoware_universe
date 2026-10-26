@@ -13,7 +13,7 @@
   <arg name="output_set_aggregator_initializing" default="/system/aggregator/set_initializing"/>
   <arg name="output_set_redundancy_switcher_interface_initializing" default="/system/redundancy_switcher_interface/set_initializing"/>
 
-  <node pkg="autoware_mrm_reset_manager" exec="autoware_mrm_reset_manager_node" name="autoware_mrm_reset_manager" output="screen">
+  <autoware_node pkg="autoware_mrm_reset_manager" exec="autoware_mrm_reset_manager_node" name="autoware_mrm_reset_manager" output="screen">
     <param from="$(var mrm_reset_manager_param_file)"/>
     <param name="is_redundant" value="$(var is_redundant)"/>
     <param name="enable_autoware_ready_actions" value="$(var enable_autoware_ready_actions)"/>
@@ -27,5 +27,5 @@
     <remap from="~/output/reset_redundancy_switcher" to="$(var output_reset_redundancy_switcher)"/>
     <remap from="~/output/set_aggregator_initializing" to="$(var output_set_aggregator_initializing)"/>
     <remap from="~/output/set_redundancy_switcher_interface_initializing" to="$(var output_set_redundancy_switcher_interface_initializing)"/>
-  </node>
+  </autoware_node>
 </launch>

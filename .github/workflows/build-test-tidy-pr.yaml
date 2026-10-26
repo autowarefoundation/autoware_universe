@@ -20,7 +20,7 @@ jobs:
 
   check-if-cuda-job-is-needed:
     needs: require-label
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       cuda_job_is_needed: ${{ steps.check.outputs.any_changed }}
     steps:

@@ -59,15 +59,15 @@ std::pair<bool, double> PurePursuit::run()
     *curr_wps_ptr_, *curr_pose_ptr_, closest_thr_dist_, closest_thr_ang_);
 
   if (!closest_pair.first) {
-    RCLCPP_WARN(
-      logger, "cannot find, curr_bool: %d, closest_idx: %d", closest_pair.first,
+    AW_PP_WARN(
+      *writer_, "cannot find, curr_bool: {:d}, closest_idx: {:d}", closest_pair.first,
       closest_pair.second);
     return std::make_pair(false, std::numeric_limits<double>::quiet_NaN());
   }
 
   int32_t next_wp_idx = findNextPointIdx(closest_pair.second);
   if (next_wp_idx == -1) {
-    RCLCPP_WARN(logger, "lost next waypoint");
+    AW_PP_WARN(*writer_, "lost next waypoint");
     return std::make_pair(false, std::numeric_limits<double>::quiet_NaN());
   }
 
@@ -82,7 +82,7 @@ std::pair<bool, double> PurePursuit::run()
     std::pair<bool, geometry_msgs::msg::Point> lerp_pair = lerpNextTarget(next_wp_idx);
 
     if (!lerp_pair.first) {
-      RCLCPP_WARN(logger, "lost target! ");
+      AW_PP_WARN(*writer_, "lost target! ");
       return std::make_pair(false, std::numeric_limits<double>::quiet_NaN());
     }
 
@@ -107,7 +107,7 @@ std::pair<bool, geometry_msgs::msg::Point> PurePursuit::lerpNextTarget(int32_t n
     (vec_end.x - vec_start.x), (vec_end.y - vec_start.y), (vec_end.z - vec_start.z));
 
   if (vec_a.norm() < ERROR2) {
-    RCLCPP_ERROR(logger, "waypoint interval is almost 0");
+    AW_PP_ERROR(*writer_, "waypoint interval is almost 0");
     return std::make_pair(false, geometry_msgs::msg::Point());
   }
 
@@ -115,9 +115,10 @@ std::pair<bool, geometry_msgs::msg::Point> PurePursuit::lerpNextTarget(int32_t n
     planning_utils::calcLateralError2D(vec_start, vec_end, curr_pose.position);
 
   if (fabs(lateral_error) > lookahead_distance_) {
-    RCLCPP_ERROR(logger, "lateral error is larger than lookahead distance");
-    RCLCPP_ERROR(
-      logger, "lateral error: %lf, lookahead distance: %lf", lateral_error, lookahead_distance_);
+    AW_PP_ERROR(*writer_, "lateral error is larger than lookahead distance");
+    AW_PP_ERROR(
+      *writer_, "lateral error: {:f}, lookahead distance: {:f}", lateral_error,
+      lookahead_distance_);
     return std::make_pair(false, geometry_msgs::msg::Point());
   }
 
@@ -163,7 +164,7 @@ int32_t PurePursuit::findNextPointIdx(int32_t search_start_idx)
     }
 
     // if waypoint direction is forward
-    const auto gld = planning_utils::getLaneDirection(*curr_wps_ptr_, 0.05);
+    const auto gld = planning_utils::getLaneDirection(*writer_, *curr_wps_ptr_, 0.05);
     if (gld == 0) {
       // if waypoint is not in front of ego, skip
       auto ret = planning_utils::transformToRelativeCoordinate2D(

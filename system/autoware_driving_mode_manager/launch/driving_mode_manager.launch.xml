@@ -21,7 +21,7 @@
   <arg name="vehicle_control_mode_command_cli" default="/control/control_mode_request"/>
   <arg name="diagnostics_topic" default="/diagnostics"/>
 
-  <node pkg="autoware_driving_mode_manager" exec="driving_mode_manager_node">
+  <autoware_node pkg="autoware_driving_mode_manager" exec="driving_mode_manager_node">
     <param from="$(var config)"/>
     <remap from="~/system/change_operation_mode" to="$(var change_operation_mode_srv)"/>
     <remap from="~/system/change_autoware_control" to="$(var change_autoware_control_srv)"/>
@@ -43,5 +43,5 @@
     <remap from="~/vehicle/control_mode/report" to="$(var vehicle_control_mode_report_topic)"/>
     <remap from="~/vehicle/control_mode/command" to="$(var vehicle_control_mode_command_cli)"/>
     <remap from="~/diagnostics" to="$(var diagnostics_topic)"/>
-  </node>
+  </autoware_node>
 </launch>

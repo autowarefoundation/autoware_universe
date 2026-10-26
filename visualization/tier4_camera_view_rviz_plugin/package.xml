@@ -5,7 +5,7 @@
   <version>0.53.0</version>
   <description>The autoware camera view rviz plugin package</description>
   <maintainer email="uken.ryu@tier4.jp">Yuxuan Liu</maintainer>
-  <maintainer email="makoto.ybauta@tier4.jp">Makoto Yabuta</maintainer>
+  <maintainer email="makoto.yabuta@tier4.jp">Makoto Yabuta</maintainer>
   <license>Apache License 2.0</license>
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>

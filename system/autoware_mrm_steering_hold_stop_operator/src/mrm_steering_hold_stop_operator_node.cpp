@@ -77,7 +77,7 @@ MrmSteeringHoldStopOperator::MrmSteeringHoldStopOperator(const rclcpp::NodeOptio
 
   // Timer
   const auto period_ns = rclcpp::Rate(update_rate_).period();
-  timer_ = rclcpp::create_timer(
+  timer_ = autoware::agnocast_wrapper::create_timer(
     this, get_clock(), period_ns, std::bind(&MrmSteeringHoldStopOperator::onTimer, this));
 }
 

@@ -71,7 +71,7 @@ protected:
   void TearDown() override
   {
     if (node_) {
-      executor_->remove_node(node_);
+      executor_->remove_node(node_->get_node_base_interface());
     }
     executor_->remove_node(helper_);
   }
@@ -89,7 +89,7 @@ protected:
       {"profiles.emergency.target_jerk", -20.0},
     });
     node_ = std::make_shared<MrmSteeringHoldStopOperator>(options);
-    executor_->add_node(node_);
+    executor_->add_node(node_->get_node_base_interface());
   }
 
   void publishInputs(const double steering, const double velocity, const double acceleration)
