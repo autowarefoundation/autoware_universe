@@ -30,8 +30,6 @@
 
 #include "autoware/pure_pursuit/autoware_pure_pursuit_lateral_controller_node.hpp"
 
-#include "autoware/pure_pursuit/util/tf_utils.hpp"
-
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 
 #include <memory>
@@ -42,8 +40,6 @@ PurePursuitLateralControllerNode::PurePursuitLateralControllerNode(rclcpp::Node 
 : clock_(node.get_clock()),
   logger_(node.get_logger().get_child("lateral_controller")),
   writer_(logger_, clock_),
-  tf_buffer_(clock_),
-  tf_listener_(tf_buffer_),
   controller_(std::make_unique<PurePursuitLateralController>(createConfig(node), writer_))
 {
   // Debug Publishers
