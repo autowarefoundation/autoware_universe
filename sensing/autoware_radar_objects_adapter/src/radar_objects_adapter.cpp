@@ -16,10 +16,10 @@
 
 #include <autoware_utils_geometry/geometry.hpp>
 
-#include <algorithm>
 #include <cmath>
 #include <functional>
 #include <map>
+#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -129,35 +129,36 @@ RadarObjectsAdapter::RadarObjectsAdapter(
 tl::expected<ConversionConfiguration, InvalidRadarInfo> RadarObjectsAdapter::update_radar_info(
   const autoware_sensing_msgs::msg::RadarInfo & radar_info_msg)
 {
-  for (const auto & field_info : radar_info_msg.object_fields_info) {
-    field_info_map_[field_info.field_name.data] = field_info;
+  // The answer is fixed by the first valid radar info: a later message is not looked at, and
+  // comes back with the configuration already fixed.
+  if (configuration_.has_value()) {
+    return *configuration_;
   }
 
-  valid_radar_info_ = std::all_of(
-    required_attributes_.begin(), required_attributes_.end(),
-    [this](const std::string & attribute) {
-      return field_info_map_.find(attribute) != field_info_map_.end();
-    });
+  std::set<std::string> declared_fields;
+  for (const auto & field_info : radar_info_msg.object_fields_info) {
+    declared_fields.insert(field_info.field_name.data);
+  }
 
-  if (!valid_radar_info_) {
-    std::vector<std::string> missing_required_fields;
-    for (const auto & attribute : required_attributes_) {
-      if (field_info_map_.find(attribute) == field_info_map_.end()) {
-        missing_required_fields.push_back(attribute);
-      }
+  std::vector<std::string> missing_required_fields;
+  for (const auto & attribute : required_attributes_) {
+    if (declared_fields.count(attribute) == 0) {
+      missing_required_fields.push_back(attribute);
     }
+  }
+  if (!missing_required_fields.empty()) {
     return tl::make_unexpected(InvalidRadarInfo(missing_required_fields));
   }
 
-  position_z_available_ = field_info_map_.count("position_z") > 0;
-  velocity_z_available_ = field_info_map_.count("velocity_z") > 0;
-  acceleration_z_available_ = field_info_map_.count("acceleration_z") > 0;
-  size_x_available_ = field_info_map_.count("size_x") > 0;
-  size_y_available_ = field_info_map_.count("size_y") > 0;
-  size_z_available_ = field_info_map_.count("size_z") > 0;
+  position_z_available_ = declared_fields.count("position_z") > 0;
+  velocity_z_available_ = declared_fields.count("velocity_z") > 0;
+  acceleration_z_available_ = declared_fields.count("acceleration_z") > 0;
+  size_x_available_ = declared_fields.count("size_x") > 0;
+  size_y_available_ = declared_fields.count("size_y") > 0;
+  size_z_available_ = declared_fields.count("size_z") > 0;
 
-  orientation_std_available_ = field_info_map_.count("orientation_std") > 0;
-  orientation_rate_std_available_ = field_info_map_.count("orientation_rate_std") > 0;
+  orientation_std_available_ = declared_fields.count("orientation_std") > 0;
+  orientation_rate_std_available_ = declared_fields.count("orientation_rate_std") > 0;
 
   // The fields filled from a parameter, in the order the node has always warned about them.
   // orientation_std and orientation_rate_std have no parameter: without them the yaw variances
@@ -181,13 +182,14 @@ tl::expected<ConversionConfiguration, InvalidRadarInfo> RadarObjectsAdapter::upd
   if (!size_z_available_) {
     config.add_field("size_z", params_.default_size_z);
   }
+  configuration_ = config;
   return config;
 }
 
 tl::expected<ConversionOutcome, MissingRadarInfo> RadarObjectsAdapter::convert(
   const autoware_sensing_msgs::msg::RadarObjects & input_msg) const
 {
-  if (!valid_radar_info_) {
+  if (!configuration_.has_value()) {
     return tl::make_unexpected(MissingRadarInfo());
   }
 

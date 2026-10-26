@@ -577,6 +577,66 @@ TEST(RadarObjectsAdapter, RadarInfo_UnknownFields_Ignored)
   EXPECT_EQ(result.error().missing_required_fields(), std::vector<std::string>{"orientation"});
 }
 
+// Until a valid radar info arrives, each message is judged on its own: two messages that each
+// declare part of the required fields do not add up, and nothing is converted in between.
+TEST(RadarObjectsAdapter, RadarInfo_BeforeValid_EachMessageJudgedOnItsOwn)
+{
+  // Arrange
+  const RadarObjects objects = make_radar_objects({make_radar_object()});
+  RadarObjectsAdapter adapter = make_adapter();
+
+  // Act: a radar info lacking one required field, then one declaring only that field
+  const auto first =
+    adapter.update_radar_info(make_radar_info(without(required_fields, "orientation")));
+  const auto second = adapter.update_radar_info(make_radar_info({"orientation"}));
+
+  // Assert: the second is judged on its own, and nothing is converted
+  EXPECT_FALSE(first.has_value());
+  ASSERT_FALSE(second.has_value());
+  const std::vector<std::string> all_but_orientation(
+    required_fields_in_order.begin(), required_fields_in_order.end() - 1);
+  EXPECT_EQ(second.error().missing_required_fields(), all_but_orientation);
+  EXPECT_FALSE(adapter.convert(objects).has_value());
+
+  // Act: a radar info declaring every required field
+  const auto third = adapter.update_radar_info(make_radar_info(required_fields));
+
+  // Assert
+  EXPECT_TRUE(third.has_value());
+  EXPECT_TRUE(adapter.convert(objects).has_value());
+}
+
+// The first valid radar info fixes the answer. A later message is not looked at: it comes back
+// with the first's configuration, never as an error, and changes nothing about the conversion,
+// whether it declares more fields, fewer, or lacks a required one.
+TEST(RadarObjectsAdapter, RadarInfo_AfterValid_LaterRadarInfoIgnored)
+{
+  // Arrange: the first valid radar info declares position_z and no other optional field
+  const DefaultParameters defaults;
+  const RadarObjects objects = make_radar_objects({make_radar_object()});
+  RadarObjectsAdapter adapter = make_adapter(defaults.to_params());
+  ASSERT_TRUE(
+    adapter.update_radar_info(make_radar_info(with(required_fields, {"position_z"}))).has_value());
+
+  for (const auto & later :
+       {with(required_fields, {"size_x"}), without(required_fields, "orientation"),
+        std::set<std::string>{}}) {
+    // Act
+    const auto result = adapter.update_radar_info(make_radar_info(later));
+
+    // Assert: still the first radar info's answer, and still its conversion (position_z copied,
+    // size_x from the parameter)
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(result->defaulted_fields(), all_defaulted_except("position_z"));
+    const auto converted = adapter.convert(objects);
+    ASSERT_TRUE(converted.has_value());
+    const DetectedObject & detected = converted->detections.objects.at(0);
+    EXPECT_DOUBLE_EQ(
+      detected.kinematics.pose_with_covariance.pose.position.z, objects.objects.at(0).position.z);
+    EXPECT_DOUBLE_EQ(detected.shape.dimensions.x, defaults.size_x);
+  }
+}
+
 // ---------------------------------------------------------------------------------------------
 // Conversion into detected objects. A radar object is converted into a detected object with the
 // fields that are explicitly declared in a preceding radar info. Each test case evaluates the
