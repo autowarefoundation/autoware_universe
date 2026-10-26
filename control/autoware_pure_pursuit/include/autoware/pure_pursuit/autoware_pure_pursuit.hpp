@@ -30,6 +30,8 @@
 #ifndef AUTOWARE__PURE_PURSUIT__AUTOWARE_PURE_PURSUIT_HPP_
 #define AUTOWARE__PURE_PURSUIT__AUTOWARE_PURE_PURSUIT_HPP_
 
+#include "autoware/pure_pursuit/log_writer.hpp"
+
 #include <rclcpp/rclcpp.hpp>
 
 #include <geometry_msgs/msg/pose.hpp>
@@ -50,8 +52,9 @@ public:
   PurePursuit() : lookahead_distance_(0.0), closest_thr_dist_(3.0), closest_thr_ang_(M_PI / 4) {}
   ~PurePursuit() = default;
 
-  rclcpp::Logger logger = rclcpp::get_logger("pure_pursuit");
   // setter
+  // The writer has to outlive this object.
+  void setLogWriter(const LogWriter & writer) { writer_ = &writer; }
   void setCurrentPose(const geometry_msgs::msg::Pose & msg);
   void setWaypoints(const std::vector<geometry_msgs::msg::Pose> & msg);
   void setLookaheadDistance(double ld) { lookahead_distance_ = ld; }
@@ -74,6 +77,7 @@ private:
   geometry_msgs::msg::Point loc_next_tgt_;
 
   // variables got from outside
+  const LogWriter * writer_{&no_log};
   double lookahead_distance_, closest_thr_dist_, closest_thr_ang_;
   std::shared_ptr<std::vector<geometry_msgs::msg::Pose>> curr_wps_ptr_;
   std::shared_ptr<geometry_msgs::msg::Pose> curr_pose_ptr_;

@@ -42,9 +42,11 @@ namespace autoware::ground_segmentation
 {
 using autoware::vehicle_info_utils::VehicleInfo;
 
-class ScanGroundFilterComponent : public autoware::pointcloud_preprocessor::Filter
+class ScanGroundFilterComponent : public autoware::pointcloud_preprocessor::AgnocastFilter
 {
 private:
+  using NodeType = autoware::agnocast_wrapper::Node;
+
   // classified point label
   // (0: not classified, 1: ground, 2: not ground, 3: follow previous point,
   //  4: unkown(currently not used), 5: virtual ground)
@@ -184,8 +186,7 @@ private:
   std::unique_ptr<GridGroundFilter> grid_ground_filter_ptr_;
 
   // time keeper related
-  rclcpp::Publisher<autoware_utils::ProcessingTimeDetail>::SharedPtr
-    detailed_processing_time_publisher_;
+  AUTOWARE_PUBLISHER_PTR(autoware_utils::ProcessingTimeDetail) detailed_processing_time_publisher_;
   std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;
 
   /*!
@@ -236,7 +237,7 @@ private:
     PointCloud2 & out_object_cloud) const;
 
   /** \brief Parameter service callback result : needed to be hold */
-  OnSetParametersCallbackHandle::SharedPtr set_param_res_;
+  rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr set_param_res_;
 
   /** \brief Parameter service callback */
   rcl_interfaces::msg::SetParametersResult onParameter(
@@ -244,7 +245,7 @@ private:
 
   // debugger
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_{nullptr};
-  std::unique_ptr<autoware_utils::DebugPublisher> debug_publisher_ptr_{nullptr};
+  std::unique_ptr<autoware_utils::BasicDebugPublisher<NodeType>> debug_publisher_ptr_{nullptr};
 
 public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW

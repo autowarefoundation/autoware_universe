@@ -2,6 +2,42 @@
 Changelog for package autoware_diagnostic_graph_utils
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* fix(design): align the system node designs with the packages they describe (`#13338 <https://github.com/autowarefoundation/autoware_universe/issues/13338>`_)
+  * fix(design): declare the fixed-name interfaces of the system node designs as remap targets
+  The diagnostic graph ports, the diagnostics array publisher and the automatic
+  pose initializer's localization interfaces are pinned with global:, which keeps
+  them out of the design graph: link_manager skips any connection whose target is
+  a global input port and the exporter emits no remap. remap_target: keeps the
+  same fixed topic and service names while letting the ports take part in the
+  graph.
+  * feat(autoware_default_adapi_universe): add node designs for the AD API nodes
+  The package builds fifteen AD API components with no design of their own, so a
+  system that composes the AD API from design modules cannot reference them.
+  * feat(design): add the diagnostic graph and component state monitor node designs
+  autoware_component_state_monitor and autoware_diagnostic_graph_aggregator build
+  three components with no design of their own: the state monitor that aggregates
+  topic monitor diagnostics into per-component availability, the aggregator that
+  turns /diagnostics into the diagnostic graph, and the converter that derives
+  operation mode availability from it.
+  DiagnosticGraphLogging and ProcessingTimeChecker declare the parameters their
+  launchers pass, which have no package param file to come from.
+  ---------
+* feat(diagnostic_graph_utils): apply `agnocast_wrapper::Node` to `diagnostic_graph_utils` and `hazard_status_converter` (`#13075 <https://github.com/autowarefoundation/autoware_universe/issues/13075>`_)
+  * feat(diagnostic_graph_utils): apply `agnocast_wrapper::Node` to `diagnostic_graph_utils` and `hazard_status_converter`
+  * feat(diagnostic_graph_utils): add launch files for converter and dump nodes
+  Both nodes were only documented as `ros2 run`, which does not preload the Agnocast heaphook.
+  converter_node publishes /diagnostics_array through an agnocast publisher, so it needs the
+  heaphook under ENABLE_AGNOCAST=1. Give both nodes a launch file that includes
+  agnocast_env.launch.xml and sets LD_PRELOAD, as logging.launch.xml does, and point the docs at
+  them.
+  ---------
+* refactor(system): move node design files into each package (`#13103 <https://github.com/autowarefoundation/autoware_universe/issues/13103>`_)
+  Co-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>
+* Contributors: Koichi Imai, Ryohsuke Mitsudome, Taekjin LEE
+
 0.52.0 (2026-06-30)
 -------------------
 

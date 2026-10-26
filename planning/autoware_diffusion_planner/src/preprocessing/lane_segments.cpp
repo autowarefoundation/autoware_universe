@@ -16,18 +16,24 @@
 
 #include "autoware/diffusion_planner/constants.hpp"
 #include "autoware/diffusion_planner/dimensions.hpp"
+#include "autoware_utils_math/normalization.hpp"
 
 #include <autoware_lanelet2_extension/regulatory_elements/road_marking.hpp>  // for lanelet::autoware::RoadMarking
 
 #include <Eigen/src/Core/Matrix.h>
 #include <lanelet2_core/Forward.h>
+#include <lanelet2_core/geometry/LineString.h>
+#include <lanelet2_core/geometry/Point.h>
+#include <lanelet2_core/geometry/Polygon.h>
 
 #include <algorithm>
 #include <cmath>
 #include <iostream>
+#include <iterator>
 #include <limits>
 #include <map>
 #include <memory>
+#include <optional>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -43,6 +49,9 @@ using autoware_perception_msgs::msg::TrafficLightElement;
 std::map<lanelet::Id, size_t> create_lane_id_to_array_index_map(
   const std::vector<LaneSegment> & lane_segments);
 bool is_segment_inside(const LaneSegment & segment, const double center_x, const double center_y);
+std::optional<size_t> find_closest_segment_index(
+  const std::vector<LaneSegment> & lane_segments, const std::vector<int64_t> & segment_indices,
+  const lanelet::BasicPoint2d & point, const double yaw, const double yaw_threshold);
 uint8_t identify_current_light_status(
   const int64_t turn_direction, const std::vector<TrafficLightElement> & traffic_light_elements);
 }  // namespace
@@ -60,42 +69,38 @@ LaneSegmentContext::LaneSegmentContext(
 }
 
 std::vector<int64_t> LaneSegmentContext::select_route_segment_indices(
-  const LaneletRoute & route, const double center_x, const double center_y, const double center_z,
-  const int64_t max_segments) const
+  const LaneletRoute & route, const double center_x, const double center_y,
+  [[maybe_unused]] const double center_z, const double center_yaw, const int64_t max_segments) const
 {
   std::vector<int64_t> array_indices;
-  double closest_distance = std::numeric_limits<double>::max();
-  size_t closest_index = 0;
-  for (size_t i = 0; i < route.segments.size(); ++i) {
+  for (const auto & route_segment : route.segments) {
     // add index
-    const int64_t lanelet_id = route.segments[i].preferred_primitive.id;
+    const int64_t lanelet_id = route_segment.preferred_primitive.id;
     if (lanelet_id_to_array_index_.count(lanelet_id) == 0) {
       continue;
     }
-    const int64_t array_index = lanelet_id_to_array_index_.at(lanelet_id);
-    array_indices.push_back(array_index);
+    array_indices.push_back(static_cast<int64_t>(lanelet_id_to_array_index_.at(lanelet_id)));
+  }
 
-    // calculate closest index
-    const LaneSegment & route_segment = lanelet_map_.lane_segments[array_index];
-    double distance = std::numeric_limits<double>::max();
-    for (const LanePoint & point : route_segment.centerline) {
-      const double diff_x = point.x() - center_x;
-      const double diff_y = point.y() - center_y;
-      const double diff_z = point.z() - center_z;
-      const double curr_distance = std::sqrt(diff_x * diff_x + diff_y * diff_y + diff_z * diff_z);
-      distance = std::min(distance, curr_distance);
-    }
-    if (distance < closest_distance) {
-      closest_distance = distance;
-      closest_index = i;
-    }
+  // calculate closest index
+  // prefer lanelets aligned with ego yaw to avoid picking a crossing part of the route
+  const lanelet::BasicPoint2d center(center_x, center_y);
+  auto closest_index = find_closest_segment_index(
+    lanelet_map_.lane_segments, array_indices, center, center_yaw,
+    autoware::diffusion_planner::constants::MAX_ROUTE_SEGMENT_YAW_DIFF_RAD);
+  if (!closest_index) {
+    closest_index = find_closest_segment_index(
+      lanelet_map_.lane_segments, array_indices, center, center_yaw,
+      std::numeric_limits<double>::max());
   }
 
   std::vector<int64_t> selected_indices;
   bool has_entered_valid_region = false;
 
   // Select route segment indices
-  for (size_t i = closest_index; i < array_indices.size(); ++i) {
+  // closest_index is used to index array_indices, which excludes
+  // route segments that are unavailable in the processed map.
+  for (size_t i = closest_index.value_or(0); i < array_indices.size(); ++i) {
     const int64_t segment_idx = array_indices[i];
 
     if (!is_segment_inside(lanelet_map_.lane_segments[segment_idx], center_x, center_y)) {
@@ -120,13 +125,14 @@ std::vector<int64_t> LaneSegmentContext::select_route_segment_indices(
 autoware_perception_msgs::msg::TrafficLightGroup
 LaneSegmentContext::get_first_traffic_light_on_route(
   const LaneletRoute & route, const double center_x, const double center_y, const double center_z,
+  const double center_yaw,
   const std::map<lanelet::Id, TrafficSignalStamped> & traffic_light_id_map) const
 {
   autoware_perception_msgs::msg::TrafficLightGroup result;
   result.traffic_light_group_id = 0;
 
-  const std::vector<int64_t> segment_indices =
-    select_route_segment_indices(route, center_x, center_y, center_z, NUM_SEGMENTS_IN_ROUTE);
+  const std::vector<int64_t> segment_indices = select_route_segment_indices(
+    route, center_x, center_y, center_z, center_yaw, NUM_SEGMENTS_IN_ROUTE);
 
   for (const int64_t segment_idx : segment_indices) {
     const LaneSegment & segment = lanelet_map_.lane_segments[segment_idx];
@@ -454,6 +460,45 @@ bool is_segment_inside(const LaneSegment & segment, const double center_x, const
   }
 
   return false;
+}
+
+std::optional<size_t> find_closest_segment_index(
+  const std::vector<LaneSegment> & lane_segments, const std::vector<int64_t> & segment_indices,
+  const lanelet::BasicPoint2d & point, const double yaw, const double yaw_threshold)
+{
+  const auto to_2d = [](const LanePoint & p) { return lanelet::BasicPoint2d(p.x(), p.y()); };
+
+  std::optional<size_t> closest_index;
+  double min_distance = std::numeric_limits<double>::max();
+  for (size_t i = 0; i < segment_indices.size(); ++i) {
+    const LaneSegment & lane_segment = lane_segments[segment_indices[i]];
+
+    lanelet::BasicPolygon2d polygon;
+    std::transform(
+      lane_segment.left_boundary.begin(), lane_segment.left_boundary.end(),
+      std::back_inserter(polygon), to_2d);
+    std::transform(
+      lane_segment.right_boundary.rbegin(), lane_segment.right_boundary.rend(),
+      std::back_inserter(polygon), to_2d);
+    const double distance = lanelet::geometry::distance2d(polygon, point);
+    if (distance >= min_distance) {
+      continue;
+    }
+
+    lanelet::BasicLineString2d centerline;
+    std::transform(
+      lane_segment.centerline.begin(), lane_segment.centerline.end(),
+      std::back_inserter(centerline), to_2d);
+    const auto segment = lanelet::geometry::closestSegment(centerline, point);
+    const double lanelet_yaw =
+      std::atan2(segment.second.y() - segment.first.y(), segment.second.x() - segment.first.x());
+    if (std::abs(autoware_utils_math::normalize_radian(lanelet_yaw - yaw)) > yaw_threshold) {
+      continue;
+    }
+    min_distance = distance;
+    closest_index = i;
+  }
+  return closest_index;
 }
 
 uint8_t identify_current_light_status(

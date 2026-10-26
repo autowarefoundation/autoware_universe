@@ -2,6 +2,57 @@
 Changelog for package autoware_component_state_monitor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* fix(design): align the system node designs with the packages they describe (`#13338 <https://github.com/autowarefoundation/autoware_universe/issues/13338>`_)
+  * fix(design): declare the fixed-name interfaces of the system node designs as remap targets
+  The diagnostic graph ports, the diagnostics array publisher and the automatic
+  pose initializer's localization interfaces are pinned with global:, which keeps
+  them out of the design graph: link_manager skips any connection whose target is
+  a global input port and the exporter emits no remap. remap_target: keeps the
+  same fixed topic and service names while letting the ports take part in the
+  graph.
+  * feat(autoware_default_adapi_universe): add node designs for the AD API nodes
+  The package builds fifteen AD API components with no design of their own, so a
+  system that composes the AD API from design modules cannot reference them.
+  * feat(design): add the diagnostic graph and component state monitor node designs
+  autoware_component_state_monitor and autoware_diagnostic_graph_aggregator build
+  three components with no design of their own: the state monitor that aggregates
+  topic monitor diagnostics into per-component availability, the aggregator that
+  turns /diagnostics into the diagnostic graph, and the converter that derives
+  operation mode availability from it.
+  DiagnosticGraphLogging and ProcessingTimeChecker declare the parameters their
+  launchers pass, which have no package param file to come from.
+  ---------
+* feat(autoware_topic_state_monitor): apply `agnocast_wrapper::Node` to `topic_state_monitor` (`#13382 <https://github.com/autowarefoundation/autoware_universe/issues/13382>`_)
+  * feat(autoware_topic_state_monitor): apply `agnocast_wrapper::Node` to `topic_state_monitor`
+  * feat(autoware_component_state_monitor): run topic state monitors standalone under Agnocast
+  ---------
+* feat(component_state_monitor): apply `agnocast_wrapper::Node` to `component_state_monitor` (`#12903 <https://github.com/autowarefoundation/autoware_universe/issues/12903>`_)
+  * feat(component_state_monitor): apply agnocast_wrapper::Node to component_state_monitor
+  Apply autoware::agnocast_wrapper::Node to component_state_monitor (Method 2,
+  agnocast_wrapper::Node inheritance) so it can run with a CallbackIsolated /
+  Agnocast executor.
+  The node uses the AgnocastOnlyCallbackIsolatedExecutor, whose agnocast runtime
+  (signal handler / shutdown eventfd) is initialized by the generated standalone
+  main, not by a component container. It is therefore launched as a standalone
+  executable (component_state_monitor_node) rather than as a composable node in a
+  container; loading an agnocast-publisher node into a component container would
+  SIGSEGV on construction. The topic_state_monitor nodes stay as composable nodes
+  in the (plain) container.
+  Based on https://github.com/autowarefoundation/autoware_universe/pull/12763.
+  Claude-Session: https://claude.ai/code/session_01SXw9xgZwpwCE2KdXTraco2
+  * chore(component_state_monitor): remove redundant launch comment
+  Claude-Session: https://claude.ai/code/session_01SXw9xgZwpwCE2KdXTraco2
+  * refactor: use plain const reference subscription callbacks
+  autoware_agnocast_wrapper now accepts rclcpp-style const MessageT &
+  callbacks (`autowarefoundation/autoware_core#1228 <https://github.com/autowarefoundation/autoware_core/issues/1228>`_), so the subscription
+  callbacks no longer need wrapper-specific message pointer types.
+  ---------
+  Co-authored-by: atsushi421 <yff81986@nifty.com>
+* Contributors: Koichi Imai, Ryohsuke Mitsudome, Taekjin LEE, atsushi yano
+
 0.52.0 (2026-06-30)
 -------------------
 

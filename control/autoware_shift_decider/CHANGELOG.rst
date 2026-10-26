@@ -2,6 +2,22 @@
 Changelog for package autoware_shift_decider
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* refactor(control): move node design files into each package (`#13100 <https://github.com/autowarefoundation/autoware_universe/issues/13100>`_)
+  Co-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>
+* feat(shift_decider): apply `agnocast_wrapper::Node` to `autoware_shift_decider` (`#12918 <https://github.com/autowarefoundation/autoware_universe/issues/12918>`_)
+  * feat(shift_decider): apply agnocast_wrapper::Node to autoware_shift_decider
+  Co-authored-by: Koichi Imai <koichi.imai.2@tier4.jp>
+  * refactor: migrate to polling AIP
+  * style(pre-commit): autofix
+  * refactor: subscriber
+  ---------
+  Co-authored-by: kobayu858 <yutaro.kobayashi.2@tier4.jp>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Koichi Imai, Ryohsuke Mitsudome, Taekjin LEE
+
 0.52.0 (2026-06-30)
 -------------------
 

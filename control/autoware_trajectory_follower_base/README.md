@@ -18,10 +18,9 @@ The interface class has the following base functions.
 
 - `isReady()`: Check if the control is ready to compute.
 - `run()`: Compute control commands and return to [Trajectory Follower Nodes](../autoware_trajectory_follower_node/README.md). This must be implemented by inherited algorithms.
-- `sync()`: Input the result of running the other controller.
+- `sync()`: Input the result of running the lateral controller. Only the longitudinal controller has this function.
   - steer angle convergence
     - allow keeping stopped until steer is converged.
-  - velocity convergence(currently not used)
 
 See [the Design of Trajectory Follower Nodes](../autoware_trajectory_follower_node/README.md#Design) for how these functions work in the node.
 

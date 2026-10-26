@@ -2,6 +2,15 @@
 Changelog for package autoware_path_smoother
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* feat(autoware_trajectory_processor): support agnocast_wrapper::Node (`#13243 <https://github.com/autowarefoundation/autoware_universe/issues/13243>`_)
+  feat(path_smoother, path_optimizer): support agnocast_wrapper::Node
+* refactor(planning): move node design files into each package (`#13102 <https://github.com/autowarefoundation/autoware_universe/issues/13102>`_)
+  Co-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>
+* Contributors: Ryohsuke Mitsudome, Taekjin LEE, Yutaro Kobayashi
+
 0.52.0 (2026-06-30)
 -------------------
 

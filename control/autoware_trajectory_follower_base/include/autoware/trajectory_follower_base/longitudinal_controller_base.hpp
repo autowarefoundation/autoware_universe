@@ -31,17 +31,14 @@ struct LongitudinalOutput
 {
   Longitudinal control_cmd;
   LongitudinalHorizon control_cmd_horizon;
-  LongitudinalSyncData sync_data;
 };
 class LongitudinalControllerBase
 {
 public:
+  virtual ~LongitudinalControllerBase() = default;
   virtual bool isReady(const InputData & input_data) = 0;
   virtual LongitudinalOutput run(InputData const & input_data) = 0;
   void sync(LateralSyncData const & lateral_sync_data);
-  // NOTE: This reset function should be called when the trajectory is replanned by changing ego
-  // pose or goal pose.
-  void reset();
 
 protected:
   LateralSyncData lateral_sync_data_;

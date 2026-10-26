@@ -2,6 +2,17 @@
 Changelog for package autoware_simpl_prediction
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* refactor(perception): move node design files into each package (`#13104 <https://github.com/autowarefoundation/autoware_universe/issues/13104>`_)
+  Co-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>
+* chore(pre-commit): update clang-format to v22.1.5 (`#13126 <https://github.com/autowarefoundation/autoware_universe/issues/13126>`_)
+  * chore(pre-commit): update clang-format to v22.1.5
+  * style(pre-commit): autofix
+  ---------
+* Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome, Taekjin LEE
+
 0.52.0 (2026-06-30)
 -------------------
 

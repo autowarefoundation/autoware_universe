@@ -2,6 +2,33 @@
 Changelog for package tier4_dummy_object_rviz_plugin
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* feat(autoware_diffusion_planner): remap unsupported objects to pedestrian (`#13352 <https://github.com/autowarefoundation/autoware_universe/issues/13352>`_)
+  * feat(autoware_diffusion_planner): treat HAZARD objects as pedestrians
+  Remap HAZARD classification to PEDESTRIAN when updating agent histories
+  so that hazard objects are considered as planner inputs. If a hazard
+  object has a non-BOX shape, emit a warning and replace the shape with
+  a 0.5 m bounding box.
+  Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
+  * feat(autoware_diffusion_planner): gate object remapping behind a parameter and extend it to UNKNOWN
+  * fix(tier4_dummy_object_rviz_plugin): emit a footprint for dummy unknown objects
+  * refactor(autoware_diffusion_planner): derive the unsupported-label set from the model labels
+  ---------
+  Co-authored-by: Yukihito Saito <yukky.saito@gmail.com>
+  Co-authored-by: Claude Fable 5 <noreply@anthropic.com>
+  Co-authored-by: Max-Bin <vborisw@gmail.com>
+* fix: declare the dependencies the simulator, e2e and map packages use (`#13209 <https://github.com/autowarefoundation/autoware_universe/issues/13209>`_)
+  * fix: declare the dependencies the simulator, e2e and map packages use
+  Three packages use headers or symbols of packages that they never declare. Add the 12 missing <depend> entries.
+  * fix: declare tf2 in tier4_dummy_object_rviz_plugin
+  The plugin uses tf2::Transform and tf2::Quaternion directly, but only tf2_geometry_msgs and tf2_ros were declared.
+  ---------
+* refactor(simulator): move node design files into each package (`#13096 <https://github.com/autowarefoundation/autoware_universe/issues/13096>`_)
+  Co-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>
+* Contributors: Mete Fatih Cırıt, Minglu Zhao, Ryohsuke Mitsudome, Taekjin LEE
+
 0.52.0 (2026-06-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

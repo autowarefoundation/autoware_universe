@@ -2,6 +2,37 @@
 Changelog for package autoware_mrm_handler
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* feat(mrm_handler): apply `agnocast_wrapper::Node` to `mrm_handler` (`#12844 <https://github.com/autowarefoundation/autoware_universe/issues/12844>`_)
+  * apply agnocast_wrapper::Node
+  * apply agnocast_wrapper::Node
+  * style(pre-commit): autofix
+  * use AgnocastOnlyCIE
+  * fix
+  * refactor(autoware_mrm_handler): keep upstream services QoS profile
+  The agnocast_wrapper node now accepts an rmw_qos_profile_t, so
+  AUTOWARE_DEFAULT_SERVICES_QOS_PROFILE() can be passed unchanged and the
+  create_mrm_client() helper is no longer needed.
+  * refactor(autoware_mrm_handler): initialize polling subscribers in the header
+  Drop the create_polling_sub() helper and keep the members initialized inline
+  as upstream does.
+  * style(pre-commit): autofix
+  * fix(mrm_handler): migrate to the current agnocast_wrapper polling API
+  * fix(mrm_handler): pass rclcpp::QoS to the wrapper's create_client
+  * style(pre-commit): autofix
+  * docs(mrm_handler): add a comment explaining the LD_PRELOAD env
+  * docs(mrm_handler): add a comment for the agnocast_env include
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+  Co-authored-by: kobayu858 <yutaro.kobayashi.2@tier4.jp>
+  Co-authored-by: Yutaro Kobayashi <129580202+kobayu858@users.noreply.github.com>
+* fix(system): declare the dependencies these packages use (`#13217 <https://github.com/autowarefoundation/autoware_universe/issues/13217>`_)
+* refactor(system): move node design files into each package (`#13103 <https://github.com/autowarefoundation/autoware_universe/issues/13103>`_)
+  Co-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>
+* Contributors: Koichi Imai, Mete Fatih Cırıt, Ryohsuke Mitsudome, Taekjin LEE
+
 0.52.0 (2026-06-30)
 -------------------
 

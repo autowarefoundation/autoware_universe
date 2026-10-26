@@ -2,6 +2,16 @@
 Changelog for package perception_utils
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* perf(perception_utils): reduce NMS computation time using cache RDDR-996 (`#13169 <https://github.com/autowarefoundation/autoware_universe/issues/13169>`_)
+  * perf: reduce NMS computation time using cache
+  * refactor: rename functions
+  * chore: add comment for guards
+  ---------
+* Contributors: Kotaro Uetake, Ryohsuke Mitsudome
+
 0.52.0 (2026-06-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

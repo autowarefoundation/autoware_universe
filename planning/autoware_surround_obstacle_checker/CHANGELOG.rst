@@ -2,6 +2,66 @@
 Changelog for package autoware_surround_obstacle_checker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* fix(design): align the planning node designs with the packages they describe (`#13342 <https://github.com/autowarefoundation/autoware_universe/issues/13342>`_)
+  * fix(design): align the planning node designs with the packages they describe
+  HazardLightsSelector registers as HazardLightsSelector, and its second input
+  maps to input/system/hazard_lights_command and carries the MRM command, so the
+  port is named system_hazard_lights_cmd.
+  SurroundObstacleChecker publishes the migrated autoware_internal_planning_msgs
+  velocity limit types, and creates neither stop_reasons nor no_start_reason.
+  RemainingDistanceTimeCalculator takes its velocity limit input through the
+  design graph; global: keeps a port out of it, since link_manager skips any
+  connection whose target is a global input port and the exporter emits no remap.
+  ExternalVelocityLimitSelector's api_limit is the reverse case: it is published
+  only by AD API adaptors outside the design graph, so it keeps global: alongside
+  its remap_target.
+  `#13165 <https://github.com/autowarefoundation/autoware_universe/issues/13165>`_ unified the Modifier and Optimizer nodes into TrajectoryProcessor but
+  left both old designs in place, naming plugins, executables and param files
+  that no longer exist, and put the new design in common/autoware_universe_designs,
+  a bare directory that is not a ROS package. The design moves into
+  autoware_trajectory_processor per the convention set by `#13102 <https://github.com/autowarefoundation/autoware_universe/issues/13102>`_, and its
+  processing_time_detail publisher carries ProcessingTimeTree.
+  * feat(autoware_path_sampler): add the packaged path sampler parameter file
+  The package had no config/ directory and its INSTALL_TO_SHARE was commented
+  out, so the parameter file the node design points at lived only in
+  autoware_launch. The file is copied into the package and installed, and the
+  design declares the three shared param files the launcher also passes, which is
+  where ego_nearest_dist_threshold and ego_nearest_yaw_threshold come from.
+  * feat(design): add the planning factor publishers to the BehaviorPathPlanner node design
+  The node publishes nine planning factor arrays under
+  /planning/planning_factors that the design did not declare, so nothing could
+  connect them to the evaluator.
+  ---------
+* chore(planning): update package maintainers (`#13186 <https://github.com/autowarefoundation/autoware_universe/issues/13186>`_)
+* refactor(planning): move node design files into each package (`#13102 <https://github.com/autowarefoundation/autoware_universe/issues/13102>`_)
+  Co-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>
+* chore(pre-commit): update clang-format to v22.1.5 (`#13126 <https://github.com/autowarefoundation/autoware_universe/issues/13126>`_)
+  * chore(pre-commit): update clang-format to v22.1.5
+  * style(pre-commit): autofix
+  ---------
+* feat: support new object classification labels (`#12956 <https://github.com/autowarefoundation/autoware_universe/issues/12956>`_)
+  * fix(obstacle_proximity_checker): support new object classification labels
+  * feat(collision_detector): support new object classification labels
+  * feat(surround_obstacle_checker): support new object classification labels
+  * fix: apply pre-commit
+  ---------
+* feat(trajectory_modifier): add surround obstacle stop plugin to trajectory modifier (`#12894 <https://github.com/autowarefoundation/autoware_universe/issues/12894>`_)
+  * extract core logic from surround_obstacle_checker to new common package obstacle_proximit_checker
+  * add new modifier plugin surround_obstacle_stop which uses common package obstacle_proximity_checker
+  * apply pre-commit checks
+  * refactor implementation, add integration test for surround_obstacle_stop
+  * run proximity checker only once per planning cycle
+  * add maintainers for new package
+  * update default param values
+  * update and use utility function replace_trajectory_with_stop_point
+  * add readme for autoware_obstacle_proximity_checker
+  * fix unit tests
+  ---------
+* Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome, Satoshi OTA, Taekjin LEE, mkquda
+
 0.52.0 (2026-06-30)
 -------------------
 

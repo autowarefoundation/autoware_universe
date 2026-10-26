@@ -2,6 +2,69 @@
 Changelog for package autoware_image_projection_based_fusion
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* fix(autoware_image_projection_based_fusion): use runtime-agnostic wait and shutdown (`#13399 <https://github.com/autowarefoundation/autoware_universe/issues/13399>`_)
+  * fix(autoware_image_projection_based_fusion): use runtime-agnostic wait and shutdown
+  An executable registered with an AgnocastOnly* executor brings up only the
+  agnocast context, so rclcpp::ok() is false and rclcpp::shutdown() is a no-op
+  when ENABLE_AGNOCAST=1.
+  - camera_info_callback(): the logging thread is joined right after the
+  projector is built, so `initializing` alone terminates the loop. Drop
+  rclcpp::ok() and rclcpp::Rate, which also avoids rclcpp::Rate::sleep()
+  throwing on an invalid context.
+  - pointpainting: call autoware::agnocast_wrapper::shutdown() so build_only
+  terminates the node in both modes.
+  * fix(autoware_image_projection_based_fusion): set LD_PRELOAD in the standalone launch files
+  Every node in this package is registered with an AgnocastOnly* executor, which
+  needs libagnocast_heaphook.so in LD_PRELOAD. Only roi_cluster_fusion included
+  agnocast_env.launch.xml, so the other standalone nodes exited immediately at
+  ENABLE_AGNOCAST=1 with "libagnocast_heaphook.so not found in LD_PRELOAD".
+  roi_pointcloud_fusion is left alone: it only loads into an existing container,
+  which owns LD_PRELOAD.
+  * fix(autoware_image_projection_based_fusion): set LD_PRELOAD in segmentation_pointcloud_fusion.launch.py
+  ---------
+* fix(image_projection_based_fusion): dangling reference bug fix (`#13266 <https://github.com/autowarefoundation/autoware_universe/issues/13266>`_)
+* feat(image_projection_based_fusion): apply `agnocast_wrapper::Node` to RoiFusion base node (`#12688 <https://github.com/autowarefoundation/autoware_universe/issues/12688>`_)
+  * apply agnocast_wrapper::Node
+  * fix
+  * style(pre-commit): autofix
+  * refactor(image_projection_based_fusion): drop node name cache, get_name() returns const char*
+  * fix(image_projection_based_fusion): publish debug images without image_transport
+  image_transport needs a real rclcpp::Node, so the debug publishers could not be created from
+  the wrapper node and debug_mode/is_publish_debug_mask had to be forced off under agnocast.
+  Passing `this` to image_transport in the non-agnocast path also failed to compile once
+  agnocast_wrapper::Node stopped being an rclcpp::Node alias.
+  Use plain sensor_msgs/Image publishers and subscriptions instead, as blockage_diag does. The
+  debug topics no longer offer compressed transports, and the image_transport-specific format /
+  jpeg_quality / png_level parameters are gone.
+  Also add the missing <utility> include flagged by cpplint.
+  * use AUTOWARE_MESSAGE_CONST_SHARED_PTR for image_buffer\_
+  * fix(image_projection_based_fusion): keep the lock_guard in FusionCollector::set_info/get_info
+  The guard was dropped because this PR merges the Agnocast callback group back into the
+  single default one, restoring the pre-Agnocast callback layout. That makes the accesses
+  serialized in practice today, but it relies on the executor / callback group
+  configuration rather than on anything local to FusionCollector, and `#12439 <https://github.com/autowarefoundation/autoware_universe/issues/12439>`_ already
+  changed that assumption once.
+  fusion_collector_info\_ is a shared_ptr written from the subscription callbacks and read
+  from the timer callback, so keep the guard to stay robust if the callback groups are
+  split again.
+  * fix(image_projection_based_fusion): declare autoware_utils_debug and autoware_utils_diagnostics
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* refactor(pointpainting-fusion): replace NMS with perception_utils::IouBevNms (`#13180 <https://github.com/autowarefoundation/autoware_universe/issues/13180>`_)
+  refactor: replace NMS with perception_utils::IouBevNms
+* chore(pre-commit): update clang-format to v22.1.5 (`#13126 <https://github.com/autowarefoundation/autoware_universe/issues/13126>`_)
+  * chore(pre-commit): update clang-format to v22.1.5
+  * style(pre-commit): autofix
+  ---------
+* fix(autoware_image_projection_based_fusion): fix bug for contention which was introduced when `callback_group` was splitted (`#13011 <https://github.com/autowarefoundation/autoware_universe/issues/13011>`_)
+  * fix bug for contention when callback_group was splitted
+  * use plain mutex
+  ---------
+* Contributors: Koichi Imai, Kotaro Uetake, Mete Fatih Cırıt, Ryohsuke Mitsudome, badai nguyen
+
 0.52.0 (2026-06-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

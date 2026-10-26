@@ -139,6 +139,16 @@ TEST_F(UtilsTest, GetTransformMatrixRotation)
     for (int j = 0; j < 3; ++j) EXPECT_NEAR(map2bl(i, j), R.transpose()(i, j), 1e-6);
 }
 
+TEST_F(UtilsTest, YawFromQuaternion)
+{
+  for (const double angle : {0.0, M_PI_2, -M_PI_2, 3.0, -3.0}) {
+    geometry_msgs::msg::Quaternion quaternion;
+    quaternion.z = std::sin(angle / 2);
+    quaternion.w = std::cos(angle / 2);
+    EXPECT_NEAR(utils::yaw_from_quaternion(quaternion), angle, 1e-6);
+  }
+}
+
 TEST_F(UtilsTest, CheckInputMapValid)
 {
   std::unordered_map<std::string, std::vector<float>> input_map;

@@ -18,8 +18,9 @@
 #include "core/init.hpp"
 #include "core/main.hpp"
 
+#include <autoware/agnocast_wrapper/diagnostic_updater.hpp>
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware_driving_mode_manager/plugin.hpp>
-#include <diagnostic_updater/diagnostic_updater.hpp>
 #include <pluginlib/class_loader.hpp>
 
 #include <memory>
@@ -27,14 +28,14 @@
 namespace autoware::driving_mode_manager
 {
 
-class DrivingModeManager : public rclcpp::Node
+class DrivingModeManager : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit DrivingModeManager(const rclcpp::NodeOptions & options);
 
 private:
-  diagnostic_updater::Updater diag_;
-  rclcpp::TimerBase::SharedPtr timer_;
+  autoware::agnocast_wrapper::diagnostic_updater::Updater diag_;
+  AUTOWARE_TIMER_PTR timer_;
   double rate_;
 
   void on_timer_init();

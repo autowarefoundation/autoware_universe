@@ -2,6 +2,28 @@
 Changelog for package autoware_trajectory_concatenator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* feat(trajectory_selector): apply `agnocast_wrapper::Node` to `autoware_trajectory_selector` (`#12920 <https://github.com/autowarefoundation/autoware_universe/issues/12920>`_)
+  * apply agnocast_wrapper::Node
+  * apply agnocast_wrapper::Node
+  * fix trajectory_concatenator_wrapper
+  * style(pre-commit): autofix
+  * fix to not use template
+  * style(pre-commit): autofix
+  * fix: move bug
+  * fix: use {} for agnocast message_ptr null
+  * fix: wrap test context assignments in agnocast msg_ptr
+  * fix: executor
+  * fix: polling
+  * refactor: subscriber
+  * refactor: skip test in cmake
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+  Co-authored-by: kobayu858 <yutaro.kobayashi.2@tier4.jp>
+* Contributors: Koichi Imai, Ryohsuke Mitsudome
+
 0.52.0 (2026-06-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

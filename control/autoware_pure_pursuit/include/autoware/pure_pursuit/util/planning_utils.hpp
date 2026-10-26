@@ -17,6 +17,7 @@
 
 #define EIGEN_MPL2_ONLY
 
+#include "autoware/pure_pursuit/log_writer.hpp"
 #include "interpolate.hpp"
 
 #include <Eigen/Core>
@@ -34,8 +35,6 @@
 #include <memory>
 #include <utility>
 #include <vector>
-
-#define PLANNING_UTILS_LOGGER "planning_utils"
 
 namespace autoware::pure_pursuit
 {
@@ -64,7 +63,9 @@ std::pair<bool, int32_t> findClosestIdxWithDistAngThr(
   const geometry_msgs::msg::Pose & current_pose, const double th_dist = 3.0,
   const double th_yaw = M_PI_2);
 
-int8_t getLaneDirection(const std::vector<geometry_msgs::msg::Pose> & poses, double th_dist = 0.5);
+int8_t getLaneDirection(
+  const LogWriter & writer, const std::vector<geometry_msgs::msg::Pose> & poses,
+  double th_dist = 0.5);
 
 double normalizeEulerAngle(const double euler);
 

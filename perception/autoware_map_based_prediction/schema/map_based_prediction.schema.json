@@ -178,6 +178,28 @@
           "default": 1.0,
           "description": "Minimum duration that lack of crossing intention must continuously persist to be judged as false"
         },
+        "lane_change_path_suppression": {
+          "type": "object",
+          "properties": {
+            "enable": {
+              "type": "boolean",
+              "default": true,
+              "description": "Suppress undetected lane-change paths when any lane-follow candidate exists"
+            },
+            "keep_when_lane_ends": {
+              "type": "boolean",
+              "default": true,
+              "description": "Keep lane-change paths when any following-only branch from the current lanelet ends without followers within max(speed, 1.0 m/s) times lane_end_rescue_time_horizon, independently of center-candidate acceptance"
+            },
+            "lane_end_rescue_time_horizon": {
+              "type": "number",
+              "default": 5.0,
+              "minimum": 0.0,
+              "description": "Independent lane-end rescue time horizon in seconds"
+            }
+          },
+          "required": ["enable", "keep_when_lane_ends", "lane_end_rescue_time_horizon"]
+        },
         "lane_change_detection": {
           "type": "object",
           "properties": {
@@ -373,6 +395,7 @@
         "use_crosswalk_user_history",
         "crossing_intention_duration",
         "no_crossing_intention_duration",
+        "lane_change_path_suppression",
         "lane_change_detection",
         "reference_path_resolution",
         "behavior_model",

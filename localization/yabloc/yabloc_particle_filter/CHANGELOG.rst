@@ -2,6 +2,18 @@
 Changelog for package yabloc_particle_filter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* fix(yabloc): declare the actual service names and shared topics in the node designs (`#13292 <https://github.com/autowarefoundation/autoware_universe/issues/13292>`_)
+  The align, trigger and switch services are created as ~/<name>, not
+  ~/service/<name>; CameraPoseInitializer also subscribes ~/input/camera_info.
+  weighted_particles is published by both correctors and consumed by the
+  predictor, so it is pinned with global: on all three ports.
+* refactor(localization): move node design files into each package (`#13101 <https://github.com/autowarefoundation/autoware_universe/issues/13101>`_)
+  Co-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>
+* Contributors: Ryohsuke Mitsudome, Taekjin LEE
+
 0.52.0 (2026-06-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

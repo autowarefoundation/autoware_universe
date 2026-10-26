@@ -14,16 +14,18 @@
 
 #include "autoware/trajectory_follower_node/controller_node.hpp"
 
-#include "autoware/mpc_lateral_controller/mpc_lateral_controller.hpp"
+#include "autoware/mpc_lateral_controller/mpc_lateral_controller_node.hpp"
 #include "autoware/pid_longitudinal_controller/pid_longitudinal_controller_node.hpp"
-#include "autoware/pure_pursuit/autoware_pure_pursuit_lateral_controller.hpp"
+#include "autoware/pure_pursuit/autoware_pure_pursuit_lateral_controller_node.hpp"
 #include "autoware_utils/ros/marker_helper.hpp"
 
 #include <autoware/trajectory_follower_base/lateral_controller_base.hpp>
 
 #include <algorithm>
+#include <cstdint>
 #include <limits>
 #include <memory>
+#include <numeric>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -80,12 +82,12 @@ Controller::Controller(const rclcpp::NodeOptions & node_options)
   switch (lateral_controller_mode) {
     case LateralControllerMode::MPC: {
       lateral_controller_ =
-        std::make_shared<mpc_lateral_controller::MpcLateralController>(*this, diag_updater_);
+        std::make_shared<mpc_lateral_controller::MpcLateralControllerNode>(*this, diag_updater_);
       break;
     }
     case LateralControllerMode::PURE_PURSUIT: {
       lateral_controller_ =
-        std::make_shared<autoware::pure_pursuit::PurePursuitLateralController>(*this);
+        std::make_shared<autoware::pure_pursuit::PurePursuitLateralControllerNode>(*this);
       break;
     }
     default:
@@ -274,7 +276,6 @@ void Controller::callbackTimerControl()
 
   // 4. sync with each other controllers
   longitudinal_controller_->sync(lat_out.sync_data);
-  lateral_controller_->sync(lon_out.sync_data);
 
   // TODO(Horibe): Think specification. This comes from the old implementation.
   if (isTimeOut(lon_out, lat_out)) return;
@@ -379,8 +380,8 @@ std::optional<ControlHorizon> Controller::mergeLatLonHorizon(
   // calculate greatest common divisor of time steps
   const auto gcd_double = [](const double a, const double b) {
     const double precision = 1e9;
-    const int int_a = static_cast<int>(round(a * precision));
-    const int int_b = static_cast<int>(round(b * precision));
+    const std::int64_t int_a = static_cast<std::int64_t>(round(a * precision));
+    const std::int64_t int_b = static_cast<std::int64_t>(round(b * precision));
     return static_cast<double>(std::gcd(int_a, int_b)) / precision;
   };
   const double time_step_ms =

@@ -2,6 +2,30 @@
 Changelog for package autoware_control_command_gate
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* fix(design): align the control node designs with the packages they describe (`#13340 <https://github.com/autowarefoundation/autoware_universe/issues/13340>`_)
+  * fix(design): align the control node designs with the packages they describe
+  ControlCommandGate and the operation mode transition manager name a plugin
+  class and pin publishers that do not match the built package: the registered
+  component is ControlCmdGate, and the transition flags belong on the design
+  graph rather than on global: pins that link_manager skips.
+  TrajectoryFollower declares three debug publishers with message types the node
+  never publishes and a stop_reason publisher it does not create at all.
+  VehicleCmdGate keeps gate_mode and engage on their official topic names through
+  remap_target: alone, so the two inputs are connected through the design.
+  * fix(autoware_operation_mode_transition_manager): declare the system and legacy interfaces as remap targets
+  The operation mode state publisher, the two operation mode change services and
+  the legacy engage and gate mode publishers are node-side fixed names. Declaring
+  them as remap targets puts them on the design graph; a port pinned with global:
+  is skipped by link_manager and the exporter emits no remap for it.
+  ---------
+* fix(control_command_gate): ignore invalid control command (`#13239 <https://github.com/autowarefoundation/autoware_universe/issues/13239>`_)
+* refactor(control): move node design files into each package (`#13100 <https://github.com/autowarefoundation/autoware_universe/issues/13100>`_)
+  Co-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>
+* Contributors: Ryohsuke Mitsudome, Taekjin LEE, Takagi, Isamu
+
 0.52.0 (2026-06-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

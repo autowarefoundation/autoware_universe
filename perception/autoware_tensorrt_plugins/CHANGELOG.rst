@@ -2,6 +2,28 @@
 Changelog for package autoware_tensorrt_plugins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* feat(autoware_ptv3): support multisweep densification with time-lag features (`#13300 <https://github.com/autowarefoundation/autoware_universe/issues/13300>`_)
+  * feat(autoware_ptv3): support multisweep densification with time-lag features
+  * feat(autoware_ptv3): support none source reconstruction mode
+  * fix(autoware_ptv3): publish every output cloud in input order
+  * perf(autoware_ptv3): drop the per-frame stream sync from sweep aggregation
+  * fix(autoware_ptv3): mark the current sweep explicitly instead of inferring it from the lag
+  * fix(autoware_ptv3): reject unusable frames when they are cached instead of throwing mid-inference
+  * refactor(autoware_ptv3): create the TF buffer and listener only when densification is enabled
+  * fix(autoware_ptv3): advertise the filtered cloud only when filter classes are configured
+  * refactor(autoware_ptv3): drop the duplicated frame count, config copies and cache walks
+  * fix(autoware_ptv3): pass identity for the current frame instead of a pose round trip
+  * chore: add voxelizer to the cspell dictionary
+  ---------
+* chore(pre-commit): update clang-format to v22.1.5 (`#13126 <https://github.com/autowarefoundation/autoware_universe/issues/13126>`_)
+  * chore(pre-commit): update clang-format to v22.1.5
+  * style(pre-commit): autofix
+  ---------
+* Contributors: Amadeusz Szymko, Mete Fatih Cırıt, Ryohsuke Mitsudome
+
 0.52.0 (2026-06-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

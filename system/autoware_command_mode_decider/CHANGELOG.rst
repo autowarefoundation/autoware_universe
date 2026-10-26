@@ -2,6 +2,13 @@
 Changelog for package autoware_command_mode_decider
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* fix(command_mode_decider): fix initial last mode (`#13220 <https://github.com/autowarefoundation/autoware_universe/issues/13220>`_)
+* fix(system): declare the dependencies these packages use (`#13217 <https://github.com/autowarefoundation/autoware_universe/issues/13217>`_)
+* Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome, Takagi, Isamu
+
 0.52.0 (2026-06-30)
 -------------------
 

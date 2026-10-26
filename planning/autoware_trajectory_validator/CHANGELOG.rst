@@ -2,6 +2,211 @@
 Changelog for package autoware_trajectory_validator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* feat(traffic_light_compliance_checker): improve compliance checker stability and amber handling (`#13371 <https://github.com/autowarefoundation/autoware_universe/issues/13371>`_)
+  * modify tl compliance checker to detect stop attempts at amber light and (optionally) add tl id to force rejection buffer
+  - update traffic_light_stop params in modifier
+  - update traffic_light filter params in validator
+  - update modifier and validator parameter structs
+  - implement logic to detect stops at ember light and optionally add to force rejection buffer
+  - update & refactor traffic_light filter tests
+  * refactor tl compliance checker
+  - update amber rejection hystory while checking for violations instead of post process
+  - apply allow_if_cannot stop check while checking for violations instead of post process
+  * improve crossig time limit logic
+  compute dynamic time limit for amber light based on tracked tl duration instead of using fixed value param
+  * check the flag reject_if_stop_detected before adding tl to amber_rejection_history\_
+  * add test cases to traffic_light_stop and traffic_light_filter
+  * minor refactor
+  * fix(traffic_light_stop): floor scan length with min_lookahead_distance and wire stop time step (`#3232 <https://github.com/autowarefoundation/autoware_universe/issues/3232>`_)
+  * fix(traffic_light_stop): check full traj horizon and wire stop time step
+  At low ego speed the compliance checker capped the scan by comfortable
+  stopping distance (~0.5 m), missing red stop lines ahead. Also assign
+  trajectory_time_step\_ so the existing 3-point stop fallback uses the
+  configured step.
+  Co-authored-by: Cursor <cursoragent@cursor.com>
+  * fix(traffic_light): floor scan length with min_lookahead_distance
+  Restore the comfortable-stop scan cap but floor it at 20 m so creeping
+  ego still sees nearby stop lines, without rejecting far lights in the
+  shared traffic_light_filter path.
+  Co-authored-by: Cursor <cursoragent@cursor.com>
+  ---------
+  Co-authored-by: Cursor <cursoragent@cursor.com>
+  * fix cherry-pick errors
+  * implement arrow aware amber tl compliance check
+  - Track YellowState (kNotYellow / kFromGreen / kFromNonGreen) in TrafficLightStatusTracker from raw Green Circle → Amber transitions
+  - Skip stop-line collection for arrow-aware amber when enable_arrow_aware_yellow_passing, turn lane, mapped static arrow, and kFromGreen all hold
+  - Keep Red→Amber / unknown-origin amber as stop (no override)
+  - Add shared utils (is_equal, has\_*_circle, has_static_arrow, is_arrow_aware_amber_pass) used by tracker and checker
+  - Add enable_arrow_aware_yellow_passing (default true) and wire it through trajectory_modifier traffic_light_stop and trajectory_validator traffic_light_filter (params, schema, config)
+  - Document arrow-aware amber behavior in the compliance checker README
+  - Add unit tests for yellow-transition tracking and end-to-end arrow-aware amber cases
+  * hold last stable TL status while gated states settle
+  - Track current candidate and last stable signal separately in TrafficLightStatusTracker
+  - Emit the last stable status while red/amber/unknown are below their stable-duration thresholds instead of clearing elements
+  - Update YellowState only when the accepted stable status changes, avoiding single-frame false detections
+  - Pass through raw signals when ego is stopped for responsiveness, while still updating stable history
+  - Accept candidate states with duration >= threshold (including immediate green)
+  * replace yellow usage by amber
+  * fix test
+  * rename test file and extend test cases for compliance checker
+  * improve TL compliance checker to prevent chattering behavior
+  - refactor TrafficLightStatusTracker::filter_signals to emit all stable statuses in the history, not only the ones in this frame
+  - keep a history of violation arc lengths per id
+  - use previous violation arc lengths to floor current frame lookahead distance
+  - use current frame collected stop lines to cleanup the history of violation arc lengths
+  * Update common/autoware_traffic_light_compliance_checker/include/autoware/traffic_light_compliance_checker/utils.hpp
+  Co-authored-by: Maxime CLEMENT <78338830+maxime-clem@users.noreply.github.com>
+  * feat(traffic_light_stop, traffic_light_compliance_checker): fix inconsistent amber rejection behavior (`#3380 <https://github.com/autowarefoundation/autoware_universe/issues/3380>`_)
+  * update modifier traffic_light_stop parameters
+  - modify traffic_light_stop config to be consistent with traffic_light_filter
+  - update parameter_struct.yaml and schema
+  - update integration tests
+  - add delay_response_time param
+  * ensure distance to stop line and crossing time are measured with respect to ego front
+  * update default trajectory_processor config
+  ---------
+  * fix format
+  * remove duplicated set of params
+  * fix test
+  ---------
+  Co-authored-by: Yuxuan Liu <619684051@qq.com>
+  Co-authored-by: Cursor <cursoragent@cursor.com>
+  Co-authored-by: Maxime CLEMENT <78338830+maxime-clem@users.noreply.github.com>
+* feat(crosswalk_filter): port crosswalk filter improvements (`#13374 <https://github.com/autowarefoundation/autoware_universe/issues/13374>`_)
+  * Apply PR `#3318 <https://github.com/autowarefoundation/autoware_universe/issues/3318>`_ changes
+  * Apply PR `#3319 <https://github.com/autowarefoundation/autoware_universe/issues/3319>`_ changes
+* fix(trajectory_validator): port fixes to trajectory validator (`#13366 <https://github.com/autowarefoundation/autoware_universe/issues/13366>`_)
+  * feat(trajectory validator): replace DANGER with HIGH_CAUTION in vehicle constraint filter (`#3188 <https://github.com/autowarefoundation/autoware_universe/issues/3188>`_)
+  * fix(trajectory_validator): keep shadow filter metrics in validation report (`#3279 <https://github.com/autowarefoundation/autoware_universe/issues/3279>`_)
+  refactor final trajectory risk level calculation
+  ---------
+  Co-authored-by: Kotaro Uetake <60615504+ktro2828@users.noreply.github.com>
+* feat(boundary_departure): report NEAR_BOUNDARY as a low caution risk (`#13345 <https://github.com/autowarefoundation/autoware_universe/issues/13345>`_)
+* feat(trajectory_ranker): implement and integrate ranker into selector node (`#13353 <https://github.com/autowarefoundation/autoware_universe/issues/13353>`_)
+  * feat(trajectory_ranker): implement new ranker module and integrate into selector component (`#3208 <https://github.com/autowarefoundation/autoware_universe/issues/3208>`_)
+  * add trajectory_ranker_wrapper framework
+  * refactor trajectory ranker parameter handling
+  * implement trajectory_ranker class framework
+  * implement core ranker logic
+  - add logic to evaluate trajectories based on risk level
+  - add logic to evaluate trajectories based on source
+  - use existing metrics based evaluation to evaluate trajectory quality
+  * integrate new ranker into trajectory_selector_node
+  * refactor code
+  * remove obsolete ranker node
+  * refactor for debugging
+  * add flag to enable/disable ranker within selectory node
+  * fix parameter update logic, cleanup code
+  * update launch files
+  * disable quality evaluation by default
+  * fix topic name
+  * minor refactor
+  * output debug to console when best trajectory has low score
+  * support new backup planner dual go/stop trajectories
+  * populate generator info of ScoredCandidateTrajectories
+  * filter out shadow mode metrics before assigning combined trajectory risk level
+  * update source penalties
+  * add integration tests for trajectory ranker
+  * add ranker parameters schema, update readme
+  * remove simple_trajectory_ranker_node
+  * remove launch prefix
+  * pass active_filter_names to validator from wrapper
+  * add missing includes
+  ---------
+  * replace rclcpp::Node usage by agnocast_wrapper::Node
+  * fix selector node tests
+  * add missing selector config file
+  ---------
+* fix(trajectory_selector, trajectory_validator): sync changes to the (`#13344 <https://github.com/autowarefoundation/autoware_universe/issues/13344>`_)
+  * fix(trajectory_selector): pass route to validator context and expose validation report
+  * feat(trajectory_validator): publish planning factors from validator filters
+  ---------
+* feat(trajectory_selector): apply `agnocast_wrapper::Node` to `autoware_trajectory_selector` (`#12920 <https://github.com/autowarefoundation/autoware_universe/issues/12920>`_)
+  * apply agnocast_wrapper::Node
+  * apply agnocast_wrapper::Node
+  * fix trajectory_concatenator_wrapper
+  * style(pre-commit): autofix
+  * fix to not use template
+  * style(pre-commit): autofix
+  * fix: move bug
+  * fix: use {} for agnocast message_ptr null
+  * fix: wrap test context assignments in agnocast msg_ptr
+  * fix: executor
+  * fix: polling
+  * refactor: subscriber
+  * refactor: skip test in cmake
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+  Co-authored-by: kobayu858 <yutaro.kobayashi.2@tier4.jp>
+* feat(trajectory_validator): evaluate the risk of obstructing pedestrian crossing (`#13123 <https://github.com/autowarefoundation/autoware_universe/issues/13123>`_)
+  * feat(trajectory_validator): evaluate the risk of obstructing pedestrian crossing (`#3209 <https://github.com/autowarefoundation/autoware_universe/issues/3209>`_)
+  * add crosswalk_filter framework
+  * implement logic to get target crosswalks
+  * visualize target crosswalk
+  * implement object filtering logic
+  * fix target object processing logic
+  * implement feasibility assessment
+  * fix is_crossing condition
+  * fix logic
+  * revise logic for determining target objects
+  - implement function to generate detection areas for crosswalk
+  - check if detected object is within the detection area or not
+  * use parameter instead of hardcoded const
+  * add CrosswalkFilter.md to docs
+  * add unit tests for crosswalk_filter
+  * get highest probability classification
+  * add more debug markers
+  * add planning factor to crosswalk_filter validation result
+  * add flag to enable/disable using trejectory time info for evaluating stop duration
+  * visualize arrival distance threshold from crosswalk stop line
+  ---------
+  * add missing dependency
+  * fix cherry-pick related issues
+  * minor fixes
+  ---------
+* fix(boundary_departure): separate hysteresis state (`#12986 <https://github.com/autowarefoundation/autoware_universe/issues/12986>`_)
+  fix(boundary_departure): separate hysteresis state (`#3116 <https://github.com/autowarefoundation/autoware_universe/issues/3116>`_)
+  * fix(boundary_departure): separate hysteresis state
+  * fix: separate hash
+  * fix: precommit
+  ---------
+  Co-authored-by: Yuxuan Liu <619684051@qq.com>
+* feat(traffic_light_compliance_checker): allow when close and cannot stop (`#13028 <https://github.com/autowarefoundation/autoware_universe/issues/13028>`_)
+* fix(trajectory_validator): replace is feasible input from trajectory points to candidate trajectory (`#12985 <https://github.com/autowarefoundation/autoware_universe/issues/12985>`_)
+  fix(trajectory_validator): replace is feasible input from trajectory points to candidate trajectory (`#3101 <https://github.com/autowarefoundation/autoware_universe/issues/3101>`_)
+  * fix(trajectory_validator): replace is feasible input from trajectory points to candidate trajectory
+  * fix: update trajectory selector test
+  ---------
+* feat(traffic_light_compliance_checker): param for stable UNKNOWN signal (`#12936 <https://github.com/autowarefoundation/autoware_universe/issues/12936>`_)
+* feat(trajectory_modifier): add traffic light stop to trajectory modifier (`#12875 <https://github.com/autowarefoundation/autoware_universe/issues/12875>`_)
+  * feat(trajectory_modifier): implement traffic light stop plugin in modifier (`#3017 <https://github.com/autowarefoundation/autoware_universe/issues/3017>`_)
+  * add traffic_light_stop plugin framework
+  * refactor traffic_light_compliance_checker, add crossing point and arc length to Violation struct
+  * add required inputs to trajectory_modifer
+  - add subscribers for lanelet_map, route, and signals
+  - add lanelet_map, route, and signal ptrs to trajectory_modifier plugin InputData struct
+  - update and refactory trajectory_modifier node to process new input data
+  * implement is is_trajectory_modification_required function for traffic_light_stop plugin
+  * refactor setting stop point logic and add utility functions to commonize logic
+  * implement traffic light stopping logic
+  * publish debug string
+  * set default param values, update schema
+  * check for empty trajectory
+  ---------
+  * feat(traffic_light_compliance_checker): add documentation for traffic light compliance checker  (`#3085 <https://github.com/autowarefoundation/autoware_universe/issues/3085>`_)
+  * write the readme for traffic_light_compliance_checker package
+  * add unit tests for traffic light stop
+  * update traffic_light_filter documentation, add docs file for traffic_light_stop module
+  ---------
+  * feat(traffic_light_stop): add missing parameter treat_unknown_light_as_red (`#3091 <https://github.com/autowarefoundation/autoware_universe/issues/3091>`_)
+  add missing parameter treat_unknown_light_as_red
+  * fix spelling
+  ---------
+* Contributors: Koichi Imai, Maxime CLEMENT, Ryohsuke Mitsudome, Zulfaqar Azmi, mkquda
+
 0.52.0 (2026-06-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

@@ -15,6 +15,7 @@
 #ifndef REDUNDANCY_COMMAND_SELECTOR_HPP_
 #define REDUNDANCY_COMMAND_SELECTOR_HPP_
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_control_msgs/msg/control.hpp>
@@ -30,7 +31,7 @@
 namespace autoware::simulator::redundancy_command_selector
 {
 
-class RedundancyCommandSelector : public rclcpp::Node
+class RedundancyCommandSelector : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit RedundancyCommandSelector(const rclcpp::NodeOptions & options);
@@ -42,29 +43,30 @@ private:
   using TurnIndicatorsCommand = autoware_vehicle_msgs::msg::TurnIndicatorsCommand;
   using ActiveControlUnit = tier4_system_msgs::msg::ActiveControlUnit;
 
-  rclcpp::Publisher<Control>::SharedPtr pub_control_;
-  rclcpp::Publisher<GearCommand>::SharedPtr pub_gear_;
-  rclcpp::Publisher<HazardLightsCommand>::SharedPtr pub_hazard_;
-  rclcpp::Publisher<TurnIndicatorsCommand>::SharedPtr pub_turn_;
+  AUTOWARE_PUBLISHER_PTR(Control) pub_control_;
+  AUTOWARE_PUBLISHER_PTR(GearCommand) pub_gear_;
+  AUTOWARE_PUBLISHER_PTR(HazardLightsCommand) pub_hazard_;
+  AUTOWARE_PUBLISHER_PTR(TurnIndicatorsCommand) pub_turn_;
 
-  rclcpp::Subscription<Control>::SharedPtr sub_main_control_;
-  rclcpp::Subscription<GearCommand>::SharedPtr sub_main_gear_;
-  rclcpp::Subscription<HazardLightsCommand>::SharedPtr sub_main_hazard_;
-  rclcpp::Subscription<TurnIndicatorsCommand>::SharedPtr sub_main_turn_;
+  AUTOWARE_SUBSCRIPTION_PTR(Control) sub_main_control_;
+  AUTOWARE_SUBSCRIPTION_PTR(GearCommand) sub_main_gear_;
+  AUTOWARE_SUBSCRIPTION_PTR(HazardLightsCommand) sub_main_hazard_;
+  AUTOWARE_SUBSCRIPTION_PTR(TurnIndicatorsCommand) sub_main_turn_;
 
-  rclcpp::Subscription<Control>::SharedPtr sub_sub_control_;
-  rclcpp::Subscription<GearCommand>::SharedPtr sub_sub_gear_;
-  rclcpp::Subscription<HazardLightsCommand>::SharedPtr sub_sub_hazard_;
-  rclcpp::Subscription<TurnIndicatorsCommand>::SharedPtr sub_sub_turn_;
+  AUTOWARE_SUBSCRIPTION_PTR(Control) sub_sub_control_;
+  AUTOWARE_SUBSCRIPTION_PTR(GearCommand) sub_sub_gear_;
+  AUTOWARE_SUBSCRIPTION_PTR(HazardLightsCommand) sub_sub_hazard_;
+  AUTOWARE_SUBSCRIPTION_PTR(TurnIndicatorsCommand) sub_sub_turn_;
 
-  rclcpp::Subscription<ActiveControlUnit>::SharedPtr sub_active_control_unit_;
+  AUTOWARE_SUBSCRIPTION_PTR(ActiveControlUnit) sub_active_control_unit_;
 
   // Creates a subscription that relays the received message to the given publisher
   // only while the active ECU matches `active_when_use_main`.
   template <class MsgT>
-  typename rclcpp::Subscription<MsgT>::SharedPtr create_relay(
-    const std::string & topic, const rclcpp::QoS & qos,
-    const typename rclcpp::Publisher<MsgT>::SharedPtr & pub, const bool active_when_use_main)
+  AUTOWARE_SUBSCRIPTION_PTR(MsgT)
+  create_relay(
+    const std::string & topic, const rclcpp::QoS & qos, const AUTOWARE_PUBLISHER_PTR(MsgT) & pub,
+    const bool active_when_use_main)
   {
     return create_subscription<MsgT>(
       topic, qos, [this, pub, active_when_use_main](const typename MsgT::ConstSharedPtr & msg) {

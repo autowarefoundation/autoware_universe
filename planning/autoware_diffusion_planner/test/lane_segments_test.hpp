@@ -74,6 +74,32 @@ protected:
     test_lanelet_ = test_lanelet;
   }
 
+  // Add a lanelet heading north that crosses the test lanelet at (10, 0)
+  lanelet::Lanelet add_crossing_lanelet()
+  {
+    auto p1 = lanelet::Point3d(21, 10.0, -10.0, 0.0);
+    auto p2 = lanelet::Point3d(22, 10.0, 10.0, 0.0);
+    auto p3 = lanelet::Point3d(23, 12.0, -10.0, 0.0);
+    auto p4 = lanelet::Point3d(24, 12.0, 10.0, 0.0);
+    auto p5 = lanelet::Point3d(25, 8.0, -10.0, 0.0);
+    auto p6 = lanelet::Point3d(26, 8.0, 10.0, 0.0);
+
+    lanelet::LineString3d centerline(30, {p1, p2});
+    lanelet::LineString3d right_bound(31, {p3, p4});
+    lanelet::LineString3d left_bound(32, {p5, p6});
+
+    lanelet::Lanelet crossing_lanelet(200, left_bound, right_bound);
+    crossing_lanelet.setCenterline(centerline);
+    crossing_lanelet.setAttribute(
+      lanelet::AttributeName::Subtype, lanelet::AttributeValueString::Road);
+    crossing_lanelet.setAttribute(
+      lanelet::AttributeName::Location, lanelet::AttributeValueString::Urban);
+    crossing_lanelet.setAttribute("speed_limit", "30");
+
+    lanelet_map_->add(crossing_lanelet);
+    return crossing_lanelet;
+  }
+
   std::shared_ptr<lanelet::LaneletMap> lanelet_map_;
   lanelet::Lanelet test_lanelet_;
 };

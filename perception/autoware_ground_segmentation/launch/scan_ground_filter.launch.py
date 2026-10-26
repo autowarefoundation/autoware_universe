@@ -15,13 +15,16 @@
 import launch
 from launch.actions import DeclareLaunchArgument
 from launch.actions import GroupAction
+from launch.actions import IncludeLaunchDescription
 from launch.actions import OpaqueFunction
 from launch.conditions import LaunchConfigurationEquals
 from launch.conditions import LaunchConfigurationNotEquals
+from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch.substitutions import PathJoinSubstitution
 from launch_ros.actions import ComposableNodeContainer
 from launch_ros.actions import LoadComposableNodes
+from launch_ros.actions import Node
 from launch_ros.descriptions import ComposableNode
 from launch_ros.substitutions import FindPackageShare
 import yaml
@@ -43,21 +46,39 @@ def launch_setup(context, *args, **kwargs):
     with open(ground_segmentation_param_path, "r") as f:
         ground_segmentation_param = yaml.safe_load(f)["/**"]["ros__parameters"]
 
+    remappings = [
+        ("input", LaunchConfiguration("input/pointcloud")),
+        ("output", LaunchConfiguration("output/pointcloud")),
+    ]
+    parameters = [
+        ground_segmentation_param["common_ground_filter"]["parameters"],
+        {"input_frame": "base_link"},
+        {"output_frame": "base_link"},
+        vehicle_info_param,
+    ]
+
+    if LaunchConfiguration("use_agnocast").perform(context) == "1":
+        # With ENABLE_AGNOCAST=1 the node runs standalone, otherwise it is loaded into a
+        # component container.
+        return [
+            Node(
+                package="autoware_ground_segmentation",
+                executable="scan_ground_filter_node",
+                name="scan_ground_filter",
+                remappings=remappings,
+                parameters=parameters,
+                output="screen",
+                additional_env={"LD_PRELOAD": LaunchConfiguration("ld_preload_value")},
+            )
+        ]
+
     nodes = [
         ComposableNode(
             package="autoware_ground_segmentation",
             plugin="autoware::ground_segmentation::ScanGroundFilterComponent",
             name="scan_ground_filter",
-            remappings=[
-                ("input", LaunchConfiguration("input/pointcloud")),
-                ("output", LaunchConfiguration("output/pointcloud")),
-            ],
-            parameters=[
-                ground_segmentation_param["common_ground_filter"]["parameters"],
-                {"input_frame": "base_link"},
-                {"output_frame": "base_link"},
-                vehicle_info_param,
-            ],
+            remappings=remappings,
+            parameters=parameters,
         ),
     ]
 
@@ -99,12 +120,21 @@ def generate_launch_description():
         description="Path to config file for vehicle information",
     )
 
+    agnocast_env = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            PathJoinSubstitution(
+                [FindPackageShare("autoware_agnocast_wrapper"), "launch", "agnocast_env.launch.py"]
+            )
+        )
+    )
+
     return launch.LaunchDescription(
         [
             vehicle_info_param,
             add_launch_arg("container", ""),
             add_launch_arg("input/pointcloud", "pointcloud"),
             add_launch_arg("output/pointcloud", "no_ground/pointcloud"),
+            agnocast_env,
         ]
         + [OpaqueFunction(function=launch_setup)]
     )

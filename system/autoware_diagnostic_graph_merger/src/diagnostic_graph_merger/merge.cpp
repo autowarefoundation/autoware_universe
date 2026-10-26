@@ -35,7 +35,8 @@ MergeNode::MergeNode(const rclcpp::NodeOptions & options) : Node("diagnostic_gra
     "~/input2/status", qos_status, std::bind(&MergeNode::on_status2, this, std::placeholders::_1));
 
   const auto rate = rclcpp::Rate(declare_parameter<double>("rate"));
-  timer_ = rclcpp::create_timer(this, get_clock(), rate.period(), [this]() { on_timer(); });
+  timer_ = autoware::agnocast_wrapper::create_timer(
+    this, get_clock(), rate.period(), [this]() { on_timer(); });
 }
 
 void MergeNode::on_timer()

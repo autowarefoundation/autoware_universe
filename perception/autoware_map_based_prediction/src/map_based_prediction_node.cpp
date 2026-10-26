@@ -20,11 +20,16 @@
 #include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware_utils/ros/parameter.hpp>
 #include <autoware_utils/ros/update_param.hpp>
+#include <rcl_interfaces/msg/floating_point_range.hpp>
+#include <rcl_interfaces/msg/parameter_descriptor.hpp>
 
 #include <autoware_perception_msgs/msg/object_classification.hpp>
 
+#include <cmath>
 #include <functional>
+#include <limits>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
@@ -50,6 +55,29 @@ const std::vector<std::pair<ObjectClassification::_label_type, std::string>> obj
   {ObjectClassification::HAZARD, "hazard"},
   {ObjectClassification::OVER_DRIVABLE, "over_drivable"},
   {ObjectClassification::UNDER_DRIVABLE, "under_drivable"}};
+
+/// @brief Declare the lane-change path suppression parameters of the vehicle path processor
+/// and validate the lane-end rescue horizon.
+void declare_lane_change_path_suppression_params(
+  autoware::agnocast_wrapper::Node & node, PathProcessor::Params & params)
+{
+  params.lane_change_path_suppression_enable =
+    node.declare_parameter<bool>("lane_change_path_suppression.enable");
+  params.lane_change_path_suppression_keep_when_lane_ends =
+    node.declare_parameter<bool>("lane_change_path_suppression.keep_when_lane_ends");
+  rcl_interfaces::msg::ParameterDescriptor rescue_descriptor;
+  rcl_interfaces::msg::FloatingPointRange rescue_range;
+  rescue_range.from_value = 0.0;
+  rescue_range.to_value = std::numeric_limits<double>::max();
+  rescue_descriptor.floating_point_range.push_back(rescue_range);
+  params.lane_change_path_suppression_lane_end_rescue_time_horizon = node.declare_parameter<double>(
+    "lane_change_path_suppression.lane_end_rescue_time_horizon", 5.0, rescue_descriptor);
+  if (
+    !std::isfinite(params.lane_change_path_suppression_lane_end_rescue_time_horizon) ||
+    params.lane_change_path_suppression_lane_end_rescue_time_horizon < 0.0) {
+    throw std::invalid_argument("lane_end_rescue_time_horizon must be finite and nonnegative");
+  }
+}
 
 /// @brief Declare the deceleration of every object class, defaulting to the base value for the
 /// classes the parameter file does not list.
@@ -128,6 +156,7 @@ MapBasedPredictionNode::MapBasedPredictionNode(const rclcpp::NodeOptions & node_
     pp.speed_limit_multiplier = declare_parameter<double>("speed_limit_multiplier");
     pp.acceleration_exponential_half_life =
       declare_parameter<double>("acceleration_exponential_half_life");
+    declare_lane_change_path_suppression_params(*this, pp);
     pp.consider_only_routable_neighbours =
       declare_parameter<bool>("lane_change_detection.consider_only_routable_neighbours");
   }
@@ -250,6 +279,17 @@ rcl_interfaces::msg::SetParametersResult MapBasedPredictionNode::onParam(
 {
   using autoware_utils::update_param;
 
+  for (const auto & parameter : parameters) {
+    if (parameter.get_name() == "lane_change_path_suppression.lane_end_rescue_time_horizon") {
+      const double value = parameter.as_double();
+      if (!std::isfinite(value) || value < 0.0) {
+        rcl_interfaces::msg::SetParametersResult result;
+        result.successful = false;
+        result.reason = "lane_end_rescue_time_horizon must be finite and nonnegative";
+        return result;
+      }
+    }
+  }
   auto vehicle_params = state_.predictor_vehicle->getParams();
   auto & pp = vehicle_params.path_processor;
   update_param(parameters, "max_lateral_accel", pp.max_lateral_accel);
@@ -257,6 +297,14 @@ rcl_interfaces::msg::SetParametersResult MapBasedPredictionNode::onParam(
   update_param(
     parameters, "check_lateral_acceleration_constraints",
     pp.check_lateral_acceleration_constraints);
+  update_param(
+    parameters, "lane_change_path_suppression.enable", pp.lane_change_path_suppression_enable);
+  update_param(
+    parameters, "lane_change_path_suppression.keep_when_lane_ends",
+    pp.lane_change_path_suppression_keep_when_lane_ends);
+  update_param(
+    parameters, "lane_change_path_suppression.lane_end_rescue_time_horizon",
+    pp.lane_change_path_suppression_lane_end_rescue_time_horizon);
   update_param(parameters, "use_vehicle_acceleration", pp.use_vehicle_acceleration);
   update_param(parameters, "speed_limit_multiplier", pp.speed_limit_multiplier);
   update_param(

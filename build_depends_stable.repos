@@ -6,7 +6,7 @@ repositories:
   universe/external/tier4_autoware_msgs:
     type: git
     url: https://github.com/tier4/tier4_autoware_msgs.git
-    version: v0.58.0
+    version: 1.0.0-alpha
   # Fix the version not to merge https://github.com/MORAI-Autonomous/MORAI-ROS2_morai_msgs/pull/9
   universe/external/morai_msgs:
     type: git
@@ -31,7 +31,7 @@ repositories:
   universe/external/managed_transform_buffer:
     type: git
     url: https://github.com/autowarefoundation/managed_transform_buffer.git
-    version: 0.2.0
+    version: 0.3.0
   # middleware
   # TODO(TIER IV): During the transition period of Agnocast introduction,
   # the Agnocast ROS packages are provided as a source build.
@@ -39,9 +39,9 @@ repositories:
   # Issue: https://github.com/autowarefoundation/autoware/issues/5968
   middleware/external/agnocast:
     type: git
-    url: https://github.com/tier4/agnocast.git
-    version: backport-jazzy-support-v2.1.2
+    url: https://github.com/autowarefoundation/agnocast.git
+    version: 2.4.1
   universe/external/bevdet_vendor:
     type: git
     url: https://github.com/autowarefoundation/bevdet_vendor.git
-    version: 0.1.0
+    version: 0.2.1

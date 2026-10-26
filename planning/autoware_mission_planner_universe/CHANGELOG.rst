@@ -2,6 +2,67 @@
 Changelog for package autoware_mission_planner_universe
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* fix(mission_planner): guard against empty planned path to prevent SIGSEGV (`#13396 <https://github.com/autowarefoundation/autoware_universe/issues/13396>`_)
+  * test(mission_planner): add regression test for empty-path route planning
+  DefaultPlanner::plan() can build an empty planned path (fewer than two
+  checkpoints, or planPathLaneletsBetweenCheckpoints reporting success while
+  yielding no lanelets). That empty path is passed straight into route_handler
+  (createMapSegments -> getMainLanelets, and refine_goal_height), both of which
+  index the path/route with back() and dereference an invalid lanelet, causing a
+  SIGSEGV that kills the mission_planner node.
+  This commit adds only the regression test (planning a degenerate single-point
+  route). It is intentionally pushed ahead of the fix so CI demonstrates the
+  failure first; the following commit adds the guard that turns it green.
+  Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+  * fix(mission_planner): guard against empty planned path to prevent SIGSEGV
+  When the planned path is empty (fewer than two check points, or
+  planPathLaneletsBetweenCheckpoints reporting success while yielding no
+  lanelets), plan() passed it into route_handler's createMapSegments ->
+  getMainLanelets and refine_goal_height, both of which call back() on the
+  empty path/route and dereference an invalid lanelet, segfaulting the node.
+  Return a normal "failed to plan" result as soon as the path is empty,
+  mirroring the existing early-return on planPathLaneletsBetweenCheckpoints
+  failure. This turns the regression test added in the previous commit green.
+  Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: Masaya Kataoka <cld-masaya.kataoka@tier4.jp>
+  Co-authored-by: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* feat(mission_planner_universe): apply `agnocast_wrapper::Node` to `route_selector` & `goal_pose_visualizer` (`#12987 <https://github.com/autowarefoundation/autoware_universe/issues/12987>`_)
+  * apply agnocast_wrapper::Node
+  * fix(mission_planner_universe): use AgnocastOnlyCallbackIsolatedExecutor for route_selector
+  * fix(mission_planner_universe): adapt service client to wrapper Client API
+  * refactor(mission_planner_universe): remove the now-empty mission_planner_container
+  Both nodes that lived in mission_planner_container now run standalone with
+  their own agnocast-aware executor: mission_planner in `#13057 <https://github.com/autowarefoundation/autoware_universe/issues/13057>`_ and
+  route_selector in this PR. The container has no composable node left, so
+  drop it and launch mission_planner as a standalone node.
+  This assumes `#13057 <https://github.com/autowarefoundation/autoware_universe/issues/13057>`_ is merged first.
+  * refactor(autoware_mission_planner_universe): drop the unused qos_utils dependency and include the wrapper macros directly
+  ---------
+  Co-authored-by: kobayu858 <yutaro.kobayashi.2@tier4.jp>
+* feat(autoware_mission_planner_universe): apply agnocast_wrapper::Node to MissionPlanner (`#13317 <https://github.com/autowarefoundation/autoware_universe/issues/13317>`_)
+* refactor(autoware_mission_planner_universe): decouple DefaultPlanner from rclcpp::Node (`#13283 <https://github.com/autowarefoundation/autoware_universe/issues/13283>`_)
+  * refactor(autoware_mission_planner_universe): decouple DefaultPlanner from rclcpp::Node
+  * refactor(autoware_mission_planner_universe): align DefaultPlanner details with autoware_core
+  * refactor(autoware_mission_planner_universe): isolate the pluginlib registration and drop the relocated route log
+  * refactor(autoware_mission_planner_universe): keep ready() answerable before initialize() and drop the area marker stamp
+  * fix(autoware_mission_planner_universe): drop the trailing blank line left by removing the pluginlib export
+  * refactor(autoware_mission_planner_universe): remove pluginlib as autoware_core did
+  ---------
+* refactor(planning): move node design files into each package (`#13102 <https://github.com/autowarefoundation/autoware_universe/issues/13102>`_)
+  Co-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>
+* chore(pre-commit): update clang-format to v22.1.5 (`#13126 <https://github.com/autowarefoundation/autoware_universe/issues/13126>`_)
+  * chore(pre-commit): update clang-format to v22.1.5
+  * style(pre-commit): autofix
+  ---------
+* refactor(autoware_mission_planner_universe): decouple arrival checker from rclcpp::Node (`#13069 <https://github.com/autowarefoundation/autoware_universe/issues/13069>`_)
+* Contributors: Koichi Imai, Masaya Kataoka, Mete Fatih Cırıt, Ryohsuke Mitsudome, Taekjin LEE, Yutaro Kobayashi
+
 0.52.0 (2026-06-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

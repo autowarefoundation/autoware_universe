@@ -2,6 +2,19 @@
 Changelog for package autoware_kinematic_evaluator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* fix(evaluator): declare the dependencies these packages use (`#13218 <https://github.com/autowarefoundation/autoware_universe/issues/13218>`_)
+  Six packages use headers or symbols of packages that they never declare. Add the 26 missing entries: 25 <depend> and 1 <test_depend>.
+  A per-package sweep of the first commit found four more missing entries.
+  autoware_kinematic_evaluator and autoware_localization_evaluator call find_package(ament_cmake_ros REQUIRED) under BUILD_TESTING and declare it nowhere. Both get <test_depend>ament_cmake_ros</test_depend>.
+  autoware_planning_evaluator uses lanelet::ConstLanelet in the library code, and the header arrives only through autoware_lanelet2_utils. It gets <depend>lanelet2_core</depend>. Its test loads two parameter files from the share directory of autoware_test_utils, so it gets <test_depend>autoware_test_utils</test_depend>.
+* chore(evaluator): update package maintainers (`#13184 <https://github.com/autowarefoundation/autoware_universe/issues/13184>`_)
+* refactor(evaluator): move node design files into each package (`#13099 <https://github.com/autowarefoundation/autoware_universe/issues/13099>`_)
+  Co-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>
+* Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome, Satoshi OTA, Taekjin LEE
+
 0.52.0 (2026-06-30)
 -------------------
 

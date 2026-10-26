@@ -7,7 +7,8 @@ autoware_package()
 find_package(OpenCV REQUIRED)
 
 ament_auto_add_library(traffic_light_roi_visualizer SHARED
-  src/traffic_light_roi_visualizer/node.cpp
+  src/traffic_light_roi_visualizer/roi_visualizer_node.cpp
+  src/traffic_light_roi_visualizer/roi_visualizer.cpp
   src/traffic_light_roi_visualizer/shape_draw.cpp
 )
 
@@ -38,6 +39,43 @@ autoware_agnocast_wrapper_register_node(traffic_light_map_visualizer
 
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
+  find_package(ament_cmake_ros REQUIRED)
+
+  # Node test: drives TrafficLightRoiVisualizerNode through its real topics. Runs in an isolated
+  # ROS domain so that it cannot interfere with other tests.
+  ament_add_ros_isolated_gtest(test_roi_visualizer_node
+    test/traffic_light_roi_visualizer/test_roi_visualizer_node.cpp
+    TIMEOUT 300
+  )
+  target_include_directories(test_roi_visualizer_node PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+  )
+  target_link_libraries(test_roi_visualizer_node
+    traffic_light_roi_visualizer
+  )
+  ament_target_dependencies(test_roi_visualizer_node
+    rclcpp
+    sensor_msgs
+    tier4_perception_msgs
+  )
+
+  # Unit tests for the drawing separated out of the node. No ROS runtime: the logic is called
+  # directly with messages.
+  ament_add_gtest(test_roi_visualizer
+    test/traffic_light_roi_visualizer/test_roi_visualizer.cpp
+  )
+  target_include_directories(test_roi_visualizer PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+  )
+  target_link_libraries(test_roi_visualizer
+    traffic_light_roi_visualizer
+  )
+  ament_target_dependencies(test_roi_visualizer
+    ament_index_cpp
+    cv_bridge
+    sensor_msgs
+    tier4_perception_msgs
+  )
 
   ament_add_gtest(test_traffic_light_map_visualizer
     test/traffic_light_map_visualizer/test_traffic_light_map_visualizer.cpp

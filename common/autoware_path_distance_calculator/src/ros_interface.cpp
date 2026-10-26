@@ -15,6 +15,7 @@
 #include "ros_interface.hpp"
 
 #include <chrono>
+#include <utility>
 
 namespace autoware::path_distance_calculator
 {
@@ -25,7 +26,8 @@ namespace
 // the same sample is not handed to the caller (and recomputed) again.
 template <typename T>
 typename T::ConstSharedPtr poll_new_data(
-  autoware_utils::InterProcessPollingSubscriber<T> & subscriber, typename T::ConstSharedPtr & last)
+  autoware::agnocast_wrapper::polling::PollingSubscriber<T> & subscriber,
+  typename T::ConstSharedPtr & last)
 {
   const auto data = subscriber.take_data();
   if (!data || data == last) {
@@ -37,21 +39,22 @@ typename T::ConstSharedPtr poll_new_data(
 }  // namespace
 
 PathDistanceCalculator::PathDistanceCalculator(const rclcpp::NodeOptions & options)
-: Node("path_distance_calculator", options), self_pose_listener_(this)
+: Node("path_distance_calculator", options)
 {
   pub_dist_ = create_publisher<autoware_internal_debug_msgs::msg::Float64Stamped>(
     "~/output/distance", rclcpp::QoS(1));
 
   using std::chrono_literals::operator""s;
-  timer_ = rclcpp::create_timer(this, get_clock(), 1s, [this]() { on_timer(); });
+  timer_ =
+    autoware::agnocast_wrapper::create_timer(this, get_clock(), 1s, [this]() { on_timer(); });
 }
 
 void PathDistanceCalculator::on_timer()
 {
-  if (const auto map = poll_new_data(sub_map_, last_map_)) {
+  if (const auto map = poll_new_data(*sub_map_, last_map_)) {
     calculator_.set_map(*map);
   }
-  if (const auto route = poll_new_data(sub_route_, last_route_)) {
+  if (const auto route = poll_new_data(*sub_route_, last_route_)) {
     calculator_.set_route(*route);
   }
 
@@ -67,10 +70,10 @@ void PathDistanceCalculator::on_timer()
     return;
   }
 
-  autoware_internal_debug_msgs::msg::Float64Stamped msg;
-  msg.stamp = pose->header.stamp;
-  msg.data = distance.value();
-  pub_dist_->publish(msg);
+  auto msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_dist_);
+  msg->stamp = pose->header.stamp;
+  msg->data = distance.value();
+  pub_dist_->publish(std::move(msg));
 }
 
 }  // namespace autoware::path_distance_calculator

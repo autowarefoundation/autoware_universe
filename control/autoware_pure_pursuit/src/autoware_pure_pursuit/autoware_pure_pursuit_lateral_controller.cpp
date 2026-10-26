@@ -32,10 +32,8 @@
 
 #include "autoware/pure_pursuit/autoware_pure_pursuit_viz.hpp"
 #include "autoware/pure_pursuit/util/planning_utils.hpp"
-#include "autoware/pure_pursuit/util/tf_utils.hpp"
 
 #include <autoware_utils/geometry/geometry.hpp>
-#include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 
 #include <algorithm>
 #include <memory>
@@ -58,53 +56,18 @@ enum TYPE {
 
 namespace autoware::pure_pursuit
 {
-PurePursuitLateralController::PurePursuitLateralController(rclcpp::Node & node)
-: clock_(node.get_clock()),
-  logger_(node.get_logger().get_child("lateral_controller")),
-  tf_buffer_(clock_),
-  tf_listener_(tf_buffer_)
+PurePursuitLateralController::PurePursuitLateralController(
+  const PurePursuitLateralControllerConfig & config, const LogWriter & writer)
+: writer_(writer), param_(config)
 {
   pure_pursuit_ = std::make_unique<PurePursuit>();
-
-  // Vehicle Parameters
-  const auto vehicle_info = autoware::vehicle_info_utils::VehicleInfoUtils(node).getVehicleInfo();
-  param_.wheel_base = vehicle_info.wheel_base_m;
-  param_.max_steering_angle = vehicle_info.max_steer_angle_rad;
-
-  // Algorithm Parameters
-  param_.ld_velocity_ratio = node.declare_parameter<double>("ld_velocity_ratio");
-  param_.ld_lateral_error_ratio = node.declare_parameter<double>("ld_lateral_error_ratio");
-  param_.ld_curvature_ratio = node.declare_parameter<double>("ld_curvature_ratio");
-  param_.long_ld_lateral_error_threshold =
-    node.declare_parameter<double>("long_ld_lateral_error_threshold");
-  param_.min_lookahead_distance = node.declare_parameter<double>("min_lookahead_distance");
-  param_.max_lookahead_distance = node.declare_parameter<double>("max_lookahead_distance");
-  param_.reverse_min_lookahead_distance =
-    node.declare_parameter<double>("reverse_min_lookahead_distance");
-  param_.converged_steer_rad_ = node.declare_parameter<double>("converged_steer_rad");
-  param_.prediction_ds = node.declare_parameter<double>("prediction_ds");
-  param_.prediction_distance_length = node.declare_parameter<double>("prediction_distance_length");
-  param_.resampling_ds = node.declare_parameter<double>("resampling_ds");
-  param_.curvature_calculation_distance =
-    node.declare_parameter<double>("curvature_calculation_distance");
-  param_.enable_path_smoothing = node.declare_parameter<bool>("enable_path_smoothing");
-  param_.path_filter_moving_ave_num = node.declare_parameter<int64_t>("path_filter_moving_ave_num");
-
-  // Debug Publishers
-  pub_debug_marker_ =
-    node.create_publisher<visualization_msgs::msg::MarkerArray>("~/debug/markers", 0);
-  pub_debug_values_ =
-    node.create_publisher<autoware_internal_debug_msgs::msg::Float32MultiArrayStamped>(
-      "~/debug/ld_outputs", rclcpp::QoS{1});
-
-  // Publish predicted trajectory
-  pub_predicted_trajectory_ = node.create_publisher<autoware_planning_msgs::msg::Trajectory>(
-    "~/output/predicted_trajectory", 1);
+  pure_pursuit_->setLogWriter(writer_);
 }
 
 double PurePursuitLateralController::calcLookaheadDistance(
   const double lateral_error, const double curvature, const double velocity, const double min_ld,
-  const bool is_control_cmd)
+  const bool is_control_cmd, const rclcpp::Time & stamp,
+  PurePursuitLateralControllerResult & result)
 {
   const double vel_ld = abs(param_.ld_velocity_ratio * velocity);
   const double curvature_ld = -abs(param_.ld_curvature_ratio * curvature);
@@ -129,8 +92,10 @@ double PurePursuitLateralController::calcLookaheadDistance(
     debug_msg.data.at(TYPE::VELOCITY) = static_cast<float>(velocity);
     debug_msg.data.at(TYPE::CURVATURE) = static_cast<float>(curvature);
     debug_msg.data.at(TYPE::LATERAL_ERROR) = static_cast<float>(lateral_error);
-    debug_msg.stamp = clock_->now();
-    pub_debug_values_->publish(debug_msg);
+    debug_msg.stamp = stamp;
+    if (!result.lookahead_debug_values) {
+      result.lookahead_debug_values = debug_msg;
+    }
   };
 
   if (is_control_cmd) {
@@ -211,7 +176,7 @@ double PurePursuitLateralController::calcCurvature(const size_t closest_idx)
       autoware_utils::get_point(trajectory_resampled_->points.at(next_idx)));
   } catch (std::exception const & e) {
     // ...code that handles the error...
-    RCLCPP_WARN(rclcpp::get_logger("pure_pursuit"), "%s", e.what());
+    AW_PP_WARN(writer_, "{}", e.what());
     current_curvature = 0.0;
   }
   return current_curvature;
@@ -221,7 +186,7 @@ void PurePursuitLateralController::averageFilterTrajectory(
   autoware_planning_msgs::msg::Trajectory & u)
 {
   if (static_cast<int>(u.points.size()) <= 2 * param_.path_filter_moving_ave_num) {
-    RCLCPP_ERROR(logger_, "Cannot smooth path! Trajectory size is too low!");
+    AW_PP_ERROR(writer_, "Cannot smooth path! Trajectory size is too low!");
     return;
   }
 
@@ -269,13 +234,14 @@ void PurePursuitLateralController::averageFilterTrajectory(
   trajectory_resampled_ = std::make_shared<Trajectory>(filtered_trajectory);
 }
 
-boost::optional<Trajectory> PurePursuitLateralController::generatePredictedTrajectory()
+std::optional<Trajectory> PurePursuitLateralController::generatePredictedTrajectory(
+  const rclcpp::Time & stamp, PurePursuitLateralControllerResult & result)
 {
   const auto closest_idx_result = autoware::motion_utils::findNearestIndex(
     output_tp_array_, current_odometry_.pose.pose, 3.0, M_PI_4);
 
   if (!closest_idx_result) {
-    return boost::none;
+    return std::nullopt;
   }
 
   const double remaining_distance = planning_utils::calcArcLengthFromWayPoint(
@@ -297,30 +263,32 @@ boost::optional<Trajectory> PurePursuitLateralController::generatePredictedTraje
       p.longitudinal_velocity_mps = current_odometry_.twist.twist.linear.x;
       predicted_trajectory.points.push_back(p);
 
-      const auto pp_output = calcTargetCurvature(true, predicted_trajectory.points.at(i).pose);
+      const auto pp_output =
+        calcTargetCurvature(true, predicted_trajectory.points.at(i).pose, stamp, result);
       Lateral tmp_msg;
 
       if (pp_output) {
-        tmp_msg = generateCtrlCmdMsg(pp_output->curvature);
+        tmp_msg = generateCtrlCmdMsg(pp_output->curvature, stamp);
         predicted_trajectory.points.at(i).longitudinal_velocity_mps = pp_output->velocity;
       } else {
-        RCLCPP_WARN_THROTTLE(logger_, *clock_, 5000, "failed to solve pure_pursuit for prediction");
-        tmp_msg = generateCtrlCmdMsg(0.0);
+        AW_PP_WARN_THROTTLE(writer_, 5.0, "failed to solve pure_pursuit for prediction");
+        tmp_msg = generateCtrlCmdMsg(0.0, stamp);
       }
       TrajectoryPoint p2;
       p2 = calcNextPose(param_.prediction_ds, predicted_trajectory.points.at(i), tmp_msg);
       predicted_trajectory.points.push_back(p2);
 
     } else {
-      const auto pp_output = calcTargetCurvature(false, predicted_trajectory.points.at(i).pose);
+      const auto pp_output =
+        calcTargetCurvature(false, predicted_trajectory.points.at(i).pose, stamp, result);
       Lateral tmp_msg;
 
       if (pp_output) {
-        tmp_msg = generateCtrlCmdMsg(pp_output->curvature);
+        tmp_msg = generateCtrlCmdMsg(pp_output->curvature, stamp);
         predicted_trajectory.points.at(i).longitudinal_velocity_mps = pp_output->velocity;
       } else {
-        RCLCPP_WARN_THROTTLE(logger_, *clock_, 5000, "failed to solve pure_pursuit for prediction");
-        tmp_msg = generateCtrlCmdMsg(0.0);
+        AW_PP_WARN_THROTTLE(writer_, 5.0, "failed to solve pure_pursuit for prediction");
+        tmp_msg = generateCtrlCmdMsg(0.0, stamp);
       }
       predicted_trajectory.points.push_back(
         calcNextPose(param_.prediction_ds, predicted_trajectory.points.at(i), tmp_msg));
@@ -335,13 +303,10 @@ boost::optional<Trajectory> PurePursuitLateralController::generatePredictedTraje
   return predicted_trajectory;
 }
 
-bool PurePursuitLateralController::isReady([[maybe_unused]] const InputData & input_data)
+PurePursuitLateralControllerResult PurePursuitLateralController::run(
+  const InputData & input_data, const rclcpp::Time & stamp)
 {
-  return true;
-}
-
-LateralOutput PurePursuitLateralController::run(const InputData & input_data)
-{
+  PurePursuitLateralControllerResult result;
   current_pose_ = input_data.current_odometry.pose.pose;
   trajectory_ = input_data.current_trajectory;
   current_odometry_ = input_data.current_odometry;
@@ -351,21 +316,18 @@ LateralOutput PurePursuitLateralController::run(const InputData & input_data)
   if (param_.enable_path_smoothing) {
     averageFilterTrajectory(*trajectory_resampled_);
   }
-  const auto cmd_msg = generateOutputControlCmd();
+  const auto cmd_msg = generateOutputControlCmd(stamp, result);
 
-  LateralOutput output;
-  output.control_cmd = cmd_msg;
-  output.sync_data.is_steer_converged = calcIsSteerConverged(cmd_msg);
+  result.output.control_cmd = cmd_msg;
+  result.output.sync_data.is_steer_converged = calcIsSteerConverged(cmd_msg);
 
   // calculate predicted trajectory with iterative calculation
-  const auto predicted_trajectory = generatePredictedTrajectory();
-  if (!predicted_trajectory) {
-    RCLCPP_ERROR(logger_, "Failed to generate predicted trajectory.");
-  } else {
-    pub_predicted_trajectory_->publish(*predicted_trajectory);
+  result.predicted_trajectory = generatePredictedTrajectory(stamp, result);
+  if (!result.predicted_trajectory) {
+    AW_PP_ERROR(writer_, "Failed to generate predicted trajectory.");
   }
 
-  return output;
+  return result;
 }
 
 bool PurePursuitLateralController::calcIsSteerConverged(const Lateral & cmd)
@@ -374,34 +336,36 @@ bool PurePursuitLateralController::calcIsSteerConverged(const Lateral & cmd)
          static_cast<float>(param_.converged_steer_rad_);
 }
 
-Lateral PurePursuitLateralController::generateOutputControlCmd()
+Lateral PurePursuitLateralController::generateOutputControlCmd(
+  const rclcpp::Time & stamp, PurePursuitLateralControllerResult & result)
 {
   // Generate the control command
-  const auto pp_output = calcTargetCurvature(true, current_odometry_.pose.pose);
+  const auto pp_output = calcTargetCurvature(true, current_odometry_.pose.pose, stamp, result);
   Lateral output_cmd;
 
   if (pp_output) {
-    output_cmd = generateCtrlCmdMsg(pp_output->curvature);
-    prev_cmd_ = boost::optional<Lateral>(output_cmd);
+    output_cmd = generateCtrlCmdMsg(pp_output->curvature, stamp);
+    prev_cmd_ = std::optional<Lateral>(output_cmd);
     publishDebugMarker();
   } else {
-    RCLCPP_WARN_THROTTLE(
-      logger_, *clock_, 5000, "failed to solve pure_pursuit for control command calculation");
+    AW_PP_WARN_THROTTLE(
+      writer_, 5.0, "failed to solve pure_pursuit for control command calculation");
     if (prev_cmd_) {
       output_cmd = *prev_cmd_;
     } else {
-      output_cmd = generateCtrlCmdMsg(0.0);
+      output_cmd = generateCtrlCmdMsg(0.0, stamp);
     }
   }
   return output_cmd;
 }
 
-Lateral PurePursuitLateralController::generateCtrlCmdMsg(const double target_curvature)
+Lateral PurePursuitLateralController::generateCtrlCmdMsg(
+  const double target_curvature, const rclcpp::Time & stamp)
 {
   const double tmp_steering =
     planning_utils::convertCurvatureToSteeringAngle(param_.wheel_base, target_curvature);
   Lateral cmd;
-  cmd.stamp = clock_->now();
+  cmd.stamp = stamp;
   cmd.steering_tire_angle = static_cast<float>(
     std::min(std::max(tmp_steering, -param_.max_steering_angle), param_.max_steering_angle));
 
@@ -418,12 +382,13 @@ void PurePursuitLateralController::publishDebugMarker() const
     createTrajectoryCircleMarker(debug_data_.next_target, current_odometry_.pose.pose));
 }
 
-boost::optional<PpOutput> PurePursuitLateralController::calcTargetCurvature(
-  bool is_control_output, geometry_msgs::msg::Pose pose)
+std::optional<PpOutput> PurePursuitLateralController::calcTargetCurvature(
+  bool is_control_output, geometry_msgs::msg::Pose pose, const rclcpp::Time & stamp,
+  PurePursuitLateralControllerResult & result)
 {
   // Ignore invalid trajectory
   if (trajectory_resampled_->points.size() < 3) {
-    RCLCPP_WARN_THROTTLE(logger_, *clock_, 5000, "received path size is < 3, ignored");
+    AW_PP_WARN_THROTTLE(writer_, 5.0, "received path size is < 3, ignored");
     return {};
   }
 
@@ -432,7 +397,7 @@ boost::optional<PpOutput> PurePursuitLateralController::calcTargetCurvature(
   const auto closest_idx_result =
     autoware::motion_utils::findNearestIndex(output_tp_array_, pose, 3.0, M_PI_4);
   if (!closest_idx_result) {
-    RCLCPP_ERROR(logger_, "cannot find closest waypoint");
+    AW_PP_ERROR(writer_, "cannot find closest waypoint");
     return {};
   }
 
@@ -454,12 +419,12 @@ boost::optional<PpOutput> PurePursuitLateralController::calcTargetCurvature(
   const double min_lookahead_distance =
     is_reverse ? param_.reverse_min_lookahead_distance : param_.min_lookahead_distance;
   double lookahead_distance =
-    is_control_output
-      ? calcLookaheadDistance(
-          lateral_error, current_curvature, current_odometry_.twist.twist.linear.x,
-          min_lookahead_distance, is_control_output)
-      : calcLookaheadDistance(
-          lateral_error, current_curvature, target_vel, min_lookahead_distance, is_control_output);
+    is_control_output ? calcLookaheadDistance(
+                          lateral_error, current_curvature, current_odometry_.twist.twist.linear.x,
+                          min_lookahead_distance, is_control_output, stamp, result)
+                      : calcLookaheadDistance(
+                          lateral_error, current_curvature, target_vel, min_lookahead_distance,
+                          is_control_output, stamp, result);
 
   // Set PurePursuit data
   pure_pursuit_->setCurrentPose(pose);

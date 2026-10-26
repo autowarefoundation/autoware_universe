@@ -2,6 +2,19 @@
 Changelog for package autoware_ground_segmentation_cuda
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* fix(autoware_ground_segmentation_cuda): reject point clouds with an unexpected point_step (`#13314 <https://github.com/autowarefoundation/autoware_universe/issues/13314>`_)
+  The filter kernels reinterpret_cast the cloud to a 16-byte PointTypeStruct
+  while the host sizes its output buffers from point_step. Nothing validated the
+  layout, so a wider point type was read at the wrong stride, and the two halves
+  disagreed on the point size, with no error.
+  Co-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>
+* refactor(perception): move node design files into each package (`#13104 <https://github.com/autowarefoundation/autoware_universe/issues/13104>`_)
+  Co-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>
+* Contributors: Max Schmeller, Ryohsuke Mitsudome, Taekjin LEE
+
 0.52.0 (2026-06-30)
 -------------------
 

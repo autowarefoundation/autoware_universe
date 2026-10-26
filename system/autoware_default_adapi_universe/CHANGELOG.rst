@@ -2,6 +2,134 @@
 Changelog for package autoware_default_adapi
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* feat(default_adapi_universe): make default_adapi.launch.py configurable by node_keys_file (`#13444 <https://github.com/autowarefoundation/autoware_universe/issues/13444>`_)
+  * feat: make default_adapi_launch configurable by node_keys
+  * revert unnecessary change for test_default_adapi.launch.xml
+  * rename key for avoid conflict
+  * minor local variable renaming
+  * use node keys file
+  * add comment
+  * fix comment
+  ---------
+  Co-authored-by: Taeseung Sohn <taeseung.sohn@tier4.jp>
+* fix(design): align the system node designs with the packages they describe (`#13338 <https://github.com/autowarefoundation/autoware_universe/issues/13338>`_)
+  * fix(design): declare the fixed-name interfaces of the system node designs as remap targets
+  The diagnostic graph ports, the diagnostics array publisher and the automatic
+  pose initializer's localization interfaces are pinned with global:, which keeps
+  them out of the design graph: link_manager skips any connection whose target is
+  a global input port and the exporter emits no remap. remap_target: keeps the
+  same fixed topic and service names while letting the ports take part in the
+  graph.
+  * feat(autoware_default_adapi_universe): add node designs for the AD API nodes
+  The package builds fifteen AD API components with no design of their own, so a
+  system that composes the AD API from design modules cannot reference them.
+  * feat(design): add the diagnostic graph and component state monitor node designs
+  autoware_component_state_monitor and autoware_diagnostic_graph_aggregator build
+  three components with no design of their own: the state monitor that aggregates
+  topic monitor diagnostics into per-component availability, the aggregator that
+  turns /diagnostics into the diagnostic graph, and the converter that derives
+  operation mode availability from it.
+  DiagnosticGraphLogging and ProcessingTimeChecker declare the parameters their
+  launchers pass, which have no package param file to come from.
+  ---------
+* feat(autoware_default_adapi_universe): move the last component_interface_utils nodes to agnocast_wrapper::Node (`#13378 <https://github.com/autowarefoundation/autoware_universe/issues/13378>`_)
+  * feat(autoware_default_adapi_universe): move the last component_interface_utils nodes to agnocast_wrapper::Node
+  motion held a VehicleStopChecker, which owns an rclcpp subscription. Only the node-agnostic
+  VehicleStopCheckerBase is kept, fed from a KinematicState subscription: that spec is
+  /localization/kinematic_state with the same depth and QoS the checker used, so the node sees
+  the same odometry it did before.
+  mrm_request and vehicle_door take the wrapper's diagnostic_updater::Updater, which dispatches
+  to the same upstream Updater under ENABLE_AGNOCAST=0. vehicle_door blocks on a client from
+  inside a service callback, which the callback-isolated executor serves on another thread.
+  With no node left on rclcpp, utils/types.hpp drops the rclcpp::Node default from the endpoint
+  aliases, the package registers no rclcpp components any more, and the launch file starts the
+  whole set as separate processes under =1 rather than an empty container beside them.
+  * cosmetic: add reference link to value
+  ---------
+  Co-authored-by: Junya Sasaki <j2sasaki1990@gmail.com>
+  Co-authored-by: Junya Sasaki <junya.sasaki@tier4.jp>
+* feat(autoware_default_adapi_universe): move the nodes that build endpoints outside the adaptor to agnocast_wrapper::Node (`#13377 <https://github.com/autowarefoundation/autoware_universe/issues/13377>`_)
+  These three create endpoints that NodeAdaptor does not cover, so they name the wrapper types
+  directly instead of the rclcpp handle types: autoware_state's component-state subscriptions,
+  its state publisher and its shutdown service, operation_mode's availability subscription, and
+  planning's factor subscriptions, whose init_factors() now deduces the node type rather than
+  naming rclcpp::Node.
+  autoware_state builds its state message into the loaned message so the Agnocast path copies
+  no payload.
+  operation_mode blocks on a client from inside a service callback, so its client callback group
+  has to be served by another thread, which the callback-isolated executor does.
+* feat(autoware_default_adapi_universe): move the mechanical component_interface_utils nodes to agnocast_wrapper::Node (`#13376 <https://github.com/autowarefoundation/autoware_universe/issues/13376>`_)
+  Of the 13 nodes in this package that reach the middleware through
+  component_interface_utils, these seven need nothing beyond naming the node type: the base
+  class, `NodeAdaptor<NodeT>` instead of CTAD, and the wrapper's create_timer where they hold
+  one. autoware_core`#1362 <https://github.com/autowarefoundation/autoware_universe/issues/1362>`_ already templated component_interface_utils on the node type, so the
+  endpoint wrappers follow the alias.
+  utils/types.hpp carries that name. The endpoint aliases take the node type as a second
+  parameter, defaulted to rclcpp::Node, so the nodes that have not moved yet keep compiling
+  unchanged; NodeAdaptor deduces its constructor argument separately from its node type, so
+  CTAD would otherwise keep NodeT at that default and the endpoint types would not match.
+  Under ENABLE_AGNOCAST=0 every node stays composed in the shared container, where the wrapper
+  is backed by rclcpp. Under =1 these seven need an AgnocastOnly executor that a container
+  cannot provide, so each also gets a standalone executable and the launch file starts them as
+  separate processes, next to the container that still holds the remaining six. They take the
+  callback-isolated Agnocast executor, like the nodes already moved, and keep a multi-threaded ROS 2
+  executor, matching the component_container_mt they shared under =0.
+* feat(autoware_default_adapi_universe): run the core API nodes standalone under agnocast (`#13368 <https://github.com/autowarefoundation/autoware_universe/issues/13368>`_)
+* feat(autoware_default_adapi_universe): move ManualControlNode to agnocast_wrapper::Node (`#13261 <https://github.com/autowarefoundation/autoware_universe/issues/13261>`_)
+  * feat(autoware_default_adapi_universe): move DiagnosticsNode to agnocast_wrapper::Node
+  DiagnosticsNode uses no component_interface_utils, so it is the smallest node
+  in this package to move.
+  Under ENABLE_AGNOCAST=0 it stays composed like every other node here, because
+  agnocast_wrapper::Node is backed by rclcpp there and a component container
+  takes it unchanged. Under =1 it needs an AgnocastOnly executor, which a shared
+  container cannot provide, so it runs as its own process with ld_preload_value
+  from agnocast_env.launch.py on that process alone. Callbacks are isolated per
+  group because on_reset() blocks on the reset client from inside the service
+  callback, and the client has its own group.
+  The publishers build into the loaned message rather than a local one, so the
+  Agnocast path copies no payload. The client request is allocated the same way.
+  The rclcpp::QoS overload of create_client() exists in every rclcpp version the
+  wrapper supports, so AUTOWARE_DEFAULT_SERVICES_QOS_PROFILE() is no longer
+  needed here -- it resolved to the same ServicesQoS. That leaves
+  autoware_qos_utils unused by this package.
+  * feat(autoware_default_adapi_universe): move ManualControlNode to agnocast_wrapper::Node
+  This completes the nodes in this package that can move today: the other 13 all
+  build their endpoints through component_interface_utils, which needs the
+  endpoint name and QoS accessors that autoware_agnocast_wrapper does not have
+  on main yet.
+  The polling subscription becomes the wrapper's, keeping polling_policy::Latest,
+  which is what autoware_utils_rclcpp defaulted to. The diagnostic updater
+  becomes the wrapper's; TimeoutDiag takes a clock rather than a node, so it is
+  unchanged.
+  The mode status message is built here, so it is built into the loaned message.
+  The command relays keep publish(const MessageT &): the payload arrives from a
+  subscription, which is the case that overload exists for.
+  Both instances share one executable and differ only in the mode parameter,
+  which the shared config file keys by fully qualified node name, so adding them
+  to AGNOCAST_WRAPPER_NODES is all the launch file needs.
+  ---------
+* feat(autoware_default_adapi_universe): move DiagnosticsNode to agnocast_wrapper::Node (`#13260 <https://github.com/autowarefoundation/autoware_universe/issues/13260>`_)
+  DiagnosticsNode uses no component_interface_utils, so it is the smallest node
+  in this package to move.
+  Under ENABLE_AGNOCAST=0 it stays composed like every other node here, because
+  agnocast_wrapper::Node is backed by rclcpp there and a component container
+  takes it unchanged. Under =1 it needs an AgnocastOnly executor, which a shared
+  container cannot provide, so it runs as its own process with ld_preload_value
+  from agnocast_env.launch.py on that process alone. Callbacks are isolated per
+  group because on_reset() blocks on the reset client from inside the service
+  callback, and the client has its own group.
+  The publishers build into the loaned message rather than a local one, so the
+  Agnocast path copies no payload. The client request is allocated the same way.
+  The rclcpp::QoS overload of create_client() exists in every rclcpp version the
+  wrapper supports, so AUTOWARE_DEFAULT_SERVICES_QOS_PROFILE() is no longer
+  needed here -- it resolved to the same ServicesQoS. That leaves
+  autoware_qos_utils unused by this package.
+* fix(system): declare the dependencies these packages use (`#13217 <https://github.com/autowarefoundation/autoware_universe/issues/13217>`_)
+* Contributors: Koichi Imai, Mete Fatih Cırıt, Ryohsuke Mitsudome, Taekjin LEE, Takagi, Isamu
+
 0.52.0 (2026-06-30)
 -------------------
 

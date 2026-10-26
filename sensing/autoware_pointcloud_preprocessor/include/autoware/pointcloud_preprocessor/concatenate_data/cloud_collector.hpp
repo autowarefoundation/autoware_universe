@@ -14,8 +14,11 @@
 
 #pragma once
 
+#include "cloud_collector_core.hpp"
 #include "collector_info.hpp"
 #include "combine_cloud_handler.hpp"
+
+#include <rclcpp/rclcpp.hpp>
 
 #include <memory>
 #include <string>
@@ -30,7 +33,8 @@ class PointCloudConcatenateDataSynchronizerComponentTemplated;
 template <typename MsgTraits>
 class CombineCloudHandler;
 
-enum class CollectorStatus { Idle, Processing, Finished };
+// The ROS half of the collector: a timeout timer, the throttled warnings, and the hand-off to the
+// node's publisher. The state machine itself lives in CloudCollectorCore.
 template <typename MsgTraits>
 class CloudCollector
 {
@@ -38,14 +42,15 @@ public:
   CloudCollector(
     std::shared_ptr<PointCloudConcatenateDataSynchronizerComponentTemplated<MsgTraits>> &&
       ros2_parent_node,
-    std::shared_ptr<CombineCloudHandler<MsgTraits>> & combine_cloud_handler, int num_of_clouds,
-    double timeout_sec, bool debug_mode);
+    std::shared_ptr<CombineCloudHandler<typename MsgTraits::PointCloudMessage>> &
+      combine_cloud_handler,
+    int num_of_clouds, double timeout_sec, bool debug_mode);
   bool topic_exists(const std::string & topic_name);
   void process_pointcloud(
     const std::string & topic_name, typename MsgTraits::PointCloudMessage::ConstSharedPtr cloud);
   void concatenate_callback();
 
-  ConcatenatedCloudResult<MsgTraits> concatenate_pointclouds(
+  ConcatenatedCloudResult<typename MsgTraits::PointCloudMessage> concatenate_pointclouds(
     std::unordered_map<std::string, typename MsgTraits::PointCloudMessage::ConstSharedPtr>
       topic_to_cloud_map);
 
@@ -62,14 +67,10 @@ public:
 private:
   std::shared_ptr<PointCloudConcatenateDataSynchronizerComponentTemplated<MsgTraits>>
     ros2_parent_node_;
-  std::shared_ptr<CombineCloudHandler<MsgTraits>> combine_cloud_handler_;
+  std::shared_ptr<CombineCloudHandler<typename MsgTraits::PointCloudMessage>>
+    combine_cloud_handler_;
   rclcpp::TimerBase::SharedPtr timer_;
-  std::unordered_map<std::string, typename MsgTraits::PointCloudMessage::ConstSharedPtr>
-    topic_to_cloud_map_;
-  uint64_t num_of_clouds_;
-  double timeout_sec_;
-  std::shared_ptr<CollectorInfoBase> collector_info_;
-  CollectorStatus status_;
+  CloudCollectorCore<typename MsgTraits::PointCloudMessage> core_;
   bool debug_mode_;
 };
 

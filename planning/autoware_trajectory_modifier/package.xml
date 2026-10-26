@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="3">
   <name>autoware_trajectory_modifier</name>
-  <version>0.52.0</version>
+  <version>0.53.0</version>
   <description>The autoware_trajectory_modifier package for combined trajectory modification and optimization</description>
 
   <maintainer email="maxime.clement@tier4.jp">Maxime CLEMENT</maintainer>
@@ -51,6 +51,7 @@
   <depend>tf2_eigen</depend>
   <depend>tf2_geometry_msgs</depend>
   <depend>tf2_ros</depend>
+  <depend>tl_expected</depend>
   <depend>visualization_msgs</depend>
   <exec_depend>autoware_core_planning</exec_depend>
   <exec_depend>python3-matplotlib</exec_depend>

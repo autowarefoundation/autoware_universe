@@ -47,6 +47,7 @@
 #ifndef AUTOWARE__MPC_LATERAL_CONTROLLER__VEHICLE_MODEL__VEHICLE_MODEL_BICYCLE_DYNAMICS_HPP_
 #define AUTOWARE__MPC_LATERAL_CONTROLLER__VEHICLE_MODEL__VEHICLE_MODEL_BICYCLE_DYNAMICS_HPP_
 
+#include "autoware/mpc_lateral_controller/log_writer.hpp"
 #include "autoware/mpc_lateral_controller/vehicle_model/vehicle_model_interface.hpp"
 
 #include <Eigen/Core>
@@ -73,10 +74,11 @@ public:
    * @param [in] mass_rr mass applied to rear right tire [kg]
    * @param [in] cf front cornering power [N/rad]
    * @param [in] cr rear cornering power [N/rad]
+   * @param [in] writer where the model writes its log. It has to outlive this object.
    */
   DynamicsBicycleModel(
     const double wheelbase, const double mass_fl, const double mass_fr, const double mass_rl,
-    const double mass_rr, const double cf, const double cr);
+    const double mass_rr, const double cf, const double cr, const LogWriter & writer);
 
   /**
    * @brief destructor
@@ -120,6 +122,8 @@ private:
   double m_iz;    //!< @brief moment of inertia [kg * m2]
   double m_cf;    //!< @brief front cornering power [N/rad]
   double m_cr;    //!< @brief rear cornering power [N/rad]
+
+  const LogWriter & m_writer;  //!< @brief where the model writes its log
 };
 }  // namespace autoware::motion::control::mpc_lateral_controller
 #endif  // AUTOWARE__MPC_LATERAL_CONTROLLER__VEHICLE_MODEL__VEHICLE_MODEL_BICYCLE_DYNAMICS_HPP_

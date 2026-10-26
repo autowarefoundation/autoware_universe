@@ -2,6 +2,189 @@
 Changelog for package autoware_map_based_prediction
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* perf(map_based_prediction): vru path-cut follow-up optimizations (`#13238 <https://github.com/autowarefoundation/autoware_universe/issues/13238>`_)
+  * fix(map_based_prediction): cut at the earliest fence crossing
+  The candidate loop stopped at the first crossed fence in R-tree order, so
+  a different fence crossing earlier along the path was never examined and
+  the cut landed too late. Collect every crossed fence; the segment loop
+  already returns the earliest crossing.
+  Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
+  * perf(map_based_prediction): convert path-cut map geometry once at load
+  Vegetation polygons are converted to boost polygons and validated when
+  the map arrives; the per-cycle loops look the conversions up by id. A
+  vegetation-free map leaves the layer null so queries short-circuit.
+  Road boundaries are converted to 2D once per crossed boundary and
+  crosswalk rings are cached at load. Bounds shared by two road-subtype
+  lanelets are interior lane dividers and are dropped from the boundary
+  layer: a path from outside the road always reaches an outer edge first.
+  Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
+  * perf(map_based_prediction): cheapen vegetation crossing tests
+  Cylinder footprints sweep the centerline buffered by their radius, so
+  segment-vs-polygon distance tests replace the per-segment convex hulls
+  and are exact; box and polygon shapes keep the hulls but reuse each
+  segment's end footprint as the next start. Candidates are gated by one
+  centerline-to-polygon distance test in place of the N-footprint
+  bounding box, and the R-tree query box is grown by the footprint radius
+  so polygons reachable by the swept footprint are not missed.
+  The road-boundary segment test resolves intersection points in a single
+  sweep, keeping intersects() only as the collinear-overlap fallback.
+  Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
+  * perf(map_based_prediction): build each predicted-path linestring once
+  The caller converts a path to a 2D linestring once and hands it to the
+  fence and vegetation modules; the fence-cut prefix is reused for the
+  vegetation cut. Fences crossed by a path are converted to 2D once
+  instead of per segment, and the road-boundary module shares the utils
+  conversion helper.
+  Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
+  * test(map_based_prediction): add VRU path-cut module tests
+  Synthetic in-memory lanelet maps pin the behavior the modules must
+  preserve: earliest-crossing cut index, the initial-overlap exemption,
+  detection of polygons reachable only by the swept footprint, invalid
+  map polygons skipped at load, interior lane dividers excluded from the
+  boundary layer, the crosswalk signal exemption, and the can-stop gate.
+  Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
+  ---------
+  Co-authored-by: Claude Fable 5 <noreply@anthropic.com>
+* feat(map_based_prediction): add vegetation path cutting (`#13190 <https://github.com/autowarefoundation/autoware_universe/issues/13190>`_)
+  * feat(map_based_predictor): add vegitation path cut , (`#3113 <https://github.com/autowarefoundation/autoware_universe/issues/3113>`_)
+  add path cut function by vegetation
+  (cherry picked from commit 7be16b3d11cf67fd67fff0fecb482ed8157f3cd2)
+  * chore(map_based_prediction): remove path cut debug
+  * feat(map_based_prediction): judge vegetation path cut on path segments (`#3221 <https://github.com/autowarefoundation/autoware_universe/issues/3221>`_)
+  Cherry-picked vegetation.cpp changes from `tier4/autoware_universe#3221 <https://github.com/tier4/autoware_universe/issues/3221>`_, excluding test_vegetation.cpp.
+  (cherry picked from commit 2e365e13641e084f5d0f55194deb0a2577c751fe)
+  * refactor(map_based_prediction): remove vegetation info precheck
+  * perf(map_based_prediction): skip precise path cut checks by bbox
+  * perf(map_based_prediction): skip vegetation cross checks by bbox
+  * style(map_based_prediction): use at for indexed path access
+  * fix(map_based_prediction): hold the vegetation layer as a const map
+  vegetation_layer\_ was a non-const LaneletMapUPtr, so polygonLayer.search()
+  selected the non-const overload and returned std::vector<lanelet::Polygon3d>,
+  which does not bind to the const lanelet::ConstPolygons3d & the crossing
+  helpers take. The layer is only ever searched after being built, so hold it
+  as a LaneletMapConstUPtr; search() then returns ConstPolygons3d directly and
+  the call sites need no conversion.
+  Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+  * fix(map_based_prediction): keep the path footprint polygon alive while iterating
+  buildPathFootprintBBox() iterated over to_polygon2d(...).outer() directly.
+  to_polygon2d() returns by value and outer() returns a reference into it, but
+  in a range-for only the result of the range expression is lifetime-extended,
+  so the Polygon2d temporary was destroyed before the loop body ran. GCC 13
+  reports the dangling access as -Werror=maybe-uninitialized, which broke the
+  Jazzy CI build.
+  Bind the footprint to a named local so it outlives the loop.
+  Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+  * fix(map_based_prediction): report the vegetation crossing closest to the object
+  findVegetationCrossingIndex() looped over the candidate polygons outside the
+  segment loop, so the index it returned belonged to whichever polygon the
+  R-tree yielded first rather than to the first crossing along the path: with
+  two polygons over the path, a crossing on segment 5 could be returned while
+  the polygon crossed on segment 1 was never examined.
+  Segment 0's swept polygon also covers the object's current footprint, so an
+  object standing under a mapped tree reported a crossing at index 0, dropping
+  every crosswalk path and truncating the straight path to a single pose. A
+  path leaving a vegetation area is not a path entering one, so return no
+  crossing when the initial footprint already overlaps the vegetation.
+  Collect the polygons that pass the bbox check first, then walk the segments
+  outermost. This also stops the swept hulls being rebuilt per candidate
+  polygon, and the empty-candidate early return keeps the bbox rejection as
+  cheap as it was.
+  Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+  * refactor(map_based_prediction): make doesPathCrossVegetation a thin wrapper
+  doesPathCrossVegetation() was findVegetationCrossingIndex() with last_idx
+  clamped to arrival_index, so it carried its own copy of the polygon/segment
+  loop and would need the same two fixes applied twice.
+  Take last_idx as a parameter instead and let the boolean form delegate.
+  PredictedPathWithArrivalIndex derives from PredictedPath, so it passes
+  straight through; cutPathsCrossingVegetation() supplies path.size() - 1.
+  Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+  ---------
+  Co-authored-by: Akifumi_Ohata <mojanekonihiki@gmail.com>
+  Co-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>
+* feat(map_based_prediction): cut VRU paths jumping onto the road at road boundaries (`#13203 <https://github.com/autowarefoundation/autoware_universe/issues/13203>`_)
+  * feat(map_based_prediction): add per-class object deceleration parameters
+  Introduce behavior_model.object_deceleration, the deceleration [m/ss] each
+  object class is assumed to be able to apply. It is used to judge whether an
+  object can come to a stop before a line its predicted path crosses.
+  A class that has an entry of its own uses that value; every other class falls
+  back to behavior_model.object_deceleration.base, so only the classes that
+  deviate need to be listed in the parameter file. Every class defined in
+  autoware_perception_msgs::msg::ObjectClassification can be configured.
+  Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+  * feat(map_based_prediction): cut VRU paths jumping onto the road at road boundaries (`#3213 <https://github.com/autowarefoundation/autoware_universe/issues/3213>`_)
+  Add a RoadBoundaryModule that trims VRU predicted paths which jump out onto
+  the road at the right/left bound of road / road_shoulder lanelets. Following
+  the fence module pattern, the logic lives in a dedicated road_boundary.cpp
+  and is invoked from predictor_vru.cpp so it applies only to VRUs.
+  - Collect road / road_shoulder lanelet bounds into a searchable layer
+  - Cut at the crossing closest to the object among multiple crossed boundaries
+  - Skip cutting when the crossing point lies inside a crosswalk / walkway
+  (treated as a legitimate crossing), unless the crosswalk's traffic signal
+  is red (gated by use_crosswalk_signal)
+  - Skip cutting for objects already inside a road lanelet
+  - Cut only when the object can decelerate to a stop before the boundary
+  - Add TrafficSignalModule::isRedSignal() reusing getSignalId/getSignalElement
+  Cherry-picked from `tier4/autoware_universe#3213 <https://github.com/tier4/autoware_universe/issues/3213>`_. The path_cut_debug marker
+  publishing is omitted since that module does not exist here.
+  Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+  Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+  * fix(map_based_prediction): take agnocast_wrapper::Node in the deceleration param helpers
+  MapBasedPredictionNode derives from autoware::agnocast_wrapper::Node since
+  `#12879 <https://github.com/autowarefoundation/autoware_universe/issues/12879>`_, and that class does not derive from rclcpp::Node, so the helpers
+  introduced for behavior_model.object_deceleration could not be called with
+  *this. Take the wrapper node instead, as the other agnocast-migrated
+  parameter helpers do.
+  Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+  * style(pre-commit): autofix
+  * fix(map_based_prediction): hold the road boundary layer as a const map
+  The layer is only searched after being built, and crosswalk_layer\_ next to it
+  is already a LaneletMapConstUPtr. Holding it as a non-const map made
+  lineStringLayer.search() resolve to the non-const overload wherever the map is
+  reached without a const qualifier.
+  Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+  * fix(map_based_prediction): constrain the base deceleration to non-positive
+  The parameter is a deceleration expressed as a negative acceleration, so a
+  positive value is always a misconfiguration. Reject it in the schema.
+  Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+  * fix(map_based_prediction): declare every object deceleration with base as its default
+  The try/catch fallback absorbed real misconfiguration: an integer literal such
+  as 'pedestrian: -1' makes declare_parameter<double> throw, and the class then
+  quietly took the base value with no log line. It also left the classes missing
+  from the parameter file undeclared, so they never showed up in ros2 param list.
+  Declaring each class with base as its default covers both, and a type mismatch
+  now fails loudly at start-up.
+  Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+  * fix(map_based_prediction): drop the unused lanelet2_extension include
+  road_boundary.cpp only uses lanelet::utils::to2D, createMap and createConstMap,
+  all of which come from lanelet2_core/LaneletMap.h that road_boundary.hpp
+  already includes. The autoware_lanelet2_extension header was never needed, and
+  the package does not declare that dependency.
+  Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+  ---------
+  Co-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>
+  Co-authored-by: Taekjin LEE <taekjin.lee@tier4.jp>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* chore(pre-commit): update clang-format to v22.1.5 (`#13126 <https://github.com/autowarefoundation/autoware_universe/issues/13126>`_)
+  * chore(pre-commit): update clang-format to v22.1.5
+  * style(pre-commit): autofix
+  ---------
+* refactor(autoware_map_based_prediction): migrate to polling:: API (`#13036 <https://github.com/autowarefoundation/autoware_universe/issues/13036>`_)
+* fix(map_based_prediction): fix use_after_free bug of `map_based_prediction` when `agnocast::Node` applied (`#12948 <https://github.com/autowarefoundation/autoware_universe/issues/12948>`_)
+  * fix use_after_free of map_based_prediction
+  * fix use_after_free of timestamp
+  ---------
+* feat(map_based_prediction): apply `agnocast_wrapper::Node` to `map_based_prediction` (`#12879 <https://github.com/autowarefoundation/autoware_universe/issues/12879>`_)
+  * apply agnocast_wrapper::Node
+  * delete comments
+  * style(pre-commit): autofix
+  * fix to delete node\_ member based on clang-tidy
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Koichi Imai, Mete Fatih Cırıt, Ryohsuke Mitsudome, Satoshi OTA, Taekjin LEE
+
 0.52.0 (2026-06-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

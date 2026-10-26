@@ -2,6 +2,39 @@
 Changelog for package autoware_vehicle_cmd_gate
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* fix(design): align the control node designs with the packages they describe (`#13340 <https://github.com/autowarefoundation/autoware_universe/issues/13340>`_)
+  * fix(design): align the control node designs with the packages they describe
+  ControlCommandGate and the operation mode transition manager name a plugin
+  class and pin publishers that do not match the built package: the registered
+  component is ControlCmdGate, and the transition flags belong on the design
+  graph rather than on global: pins that link_manager skips.
+  TrajectoryFollower declares three debug publishers with message types the node
+  never publishes and a stop_reason publisher it does not create at all.
+  VehicleCmdGate keeps gate_mode and engage on their official topic names through
+  remap_target: alone, so the two inputs are connected through the design.
+  * fix(autoware_operation_mode_transition_manager): declare the system and legacy interfaces as remap targets
+  The operation mode state publisher, the two operation mode change services and
+  the legacy engage and gate mode publishers are node-side fixed names. Declaring
+  them as remap targets puts them on the design graph; a port pinned with global:
+  is skipped by link_manager and the exporter emits no remap for it.
+  ---------
+* fix(control): declare the fixed-name compatibility interfaces in the control node designs (`#13281 <https://github.com/autowarefoundation/autoware_universe/issues/13281>`_)
+  * fix(control): declare the fixed-name compatibility interfaces in the control node designs
+  operation_mode_transition_manager subscribes /control/current_gate_mode and
+  /control/external_cmd_selector/current_selector_mode and calls
+  /control/external_cmd_selector/select_external_command by fixed name; the
+  gate serves the ADAPI pause/stop interfaces under /control/vehicle_cmd_gate.
+  Declaring these ports with their remap_target lets a system design connect
+  them and keep the fixed names when the module hierarchy nests the nodes.
+  * fix(control): declare the multi-publisher gate_mode_cmd and engage topics as global
+  ---------
+* refactor(control): move node design files into each package (`#13100 <https://github.com/autowarefoundation/autoware_universe/issues/13100>`_)
+  Co-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>
+* Contributors: Ryohsuke Mitsudome, Taekjin LEE
+
 0.52.0 (2026-06-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

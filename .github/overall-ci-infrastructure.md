@@ -30,7 +30,7 @@ Registered with the labels `[self-hosted, Linux, X64]` and used by the heavier C
 | Workflow                                   | Trigger        | Runner                                        |
 | ------------------------------------------ | -------------- | --------------------------------------------- |
 | build-and-test                             | push to `main` | self-hosted                                   |
-| build-and-test-daily                       | daily / manual | self-hosted (amd64), ubuntu-22.04-arm (arm64) |
+| build-and-test-daily                       | daily / manual | self-hosted (amd64), ubuntu-24.04-arm (arm64) |
 | build-and-test-packages-above-differential | PR update      | self-hosted                                   |
 | build-test-tidy-pr                         | PR update      | github-std (non-cuda), self-hosted (cuda)     |
 

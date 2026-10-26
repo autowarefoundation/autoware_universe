@@ -2,6 +2,59 @@
 Changelog for package autoware_behavior_path_static_obstacle_avoidance_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* fix(autoware_behavior_path_static_obstacle_avoidance_module): stop extending lanes forever on a looping road (`#13330 <https://github.com/autowarefoundation/autoware_universe/issues/13330>`_)
+  * fix(autoware_behavior_path_static_obstacle_avoidance_module): stop extending lanes forever on a looping road
+  getExtendLanes() walks getNextLanelets() until the lane sequence reaches
+  forward_path_length ahead of the ego. On a road network that loops back on
+  itself -- a city block, say -- that walk eventually returns a lanelet already in
+  the sequence. Appending it makes the ego project onto the second lap, so the arc
+  coordinate grows in step with the sequence, forward_length never reaches the
+  threshold, and the loop extends the lanes forever: the node spins at 100% of a
+  core inside its own timer callback and publishes no path at all, so planning and
+  control go quiet and the vehicle never moves.
+  Stop when the next lanelet is already in the sequence. There is nothing further
+  ahead for it to reach that the sequence does not already cover, and the walk is
+  now bounded by the number of lanelets it can visit.
+  Found on a Lanelet2 map converted from a CARLA town, where every block loops:
+  the module hung as soon as a route made a lane change possible next to the ego.
+  Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+  Claude-Session: https://claude.ai/code/session_01B5Gc9n8qQgHyNTd3gsow8z
+  * test(autoware_behavior_path_static_obstacle_avoidance_module): cover getExtendLanes loop termination
+  Add a regression test for the looping-road hang fixed in this PR. The fixture
+  map test_data/loop_map.osm is a four-lanelet ring (1010 -> 1013 -> 1016 ->
+  1019 -> 1010) generated so getNextLanelets() forms a cycle; the ego is placed
+  at the ring start, derived from the loaded geometry so the test does not depend
+  on the map projection.
+  With the guard, getExtendLanes() returns the four ring lanelets once. Without
+  it the walk re-appends the ring until forward_path_length, so the assertions
+  (no repeated lanelet id, sequence no longer than the loop) fail cleanly instead
+  of hanging CI.
+  Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: Atrium Coding Agent <agent@atrium.local>
+  Co-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>
+  Co-authored-by: Masaya Kataoka <cld-masaya.kataoka@tier4.jp>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* chore: update planning param.yaml comments (`#13061 <https://github.com/autowarefoundation/autoware_universe/issues/13061>`_)
+  update planning param.yaml comments
+* chore(planning): update package maintainers (`#13186 <https://github.com/autowarefoundation/autoware_universe/issues/13186>`_)
+* chore(pre-commit): update clang-format to v22.1.5 (`#13126 <https://github.com/autowarefoundation/autoware_universe/issues/13126>`_)
+  * chore(pre-commit): update clang-format to v22.1.5
+  * style(pre-commit): autofix
+  ---------
+* fix(static_obstacle_avoidance): prevent crash on empty path in planCandidate (`#13008 <https://github.com/autowarefoundation/autoware_universe/issues/13008>`_)
+  * handle empty path
+  * update comment
+  * style(pre-commit): autofix
+  * doc: better comment
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Kento Yabuuchi, Masaya Kataoka, Mete Fatih Cırıt, Ryohsuke Mitsudome, Satoshi OTA, Taeseung Sohn
+
 0.52.0 (2026-06-30)
 -------------------
 

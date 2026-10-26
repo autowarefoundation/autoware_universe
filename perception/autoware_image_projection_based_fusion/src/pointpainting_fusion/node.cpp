@@ -16,6 +16,7 @@
 
 #include "autoware/point_types/types.hpp"
 
+#include <autoware/agnocast_wrapper/runtime.hpp>
 #include <autoware/image_projection_based_fusion/utils/geometry.hpp>
 #include <autoware/image_projection_based_fusion/utils/utils.hpp>
 #include <autoware/lidar_centerpoint/centerpoint_config.hpp>
@@ -269,7 +270,7 @@ PointPaintingFusionNode::PointPaintingFusionNode(const rclcpp::NodeOptions & opt
 
   if (this->declare_parameter("build_only", false)) {
     RCLCPP_INFO(this->get_logger(), "TensorRT engine is built and shutdown node.");
-    rclcpp::shutdown();
+    autoware::agnocast_wrapper::shutdown();
   }
 }
 

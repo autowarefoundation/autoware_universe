@@ -2,6 +2,40 @@
 Changelog for package autoware_control_validator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* feat(control_validator): improve roll back detection logic (`#13373 <https://github.com/autowarefoundation/autoware_universe/issues/13373>`_)
+  * feat(control_validator): improve roll back detection logic (`#3315 <https://github.com/autowarefoundation/autoware_universe/issues/3315>`_)
+  * improve roll back detection logic to properly handle zero target velocity case
+  * add unit tests for velocity validation
+  * Refactor is_rolling_back into conditional
+  ---------
+  * remove white space
+  * fix test
+  ---------
+* feat(control_validator): apply `agnocast_wrapper::Node` to `control_validator` (`#13322 <https://github.com/autowarefoundation/autoware_universe/issues/13322>`_)
+  * feat(control_validator): apply agnocast_wrapper::Node to control_validator
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* refactor(control): move node design files into each package (`#13100 <https://github.com/autowarefoundation/autoware_universe/issues/13100>`_)
+  Co-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>
+* fix(control_validator): modernize parameter handling and support dynamic reconfigure (`#13027 <https://github.com/autowarefoundation/autoware_universe/issues/13027>`_)
+  * fix(control_validator): use generate parameter library
+  * fix: dynamic reconfigure
+  * fix: rearranging parameters
+  * refactor: rearrange validator's in alphabetical order (param struct)
+  * fix: config file and arranging with alphabetical order
+  * fix: address PR's comment
+  * fix: parameter config
+  ---------
+* fix(planning_validator, control_validator): fix include path for angles header (`#13026 <https://github.com/autowarefoundation/autoware_universe/issues/13026>`_)
+  * fix include path for angles header
+  * add missing package dependency
+  ---------
+* Contributors: Ryohsuke Mitsudome, Taekjin LEE, Yutaro Kobayashi, Zulfaqar Azmi, mkquda
+
 0.52.0 (2026-06-30)
 -------------------
 

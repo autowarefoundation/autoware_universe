@@ -2,6 +2,12 @@
 Changelog for package autoware_dummy_infrastructure
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* chore(dummy_infrastructure): move package directory (`#13224 <https://github.com/autowarefoundation/autoware_universe/issues/13224>`_)
+* Contributors: Ryohsuke Mitsudome, Takagi, Isamu
+
 0.52.0 (2026-06-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

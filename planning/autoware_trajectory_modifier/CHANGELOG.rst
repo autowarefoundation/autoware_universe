@@ -2,6 +2,55 @@
 Changelog for package autoware_trajectory_modifier
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* fix: missing dependencies for tl_expected and libexpected-dev (`#13438 <https://github.com/autowarefoundation/autoware_universe/issues/13438>`_)
+* chore(autoware_trajectory_processor)!: rename to autoware_trajectory_modifier (`#13389 <https://github.com/autowarefoundation/autoware_universe/issues/13389>`_)
+  rename processor -> modifier
+* feat(autoware_trajectory_processor): move modifier and optimizer into new package (`#12934 <https://github.com/autowarefoundation/autoware_universe/issues/12934>`_)
+* feat(trajectory_modifier): support new object classes in trajectory_modifier (`#12910 <https://github.com/autowarefoundation/autoware_universe/issues/12910>`_)
+  * support HAZARD & ANIMAL object classes in modifier obstacle stop
+  * add missing object types for surround_obstacle_stop
+  ---------
+* feat(trajectory_modifier): add traffic light stop to trajectory modifier (`#12875 <https://github.com/autowarefoundation/autoware_universe/issues/12875>`_)
+  * feat(trajectory_modifier): implement traffic light stop plugin in modifier (`#3017 <https://github.com/autowarefoundation/autoware_universe/issues/3017>`_)
+  * add traffic_light_stop plugin framework
+  * refactor traffic_light_compliance_checker, add crossing point and arc length to Violation struct
+  * add required inputs to trajectory_modifer
+  - add subscribers for lanelet_map, route, and signals
+  - add lanelet_map, route, and signal ptrs to trajectory_modifier plugin InputData struct
+  - update and refactory trajectory_modifier node to process new input data
+  * implement is is_trajectory_modification_required function for traffic_light_stop plugin
+  * refactor setting stop point logic and add utility functions to commonize logic
+  * implement traffic light stopping logic
+  * publish debug string
+  * set default param values, update schema
+  * check for empty trajectory
+  ---------
+  * feat(traffic_light_compliance_checker): add documentation for traffic light compliance checker  (`#3085 <https://github.com/autowarefoundation/autoware_universe/issues/3085>`_)
+  * write the readme for traffic_light_compliance_checker package
+  * add unit tests for traffic light stop
+  * update traffic_light_filter documentation, add docs file for traffic_light_stop module
+  ---------
+  * feat(traffic_light_stop): add missing parameter treat_unknown_light_as_red (`#3091 <https://github.com/autowarefoundation/autoware_universe/issues/3091>`_)
+  add missing parameter treat_unknown_light_as_red
+  * fix spelling
+  ---------
+* feat(trajectory_modifier): add surround obstacle stop plugin to trajectory modifier (`#12894 <https://github.com/autowarefoundation/autoware_universe/issues/12894>`_)
+  * extract core logic from surround_obstacle_checker to new common package obstacle_proximit_checker
+  * add new modifier plugin surround_obstacle_stop which uses common package obstacle_proximity_checker
+  * apply pre-commit checks
+  * refactor implementation, add integration test for surround_obstacle_stop
+  * run proximity checker only once per planning cycle
+  * add maintainers for new package
+  * update default param values
+  * update and use utility function replace_trajectory_with_stop_point
+  * add readme for autoware_obstacle_proximity_checker
+  * fix unit tests
+  ---------
+* Contributors: Maxime CLEMENT, Ryohsuke Mitsudome, mkquda
+
 0.52.0 (2026-06-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
@@ -514,12 +563,6 @@ Changelog for package autoware_trajectory_modifier
   * make it so the tests dont depend on hard coded default values
   ---------
 * Contributors: danielsanchezaran, github-actions, mkquda
-
-0.50.0 (2026-02-14)
--------------------
-
-0.49.0 (2025-12-30)
--------------------
 
 0.48.0 (2025-11-18)
 -------------------

@@ -2,6 +2,32 @@
 Changelog for package autoware_path_distance_calculator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* feat(autoware_path_distance_calculator): move the node to agnocast_wrapper::Node (`#13381 <https://github.com/autowarefoundation/autoware_universe/issues/13381>`_)
+  The map and route polling subscribers move to the wrapper's polling API and the outgoing
+  distance is built in the publisher's own message.
+  The self pose listener is instantiated on the wrapper's node, buffer and listener types: the
+  plain autoware_utils::SelfPoseListener alias holds a tf2_ros listener, which an AgnocastOnly
+  executor does not spin, so the node would never get a pose under ENABLE_AGNOCAST=1. Depends on
+  `autowarefoundation/autoware_utils#121 <https://github.com/autowarefoundation/autoware_utils/issues/121>`_.
+  The launch file here already runs the node standalone, so it only gains the heaphook. The node
+  is also composed into a container by tier4_autoware_api_extension, which needs a matching
+  standalone entry there before ENABLE_AGNOCAST=1 works end to end.
+* refactor(common): move node design files into each package (`#13097 <https://github.com/autowarefoundation/autoware_universe/issues/13097>`_)
+  Co-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>
+* feat: update how to calculate distance (`#13031 <https://github.com/autowarefoundation/autoware_universe/issues/13031>`_)
+  * feat: update how to calculate distance
+  * style(pre-commit): autofix
+  * fix: calculate a distance using route msg segment info
+  * style(pre-commit): autofix
+  * fix: lack of args
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+  Co-authored-by: Takagi, Isamu <43976882+isamu-takagi@users.noreply.github.com>
+* Contributors: Koichi Imai, Ryohsuke Mitsudome, Taekjin LEE, Tetsuhiro Kawaguchi
+
 0.52.0 (2026-06-30)
 -------------------
 

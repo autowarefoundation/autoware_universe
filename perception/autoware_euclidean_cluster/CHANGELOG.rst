@@ -2,6 +2,41 @@
 Changelog for package autoware_euclidean_cluster
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* fix: missing dependencies for tl_expected and libexpected-dev (`#13438 <https://github.com/autowarefoundation/autoware_universe/issues/13438>`_)
+* feat(euclidean_cluster): add support of filtering clusters regarding size (`#13248 <https://github.com/autowarefoundation/autoware_universe/issues/13248>`_)
+  * feat: add support of filtering clusters regarding size
+  * refactor: replace parameter name
+  * feat: add label_parameters for motorcycle and animal
+  * feat: include car into confusable label groups
+  * Apply suggestion from @badai-nguyen
+  Co-authored-by: badai nguyen  <94814556+badai-nguyen@users.noreply.github.com>
+  ---------
+  Co-authored-by: badai nguyen <94814556+badai-nguyen@users.noreply.github.com>
+* fix(perception): complete node design files for label-based euclidean cluster and PTv3 (`#13253 <https://github.com/autowarefoundation/autoware_universe/issues/13253>`_)
+  * refactor(ptv3.node.yaml): update parameter definitions and add new model paths
+  * feat(LabelBasedEuclideanCluster): add new node configuration for label-based clustering
+  * fix(DetectedObjectFeatureRemover): correct plugin name in node configuration
+  ---------
+* refactor(perception): move node design files into each package (`#13104 <https://github.com/autowarefoundation/autoware_universe/issues/13104>`_)
+  Co-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>
+* feat(euclidean_cluster): remove ptv3 experimental and apply autoware_core features (`#13085 <https://github.com/autowarefoundation/autoware_universe/issues/13085>`_)
+* feat(euclidean_cluster): apply agnocast_wrapper::Node to label_based_euclidean_cluster (`#13082 <https://github.com/autowarefoundation/autoware_universe/issues/13082>`_)
+  * fix: conflict
+  * fix(euclidean_cluster): use AgnocastOnlyCallbackIsolatedExecutor for label_based node
+  Co-authored-by: Koichi Imai <koichi.imai.2@tier4.jp>
+  ---------
+  Co-authored-by: Koichi Imai <koichi.imai.2@tier4.jp>
+* feat(euclidean-cluster): apply SemanticLabel to LabelBasedEuclideanCluster (`#12911 <https://github.com/autowarefoundation/autoware_universe/issues/12911>`_)
+* feat(eucliean_cluster): compute cluster probability (`#12883 <https://github.com/autowarefoundation/autoware_universe/issues/12883>`_)
+  * feat: include point indices of cluster
+  * feat: compute cluster probability
+  * docs: update document
+  ---------
+* Contributors: Kotaro Uetake, Ryohsuke Mitsudome, Taekjin LEE, Yutaro Kobayashi
+
 0.52.0 (2026-06-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

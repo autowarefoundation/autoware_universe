@@ -2,6 +2,35 @@
 Changelog for package autoware_boundary_departure_checker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* feat(boundary_departure): report NEAR_BOUNDARY as a low caution risk (`#13345 <https://github.com/autowarefoundation/autoware_universe/issues/13345>`_)
+* chore(pre-commit): update clang-format to v22.1.5 (`#13126 <https://github.com/autowarefoundation/autoware_universe/issues/13126>`_)
+  * chore(pre-commit): update clang-format to v22.1.5
+  * style(pre-commit): autofix
+  ---------
+* fix(boundary_departure): separate hysteresis state (`#12986 <https://github.com/autowarefoundation/autoware_universe/issues/12986>`_)
+  fix(boundary_departure): separate hysteresis state (`#3116 <https://github.com/autowarefoundation/autoware_universe/issues/3116>`_)
+  * fix(boundary_departure): separate hysteresis state
+  * fix: separate hash
+  * fix: precommit
+  ---------
+  Co-authored-by: Yuxuan Liu <619684051@qq.com>
+* feat(boundary_departure): visualize segments where departure occurs (`#12984 <https://github.com/autowarefoundation/autoware_universe/issues/12984>`_)
+  * feat(boundary_departure): visualize segments where departure occurs (`#3094 <https://github.com/autowarefoundation/autoware_universe/issues/3094>`_)
+  * fix: add wall marker to visualize boundary departure
+  * remove unused header edit
+  * fix: make text marker white
+  ---------
+  * Update common/autoware_boundary_departure_checker/src/detail/debug.cpp
+  Co-authored-by: Maxime CLEMENT <78338830+maxime-clem@users.noreply.github.com>
+  * Update common/autoware_boundary_departure_checker/src/detail/debug.cpp
+  Co-authored-by: Maxime CLEMENT <78338830+maxime-clem@users.noreply.github.com>
+  ---------
+  Co-authored-by: Maxime CLEMENT <78338830+maxime-clem@users.noreply.github.com>
+* Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome, Zulfaqar Azmi
+
 0.52.0 (2026-06-30)
 -------------------
 * chore: align package versions to 0.51.0 and reset changelogs

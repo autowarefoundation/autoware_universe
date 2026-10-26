@@ -2,6 +2,41 @@
 Changelog for package autoware_mrm_comfortable_stop_operator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* feat(mrm_operator): add driving mode active flag (`#13249 <https://github.com/autowarefoundation/autoware_universe/issues/13249>`_)
+  * feat(mrm_operator): add driving mode active flag
+  * remove unnecessary conditions
+  ---------
+  Co-authored-by: Junya Sasaki <junya.sasaki@tier4.jp>
+* fix(system): declare the dependencies these packages use (`#13217 <https://github.com/autowarefoundation/autoware_universe/issues/13217>`_)
+* refactor(system): move node design files into each package (`#13103 <https://github.com/autowarefoundation/autoware_universe/issues/13103>`_)
+  Co-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>
+* fix: move mrm operator schema (`#13084 <https://github.com/autowarefoundation/autoware_universe/issues/13084>`_)
+* feat(mrm_comfortable_stop_operator): apply `agnocast_wrapper::Node` to `mrm_comfortable_stop_operator` (`#12909 <https://github.com/autowarefoundation/autoware_universe/issues/12909>`_)
+  * feat(mrm_comfortable_stop_operator): apply `agnocast_wrapper::Node` to `mrm_comfortable_stop_operator`
+  Apply `autoware::agnocast_wrapper::Node` (Method 2) to
+  `autoware_mrm_comfortable_stop_operator` so it can run on the
+  `AgnocastOnlyCallbackIsolatedExecutor` (CIE) when built and run with
+  `ENABLE_AGNOCAST=1`, while staying byte-for-byte behavior-compatible when
+  `ENABLE_AGNOCAST` is unset/0 (the wrapper falls back to `rclcpp::Node` +
+  `SingleThreadedExecutor`).
+  The launch file runs the node as its standalone executable (not a composable
+  node in a container): an AgnocastOnly node's agnocast runtime is set up only by
+  the generated node_main, so a container-loaded composable node would SIGSEGV on
+  construction. LD_PRELOAD (agnocast heaphook) is wired per-node via
+  agnocast_env.launch.py, required by the AgnocastOnly executor.
+  Claude-Session: https://claude.ai/code/session_01SXw9xgZwpwCE2KdXTraco2
+  * docs: remove agnocast launch comments from mrm_comfortable_stop_operator
+  * refactor: use plain const reference subscription callbacks
+  autoware_agnocast_wrapper now accepts rclcpp-style const MessageT &
+  callbacks (`autowarefoundation/autoware_core#1228 <https://github.com/autowarefoundation/autoware_core/issues/1228>`_), so the subscription
+  callbacks no longer need wrapper-specific message pointer types.
+  ---------
+  Co-authored-by: atsushi421 <yff81986@nifty.com>
+* Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome, Taekjin LEE, Takagi, Isamu, atsushi yano
+
 0.52.0 (2026-06-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

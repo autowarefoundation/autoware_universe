@@ -2,6 +2,27 @@
 Changelog for package autoware_map_tf_generator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* feat(autoware_map_tf_generator): add a node design for vector_map_tf_generator (`#13297 <https://github.com/autowarefoundation/autoware_universe/issues/13297>`_)
+  * feat(autoware_map_tf_generator): add a node design for vector_map_tf_generator
+  Describe the interfaces, parameters and process of the vector map TF
+  generator as a system design node file.
+  * fix: update global to remap_target for various nodes in YAML configurations
+  ---------
+* fix: declare the dependencies the simulator, e2e and map packages use (`#13209 <https://github.com/autowarefoundation/autoware_universe/issues/13209>`_)
+  * fix: declare the dependencies the simulator, e2e and map packages use
+  Three packages use headers or symbols of packages that they never declare. Add the 12 missing <depend> entries.
+  * fix: declare tf2 in tier4_dummy_object_rviz_plugin
+  The plugin uses tf2::Transform and tf2::Quaternion directly, but only tf2_geometry_msgs and tf2_ros were declared.
+  ---------
+* refactor(map): move node design files into each package (`#13094 <https://github.com/autowarefoundation/autoware_universe/issues/13094>`_)
+  Co-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>
+* feat(map_tf_generator): apply `agnocast_wrapper::Node` to `map_tf_generator` (`#12832 <https://github.com/autowarefoundation/autoware_universe/issues/12832>`_)
+  apply agnocast_wrapper::Node
+* Contributors: Koichi Imai, Mete Fatih Cırıt, Ryohsuke Mitsudome, Taekjin LEE
+
 0.52.0 (2026-06-30)
 -------------------
 
