@@ -23320,6 +23320,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#what-the-input-is-expected-to-be" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What the input is expected to be
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#parameter-classification_remap" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -23382,11 +23393,18 @@
 <p>This package converts <code>autoware_sensing_msgs::msg::RadarObjects</code> into <code>autoware_perception_msgs::msg::DetectedObjects</code> and <code>autoware_perception_msgs::msg::TrackedObjects</code>, acting as a simple integration of radars into the perception pipeline.</p>
 <h2 id="radarobjectsadapter">RadarObjectsAdapter<a class="headerlink" href="#radarobjectsadapter" title="Permanent link">#</a></h2>
 <p>A node that converts radar objects from the sensing definition into a perception friendly format with no filtering involved.</p>
+<h3 id="what-the-input-is-expected-to-be">What the input is expected to be<a class="headerlink" href="#what-the-input-is-expected-to-be" title="Permanent link">#</a></h3>
+<p>The node converts the message format; it does not transform coordinates, compensate the ego motion, or synchronize anything. It therefore expects the radar driver to publish <code>RadarObjects</code> in the form the perception pipeline uses:</p>
+<ul>
+<li>Positions, orientations, sizes and their covariances are expressed in the frame named in <code>header.frame_id</code>, which is the frame the output objects are published in (typically <code>base_link</code>).</li>
+<li>Velocities and accelerations are absolute (ground-relative) and expressed in that same frame, as the driver reports them; the node rotates them by the object's orientation so that the output twist and acceleration are expressed in the object's own frame, as Autoware's object messages require. The <code>absolute_dynamics</code> flag of <code>RadarInfo</code> is not checked.</li>
+<li>The <code>RadarInfo</code> message declares the object fields the radar provides. The following fields are required, and objects are dropped until a <code>RadarInfo</code> that declares all of them has arrived: <code>existence_probability</code>, <code>position_x</code>, <code>position_y</code>, <code>velocity_x</code>, <code>velocity_y</code>, <code>acceleration_x</code>, <code>acceleration_y</code>, <code>orientation</code>.</li>
+<li>Fields the <code>RadarInfo</code> does not declare are filled from the <code>default_*</code> parameters: <code>position_z</code>, <code>velocity_z</code>, <code>acceleration_z</code>, <code>size_x</code>, <code>size_y</code>, <code>size_z</code>. The yaw variances of the pose and the twist are set only when <code>orientation_std</code> and <code>orientation_rate_std</code> are declared.</li>
+</ul>
 <h3 id="parameter-classification_remap">Parameter: classification_remap<a class="headerlink" href="#parameter-classification_remap" title="Permanent link">#</a></h3>
 <p>This parameter allows remapping of classification labels from <code>autoware_sensing_msgs::msg::RadarClassification</code> to <code>autoware_perception_msgs::msg::ObjectClassification</code>. It should be provided as a flat list of strings, where each pair of strings represents an input label and the corresponding output label.</p>
 <p>For example, the current default configuration remaps <code>MOTORCYCLE</code> and <code>BICYCLE</code> from radar classification to <code>CAR</code> in the perception classification, while keeping other labels unchanged.</p>
-<p><strong>Note</strong>: If multiple radar labels are remapped to the same perception label, multiple probabilities may appear for that label.
-This does not violate any logic in Autoware but may be worth monitoring.</p>
+<p>The <code>probability</code> of each radar classification is treated as an independent confidence for that label, not as a share of a distribution, and is copied as it is. Consequently, if multiple radar labels are remapped to the same perception label, multiple entries with that label and their own probabilities appear in the output; the probabilities are not merged. This does not violate any logic in Autoware but may be worth monitoring.</p>
 <h3 id="inputs-outputs">Inputs / Outputs<a class="headerlink" href="#inputs-outputs" title="Permanent link">#</a></h3>
 <h4 id="input">Input<a class="headerlink" href="#input" title="Permanent link">#</a></h4>
 <table>
