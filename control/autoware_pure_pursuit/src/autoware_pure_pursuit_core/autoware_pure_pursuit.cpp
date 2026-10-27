@@ -88,7 +88,6 @@ std::pair<bool, double> PurePursuit::run()
 
     next_tgt_pos = lerp_pair.second;
   }
-  loc_next_tgt_ = next_tgt_pos;
 
   double kappa = planning_utils::calcCurvature(next_tgt_pos, *curr_pose_ptr_);
 
