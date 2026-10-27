@@ -14,7 +14,7 @@
         "output_point_type": {
           "type": "string",
           "enum": ["XYZIRC", "XYZIRCT"],
-          "description": "Point type of the published cloud. XYZIRCT additionally carries each point's time_stamp (nanoseconds relative to the header stamp), copied from the input.",
+          "description": "Point type of the published cloud. XYZIRCT additionally carries a per-point timestamp, copied from the input.",
           "default": "XYZIRC"
         },
         "use_imu": {
