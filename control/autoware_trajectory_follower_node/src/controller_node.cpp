@@ -14,16 +14,18 @@
 
 #include "autoware/trajectory_follower_node/controller_node.hpp"
 
-#include "autoware/mpc_lateral_controller/mpc_lateral_controller.hpp"
+#include "autoware/mpc_lateral_controller/mpc_lateral_controller_node.hpp"
 #include "autoware/pid_longitudinal_controller/pid_longitudinal_controller_node.hpp"
-#include "autoware/pure_pursuit/autoware_pure_pursuit_lateral_controller.hpp"
+#include "autoware/pure_pursuit/autoware_pure_pursuit_lateral_controller_node.hpp"
 #include "autoware_utils/ros/marker_helper.hpp"
 
 #include <autoware/trajectory_follower_base/lateral_controller_base.hpp>
 
 #include <algorithm>
+#include <cstdint>
 #include <limits>
 #include <memory>
+#include <numeric>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -80,12 +82,12 @@ Controller::Controller(const rclcpp::NodeOptions & node_options)
   switch (lateral_controller_mode) {
     case LateralControllerMode::MPC: {
       lateral_controller_ =
-        std::make_shared<mpc_lateral_controller::MpcLateralController>(*this, diag_updater_);
+        std::make_shared<mpc_lateral_controller::MpcLateralControllerNode>(*this, diag_updater_);
       break;
     }
     case LateralControllerMode::PURE_PURSUIT: {
       lateral_controller_ =
-        std::make_shared<autoware::pure_pursuit::PurePursuitLateralController>(*this);
+        std::make_shared<autoware::pure_pursuit::PurePursuitLateralControllerNode>(*this);
       break;
     }
     default:
@@ -242,8 +244,10 @@ boost::optional<trajectory_follower::InputData> Controller::createInputData(rclc
 
 void Controller::callbackTimerControl()
 {
+  // read the time once for this control cycle
+  const rclcpp::Time stamp = this->now();
   autoware_control_msgs::msg::Control out;
-  out.stamp = this->now();
+  out.stamp = stamp;
 
   // 1. create input data
   const auto input_data = createInputData(*get_clock());
@@ -253,13 +257,11 @@ void Controller::callbackTimerControl()
     return;
   }
 
-  // 2. check if controllers are ready
-  const bool is_lat_ready = lateral_controller_->isReady(*input_data);
-  const bool is_lon_ready = longitudinal_controller_->isReady(*input_data);
-  if (!is_lat_ready || !is_lon_ready) {
+  // 2. check if the lateral controller is ready
+  if (!lateral_controller_->isReady(*input_data)) {
     RCLCPP_INFO_THROTTLE(
       get_logger(), *get_clock(), 5000,
-      "Control is skipped since lateral and/or longitudinal controllers are not ready to run.");
+      "Control is skipped since lateral controller is not ready to run.");
     return;
   }
 
@@ -269,12 +271,19 @@ void Controller::callbackTimerControl()
   publishProcessingTime(stop_watch_.toc("lateral"), pub_processing_time_lat_ms_);
 
   stop_watch_.tic("longitudinal");
-  const auto lon_out = longitudinal_controller_->run(*input_data);
+  const auto lon_result =
+    longitudinal_controller_->run(*input_data, stamp, previous_lateral_sync_data_);
   publishProcessingTime(stop_watch_.toc("longitudinal"), pub_processing_time_lon_ms_);
 
-  // 4. sync with each other controllers
-  longitudinal_controller_->sync(lat_out.sync_data);
-  lateral_controller_->sync(lon_out.sync_data);
+  // 4. keep the lateral result for the longitudinal controller of the next cycle
+  previous_lateral_sync_data_ = lat_out.sync_data;
+  if (!lon_result) {
+    RCLCPP_INFO_THROTTLE(
+      get_logger(), *get_clock(), 5000,
+      "Control is skipped since longitudinal controller failed: %s", lon_result.error().c_str());
+    return;
+  }
+  const auto & lon_out = *lon_result;
 
   // TODO(Horibe): Think specification. This comes from the old implementation.
   if (isTimeOut(lon_out, lat_out)) return;
@@ -379,8 +388,8 @@ std::optional<ControlHorizon> Controller::mergeLatLonHorizon(
   // calculate greatest common divisor of time steps
   const auto gcd_double = [](const double a, const double b) {
     const double precision = 1e9;
-    const int int_a = static_cast<int>(round(a * precision));
-    const int int_b = static_cast<int>(round(b * precision));
+    const std::int64_t int_a = static_cast<std::int64_t>(round(a * precision));
+    const std::int64_t int_b = static_cast<std::int64_t>(round(b * precision));
     return static_cast<double>(std::gcd(int_a, int_b)) / precision;
   };
   const double time_step_ms =

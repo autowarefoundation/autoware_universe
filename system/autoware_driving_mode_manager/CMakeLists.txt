@@ -43,7 +43,7 @@ autoware_agnocast_wrapper_register_node(${PROJECT_NAME}_common
   PLUGIN "autoware::driving_mode_manager::DrivingModeManager"
   EXECUTABLE "driving_mode_manager_node"
   ROS2_EXECUTOR SingleThreadedExecutor
-  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
 )
 
 if(BUILD_TESTING)

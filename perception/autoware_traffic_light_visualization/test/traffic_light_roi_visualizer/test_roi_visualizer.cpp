@@ -73,16 +73,14 @@ struct Box
 constexpr Box fine_box{200, 150, 40, 90};
 constexpr Box rough_box{190, 140, 60, 110};
 
-// Colors the visualizer draws with. Measured from the real drawing on 2026-09-10
-// (ROS 2 Jazzy / Ubuntu 24.04 / OpenCV 4.6).
-constexpr Pixel red_signal_rgb{254, 149, 149};    // str_to_color("red")
-constexpr Pixel amber_signal_rgb{254, 250, 149};  // str_to_color("yellow")
-constexpr Pixel green_signal_rgb{149, 254, 161};  // str_to_color("green")
-// A label with no circle in it leaves extract_shape_info() at its initial value, which is also
-// what a ROI with no signal at all is drawn with - the two are the same color in the output.
-constexpr Pixel no_circle_rgb{255, 255, 255};
-constexpr Pixel unknown_circle_rgb{250, 250, 250};  // str_to_color() fallback
-constexpr Pixel label_icon_rgb{0, 0, 0};            // the shape icon inside the label box
+// The palette the visualizer draws with, as RGB.
+constexpr Pixel red_signal_rgb{230, 115, 115};    // str_to_color("red")
+constexpr Pixel amber_signal_rgb{242, 191, 36};   // str_to_color("yellow")
+constexpr Pixel green_signal_rgb{153, 255, 178};  // str_to_color("green")
+// Everything the palette does not name: an unrecognized circle color, a signal with no circle in
+// it, and a ROI no signal was reported for. All three are drawn in this one color.
+constexpr Pixel unknown_rgb{250, 250, 250};
+constexpr Pixel label_icon_rgb{0, 0, 0};  // the shape icon inside the label box
 
 std::string shape_image_dir()
 {
@@ -263,7 +261,7 @@ TEST(TrafficLightRoiVisualizer, RoiWithoutSignalGetsFrameButNoLabelBox)
 
   // Assert: the frame is drawn, in the color used when nothing is known about the signal
   const auto frame_corner = pixel_at(*output, fine_box.x, fine_box.y);
-  EXPECT_EQ(frame_corner, no_circle_rgb);
+  EXPECT_EQ(frame_corner, unknown_rgb);
 
   // The label box is not drawn
   const auto above_the_roi = label_box_pixel(*output, fine_box);
@@ -308,7 +306,7 @@ TEST(TrafficLightRoiVisualizer, SignalReportedForAnotherIdIsNotUsed)
 
   // Assert: the ROI is drawn as if there were no signal at all
   const auto frame_corner = pixel_at(*output, fine_box.x, fine_box.y);
-  EXPECT_EQ(frame_corner, no_circle_rgb);
+  EXPECT_EQ(frame_corner, unknown_rgb);
   const auto above_the_roi = label_box_pixel(*output, fine_box);
   EXPECT_EQ(above_the_roi, background_rgb);
 }
@@ -327,8 +325,8 @@ TEST(TrafficLightRoiVisualizer, EveryRoiInArrayIsDrawn)
   // Assert: the top left corner of each ROI, which is where its frame starts
   const auto first_frame = pixel_at(*output, fine_box.x, fine_box.y);
   const auto second_frame = pixel_at(*output, second_box.x, second_box.y);
-  EXPECT_EQ(first_frame, no_circle_rgb);
-  EXPECT_EQ(second_frame, no_circle_rgb);
+  EXPECT_EQ(first_frame, unknown_rgb);
+  EXPECT_EQ(second_frame, unknown_rgb);
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -380,7 +378,7 @@ TEST(TrafficLightRoiVisualizer, GreenCircleColorsFrameGreen)
   EXPECT_EQ(frame_corner, green_signal_rgb);
 }
 
-TEST(TrafficLightRoiVisualizer, UnknownCircleFallsBackToOffWhite)
+TEST(TrafficLightRoiVisualizer, UnknownCircleFallsBackToUnknownColor)
 {
   // Arrange
   const auto signal =
@@ -391,13 +389,12 @@ TEST(TrafficLightRoiVisualizer, UnknownCircleFallsBackToOffWhite)
   const auto output = visualizer.visualize(background_image, fine_rois, signal);
   ASSERT_NE(output, nullptr);
 
-  // Assert: the fallback of str_to_color(), not the plain white of a ROI with no signal
+  // Assert
   const auto frame_corner = pixel_at(*output, fine_box.x, fine_box.y);
-  EXPECT_EQ(frame_corner, unknown_circle_rgb);
-  EXPECT_NE(frame_corner, no_circle_rgb);
+  EXPECT_EQ(frame_corner, unknown_rgb);
 }
 
-TEST(TrafficLightRoiVisualizer, WhiteCircleAlsoFallsBackToOffWhite)
+TEST(TrafficLightRoiVisualizer, WhiteCircleAlsoFallsBackToUnknownColor)
 {
   // Arrange: str_to_color() knows red, yellow and green only, so WHITE - a color the message
   // defines - lands in the same fallback as UNKNOWN.
@@ -411,10 +408,10 @@ TEST(TrafficLightRoiVisualizer, WhiteCircleAlsoFallsBackToOffWhite)
 
   // Assert
   const auto frame_corner = pixel_at(*output, fine_box.x, fine_box.y);
-  EXPECT_EQ(frame_corner, unknown_circle_rgb);
+  EXPECT_EQ(frame_corner, unknown_rgb);
 }
 
-TEST(TrafficLightRoiVisualizer, UndefinedColorCodeFallsBackToOffWhite)
+TEST(TrafficLightRoiVisualizer, UndefinedColorCodeFallsBackToUnknownColor)
 {
   // Arrange: an element carrying a code outside the message definition. state_to_label() answers
   // with an empty string for it, so the label reads "-circle" and str_to_color("") takes the
@@ -429,7 +426,7 @@ TEST(TrafficLightRoiVisualizer, UndefinedColorCodeFallsBackToOffWhite)
 
   // Assert
   const auto frame_corner = pixel_at(*output, fine_box.x, fine_box.y);
-  EXPECT_EQ(frame_corner, unknown_circle_rgb);
+  EXPECT_EQ(frame_corner, unknown_rgb);
 }
 
 // A shape code no table entry lists reads as unknown rather than as nothing, so the label box
@@ -448,14 +445,14 @@ TEST(TrafficLightRoiVisualizer, UndefinedShapeCodeIsLabeledUnknown)
 
   // Assert: the label box is drawn
   const auto above_the_roi = label_box_pixel(*output, fine_box);
-  EXPECT_EQ(above_the_roi, no_circle_rgb);
+  EXPECT_EQ(above_the_roi, unknown_rgb);
 
   // An icon sits in it, rather than the box being drawn empty
   const auto icon_slot = label_icon_pixel(*output, fine_box);
-  EXPECT_NE(icon_slot, no_circle_rgb);
+  EXPECT_NE(icon_slot, unknown_rgb);
 }
 
-TEST(TrafficLightRoiVisualizer, SignalWithoutCircleLeavesFrameWhite)
+TEST(TrafficLightRoiVisualizer, SignalWithoutCircleUsesUnknownColor)
 {
   // Arrange: an arrow, i.e. a classified signal whose only element is not a circle. The color of
   // the element is dropped: only a circle decides the frame color.
@@ -469,10 +466,10 @@ TEST(TrafficLightRoiVisualizer, SignalWithoutCircleLeavesFrameWhite)
 
   // Assert
   const auto frame_corner = pixel_at(*output, fine_box.x, fine_box.y);
-  EXPECT_EQ(frame_corner, no_circle_rgb);
+  EXPECT_EQ(frame_corner, unknown_rgb);
 }
 
-TEST(TrafficLightRoiVisualizer, InvalidRecognitionIsWhiteLikeArrow)
+TEST(TrafficLightRoiVisualizer, InvalidRecognitionLooksLikeArrow)
 {
   // Arrange: unknown-unknown is how an invalid recognition reaches this node. Its shape is not a
   // circle either, so it gets the same white as the arrow above.
@@ -486,7 +483,7 @@ TEST(TrafficLightRoiVisualizer, InvalidRecognitionIsWhiteLikeArrow)
 
   // Assert
   const auto frame_corner = pixel_at(*output, fine_box.x, fine_box.y);
-  EXPECT_EQ(frame_corner, no_circle_rgb);
+  EXPECT_EQ(frame_corner, unknown_rgb);
 }
 
 TEST(TrafficLightRoiVisualizer, CircleDecidesColorAmongSeveralElements)
@@ -705,8 +702,8 @@ TEST(TrafficLightRoiVisualizer, RoughAndFineWithoutSignalDrawBothFramesInWhite)
   // handed
   const auto rough_frame_corner = pixel_at(*output, rough_box.x, rough_box.y);
   const auto fine_frame_bottom_left = pixel_at(*output, fine_box.x, fine_box.y + fine_box.height);
-  EXPECT_EQ(rough_frame_corner, no_circle_rgb);
-  EXPECT_EQ(fine_frame_bottom_left, no_circle_rgb);
+  EXPECT_EQ(rough_frame_corner, unknown_rgb);
+  EXPECT_EQ(fine_frame_bottom_left, unknown_rgb);
 
   // Neither gets a label box
   const auto above_the_rough_roi = label_box_pixel(*output, rough_box);
@@ -774,7 +771,7 @@ TEST(TrafficLightRoiVisualizer, RoughRoiWithNeitherIsDrawnOnItsOwn)
   // Assert: the rough frame is drawn, white, with no label box
   const auto rough_frame_corner = pixel_at(*output, rough_box.x, rough_box.y);
   const auto above_the_rough_roi = label_box_pixel(*output, rough_box);
-  EXPECT_EQ(rough_frame_corner, no_circle_rgb);
+  EXPECT_EQ(rough_frame_corner, unknown_rgb);
   EXPECT_EQ(above_the_rough_roi, background_rgb);
 
   // Nothing is drawn where a fine ROI would have been
@@ -816,6 +813,6 @@ TEST(TrafficLightRoiVisualizer, EveryRoughRoiInArrayIsDrawn)
   // Assert: the top left corner of each rough ROI
   const auto first_frame = pixel_at(*output, rough_box.x, rough_box.y);
   const auto second_frame = pixel_at(*output, second_rough.x, second_rough.y);
-  EXPECT_EQ(first_frame, no_circle_rgb);
-  EXPECT_EQ(second_frame, no_circle_rgb);
+  EXPECT_EQ(first_frame, unknown_rgb);
+  EXPECT_EQ(second_frame, unknown_rgb);
 }

@@ -5,12 +5,13 @@
   <version>0.53.0</version>
   <description>IAdapterPlugin implementations for autoware_redundancy_switcher_interface. Includes RedundancySwitcherAdapter (for https://github.com/tier4/redundancy_switcher via UDS protocol) and NonRedundantSwitcherAdapter (for single-ECU non-redundant systems).</description>
   <maintainer email="tetsuhiro.kawaguchi@tier4.jp">Tetsuhiro Kawaguchi</maintainer>
-  <maintainer email="mokoto.kurihara@tier4.jp">Mokoto Kurihara</maintainer>
+  <maintainer email="makoto.kurihara@tier4.jp">Makoto Kurihara</maintainer>
   <license>Apache License 2.0</license>
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
   <buildtool_depend>autoware_cmake</buildtool_depend>
 
+  <depend>autoware_agnocast_wrapper</depend>
   <depend>autoware_redundancy_switcher_interface</depend>
   <depend>diagnostic_msgs</depend>
   <depend>diagnostic_updater</depend>

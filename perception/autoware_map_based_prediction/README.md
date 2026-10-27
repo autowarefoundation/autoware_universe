@@ -64,6 +64,20 @@ Lane change logics is illustrated in the figure below.An example of how to tune 
   - The generated predicted paths are recomputed to take the vehicle dynamics into account.
   - The path is calculated with minimum jerk trajectory implemented by 4th/5th order spline for lateral/longitudinal motion.
 
+### Undetected lane-change path suppression
+
+- CCF (Collision Check Filter, a downstream planning module) follows a policy of not evaluating other vehicles' lane-change (LC) paths; prediction omits undetected LC branches while retaining detected LC and lane-end LC needed to leave a terminating lane.
+- Applies to car, truck, bus, trailer and motorcycle: LC candidates are suppressed per current lanelet, only when that lanelet has its own lane-follow candidate and its detected maneuver is lane-follow. A current lanelet without a lane-follow candidate keeps all of its candidates.
+- History retains all future possible lanelets before suppression; surviving path confidences use the existing normalization.
+- `lane_change_path_suppression.enable` (bool, default `true`): `false` restores the original behavior.
+- `lane_change_path_suppression.keep_when_lane_ends` (bool, default `true`): retain LC if any following-only branch from the current lanelet ends without routing-graph followers within max(speed, 1.0 m/s) × `lane_end_rescue_time_horizon`, measured as the sum of centerline lengths minus the projected arc length on the current lanelet, independently of center-candidate acceptance; `false` disables this exception.
+- `lane_change_path_suppression.lane_end_rescue_time_horizon` (double, default `5.0`, minimum `0.0`, seconds): independent rescue horizon; vehicle prediction horizon does not affect this limit.
+  Urban maps can have following-only lanelet chains terminate after 100–200 m at intersections or disconnected map links.
+  The 5.0 s default restricts rescue to nearby merges a few seconds ahead instead of those distant apparent ends.
+- Routable lateral adjacency is not required: merge boundary/connectivity representations may lack a lane-change relation; requiring it would lose the rescue in those cases.
+- DEBUG logs report each LC candidate decision (`suppressed`, `kept_detected_lc`, `kept_lane_end`, `kept_no_center`), object ID, current lanelet, and terminal distance in meters (`-1` means no terminal found within the rescue bound, or rescue disabled). These are suppression-stage decisions; a later center-path rejection can still restore held LC paths.
+- Suppressed LC candidates are held until pose conversion, starting-position search, prediction generation and lateral-acceleration checks finish. Held LC candidates are restored only for the current lanelets whose lane-follow prediction (from a reference path with two or more points) was not accepted; a one-point lane-follow reference still yields the straight path of the path generator as before. When every lanelet's center survives, no second processing pass occurs.
+
 ### Tuning lane change detection logic
 
 Currently we provide three parameters to tune lane change detection:

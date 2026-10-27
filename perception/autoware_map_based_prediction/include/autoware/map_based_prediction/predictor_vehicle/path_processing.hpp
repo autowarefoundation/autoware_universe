@@ -17,6 +17,7 @@
 
 #include "autoware/map_based_prediction/data_structure.hpp"
 #include "autoware/map_based_prediction/path_generator/path_generator.hpp"
+#include "autoware/map_based_prediction/predictor_vehicle/lane_change_path_suppression.hpp"
 #include "autoware/map_based_prediction/predictor_vehicle/maneuver_prediction.hpp"
 #include "autoware/map_based_prediction/predictor_vehicle/object_processing.hpp"
 
@@ -32,8 +33,11 @@
 #include <lanelet2_routing/LaneletPath.h>
 #include <lanelet2_traffic_rules/TrafficRules.h>
 
+#include <limits>
 #include <memory>
 #include <optional>
+#include <set>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -79,6 +83,9 @@ public:
     double speed_limit_multiplier{1.5};
     double acceleration_exponential_half_life{2.5};
     bool consider_only_routable_neighbours{false};
+    bool lane_change_path_suppression_enable{true};
+    bool lane_change_path_suppression_keep_when_lane_ends{true};
+    double lane_change_path_suppression_lane_end_rescue_time_horizon{5.0};
   };
 
   explicit PathProcessor(autoware::agnocast_wrapper::Node & node);
@@ -98,11 +105,73 @@ public:
     double objects_detected_time, visualization_msgs::msg::MarkerArray * debug_markers);
 
 private:
+  friend class PathProcessorSuppressionTest;
+
+  /// Per-object quantities shared by the reference path search of every current lanelet.
+  struct ReferencePathSearchContext
+  {
+    double obj_vel{0.0};
+    double obj_acc{0.0};
+    double time_horizon{0.0};
+    double lambda{0.0};
+    double validate_time_horizon{0.0};
+    double final_speed_after_acceleration{0.0};
+  };
+
+  /// Reference path candidates generated from one current lanelet.
+  struct LaneletReferencePaths
+  {
+    std::vector<LaneletPathWithPathInfo> paths;
+    bool left_exists{false};
+    bool right_exists{false};
+    bool center_exists{false};
+    bool lane_ends_within_horizon{false};
+    double lane_end_distance{-1.0};
+  };
+
+  /// Predicted paths accumulated while converting reference paths of one object.
+  struct OnLanePathCandidates
+  {
+    std::vector<PredictedPath> predicted_paths;
+    double min_avg_curvature{std::numeric_limits<double>::max()};
+    std::optional<PredictedPath> path_with_smallest_avg_curvature;
+    /// Origin lanelets whose lane-follow reference (two or more points) produced an accepted path.
+    std::set<lanelet::Id> surviving_center_origins;
+  };
+
+  std::optional<PredictedObject> predictOnLane(
+    const TrackedObject & object, const LaneletsData & current_lanelets,
+    const std::vector<LaneletPathWithPathInfo> & lanelet_ref_paths,
+    const std::vector<LaneletPathWithPathInfo> & suppressed_paths,
+    visualization_msgs::msg::MarkerArray * debug_markers, size_t * processing_passes = nullptr);
   std::optional<size_t> searchProperStartingRefPathIndex(
     const TrackedObject & object, const PosePath & pose_path) const;
   std::vector<LaneletPathWithPathInfo> getPredictedReferencePath(
     const TrackedObject & object, const LaneletsData & current_lanelets_data,
-    double object_detected_time, double time_horizon);
+    double object_detected_time, double time_horizon,
+    std::vector<LaneletPathWithPathInfo> * suppressed_paths);
+  ReferencePathSearchContext makeReferencePathSearchContext(
+    const TrackedObject & object, double time_horizon) const;
+  double calcRoutingCostLimit(
+    const ReferencePathSearchContext & context, const lanelet::ConstLanelet & lanelet,
+    double target_speed_limit) const;
+  lanelet::routing::LaneletPaths getPathsForLanelet(
+    const lanelet::ConstLanelet & lanelet,
+    const lanelet::routing::PossiblePathsParams & possible_params, const TrackedObject & object,
+    double validate_time_horizon);
+  std::optional<lanelet::ConstLanelet> getLeftOrRightLanelet(
+    const lanelet::ConstLanelet & lanelet, bool get_left) const;
+  LaneletReferencePaths collectLaneletReferencePaths(
+    const TrackedObject & object, const LaneletData & current_lanelet_data,
+    const ReferencePathSearchContext & context, bool rescue_lane_end);
+  void updateFuturePossibleLanelets(
+    const std::string & object_id, const std::vector<LaneletPathWithPathInfo> & lanelet_ref_paths);
+  void logLaneChangeSuppressionDecisions(
+    const std::string & object_id, const std::vector<LaneletPathWithPathInfo> & lanelet_ref_paths,
+    const std::vector<detail::LaneChangePathSuppressionInfo> & path_origins);
+  void generateOnLanePaths(
+    const TrackedObject & yaw_fixed_object, double abs_obj_speed,
+    const std::vector<PredictedRefPath> & reference_paths, OnLanePathCandidates & candidates);
   std::vector<PredictedRefPath> convertPredictedReferencePath(
     const TrackedObject & object,
     const std::vector<LaneletPathWithPathInfo> & lanelet_ref_paths) const;

@@ -13,7 +13,6 @@
 
   <depend>autoware_agnocast_wrapper</depend>
   <depend>autoware_qos_utils</depend>
-  <depend>autoware_utils_rclcpp</depend>
   <depend>nav_msgs</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>

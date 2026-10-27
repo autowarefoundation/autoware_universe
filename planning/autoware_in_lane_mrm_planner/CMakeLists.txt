@@ -42,14 +42,14 @@ autoware_agnocast_wrapper_register_node(${PROJECT_NAME}_lib
   PLUGIN "autoware::in_lane_mrm_planner::InLaneMrmPlannerNode"
   EXECUTABLE ${PROJECT_NAME}_node
   ROS2_EXECUTOR SingleThreadedExecutor
-  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
 )
 
 autoware_agnocast_wrapper_register_node(${PROJECT_NAME}_lib
   PLUGIN "autoware::in_lane_mrm_planner::MrmInLaneStopAuxiliaryCommandsNode"
   EXECUTABLE mrm_in_lane_stop_auxiliary_commands_node
   ROS2_EXECUTOR SingleThreadedExecutor
-  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
 )
 
 if(BUILD_TESTING)

@@ -65,7 +65,7 @@ docs/
 ```mermaid
 graph TB
   subgraph autoware_redundancy_switcher_interface
-    Node["RedundancySwitcherInterface\n(rclcpp::Node)"]
+    Node["RedundancySwitcherInterface\n(agnocast_wrapper::Node)"]
     GW["EventGateway\n(mutex-protected)"]
     PROC["Processor\n(pure C++)"]
     BUS["CommandBus\n(broadcast)"]
@@ -280,7 +280,8 @@ The annotation content is defined by the submitting adapter; the Processor only 
 ```cpp
 class IAdapterPlugin {
   // Initialize ROS resources. Called once at node startup.
-  virtual void initialize(rclcpp::Node* node, std::shared_ptr<EventGateway> gateway) = 0;
+  virtual void initialize(
+    autoware::agnocast_wrapper::Node* node, std::shared_ptr<EventGateway> gateway) = 0;
 
   // Execute an OutputCommand. Called for every command by CommandBus.
   // Must ignore types this adapter does not own.

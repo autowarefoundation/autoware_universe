@@ -46,7 +46,7 @@ TrajectoryGate::TrajectoryGate(const rclcpp::NodeOptions & options)
     param.warn_duration_ = declare_parameter<double>("trajectory_warn_duration");
     param.error_duration_ = declare_parameter<double>("trajectory_error_duration");
 
-    const auto ids = declare_parameter<std::vector<int>>("source_ids");
+    const auto ids = declare_parameter<std::vector<int64_t>>("source_ids");
     for (const auto id : ids) {
       const auto ns = "source." + std::to_string(id);
       const auto name = declare_parameter<std::string>(ns + ".name");

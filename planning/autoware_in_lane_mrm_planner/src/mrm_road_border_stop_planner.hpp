@@ -17,6 +17,7 @@
 
 #include "type_alias.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware/planning_factor_interface/planning_factor_interface.hpp>
 #include <autoware_utils_geometry/boost_geometry.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -88,7 +89,9 @@ class MrmRoadBorderStopPlanner
 {
 public:
   /// `node` may be nullptr (unit tests); publishers and planning factors are then disabled.
-  void initialize(rclcpp::Node * node, const VehicleInfo & vehicle_info, const Params & params);
+  void initialize(
+    autoware::agnocast_wrapper::Node * node, const VehicleInfo & vehicle_info,
+    const Params & params);
   void update_params(const Params & params);
   void set_lanelet_map(const lanelet::LaneletMapPtr & lanelet_map_ptr);
 
@@ -130,7 +133,7 @@ private:
     TrajectoryPoints & points, RoadBorderContact & contact, const Odometry & odom);
   void publish_debug_markers(const Odometry & odom) const;
 
-  rclcpp::Node * node_{nullptr};
+  autoware::agnocast_wrapper::Node * node_{nullptr};
   VehicleInfo vehicle_info_;
   RoadBorderStopParams params_;
   autoware_utils_geometry::LinearRing2d base_footprint_;
@@ -141,9 +144,10 @@ private:
   std::optional<RoadBorderContact> last_contact_;
   autoware_internal_planning_msgs::msg::SafetyFactorArray safety_factors_;
 
-  std::unique_ptr<autoware::planning_factor_interface::PlanningFactorInterface>
+  std::unique_ptr<
+    autoware::planning_factor_interface::PlanningFactorInterfaceT<autoware::agnocast_wrapper::Node>>
     planning_factor_interface_;
-  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr debug_marker_pub_;
+  AUTOWARE_PUBLISHER_PTR(visualization_msgs::msg::MarkerArray) debug_marker_pub_;
 };
 
 }  // namespace autoware::in_lane_mrm_planner

@@ -71,6 +71,13 @@ std::string state_to_label(int state)
   return found == table.end() ? table.at(TrafficLightElement::UNKNOWN) : found->second;
 }
 
+// The palette, named after the label words; the message calls yellow AMBER.
+const cv::Scalar red_color{230, 115, 115};    // #E67373
+const cv::Scalar yellow_color{242, 191, 36};  // #F2BF24
+const cv::Scalar green_color{153, 255, 178};  // #99FFB2
+// Every other case: an unrecognized circle color, no circle in the label, or no signal at all.
+const cv::Scalar unknown_color{250, 250, 250};  // #FAFAFA
+
 /**
  * @brief Return RGB color from color string associated with "circle".
  * @param color Color string.
@@ -79,13 +86,13 @@ std::string state_to_label(int state)
 cv::Scalar str_to_color(const std::string & color)
 {
   if (color == "red") {
-    return {254, 149, 149};
+    return red_color;
   } else if (color == "yellow") {
-    return {254, 250, 149};
+    return yellow_color;
   } else if (color == "green") {
-    return {149, 254, 161};
+    return green_color;
   } else {
-    return {250, 250, 250};
+    return unknown_color;
   }
 }
 
@@ -96,7 +103,7 @@ cv::Scalar str_to_color(const std::string & color)
  */
 TrafficLightShapeInfo extract_shape_info(const std::string & label)
 {
-  cv::Scalar color{255, 255, 255};
+  cv::Scalar color = unknown_color;
   std::vector<std::string> shapes;
 
   std::stringstream ss(label);
@@ -207,7 +214,7 @@ sensor_msgs::msg::Image::SharedPtr TrafficLightRoiVisualizer::visualize(
 
     if (!has_correspond_traffic_signal) {
       // does not have classification result
-      draw_roi_with_id(cv_ptr->image, tl_roi, cv::Scalar(255, 255, 255));
+      draw_roi_with_id(cv_ptr->image, tl_roi, unknown_color);
     } else {
       // has classification result
       draw_roi_with_label(cv_ptr->image, tl_roi, result);
@@ -244,7 +251,7 @@ sensor_msgs::msg::Image::SharedPtr TrafficLightRoiVisualizer::visualize_with_rou
         draw_roi_with_label(cv_ptr->image, tl_roi, result);
       } else {
         // has fine detection result and does not have classification result
-        draw_roi_with_id(cv_ptr->image, tl_roi, cv::Scalar(255, 255, 255));
+        draw_roi_with_id(cv_ptr->image, tl_roi, unknown_color);
       }
     } else {
       // these cases are not expected, but could happen on some unpredictable conditions

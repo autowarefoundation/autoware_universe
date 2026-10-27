@@ -11,7 +11,7 @@
   <arg name="output_control" default="/control/control_command_gate/inputs/in_lane_stop/control"/>
   <arg name="output_debug_status" default="/control/mrm_steering_hold_stop_operator/debug/status"/>
 
-  <node pkg="autoware_mrm_steering_hold_stop_operator" exec="autoware_mrm_steering_hold_stop_operator_node" name="mrm_steering_hold_stop_operator" output="screen">
+  <autoware_node pkg="autoware_mrm_steering_hold_stop_operator" exec="autoware_mrm_steering_hold_stop_operator_node" name="mrm_steering_hold_stop_operator" output="screen">
     <param from="$(var param_path)"/>
 
     <remap from="~/input/trigger" to="$(var input_trigger)"/>
@@ -20,5 +20,5 @@
     <remap from="~/input/acceleration" to="$(var input_acceleration)"/>
     <remap from="~/output/control" to="$(var output_control)"/>
     <remap from="~/debug/status" to="$(var output_debug_status)"/>
-  </node>
+  </autoware_node>
 </launch>

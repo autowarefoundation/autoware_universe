@@ -95,7 +95,7 @@ constexpr Box rough_box{190, 140, 60, 110};
 // Golden colors, recorded from this node on 2026-09-10 (ROS 2 Jazzy, Ubuntu 24.04, OpenCV 4.6).
 // The published image is RGB8, so the components are red, green, blue in that order.
 constexpr Pixel background_rgb{background_level, background_level, background_level};
-constexpr Pixel green_signal_rgb{149, 254, 161};  // str_to_color("green")
+constexpr Pixel green_signal_rgb{153, 255, 178};  // str_to_color("green")
 
 // `pixel` fills every pixel of the image and is in the channel order implied by `encoding`, not
 // necessarily RGB. The stamp is left unset: the fixture stamps a message just before publishing it.

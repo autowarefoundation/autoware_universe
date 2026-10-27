@@ -19,7 +19,7 @@ The node draws the result of traffic light recognition on the input image as sho
 
 ![traffic light roi visualization](./docs/roi-visualization.png)
 
-- The colors `~/input/rois` and `~/input/rough/rois` are the same as `color` whose `shape` is CIRCLE in `~/input/traffic_signals` (unknown shows as white).
+- The colors `~/input/rois` and `~/input/rough/rois` are the same as `color` whose `shape` is CIRCLE in `~/input/traffic_signals`: `#E67373` for RED, `#F2BF24` for AMBER, `#99FFB2` for GREEN. Anything else — an unrecognized color, a signal with no circle in it, or a ROI no signal was reported for — is drawn in `#FAFAFA`.
 - The labels in the upper left of `~/input/rois` shows `shape` and `confidence` in `~/input/traffic_signals`.
 - The type of `shape` should be referred to images directory. There are only 3 types of arrows in the image, but they can represent 8 directions.
 
