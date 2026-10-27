@@ -39,6 +39,8 @@ namespace autoware::cuda_pointcloud_preprocessor
 namespace
 {
 
+using autoware::point_types::PointXYZIRC;
+
 constexpr auto kOutputFormat = CudaPointcloudPreprocessor::OutputPointFormat::XYZIRC;
 
 PreprocessorCapacity make_capacity(
@@ -210,18 +212,18 @@ class CudaPointcloudPreprocessorDeviceTest : public autoware::cuda_utils::CudaTe
 
 TEST_F(CudaPointcloudPreprocessorDeviceTest, AcceptsValidCapacities)
 {
-  EXPECT_NO_THROW(CudaPointcloudPreprocessor{make_capacity(), kOutputFormat});
+  EXPECT_NO_THROW((CudaPointcloudPreprocessor{make_capacity(), kOutputFormat}));
 }
 
 TEST(CudaPointcloudPreprocessor, RejectsInvalidCapacities)
 {
   auto capacity = make_capacity();
   capacity.max_input_point_count = 0;
-  EXPECT_THROW(CudaPointcloudPreprocessor{capacity, kOutputFormat}, std::runtime_error);
+  EXPECT_THROW((CudaPointcloudPreprocessor{capacity, kOutputFormat}), std::runtime_error);
 
   capacity = make_capacity();
   capacity.max_twist_struct_count = 0;
-  EXPECT_THROW(CudaPointcloudPreprocessor{capacity, kOutputFormat}, std::runtime_error);
+  EXPECT_THROW((CudaPointcloudPreprocessor{capacity, kOutputFormat}), std::runtime_error);
 }
 
 // Rings have no capacity of their own: any ring index and any number of points per ring are
@@ -257,7 +259,7 @@ TEST_F(CudaPointcloudPreprocessorDeviceTest, OrdersOutputByRingThenInputOrder)
   const auto output = process_cloud(preprocessor, input_cloud);
 
   ASSERT_EQ(output.width, 6U);
-  std::vector<OutputPointType> points(6);
+  std::vector<PointXYZIRC> points(6);
   std::memcpy(points.data(), output.data.data(), output.data.size());
   const std::vector<std::pair<std::uint16_t, float>> expected = {{0, 2.0F}, {0, 5.0F}, {1, 4.0F},
                                                                  {2, 1.0F}, {2, 3.0F}, {2, 6.0F}};
@@ -438,7 +440,7 @@ TEST_F(CudaPointcloudPreprocessorDeviceTest, TruncatesInputCloudToConfiguredMaxi
   ASSERT_NE(output_cloud, nullptr);
   EXPECT_EQ(output_cloud->height, 1U);
   EXPECT_EQ(output_cloud->width, 2U);
-  EXPECT_EQ(output_cloud->row_step, 2U * sizeof(OutputPointType));
+  EXPECT_EQ(output_cloud->row_step, 2U * sizeof(PointXYZIRC));
 }
 
 }  // namespace

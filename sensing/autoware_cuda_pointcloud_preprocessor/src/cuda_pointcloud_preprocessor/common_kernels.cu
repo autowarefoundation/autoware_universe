@@ -218,9 +218,9 @@ void extractPointsLaunch(
   CHECK_CUDA_ERROR(cudaGetLastError());
 }
 
-template void extractPointsLaunch<OutputPointType>(
-  InputPointType *, std::uint32_t *, std::uint32_t *, int, OutputPointType *, int, int,
-  cudaStream_t &);
+template void extractPointsLaunch<autoware::point_types::PointXYZIRC>(
+  InputPointType *, std::uint32_t *, std::uint32_t *, int, autoware::point_types::PointXYZIRC *,
+  int, int, cudaStream_t &);
 template void extractPointsLaunch<autoware::point_types::PointXYZIRCT>(
   InputPointType *, std::uint32_t *, std::uint32_t *, int, autoware::point_types::PointXYZIRCT *,
   int, int, cudaStream_t &);

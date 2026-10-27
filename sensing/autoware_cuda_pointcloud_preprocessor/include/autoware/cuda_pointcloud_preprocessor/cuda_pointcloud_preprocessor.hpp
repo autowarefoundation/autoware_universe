@@ -119,7 +119,6 @@ private:
 
   // Pointcloud preprocessing buffers
   thrust::device_vector<InputPointType> device_transformed_points_;
-  thrust::device_vector<OutputPointType> device_output_points_;
   thrust::device_vector<std::uint32_t> device_crop_mask_;
   thrust::device_vector<std::uint8_t> device_nan_mask_;
   thrust::device_vector<std::uint8_t> device_mismatch_mask_;

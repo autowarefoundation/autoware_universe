@@ -44,9 +44,9 @@ void combineMasksLaunch(
   const std::uint32_t * mask1, const std::uint32_t * mask2, int num_points,
   std::uint32_t * output_mask, int threads_per_block, int blocks_per_grid, cudaStream_t & stream);
 
-/// Compacts the masked points into `output_points`. OutputPointT is either OutputPointType
-/// (XYZIRC) or autoware::point_types::PointXYZIRCT, which additionally receives the input's
-/// time_stamp.
+/// Compacts the masked points into `output_points`. OutputPointT is either
+/// autoware::point_types::PointXYZIRC or autoware::point_types::PointXYZIRCT, which additionally
+/// receives the input's time_stamp.
 template <typename OutputPointT>
 void extractPointsLaunch(
   InputPointType * input_points, std::uint32_t * masks, std::uint32_t * indices, int num_points,
