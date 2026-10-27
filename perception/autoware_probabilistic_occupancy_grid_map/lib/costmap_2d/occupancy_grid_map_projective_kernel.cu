@@ -298,9 +298,12 @@ __global__ void fillUnknownSpaceKernel(
   }
 
   if (next_raw_range_bin_index == range_bins || next_obs_range_bin_index == range_bins) {
-    autoware::occupancy_grid_map::utils::raytrace(
-      obs_world_x, obs_world_y, obs_world_px, obs_world_py, map_origin_x, map_origin_y,
-      map_resolution_inv, num_cells_x, num_cells_y, no_information_value, costmap_tensor);
+    // a point at or above the scan origin height (infinite projection) casts no ground shadow
+    if (!isinf(obs_world_px)) {
+      autoware::occupancy_grid_map::utils::raytrace(
+        obs_world_x, obs_world_y, obs_world_px, obs_world_py, map_origin_x, map_origin_y,
+        map_resolution_inv, num_cells_x, num_cells_y, no_information_value, costmap_tensor);
+    }
     return;
   }
 
