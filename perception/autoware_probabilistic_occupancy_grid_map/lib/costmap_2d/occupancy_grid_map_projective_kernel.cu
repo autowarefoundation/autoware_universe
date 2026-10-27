@@ -163,8 +163,8 @@ __global__ void prepareObstacleTensorKernel(
   std::uint32_t world_y_int = __float_as_uint(map_point.y());
   std::uint32_t world_z_int = __float_as_uint(map_point.z());
 
-  const float scan_z = translation_scan_origin->z();
-  const float obstacle_z = map_point.z() - translation_scan_origin->z();
+  const float scan_z = translation_scan_origin->z() - translation_map->z();
+  const float obstacle_z = map_point.z() - translation_map->z();
   const float dz = scan_z - obstacle_z;
 
   float projected_length, projected_world_x, projected_world_y;
