@@ -12,10 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/pure_pursuit/autoware_pure_pursuit_lateral_controller_node.hpp"
+#include "autoware/pure_pursuit/autoware_pure_pursuit_lateral_controller.hpp"
 
-#include <ament_index_cpp/get_package_share_directory.hpp>
-#include <rclcpp/rclcpp.hpp>
+#include <rclcpp/time.hpp>
 
 #include "autoware_planning_msgs/msg/trajectory.hpp"
 #include "autoware_planning_msgs/msg/trajectory_point.hpp"
@@ -23,21 +22,17 @@
 #include <gtest/gtest.h>
 #include <rcl/time.h>
 
-#include <chrono>
 #include <cmath>
 #include <cstdint>
-#include <memory>
-#include <optional>
-#include <thread>
 #include <utility>
 #include <vector>
 
 namespace
 {
 using autoware::motion::control::trajectory_follower::InputData;
-using autoware::motion::control::trajectory_follower::LateralControllerInterface;
-using autoware::motion::control::trajectory_follower::LateralOutput;
-using autoware::pure_pursuit::PurePursuitLateralControllerNode;
+using autoware::pure_pursuit::no_log;
+using autoware::pure_pursuit::PurePursuitLateralController;
+using autoware::pure_pursuit::PurePursuitLateralControllerConfig;
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 
@@ -176,150 +171,92 @@ private:
   InputData input_ = make_default();
 };
 
-class PurePursuitLateralControllerTest : public ::testing::Test
+/// Distance between the front and the rear axle of the test vehicle [m]. Given to the
+/// controller as the wheel_base parameter.
+constexpr double wheel_base = 2.74;
+
+/// Distance between the commanded and the measured angle below which the controller
+/// reports the steering converged. Carried by the shipped parameter file as
+/// converged_steer_rad.
+constexpr double converged_steer_rad = 0.1;
+
+/// Lateral distance at or past which the controller lengthens the lookahead distance.
+/// Carried by the shipped parameter file as long_ld_lateral_error_threshold.
+constexpr double lateral_error_threshold = 0.5;
+
+/// A lateral distance small enough to land on the other side of that threshold.
+constexpr double lateral_error_step = 0.01;
+
+/// Distance around the ego within which the controller looks for the path [m]. Written
+/// into the controller rather than read from a parameter.
+constexpr double nearest_search_radius = 3.0;
+
+/// Radius of the circle the arc tests follow [m].
+constexpr double arc_radius = 30.0;
+
+/// How far the command may differ from the angle the geometry gives. The controller aims
+/// at a point on the resampled path, which is a chain of straight segments and not the
+/// circle itself, so the command misses that angle by a small amount.
+constexpr double arc_relative_tolerance = 0.01;
+
+/// Two times of a control cycle [s]. The controller stamps the command with the time of the
+/// cycle, and these two differ so that a stamp names the cycle the command was made in.
+constexpr double first_cycle_time = 1.0;
+constexpr double second_cycle_time = 1.5;
+
+/// A speed at which the lookahead distance the controller derives from the speed is longer
+/// than the shortest lookahead distance it accepts [m/s]. At a lower speed the controller
+/// returns that shortest distance whatever the lateral distance is.
+constexpr double speed_above_the_lookahead_floor = 3.0;
+
+/// Lookahead distance per unit of speed [s]. Carried by the shipped parameter file as
+/// ld_velocity_ratio.
+constexpr double ld_velocity_ratio = 2.4;
+
+/// Lookahead distance removed per unit of path curvature [m^2]. Carried by the shipped
+/// parameter file as ld_curvature_ratio.
+constexpr double ld_curvature_ratio = 120.0;
+
+/// Longest lookahead distance the controller accepts [m]. Carried by the shipped parameter
+/// file as max_lookahead_distance.
+constexpr double max_lookahead_distance = 15.0;
+
+/// How far the command may differ from the angle computed from the lookahead distance. The
+/// controller aims at a point on the resampled path, so the command misses that angle by a
+/// small amount.
+constexpr double lookahead_relative_tolerance = 0.01;
+
+/// Distance between two neighbouring points of the predicted trajectory [m]. Carried by the
+/// shipped parameter file as prediction_ds.
+constexpr double prediction_ds = 0.3;
+
+/// Length of the path the controller predicts the vehicle to drive [m]. Carried by the
+/// shipped parameter file as prediction_distance_length.
+constexpr double prediction_distance_length = 21.0;
+
+/// The values the shipped parameter file carries. The vehicle values are the ones the vehicle
+/// description package provides in production.
+PurePursuitLateralControllerConfig make_default_config()
 {
-protected:
-  /// Distance between the front and the rear axle of the test vehicle [m]. Given to the
-  /// controller as the wheel_base parameter.
-  static constexpr double wheel_base = 2.74;
-
-  /// Distance between the commanded and the measured angle below which the controller
-  /// reports the steering converged. Carried by the shipped parameter file as
-  /// converged_steer_rad.
-  static constexpr double converged_steer_rad = 0.1;
-
-  /// Lateral distance at or past which the controller lengthens the lookahead distance.
-  /// Carried by the shipped parameter file as long_ld_lateral_error_threshold.
-  static constexpr double lateral_error_threshold = 0.5;
-
-  /// A lateral distance small enough to land on the other side of that threshold.
-  static constexpr double lateral_error_step = 0.01;
-
-  /// Distance around the ego within which the controller looks for the path [m]. Written
-  /// into the controller rather than read from a parameter.
-  static constexpr double nearest_search_radius = 3.0;
-
-  /// Radius of the circle the arc tests follow [m].
-  static constexpr double arc_radius = 30.0;
-
-  /// How far the command may differ from the angle the geometry gives. The controller aims
-  /// at a point on the resampled path, which is a chain of straight segments and not the
-  /// circle itself, so the command misses that angle by a small amount.
-  static constexpr double arc_relative_tolerance = 0.01;
-
-  /// Two times of a control cycle [s]. The controller stamps the command with the time of the
-  /// cycle, and these two differ so that a stamp names the cycle the command was made in.
-  static constexpr double first_cycle_time = 1.0;
-  static constexpr double second_cycle_time = 1.5;
-
-  /// A speed at which the lookahead distance the controller derives from the speed is longer
-  /// than the shortest lookahead distance it accepts [m/s]. At a lower speed the controller
-  /// returns that shortest distance whatever the lateral distance is.
-  static constexpr double speed_above_the_lookahead_floor = 3.0;
-
-  /// Lookahead distance per unit of speed [s]. Carried by the shipped parameter file as
-  /// ld_velocity_ratio.
-  static constexpr double ld_velocity_ratio = 2.4;
-
-  /// Lookahead distance removed per unit of path curvature [m^2]. Carried by the shipped
-  /// parameter file as ld_curvature_ratio.
-  static constexpr double ld_curvature_ratio = 120.0;
-
-  /// Longest lookahead distance the controller accepts [m]. Carried by the shipped parameter
-  /// file as max_lookahead_distance.
-  static constexpr double max_lookahead_distance = 15.0;
-
-  /// How far the command may differ from the angle computed from the lookahead distance. The
-  /// controller aims at a point on the resampled path, so the command misses that angle by a
-  /// small amount.
-  static constexpr double lookahead_relative_tolerance = 0.01;
-
-  /// Distance between two neighbouring points of the predicted trajectory [m]. Carried by the
-  /// shipped parameter file as prediction_ds.
-  static constexpr double prediction_ds = 0.3;
-
-  /// Length of the path the controller predicts the vehicle to drive [m]. Carried by the
-  /// shipped parameter file as prediction_distance_length.
-  static constexpr double prediction_distance_length = 21.0;
-
-  void SetUp() override { rclcpp::init(0, nullptr); }
-  void TearDown() override { rclcpp::shutdown(); }
-
-  rclcpp::NodeOptions make_node_options(const bool enable_path_smoothing)
-  {
-    const auto share_dir = ament_index_cpp::get_package_share_directory("autoware_pure_pursuit");
-
-    rclcpp::NodeOptions options;
-    options.arguments(
-      {"--ros-args", "--params-file", share_dir + "/config/pure_pursuit.param.yaml"});
-    options.append_parameter_override("enable_path_smoothing", enable_path_smoothing);
-
-    // Provided by the vehicle description package in production.
-    options.append_parameter_override("wheel_radius", 0.39);
-    options.append_parameter_override("wheel_width", 0.42);
-    options.append_parameter_override("wheel_base", wheel_base);
-    options.append_parameter_override("wheel_tread", 1.63);
-    options.append_parameter_override("front_overhang", 1.0);
-    options.append_parameter_override("rear_overhang", 1.03);
-    options.append_parameter_override("left_overhang", 0.1);
-    options.append_parameter_override("right_overhang", 0.1);
-    options.append_parameter_override("vehicle_height", 2.5);
-    options.append_parameter_override("max_steer_angle", 0.70);
-
-    return options;
-  }
-
-  /// Build the controller behind the interface, so that the tests only use the interface the
-  /// trajectory follower node uses.
-  std::unique_ptr<LateralControllerInterface> make_controller(
-    const bool enable_path_smoothing = false)
-  {
-    // Kept alive for the whole test: a controller holds a reference to the node it was built
-    // from, and a test may build two controllers and compare their commands.
-    node_ = nodes_.emplace_back(
-      std::make_shared<rclcpp::Node>("test_node", make_node_options(enable_path_smoothing)));
-    return std::make_unique<PurePursuitLateralControllerNode>(*node_);
-  }
-
-  /// Let the controller run one cycle with the given input, and return the predicted
-  /// trajectory it publishes on ~/output/predicted_trajectory. Empty if none arrives within
-  /// message_timeout. The controller has to be the one built last.
-  std::optional<Trajectory> let_controller_publish_predicted_trajectory(
-    LateralControllerInterface & controller, const InputData & input)
-  {
-    std::optional<Trajectory> received;
-    const auto subscription = node_->create_subscription<Trajectory>(
-      "~/output/predicted_trajectory", 1,
-      [&received](const Trajectory::ConstSharedPtr message) { received = *message; });
-    const auto connected_by = std::chrono::steady_clock::now() + message_timeout;
-    while (subscription->get_publisher_count() == 0 &&
-           std::chrono::steady_clock::now() < connected_by) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    }
-
-    run_cycle(controller, input);
-
-    const auto received_by = std::chrono::steady_clock::now() + message_timeout;
-    while (!received && std::chrono::steady_clock::now() < received_by) {
-      rclcpp::spin_some(node_);
-      std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    }
-    return received;
-  }
-
-  /// Let the controller run one cycle at the given time [s], and return its output.
-  static LateralOutput run_cycle(
-    LateralControllerInterface & controller, const InputData & input,
-    const double seconds = first_cycle_time)
-  {
-    return controller.run(input, at(seconds)).value();
-  }
-
-  static constexpr auto message_timeout = std::chrono::seconds(5);
-
-  std::vector<std::shared_ptr<rclcpp::Node>> nodes_;
-  std::shared_ptr<rclcpp::Node> node_;
-};
+  PurePursuitLateralControllerConfig config{};
+  config.wheel_base = wheel_base;
+  config.max_steering_angle = 0.70;
+  config.ld_velocity_ratio = ld_velocity_ratio;
+  config.ld_lateral_error_ratio = 3.6;
+  config.ld_curvature_ratio = ld_curvature_ratio;
+  config.long_ld_lateral_error_threshold = lateral_error_threshold;
+  config.min_lookahead_distance = 4.35;
+  config.max_lookahead_distance = max_lookahead_distance;
+  config.reverse_min_lookahead_distance = 7.0;
+  config.converged_steer_rad_ = converged_steer_rad;
+  config.prediction_ds = prediction_ds;
+  config.prediction_distance_length = prediction_distance_length;
+  config.resampling_ds = 0.1;
+  config.curvature_calculation_distance = 4.0;
+  config.enable_path_smoothing = false;
+  config.path_filter_moving_ave_num = 25;
+  return config;
+}
 
 /// Distance between two points of a trajectory in the x-y plane [m].
 double distance_between(const TrajectoryPoint & a, const TrajectoryPoint & b)
