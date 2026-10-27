@@ -84,7 +84,7 @@ MpcLateralController::MpcLateralController(
   m_steer_offset_max_update_th_ = config.steer_offset_max_update_th;
   if (enable_auto_steering_offset_removal_) {
     lpf_steer_offset_ = std::make_shared<Butterworth2dFilter>(
-      config.ctrl_period, config.steer_offset_filter_cutoff_hz, m_steering_offset_);
+      config.ctrl_period, config.steer_offset_filter_cutoff_hz, 0.0);
   }
 
   m_mpc->initializeLowPassFilters(config.steering_lpf_cutoff_hz, config.error_deriv_lpf_cutoff_hz);
@@ -172,7 +172,8 @@ MpcLateralControllerResult MpcLateralController::run(
     if (!enable_auto_steering_offset_removal_) return 0.0;
     if (abs(m_steering_offset_target_ - m_steering_offset_filtered_) > 1e-4)
       return m_steering_offset_target_;
-    const double delta_offset = m_steering_offset_ - m_steering_offset_target_;
+    const double delta_offset =
+      static_cast<double>(input_data.steering_offset.data) - m_steering_offset_target_;
     const double delta_offset_clamped =
       std::clamp(delta_offset, -m_steer_offset_max_update_th_, m_steer_offset_max_update_th_);
     return m_steering_offset_target_ + delta_offset_clamped;

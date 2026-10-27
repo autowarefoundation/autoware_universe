@@ -49,8 +49,6 @@ public:
     rclcpp::Node & node, std::shared_ptr<diagnostic_updater::Updater> diag_updater);
   ~MpcLateralControllerNode() = default;
 
-  void set_steering_offset(double offset) override { m_controller->set_steering_offset(offset); }
-
   /// Read the parameters the controller needs from the node, declaring them on it.
   static MpcLateralControllerConfig createConfig(rclcpp::Node & node);
 

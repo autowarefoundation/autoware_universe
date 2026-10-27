@@ -110,6 +110,8 @@ private:
 
   rclcpp::Subscription<autoware_internal_debug_msgs::msg::Float32Stamped>::SharedPtr
     sub_steering_offset_update_;
+  // latest message received on ~/input/steering_offset_update, passed to the lateral controller
+  autoware_internal_debug_msgs::msg::Float32Stamped steering_offset_;
 
   // Publishers
   rclcpp::Publisher<autoware_control_msgs::msg::Control>::SharedPtr control_cmd_pub_;

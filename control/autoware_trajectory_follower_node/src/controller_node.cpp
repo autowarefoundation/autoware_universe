@@ -120,7 +120,7 @@ Controller::Controller(const rclcpp::NodeOptions & node_options)
     create_subscription<autoware_internal_debug_msgs::msg::Float32Stamped>(
       "~/input/steering_offset_update", rclcpp::QoS{1}.transient_local(),
       [this](const autoware_internal_debug_msgs::msg::Float32Stamped::ConstSharedPtr msg) {
-        lateral_controller_->set_steering_offset(static_cast<double>(msg->data));
+        steering_offset_ = *msg;
       });
 
   if (enable_control_cmd_horizon_pub_) {
@@ -238,6 +238,7 @@ boost::optional<trajectory_follower::InputData> Controller::createInputData(rclc
   input_data.current_steering = *current_steering_ptr_;
   input_data.current_accel = *current_accel_ptr_;
   input_data.current_operation_mode = *current_operation_mode_ptr_;
+  input_data.steering_offset = steering_offset_;
 
   return input_data;
 }
