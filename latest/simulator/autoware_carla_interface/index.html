@@ -23402,6 +23402,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#physics-substepping" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Physics substepping
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#multi-client-co-simulation" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -23765,6 +23776,18 @@ This ros package enables communication between Autoware and CARLA for autonomous
 <td><code>no_rendering_mode</code></td>
 <td>bool</td>
 <td>False</td>
+<td>Disable CARLA scene rendering via world settings for headless/faster simulation. Applied unconditionally on world load, so the default <code>False</code> (re-)enables rendering even if the server was started headless; set <code>True</code> to keep rendering off.</td>
+</tr>
+<tr>
+<td><code>max_substep_delta_time</code></td>
+<td>double</td>
+<td>0.002</td>
+<td>Longest physics substep [s] CARLA may take inside one simulation step. See <a href="#physics-substepping">Physics substepping</a>; set it to 0 on a 0.10 (Chaos) server. 0 or negative leaves CARLA's own substepping settings untouched.</td>
+</tr>
+<tr>
+<td><code>no_rendering_mode</code></td>
+<td>bool</td>
+<td>False</td>
 <td>Disable CARLA scene rendering via world settings for headless/faster simulation. Applied unconditionally on world load, so the default <code>False</code> (re-)enables rendering even if the server was started headless; set <code>True</code> to keep rendering off. Camera sensors are not spawned while this is set, see <a href="#rendering-less-carla-servers">Rendering-less CARLA servers</a>.</td>
 </tr>
 <tr>
@@ -23907,6 +23930,34 @@ cross-shaped neighborhood is sampled and the <strong>highest</strong> ground hit
 fixed z-offset is used, so enabling the flag never raises. The spawn-point path
 logs a warning when it falls back; the RViz initial-pose fallback is silent (and
 with the default random spawn the spawn-point path is not exercised at all).</p>
+<h3 id="physics-substepping">Physics substepping<a class="headerlink" href="#physics-substepping" title="Permanent link">#</a></h3>
+<p>CARLA integrates the vehicle physics in substeps of at most
+<code>max_substep_delta_time</code>, which CARLA itself defaults to 0.01 s. At that
+resolution the angular velocity a vehicle reports stops integrating to the
+rotation its own transform performs: driving straight for 27.8 s at a 1/60 s
+step, the reported yaw rate integrated to 9.41 deg against the 0.03 deg the
+vehicle actually turned. The IMU is faithful to the body -- its gyroscope
+matches <code>get_angular_velocity()</code> to seven significant figures -- so the error
+is in the rigid body's own state, and both the IMU and the velocity report
+carry a phantom yaw rate of up to 0.9 deg/s. It is deterministic and depends on
+where the vehicle is, which is why some runs carry it and others do not.</p>
+<p>At a 2 ms substep the same drive mismatches by 0.005 deg, and across an
+eleven-drive bench set the worst phantom rate went from 0.90212 to
+0.00348 deg/s. Only the substep changes; <code>fixed_delta_seconds</code> is untouched, so
+the pacing of a run stays as it was, at the cost of more physics iterations
+inside each step -- measured at 1.3-1.8x the server's physics time per tick.</p>
+<p>All of the above is CARLA 0.9.x (PhysX), which is where the default 2 ms comes
+from. Review measurements on 0.10 (Chaos) found the mismatch staying within
+0.03 deg at any substep, so the setting appears to buy nothing measurable there
+while still costing 1.3-1.8x the server's physics time per tick: <strong>set it to 0
+on a 0.10 server.</strong></p>
+<p>libcarla warns unless two constraints both hold:
+<code>fixed_delta_seconds &lt;= max_substep_delta_time * max_substeps</code>, and
+<code>max_substeps</code> in the range <code>[1-16]</code>. The substep count is derived from the step
+length rather than configured separately, and a substep that would need more
+than 16 of them to fill a step is lengthened to fill it with exactly 16 -- at
+the package's default 0.05 s step, a requested 2 ms becomes 3.125 ms. Capping
+the count instead would satisfy the range and break the inequality.</p>
 <h3 id="multi-client-co-simulation">Multi-client co-simulation<a class="headerlink" href="#multi-client-co-simulation" title="Permanent link">#</a></h3>
 <p>By default this bridge owns the CARLA simulation clock: its main loop calls <code>world.tick()</code> on every
 cycle. A server in synchronous mode advances one frame per <code>tick()</code> call, so a second client that
