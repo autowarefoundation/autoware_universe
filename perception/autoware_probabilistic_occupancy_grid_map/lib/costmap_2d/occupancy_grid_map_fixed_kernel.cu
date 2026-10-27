@@ -109,10 +109,6 @@ __global__ void fillEmptySpaceKernel(
   float world_x = __uint_as_float(range_and_x & 0xFFFFFFFF);
   float world_y = __uint_as_float(range_and_y & 0xFFFFFFFF);
 
-  if (world_x < map_origin_x || world_y < map_origin_y) {
-    return;
-  }
-
   autoware::occupancy_grid_map::utils::raytrace(
     scan_origin_x, scan_origin_y, world_x, world_y, map_origin_x, map_origin_y, map_resolution_inv,
     num_cells_x, num_cells_y, empty_value, costmap_tensor);
@@ -146,7 +142,7 @@ __global__ void fillUnknownSpaceKernel(
   float obs_world_x = __uint_as_float(obs_range_and_x & 0xFFFFFFFF);
   float obs_world_y = __uint_as_float(obs_range_and_y & 0xFFFFFFFF);
 
-  if (obs_range_int == 0xFFFFFFFF || obs_world_x < map_origin_x || obs_world_y < map_origin_y) {
+  if (obs_range_int == 0xFFFFFFFF) {
     return;
   }
 
@@ -191,9 +187,7 @@ __global__ void fillUnknownSpaceKernel(
   const float next_raw_world_y = __uint_as_float(next_raw_range_and_y & 0xFFFFFFFF);
 
   if (next_obs_range_int == 0xFFFFFFFF) {
-    if (
-      next_raw_range_int == 0xFFFFFFFF || next_raw_world_x < map_origin_x ||
-      next_raw_world_y < map_origin_y) {
+    if (next_raw_range_int == 0xFFFFFFFF) {
       return;
     }
 
@@ -217,10 +211,6 @@ __global__ void fillUnknownSpaceKernel(
   } else if (next_raw_range_int == 0xFFFFFFFF) {
     // fill with no information between obstacles
 
-    if (next_obs_world_x < map_origin_x || next_obs_world_y < map_origin_y) {
-      return;
-    }
-
     autoware::occupancy_grid_map::utils::raytrace(
       obs_world_x, obs_world_y, next_obs_world_x, next_obs_world_y, map_origin_x, map_origin_y,
       map_resolution_inv, num_cells_x, num_cells_y, no_information_value, costmap_tensor);
@@ -234,10 +224,6 @@ __global__ void fillUnknownSpaceKernel(
   if (raw_to_obs_distance < obs_to_obs_distance) {
     // fill with free space between raw and obstacle
 
-    if (next_raw_world_x < map_origin_x || next_raw_world_y < map_origin_y) {
-      return;
-    }
-
     autoware::occupancy_grid_map::utils::raytrace(
       obs_world_x, obs_world_y, next_raw_world_x, next_raw_world_y, map_origin_x, map_origin_y,
       map_resolution_inv, num_cells_x, num_cells_y, no_information_value, costmap_tensor);
@@ -248,10 +234,6 @@ __global__ void fillUnknownSpaceKernel(
     return;
   } else {
     // fill with no information between obstacles
-
-    if (next_obs_world_x < map_origin_x || next_obs_world_y < map_origin_y) {
-      return;
-    }
 
     autoware::occupancy_grid_map::utils::raytrace(
       obs_world_x, obs_world_y, next_obs_world_x, next_obs_world_y, map_origin_x, map_origin_y,
@@ -326,10 +308,6 @@ __global__ void fillObstaclesKernel(
   float next_obs_world_y = __uint_as_float(next_obs_range_and_y & 0xFFFFFFFF);
 
   if (next_obs_range_int == 0xFFFFFFFF || abs(next_obs_range - range) > distance_margin) {
-    return;
-  }
-
-  if (next_obs_world_x < map_origin_x || next_obs_world_y < map_origin_y) {
     return;
   }
 
