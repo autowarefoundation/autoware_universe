@@ -71,7 +71,7 @@ private:
    * @brief compute control command for path follow with a constant control period
    */
   bool isReady([[maybe_unused]] const InputData & input_data) override;
-  LateralOutput run(const InputData & input_data) override;
+  LateralOutput run(const InputData & input_data, const rclcpp::Time & stamp) override;
 };
 
 }  // namespace autoware::pure_pursuit

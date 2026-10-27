@@ -38,7 +38,7 @@ class LateralControllerBase
 public:
   virtual ~LateralControllerBase() = default;
   virtual bool isReady(const InputData & input_data) = 0;
-  virtual LateralOutput run(InputData const & input_data) = 0;
+  virtual LateralOutput run(const InputData & input_data, const rclcpp::Time & stamp) = 0;
 
   virtual void set_steering_offset([[maybe_unused]] double offset) {}
 };

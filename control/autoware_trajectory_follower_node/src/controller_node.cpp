@@ -267,7 +267,7 @@ void Controller::callbackTimerControl()
 
   // 3. run controllers
   stop_watch_.tic("lateral");
-  const auto lat_out = lateral_controller_->run(*input_data);
+  const auto lat_out = lateral_controller_->run(*input_data, stamp);
   publishProcessingTime(stop_watch_.toc("lateral"), pub_processing_time_lat_ms_);
 
   stop_watch_.tic("longitudinal");

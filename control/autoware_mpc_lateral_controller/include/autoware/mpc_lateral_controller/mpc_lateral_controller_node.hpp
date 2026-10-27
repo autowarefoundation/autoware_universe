@@ -58,7 +58,7 @@ private:
   bool isReady(const trajectory_follower::InputData & input_data) override;
 
   trajectory_follower::LateralOutput run(
-    trajectory_follower::InputData const & input_data) override;
+    const trajectory_follower::InputData & input_data, const rclcpp::Time & stamp) override;
 
   void publish(const MpcLateralControllerResult & result);
 

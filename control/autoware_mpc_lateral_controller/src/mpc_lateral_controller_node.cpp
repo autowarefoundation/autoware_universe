@@ -178,11 +178,8 @@ bool MpcLateralControllerNode::isReady(const trajectory_follower::InputData & in
 }
 
 trajectory_follower::LateralOutput MpcLateralControllerNode::run(
-  trajectory_follower::InputData const & input_data)
+  const trajectory_follower::InputData & input_data, const rclcpp::Time & stamp)
 {
-  // Timestamp of this control cycle, shared by every message this call publishes.
-  const auto stamp = clock_->now();
-
   const auto result = m_controller->run(input_data, stamp);
 
   publish(result);
