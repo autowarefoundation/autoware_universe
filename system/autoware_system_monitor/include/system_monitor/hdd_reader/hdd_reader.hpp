@@ -141,6 +141,8 @@ typedef std::map<std::string, HddInfo> HddInfoList;
  * @brief check if the path contains "." or ".." components (e.g. "/dev/mapper/../../opt")
  * @param [in] path path to check
  * @return true if the path contains directory traversal
+ * @note "." is not traversal by itself, but is rejected to keep the path in plain form
+ *       so that string-based checks cannot be bypassed (e.g. "/dev/./sda1").
  */
 inline bool contains_directory_traversal(const std::string & path)
 {
