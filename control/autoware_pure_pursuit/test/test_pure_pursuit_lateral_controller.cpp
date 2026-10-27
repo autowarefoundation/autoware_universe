@@ -35,7 +35,7 @@
 namespace
 {
 using autoware::motion::control::trajectory_follower::InputData;
-using autoware::motion::control::trajectory_follower::LateralControllerBase;
+using autoware::motion::control::trajectory_follower::LateralControllerInterface;
 using autoware::motion::control::trajectory_follower::LateralOutput;
 using autoware::pure_pursuit::PurePursuitLateralControllerNode;
 using autoware_planning_msgs::msg::Trajectory;
@@ -269,9 +269,10 @@ protected:
     return options;
   }
 
-  /// Build the controller behind the base class interface, so that the tests only use the
-  /// interface the trajectory follower node uses.
-  std::unique_ptr<LateralControllerBase> make_controller(const bool enable_path_smoothing = false)
+  /// Build the controller behind the interface, so that the tests only use the interface the
+  /// trajectory follower node uses.
+  std::unique_ptr<LateralControllerInterface> make_controller(
+    const bool enable_path_smoothing = false)
   {
     // Kept alive for the whole test: a controller holds a reference to the node it was built
     // from, and a test may build two controllers and compare their commands.
@@ -284,7 +285,7 @@ protected:
   /// trajectory it publishes on ~/output/predicted_trajectory. Empty if none arrives within
   /// message_timeout. The controller has to be the one built last.
   std::optional<Trajectory> let_controller_publish_predicted_trajectory(
-    LateralControllerBase & controller, const InputData & input)
+    LateralControllerInterface & controller, const InputData & input)
   {
     std::optional<Trajectory> received;
     const auto subscription = node_->create_subscription<Trajectory>(
@@ -308,7 +309,7 @@ protected:
 
   /// Let the controller run one cycle at the given time [s], and return its output.
   static LateralOutput run_cycle(
-    LateralControllerBase & controller, const InputData & input,
+    LateralControllerInterface & controller, const InputData & input,
     const double seconds = first_cycle_time)
   {
     return controller.run(input, at(seconds)).value();

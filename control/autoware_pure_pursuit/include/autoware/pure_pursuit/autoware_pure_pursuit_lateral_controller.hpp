@@ -32,7 +32,7 @@
 
 #include "autoware/pure_pursuit/autoware_pure_pursuit.hpp"
 #include "autoware/pure_pursuit/log_writer.hpp"
-#include "autoware/trajectory_follower_base/lateral_controller_base.hpp"
+#include "autoware/trajectory_follower_base/lateral_controller_interface.hpp"
 #include "rclcpp/time.hpp"
 
 #include <autoware/motion_utils/resample/resample.hpp>

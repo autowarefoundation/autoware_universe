@@ -16,7 +16,7 @@
 #define AUTOWARE__TRAJECTORY_FOLLOWER_NODE__CONTROLLER_NODE_HPP_
 
 #include "autoware/trajectory_follower_base/control_horizon.hpp"
-#include "autoware/trajectory_follower_base/lateral_controller_base.hpp"
+#include "autoware/trajectory_follower_base/lateral_controller_interface.hpp"
 #include "autoware/trajectory_follower_base/longitudinal_controller_interface.hpp"
 #include "autoware/trajectory_follower_node/visibility_control.hpp"
 #include "autoware_utils/ros/logger_level_configure.hpp"
@@ -92,7 +92,7 @@ private:
   // output of the lateral controller in the previous cycle, passed to the longitudinal controller
   trajectory_follower::LateralSyncData previous_lateral_sync_data_;
   std::shared_ptr<trajectory_follower::LongitudinalControllerInterface> longitudinal_controller_;
-  std::shared_ptr<trajectory_follower::LateralControllerBase> lateral_controller_;
+  std::shared_ptr<trajectory_follower::LateralControllerInterface> lateral_controller_;
 
   // Subscribers
   autoware_utils::InterProcessPollingSubscriber<autoware_planning_msgs::msg::Trajectory>

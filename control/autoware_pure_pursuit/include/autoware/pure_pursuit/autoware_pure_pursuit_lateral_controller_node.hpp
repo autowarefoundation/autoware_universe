@@ -32,7 +32,7 @@
 
 #include "autoware/pure_pursuit/autoware_pure_pursuit_lateral_controller.hpp"
 #include "autoware/pure_pursuit/ros_log_writer.hpp"
-#include "autoware/trajectory_follower_base/lateral_controller_base.hpp"
+#include "autoware/trajectory_follower_base/lateral_controller_interface.hpp"
 #include "rclcpp/rclcpp.hpp"
 
 #include "autoware_internal_debug_msgs/msg/float32_multi_array_stamped.hpp"
@@ -41,12 +41,12 @@
 #include <memory>
 #include <string>
 
-using autoware::motion::control::trajectory_follower::LateralControllerBase;
+using autoware::motion::control::trajectory_follower::LateralControllerInterface;
 
 namespace autoware::pure_pursuit
 {
 
-class PurePursuitLateralControllerNode : public LateralControllerBase
+class PurePursuitLateralControllerNode : public LateralControllerInterface
 {
 public:
   /// \param node Reference to the node used only for the component and parameter initialization.

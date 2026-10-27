@@ -17,7 +17,7 @@
 
 #include "autoware/mpc_lateral_controller/mpc_lateral_controller.hpp"
 #include "autoware/mpc_lateral_controller/ros_log_writer.hpp"
-#include "autoware/trajectory_follower_base/lateral_controller_base.hpp"
+#include "autoware/trajectory_follower_base/lateral_controller_interface.hpp"
 #include "rclcpp/rclcpp.hpp"
 
 #include <diagnostic_updater/diagnostic_updater.hpp>
@@ -41,7 +41,7 @@ using geometry_msgs::msg::PoseStamped;
 
 /// The node side of the lateral controller. It declares the parameters, builds the
 /// controller from them, publishes what a cycle produced and writes what it reported.
-class MpcLateralControllerNode : public trajectory_follower::LateralControllerBase
+class MpcLateralControllerNode : public trajectory_follower::LateralControllerInterface
 {
 public:
   /// \param node Reference to the node used only for the component and parameter initialization.

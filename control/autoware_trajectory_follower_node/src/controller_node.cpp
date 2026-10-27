@@ -19,8 +19,6 @@
 #include "autoware/pure_pursuit/autoware_pure_pursuit_lateral_controller_node.hpp"
 #include "autoware_utils/ros/marker_helper.hpp"
 
-#include <autoware/trajectory_follower_base/lateral_controller_base.hpp>
-
 #include <algorithm>
 #include <cstdint>
 #include <limits>
