@@ -24,6 +24,8 @@
 #include <boost/serialization/serialization.hpp>
 #include <boost/serialization/string.hpp>
 
+#include <sys/stat.h>
+
 #include <bitset>
 #include <map>
 #include <string>
@@ -135,6 +137,27 @@ struct UnmountDeviceInfo
  */
 typedef std::map<std::string, HddInfo> HddInfoList;
 
+/**
+ * @brief check if the path contains "." or ".." components (e.g. "/dev/mapper/../../opt")
+ * @param [in] path path to check
+ * @return true if the path contains directory traversal
+ */
+inline bool contains_directory_traversal(const std::string & path)
+{
+  std::string::size_type start = 0;
+  while (true) {
+    const std::string::size_type end = path.find('/', start);
+    const std::string component = path.substr(start, end - start);
+    if (component == "." || component == "..") {
+      return true;
+    }
+    if (end == std::string::npos) {
+      return false;
+    }
+    start = end + 1;
+  }
+}
+
 // Keep this helper inline in the public header so the standalone hdd_reader executable and
 // its unit tests share the same validation logic without depending on a library target.
 inline bool validate_unmount_device_name(const std::string & part_device)
@@ -154,12 +177,30 @@ inline bool validate_unmount_device_name(const std::string & part_device)
     return false;
   }
 
+  if (contains_directory_traversal(part_device)) {
+    return false;
+  }
+
   return part_device.find("/dev/") == 0 &&
          (part_device.find("/dev/sd") == 0 || part_device.find("/dev/nvme") == 0 ||
           part_device.find("/dev/mmcblk") == 0 ||
           part_device.find("/dev/mapper/") == 0 || part_device.find("/dev/dm-") == 0);
   // cspell:enable
   // clang-format on
+}
+
+/**
+ * @brief check if the path refers to a block device (symbolic links are followed)
+ * @param [in] path path to check
+ * @return true if the path refers to a block device
+ */
+inline bool is_block_device(const std::string & path)
+{
+  struct stat st{};
+  if (stat(path.c_str(), &st) != 0) {
+    return false;
+  }
+  return S_ISBLK(st.st_mode);
 }
 
 #endif  // SYSTEM_MONITOR__HDD_READER__HDD_READER_HPP_
