@@ -506,10 +506,11 @@ TEST(PurePursuitLateralControllerTest, LookaheadDistanceStopsAtTheUpperLimit)
 
 // The predicted trajectory is the path the vehicle drives if it follows the commands of the
 // controller from this cycle on. Nodes that stop the vehicle before an obstacle or before it
-// leaves the lane read it from ~/output/predicted_trajectory. The test below checks that it is
-// published, starts at the ego, and reaches prediction_distance_length along the path.
+// leaves the lane read it from ~/output/predicted_trajectory. The test below checks that the
+// controller returns it, that it starts at the ego, and that it reaches
+// prediction_distance_length along the path.
 
-TEST(PurePursuitLateralControllerTest, PredictedTrajectoryIsPublished)
+TEST(PurePursuitLateralControllerTest, PredictedTrajectoryIsReturned)
 {
   PurePursuitLateralController controller(make_default_config(), no_log);
   const InputData input = Input().following(straight_path()).planned_at(1.0).driving_at(1.0);
