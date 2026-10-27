@@ -46,12 +46,12 @@ The node draws the result of traffic light recognition on the input image as sho
 
 #### Input
 
-| Name                          | Type                                             | Description                                                      |
-| ----------------------------- | ------------------------------------------------ | ---------------------------------------------------------------- |
-| `~/input/traffic_signals`     | tier4_perception_msgs::msg::TrafficLightArray    | status of traffic lights                                         |
-| `~/input/image`               | sensor_msgs::msg::Image                          | the image captured by perception cameras                         |
-| `~/input/rois`                | tier4_perception_msgs::msg::TrafficLightRoiArray | the ROIs detected by `autoware_traffic_light_fine_detector`      |
-| `~/input/rough/rois` (option) | tier4_perception_msgs::msg::TrafficLightRoiArray | the ROIs detected by `autoware_traffic_light_map_based_detector` |
+| Name                          | Type                                             | Description                                                                                                                                                                                                |
+| ----------------------------- | ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `~/input/traffic_signals`     | tier4_perception_msgs::msg::TrafficLightArray    | status of traffic lights                                                                                                                                                                                   |
+| `~/input/image`               | sensor_msgs::msg::Image                          | the image captured by perception cameras                                                                                                                                                                   |
+| `~/input/rois`                | tier4_perception_msgs::msg::TrafficLightRoiArray | the ROIs from the last detection stage of the chain: `autoware_traffic_light_map_based_detector` when it runs alone, otherwise `autoware_traffic_light_fine_detector` or `autoware_traffic_light_selector` |
+| `~/input/rough/rois` (option) | tier4_perception_msgs::msg::TrafficLightRoiArray | the ROIs from the stage before that, always `autoware_traffic_light_map_based_detector`. Only connected when such a stage exists, which is also when `use_high_accuracy_detection` is true                 |
 
 #### Output
 

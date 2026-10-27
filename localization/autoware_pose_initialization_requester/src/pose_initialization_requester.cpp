@@ -12,20 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "automatic_pose_initializer.hpp"
+#include "pose_initialization_requester.hpp"
 
 #include <memory>
 
-namespace autoware::automatic_pose_initializer
+namespace autoware::pose_initialization_requester
 {
 
-AutomaticPoseInitializer::AutomaticPoseInitializer(const rclcpp::NodeOptions & options)
-: Node("autoware_automatic_pose_initializer", options)
+PoseInitializationRequester::PoseInitializationRequester(const rclcpp::NodeOptions & options)
+: rclcpp::Node("pose_initialization_requester", options)
 {
-  const auto adaptor = autoware::component_interface_utils::NodeAdaptor(this);
   group_cli_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
-  adaptor.init_cli(cli_initialize_, group_cli_);
-  adaptor.init_sub(sub_state_, [this](const State::Message::ConstSharedPtr msg) { state_ = *msg; });
+
+  cli_initialize_ = adaptor_.create_client<Initialize>(group_cli_);
+  sub_state_ = adaptor_.create_subscription<State>(
+    [this](const State::Message::ConstSharedPtr msg) { state_ = *msg; });
 
   const auto period = rclcpp::Rate(1.0).period();
   timer_ = rclcpp::create_timer(this, get_clock(), period, [this]() { on_timer(); });
@@ -34,20 +35,22 @@ AutomaticPoseInitializer::AutomaticPoseInitializer(const rclcpp::NodeOptions & o
   state_.state = State::Message::UNKNOWN;
 }
 
-void AutomaticPoseInitializer::on_timer()
+void PoseInitializationRequester::on_timer()
 {
   timer_->cancel();
   if (state_.state == State::Message::UNINITIALIZED) {
     try {
       const auto req = std::make_shared<Initialize::Service::Request>();
-      cli_initialize_->call(req);
+      req->method = Initialize::Service::Request::AUTO;
+      cli_initialize_->call(req);  // GNSS is used if pose is empty.
     } catch (const autoware::component_interface_utils::ServiceException & error) {
     }
   }
   timer_->reset();
 }
 
-}  // namespace autoware::automatic_pose_initializer
+}  // namespace autoware::pose_initialization_requester
 
 #include <rclcpp_components/register_node_macro.hpp>
-RCLCPP_COMPONENTS_REGISTER_NODE(autoware::automatic_pose_initializer::AutomaticPoseInitializer)
+RCLCPP_COMPONENTS_REGISTER_NODE(
+  autoware::pose_initialization_requester::PoseInitializationRequester)

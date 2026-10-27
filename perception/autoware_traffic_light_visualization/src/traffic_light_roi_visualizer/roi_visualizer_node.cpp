@@ -103,8 +103,7 @@ void TrafficLightRoiVisualizerNode::publish(const sensor_msgs::msg::Image::Share
 void TrafficLightRoiVisualizerNode::image_roi_callback(
   const sensor_msgs::msg::Image::ConstSharedPtr & input_image_msg,
   const tier4_perception_msgs::msg::TrafficLightRoiArray::ConstSharedPtr & input_tl_roi_msg,
-  [[maybe_unused]] const tier4_perception_msgs::msg::TrafficLightArray::ConstSharedPtr &
-    input_traffic_signals_msg)
+  const tier4_perception_msgs::msg::TrafficLightArray::ConstSharedPtr & input_traffic_signals_msg)
 {
   try {
     publish(visualizer_.visualize(*input_image_msg, *input_tl_roi_msg, *input_traffic_signals_msg));

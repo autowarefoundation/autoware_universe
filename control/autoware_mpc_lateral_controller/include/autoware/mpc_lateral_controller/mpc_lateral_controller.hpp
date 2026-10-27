@@ -19,6 +19,7 @@
 #include "autoware/mpc_lateral_controller/mpc.hpp"
 #include "autoware/mpc_lateral_controller/mpc_trajectory.hpp"
 #include "autoware/mpc_lateral_controller/mpc_utils.hpp"
+#include "autoware/mpc_lateral_controller/ros_log_writer.hpp"
 #include "autoware/trajectory_follower_base/lateral_controller_base.hpp"
 #include "rclcpp/rclcpp.hpp"
 
@@ -66,6 +67,7 @@ public:
 private:
   rclcpp::Clock::SharedPtr clock_;
   rclcpp::Logger logger_;
+  RosLogWriter writer_;
 
   rclcpp::Publisher<Trajectory>::SharedPtr m_pub_predicted_traj;
   rclcpp::Publisher<Trajectory>::SharedPtr m_pub_predicted_traj_frenet;
@@ -302,24 +304,6 @@ private:
    */
   rcl_interfaces::msg::SetParametersResult paramCallback(
     const std::vector<rclcpp::Parameter> & parameters);
-
-  template <typename... Args>
-  inline void info_throttle(Args &&... args) const
-  {
-    RCLCPP_INFO_THROTTLE(logger_, *clock_, 5000, "%s", args...);
-  }
-
-  template <typename... Args>
-  inline void debug_throttle(Args &&... args) const
-  {
-    RCLCPP_DEBUG_THROTTLE(logger_, *clock_, 5000, "%s", args...);
-  }
-
-  template <typename... Args>
-  inline void warn_throttle(Args &&... args) const
-  {
-    RCLCPP_WARN_THROTTLE(logger_, *clock_, 5000, "%s", args...);
-  }
 };
 }  // namespace autoware::motion::control::mpc_lateral_controller
 

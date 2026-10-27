@@ -39,9 +39,11 @@ target_include_directories(${PROJECT_NAME}_plugin PRIVATE
   "src"
 )
 
-rclcpp_components_register_node(${PROJECT_NAME}_common
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}_common
   PLUGIN "autoware::driving_mode_manager::DrivingModeManager"
   EXECUTABLE "driving_mode_manager_node"
+  ROS2_EXECUTOR SingleThreadedExecutor
+  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
 )
 
 if(BUILD_TESTING)
