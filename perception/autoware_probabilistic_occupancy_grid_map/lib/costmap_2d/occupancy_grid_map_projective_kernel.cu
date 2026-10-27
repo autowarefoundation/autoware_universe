@@ -440,9 +440,9 @@ __global__ void fillObstaclesKernel(
   next_obs_range_bin_index = std::min<int>(next_obs_range_bin_index, range_bins - 1);
 
   std::uint64_t next_obs_range_and_x =
-    obstacle_points_tensor[6 * (angle_bin_index * range_bins + range_bin_index) + 0];
+    obstacle_points_tensor[6 * (angle_bin_index * range_bins + next_obs_range_bin_index) + 0];
   std::uint64_t next_obs_range_and_y =
-    obstacle_points_tensor[6 * (angle_bin_index * range_bins + range_bin_index) + 1];
+    obstacle_points_tensor[6 * (angle_bin_index * range_bins + next_obs_range_bin_index) + 1];
 
   std::uint32_t next_obs_range_int = next_obs_range_and_x >> 32;
   float next_obs_range = next_obs_range_int * RANGE_DISCRETIZATION_RESOLUTION;
