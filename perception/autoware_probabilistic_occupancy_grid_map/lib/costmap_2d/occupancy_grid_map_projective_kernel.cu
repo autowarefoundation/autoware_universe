@@ -250,10 +250,6 @@ __global__ void fillUnknownSpaceKernel(
   int angle_bin_index = idx / range_bins;
   int range_bin_index = idx % range_bins;
 
-  if (range_bin_index == range_bins - 1) {
-    return;
-  }
-
   std::uint64_t obs_range_and_x =
     obstacle_points_tensor[6 * (angle_bin_index * range_bins + range_bin_index) + 0];
   std::uint64_t obs_range_and_y =
@@ -276,7 +272,7 @@ __global__ void fillUnknownSpaceKernel(
   int next_raw_range_bin_index = range_bin_index + 1;
   int next_obs_range_bin_index = range_bin_index + 1;
 
-  for (; next_raw_range_bin_index < range_bins - 1; next_raw_range_bin_index++) {
+  for (; next_raw_range_bin_index < range_bins; next_raw_range_bin_index++) {
     std::uint64_t next_raw_range_and_x =
       raw_points_tensor[6 * (angle_bin_index * range_bins + next_raw_range_bin_index) + 0];
     std::uint32_t next_raw_range_int = next_raw_range_and_x >> 32;
@@ -291,7 +287,7 @@ __global__ void fillUnknownSpaceKernel(
     }
   }
 
-  for (; next_obs_range_bin_index < range_bins - 1; next_obs_range_bin_index++) {
+  for (; next_obs_range_bin_index < range_bins; next_obs_range_bin_index++) {
     std::uint64_t next_obs_range_and_x =
       obstacle_points_tensor[6 * (angle_bin_index * range_bins + next_obs_range_bin_index) + 0];
     std::uint32_t next_obs_range_int = next_obs_range_and_x >> 32;
@@ -299,6 +295,13 @@ __global__ void fillUnknownSpaceKernel(
     if (next_obs_range_int != 0xFFFFFFFF) {
       break;
     }
+  }
+
+  if (next_raw_range_bin_index == range_bins || next_obs_range_bin_index == range_bins) {
+    autoware::occupancy_grid_map::utils::raytrace(
+      obs_world_x, obs_world_y, obs_world_px, obs_world_py, map_origin_x, map_origin_y,
+      map_resolution_inv, num_cells_x, num_cells_y, no_information_value, costmap_tensor);
+    return;
   }
 
   const std::uint64_t next_obs_range_and_x =
@@ -331,20 +334,6 @@ __global__ void fillUnknownSpaceKernel(
   const float next_raw_world_y = __uint_as_float(next_raw_range_and_y & 0xFFFFFFFF);
   const float next_raw_world_px = __uint_as_float(next_raw_range_and_px & 0xFFFFFFFF);
   const float next_raw_world_py = __uint_as_float(next_raw_range_and_py & 0xFFFFFFFF);
-
-  if (next_raw_range_int == 0xFFFFFFFF) {
-    autoware::occupancy_grid_map::utils::raytrace(
-      obs_world_x, obs_world_y, obs_world_px, obs_world_py, map_origin_x, map_origin_y,
-      map_resolution_inv, num_cells_x, num_cells_y, no_information_value, costmap_tensor);
-    return;
-  }
-
-  if (next_obs_range_int == 0xFFFFFFFF) {
-    autoware::occupancy_grid_map::utils::raytrace(
-      obs_world_x, obs_world_y, obs_world_px, obs_world_py, map_origin_x, map_origin_y,
-      map_resolution_inv, num_cells_x, num_cells_y, no_information_value, costmap_tensor);
-    return;
-  }
 
   float next_raw_range = next_raw_range_int * RANGE_DISCRETIZATION_RESOLUTION;
   float raw_to_obs_distance = abs(next_raw_range - obs_range);
