@@ -34,12 +34,9 @@
 #include "autoware/pure_pursuit/ros_log_writer.hpp"
 #include "autoware/trajectory_follower_base/lateral_controller_base.hpp"
 #include "rclcpp/rclcpp.hpp"
-#include "tf2_ros/buffer.h"
-#include "tf2_ros/transform_listener.h"
 
 #include "autoware_internal_debug_msgs/msg/float32_multi_array_stamped.hpp"
 #include "autoware_planning_msgs/msg/trajectory.hpp"
-#include "nav_msgs/msg/odometry.hpp"
 
 #include <memory>
 
@@ -63,19 +60,10 @@ private:
   RosLogWriter writer_;
 
   // Debug Publisher
-  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr pub_debug_marker_;
   rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float32MultiArrayStamped>::SharedPtr
     pub_debug_values_;
   // Predicted Trajectory publish
   rclcpp::Publisher<autoware_planning_msgs::msg::Trajectory>::SharedPtr pub_predicted_trajectory_;
-
-  void onTrajectory(const autoware_planning_msgs::msg::Trajectory::ConstSharedPtr msg);
-
-  void onCurrentOdometry(const nav_msgs::msg::Odometry::ConstSharedPtr msg);
-
-  // TF
-  tf2_ros::Buffer tf_buffer_;
-  tf2_ros::TransformListener tf_listener_;
 
   std::unique_ptr<PurePursuitLateralController> controller_;
 
