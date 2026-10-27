@@ -311,7 +311,7 @@ protected:
     LateralControllerBase & controller, const InputData & input,
     const double seconds = first_cycle_time)
   {
-    return controller.run(input, at(seconds));
+    return controller.run(input, at(seconds)).value();
   }
 
   static constexpr auto message_timeout = std::chrono::seconds(5);

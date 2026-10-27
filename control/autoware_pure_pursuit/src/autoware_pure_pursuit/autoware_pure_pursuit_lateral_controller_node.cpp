@@ -33,6 +33,7 @@
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 
 #include <memory>
+#include <string>
 
 namespace autoware::pure_pursuit
 {
@@ -83,12 +84,7 @@ PurePursuitLateralControllerConfig PurePursuitLateralControllerNode::createConfi
   return config;
 }
 
-bool PurePursuitLateralControllerNode::isReady([[maybe_unused]] const InputData & input_data)
-{
-  return true;
-}
-
-LateralOutput PurePursuitLateralControllerNode::run(
+tl::expected<LateralOutput, std::string> PurePursuitLateralControllerNode::run(
   const InputData & input_data, const rclcpp::Time & stamp)
 {
   const auto result = controller_->run(input_data, stamp);

@@ -53,9 +53,7 @@ public:
   static MpcLateralControllerConfig createConfig(rclcpp::Node & node);
 
 private:
-  bool isReady(const trajectory_follower::InputData & input_data) override;
-
-  trajectory_follower::LateralOutput run(
+  tl::expected<trajectory_follower::LateralOutput, std::string> run(
     const trajectory_follower::InputData & input_data, const rclcpp::Time & stamp) override;
 
   void publish(const MpcLateralControllerResult & result);

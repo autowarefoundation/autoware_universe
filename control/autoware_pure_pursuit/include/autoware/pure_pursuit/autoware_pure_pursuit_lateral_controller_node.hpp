@@ -39,6 +39,7 @@
 #include "autoware_planning_msgs/msg/trajectory.hpp"
 
 #include <memory>
+#include <string>
 
 using autoware::motion::control::trajectory_follower::LateralControllerBase;
 
@@ -70,8 +71,8 @@ private:
   /**
    * @brief compute control command for path follow with a constant control period
    */
-  bool isReady([[maybe_unused]] const InputData & input_data) override;
-  LateralOutput run(const InputData & input_data, const rclcpp::Time & stamp) override;
+  tl::expected<LateralOutput, std::string> run(
+    const InputData & input_data, const rclcpp::Time & stamp) override;
 };
 
 }  // namespace autoware::pure_pursuit

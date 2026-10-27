@@ -258,19 +258,19 @@ void Controller::callbackTimerControl()
     return;
   }
 
-  // 2. check if the lateral controller is ready
-  if (!lateral_controller_->isReady(*input_data)) {
+  // 2. run the lateral controller
+  stop_watch_.tic("lateral");
+  const auto lat_result = lateral_controller_->run(*input_data, stamp);
+  if (!lat_result) {
     RCLCPP_INFO_THROTTLE(
-      get_logger(), *get_clock(), 5000,
-      "Control is skipped since lateral controller is not ready to run.");
+      get_logger(), *get_clock(), 5000, "Control is skipped since lateral controller failed: %s",
+      lat_result.error().c_str());
     return;
   }
-
-  // 3. run controllers
-  stop_watch_.tic("lateral");
-  const auto lat_out = lateral_controller_->run(*input_data, stamp);
   publishProcessingTime(stop_watch_.toc("lateral"), pub_processing_time_lat_ms_);
+  const auto & lat_out = *lat_result;
 
+  // 3. run the longitudinal controller
   stop_watch_.tic("longitudinal");
   const auto lon_result =
     longitudinal_controller_->run(*input_data, stamp, previous_lateral_sync_data_);

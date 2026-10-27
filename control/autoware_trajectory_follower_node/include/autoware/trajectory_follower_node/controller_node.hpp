@@ -47,6 +47,8 @@
 #include <autoware_internal_debug_msgs/msg/float32_stamped.hpp>
 #include <autoware_internal_debug_msgs/msg/float64_stamped.hpp>
 
+#include <boost/optional.hpp>
+
 #include <memory>
 #include <optional>
 #include <string>

@@ -20,9 +20,12 @@
 #include "autoware/trajectory_follower_base/sync_data.hpp"
 #include "rclcpp/rclcpp.hpp"
 
+#include <tl_expected/expected.hpp>
+
 #include "autoware_control_msgs/msg/lateral.hpp"
 
-#include <boost/optional.hpp>
+#include <string>
+
 namespace autoware::motion::control::trajectory_follower
 {
 using autoware_control_msgs::msg::Lateral;
@@ -37,8 +40,8 @@ class LateralControllerBase
 {
 public:
   virtual ~LateralControllerBase() = default;
-  virtual bool isReady(const InputData & input_data) = 0;
-  virtual LateralOutput run(const InputData & input_data, const rclcpp::Time & stamp) = 0;
+  virtual tl::expected<LateralOutput, std::string> run(
+    const InputData & input_data, const rclcpp::Time & stamp) = 0;
 };
 
 }  // namespace autoware::motion::control::trajectory_follower
