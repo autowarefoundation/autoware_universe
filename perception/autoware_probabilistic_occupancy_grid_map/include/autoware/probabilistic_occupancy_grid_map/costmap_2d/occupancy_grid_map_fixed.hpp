@@ -43,6 +43,7 @@ protected:
 
   autoware::cuda_utils::CudaUniquePtr<std::uint64_t[]> raw_points_tensor_;
   autoware::cuda_utils::CudaUniquePtr<std::uint64_t[]> obstacle_points_tensor_;
+  autoware::cuda_utils::CudaUniquePtr<std::uint8_t[]> device_free_space_mask_;
 };
 
 }  // namespace costmap_2d
