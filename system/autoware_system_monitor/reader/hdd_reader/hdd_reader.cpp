@@ -544,10 +544,14 @@ int unmount_device_with_lazy(boost::archive::text_iarchive & ia, boost::archive:
  */
 void run(const std::string & socket_path)
 {
+  // Keep default permissions restrictive when creating socket inode
+  mode_t old_umask = umask(0177);
+
   // Create a new socket
   int sock = socket(AF_UNIX, SOCK_STREAM, 0);
   if (sock < 0) {
     syslog(LOG_ERR, "Failed to create a new socket. %s\n", strerror(errno));
+    umask(old_umask);  // Restore the old umask
     return;
   }
 
@@ -560,6 +564,7 @@ void run(const std::string & socket_path)
       LOG_ERR, "Failed to unlink the UNIX domain socket %s %s\n", socket_path.c_str(),
       strerror(errno));
     close(sock);
+    umask(old_umask);  // Restore the old umask
     return;
   }
 
@@ -568,23 +573,29 @@ void run(const std::string & socket_path)
   addr.sun_family = AF_UNIX;
   strncpy(addr.sun_path, socket_path.c_str(), sizeof(addr.sun_path) - 1);
   // cppcheck-suppress cstyleCast
-  ret = bind(sock, (struct sockaddr *)&addr, sizeof(addr));
+  ret = bind(sock, reinterpret_cast<struct sockaddr *>(&addr), sizeof(addr));
   if (ret < 0) {
     syslog(LOG_ERR, "Failed to bind the UNIX domain socket. %s\n", strerror(errno));
     close(sock);
     unlink(socket_path.c_str());
+    umask(old_umask);  // Restore the old umask
     return;
   }
 
-  // Allow other users to access the socket created by root (if applicable)
-  ret = chmod(socket_path.c_str(), 0777);
+  // Explicitly set the final permission mode. Do NOT allow other users to access the socket.
+  const mode_t socket_mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP;  // 0660
+  ret = fchmod(sock, socket_mode);
   if (ret < 0) {
     syslog(
       LOG_ERR, "Failed to set the socket to be accessible by all users. %s\n", strerror(errno));
     close(sock);
     unlink(socket_path.c_str());
+    umask(old_umask);  // Restore the old umask
     return;
   }
+
+  // Restore the previous umask after socket creation
+  umask(old_umask);
 
   // Prepare to accept connections on socket FD
   ret = listen(sock, 5);
