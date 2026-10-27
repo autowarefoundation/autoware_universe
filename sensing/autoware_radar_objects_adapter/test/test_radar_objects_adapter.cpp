@@ -577,64 +577,124 @@ TEST(RadarObjectsAdapter, RadarInfo_UnknownFields_Ignored)
   EXPECT_EQ(result.error().missing_required_fields(), std::vector<std::string>{"orientation"});
 }
 
-// Until a valid radar info arrives, each message is judged on its own: two messages that each
-// declare part of the required fields do not add up, and nothing is converted in between.
-TEST(RadarObjectsAdapter, RadarInfo_BeforeValid_EachMessageJudgedOnItsOwn)
+// Until a valid radar info arrives, each message is judged on its own: a message that declares
+// only the required field an earlier one lacked does not complete it, and nothing is converted.
+TEST(RadarObjectsAdapter, RadarInfo_BeforeValid_PartialMessagesDoNotAddUp)
 {
-  // Arrange
+  // Arrange: the adapter has seen a radar info lacking one required field
+  const RadarInfo incomplete_info = make_radar_info(without(required_fields, "orientation"));
+  const RadarInfo completing_info = make_radar_info({"orientation"});
   const RadarObjects objects = make_radar_objects({make_radar_object()});
   RadarObjectsAdapter adapter = make_adapter();
+  ASSERT_FALSE(adapter.update_radar_info(incomplete_info).has_value());
 
-  // Act: a radar info lacking one required field, then one declaring only that field
-  const auto first =
-    adapter.update_radar_info(make_radar_info(without(required_fields, "orientation")));
-  const auto second = adapter.update_radar_info(make_radar_info({"orientation"}));
+  // Act: a radar info declaring only that field
+  const auto result = adapter.update_radar_info(completing_info);
 
-  // Assert: the second is judged on its own, and nothing is converted
-  EXPECT_FALSE(first.has_value());
-  ASSERT_FALSE(second.has_value());
+  // Assert: judged on its own, and nothing is converted
+  ASSERT_FALSE(result.has_value());
   const std::vector<std::string> all_but_orientation(
     required_fields_in_order.begin(), required_fields_in_order.end() - 1);
-  EXPECT_EQ(second.error().missing_required_fields(), all_but_orientation);
+  EXPECT_EQ(result.error().missing_required_fields(), all_but_orientation);
   EXPECT_FALSE(adapter.convert(objects).has_value());
+}
+
+// An invalid radar info leaves nothing behind: the valid one that follows is accepted as if it
+// were the first, with its own answer, and objects are converted from then on.
+TEST(RadarObjectsAdapter, RadarInfo_BeforeValid_ValidMessageAfterInvalid_Accepted)
+{
+  // Arrange: the adapter has seen only invalid radar info messages
+  const RadarInfo incomplete_info = make_radar_info(without(required_fields, "orientation"));
+  const RadarInfo completing_info = make_radar_info({"orientation"});
+  const RadarObjects objects = make_radar_objects({make_radar_object()});
+  RadarObjectsAdapter adapter = make_adapter();
+  ASSERT_FALSE(adapter.update_radar_info(incomplete_info).has_value());
+  ASSERT_FALSE(adapter.update_radar_info(completing_info).has_value());
 
   // Act: a radar info declaring every required field
-  const auto third = adapter.update_radar_info(make_radar_info(required_fields));
+  const auto result = adapter.update_radar_info(make_radar_info(required_fields));
 
   // Assert
-  EXPECT_TRUE(third.has_value());
+  ASSERT_TRUE(result.has_value());
+  EXPECT_EQ(result->defaulted_fields(), all_defaulted);
   EXPECT_TRUE(adapter.convert(objects).has_value());
 }
 
 // The first valid radar info fixes the answer. A later message is not looked at: it comes back
 // with the first's configuration, never as an error, and changes nothing about the conversion,
-// whether it declares more fields, fewer, or lacks a required one.
-TEST(RadarObjectsAdapter, RadarInfo_AfterValid_LaterRadarInfoIgnored)
+// whether it declares more fields, lacks a required one, or declares none. The three cases below
+// share their arrangement and what they expect of the conversion.
+
+// An adapter whose answer was fixed by a first valid radar info that declares position_z and no
+// other optional field, with the default parameters.
+RadarObjectsAdapter make_adapter_fixed_with_position_z()
 {
-  // Arrange: the first valid radar info declares position_z and no other optional field
-  const DefaultParameters defaults;
-  const RadarObjects objects = make_radar_objects({make_radar_object()});
-  RadarObjectsAdapter adapter = make_adapter(defaults.to_params());
-  ASSERT_TRUE(
+  RadarObjectsAdapter adapter = make_adapter();
+  EXPECT_TRUE(
     adapter.update_radar_info(make_radar_info(with(required_fields, {"position_z"}))).has_value());
+  return adapter;
+}
 
-  for (const auto & later :
-       {with(required_fields, {"size_x"}), without(required_fields, "orientation"),
-        std::set<std::string>{}}) {
-    // Act
-    const auto result = adapter.update_radar_info(make_radar_info(later));
+// The conversion the first radar info decided: position_z copied from the object, size_x filled
+// from the parameter.
+void expect_first_radar_info_conversion(const RadarObjectsAdapter & adapter)
+{
+  const RadarObjects objects = make_radar_objects({make_radar_object()});
+  const auto converted = adapter.convert(objects);
+  ASSERT_TRUE(converted.has_value());
+  const DetectedObject & detected = converted->detections.objects.at(0);
+  EXPECT_DOUBLE_EQ(
+    detected.kinematics.pose_with_covariance.pose.position.z, objects.objects.at(0).position.z);
+  EXPECT_DOUBLE_EQ(detected.shape.dimensions.x, DefaultParameters{}.size_x);
+}
 
-    // Assert: still the first radar info's answer, and still its conversion (position_z copied,
-    // size_x from the parameter)
-    ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(result->defaulted_fields(), all_defaulted_except("position_z"));
-    const auto converted = adapter.convert(objects);
-    ASSERT_TRUE(converted.has_value());
-    const DetectedObject & detected = converted->detections.objects.at(0);
-    EXPECT_DOUBLE_EQ(
-      detected.kinematics.pose_with_covariance.pose.position.z, objects.objects.at(0).position.z);
-    EXPECT_DOUBLE_EQ(detected.shape.dimensions.x, defaults.size_x);
-  }
+// A later radar info that declares more fields does not make them available: size_x stays
+// filled from the parameter.
+TEST(RadarObjectsAdapter, RadarInfo_AfterValid_MoreFields_Ignored)
+{
+  // Arrange
+  RadarObjectsAdapter adapter = make_adapter_fixed_with_position_z();
+
+  // Act
+  const auto result = adapter.update_radar_info(make_radar_info(with(required_fields, {"size_x"})));
+
+  // Assert: still the first radar info's answer, and still its conversion
+  ASSERT_TRUE(result.has_value());
+  EXPECT_EQ(result->defaulted_fields(), all_defaulted_except("position_z"));
+  expect_first_radar_info_conversion(adapter);
+}
+
+// A later radar info that lacks a required field is not an error, and objects keep being
+// converted.
+TEST(RadarObjectsAdapter, RadarInfo_AfterValid_RequiredFieldMissing_Ignored)
+{
+  // Arrange
+  RadarObjectsAdapter adapter = make_adapter_fixed_with_position_z();
+
+  // Act
+  const auto result =
+    adapter.update_radar_info(make_radar_info(without(required_fields, "orientation")));
+
+  // Assert: still the first radar info's answer, and still its conversion
+  ASSERT_TRUE(result.has_value());
+  EXPECT_EQ(result->defaulted_fields(), all_defaulted_except("position_z"));
+  expect_first_radar_info_conversion(adapter);
+}
+
+// A later radar info that declares no field at all does not take away what the first declared:
+// position_z is still copied from the object.
+TEST(RadarObjectsAdapter, RadarInfo_AfterValid_NoFields_Ignored)
+{
+  // Arrange
+  RadarObjectsAdapter adapter = make_adapter_fixed_with_position_z();
+
+  // Act
+  const auto result = adapter.update_radar_info(make_radar_info({}));
+
+  // Assert: still the first radar info's answer, and still its conversion
+  ASSERT_TRUE(result.has_value());
+  EXPECT_EQ(result->defaulted_fields(), all_defaulted_except("position_z"));
+  expect_first_radar_info_conversion(adapter);
 }
 
 // ---------------------------------------------------------------------------------------------
