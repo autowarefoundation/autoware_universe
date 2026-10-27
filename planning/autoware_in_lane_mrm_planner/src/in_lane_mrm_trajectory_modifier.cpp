@@ -18,7 +18,7 @@ namespace autoware::in_lane_mrm_planner
 {
 
 void InLaneMrmTrajectoryModifier::initialize(
-  rclcpp::Node * node, const VehicleInfo & vehicle_info, const Params & params)
+  autoware::agnocast_wrapper::Node * node, const VehicleInfo & vehicle_info, const Params & params)
 {
   obstacle_stop_planner_.initialize(node, vehicle_info, params);
   road_border_stop_planner_.initialize(node, vehicle_info, params);

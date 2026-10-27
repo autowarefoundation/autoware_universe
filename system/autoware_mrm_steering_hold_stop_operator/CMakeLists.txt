@@ -10,10 +10,11 @@ ament_auto_add_library(${PROJECT_NAME}_component SHARED
   src/mrm_steering_hold_stop_operator_node.cpp
 )
 
-rclcpp_components_register_node(${PROJECT_NAME}_component
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}_component
   PLUGIN "autoware::mrm_steering_hold_stop_operator::MrmSteeringHoldStopOperator"
-  EXECUTOR "SingleThreadedExecutor"
   EXECUTABLE ${PROJECT_NAME}_node
+  ROS2_EXECUTOR SingleThreadedExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
 )
 
 if(BUILD_TESTING)
@@ -22,7 +23,6 @@ if(BUILD_TESTING)
   ament_add_ros_isolated_gmock(test_${PROJECT_NAME}
     test/test_deceleration_profile.cpp
     test/test_steering_hold_stop_logic.cpp
-    test/test_node_io.cpp
   )
 
   target_include_directories(test_${PROJECT_NAME} PRIVATE
@@ -32,6 +32,20 @@ if(BUILD_TESTING)
   target_link_libraries(test_${PROJECT_NAME}
     ${PROJECT_NAME}_component
   )
+
+  if(NOT "$ENV{ENABLE_AGNOCAST}" STREQUAL "1")
+    ament_add_ros_isolated_gmock(test_${PROJECT_NAME}_node_io
+      test/test_node_io.cpp
+    )
+
+    target_include_directories(test_${PROJECT_NAME}_node_io PRIVATE
+      ${CMAKE_CURRENT_SOURCE_DIR}/src
+    )
+
+    target_link_libraries(test_${PROJECT_NAME}_node_io
+      ${PROJECT_NAME}_component
+    )
+  endif()
 endif()
 
 ament_auto_package(INSTALL_TO_SHARE

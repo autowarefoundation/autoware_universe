@@ -66,7 +66,7 @@ public:
   /// Returns false on timeout or on a failure response, and fills `message` with the reason.
   template <typename ServiceT>
   bool call(
-    const typename rclcpp::Client<ServiceT>::SharedPtr & client,
+    const AUTOWARE_CLIENT_PTR(ServiceT) & client,
     const typename ServiceT::Request::SharedPtr & request, const char * label,
     std::string & message) const
   {
@@ -88,8 +88,7 @@ public:
   /// Same as above, with a default-constructed request.
   template <typename ServiceT>
   bool call(
-    const typename rclcpp::Client<ServiceT>::SharedPtr & client, const char * label,
-    std::string & message) const
+    const AUTOWARE_CLIENT_PTR(ServiceT) & client, const char * label, std::string & message) const
   {
     return call<ServiceT>(client, std::make_shared<typename ServiceT::Request>(), label, message);
   }
@@ -170,7 +169,7 @@ MrmResetManager::MrmResetManager(const rclcpp::NodeOptions & options)
     "~/output/reset_diag_graph", AUTOWARE_DEFAULT_SERVICES_QOS_PROFILE(),
     cli_reset_diag_graph_callback_group_);
 
-  init_timer_ = rclcpp::create_timer(
+  init_timer_ = autoware::agnocast_wrapper::create_timer(
     this, get_clock(), std::chrono::seconds(1), [this]() { advance_init_state(); });
 }
 
@@ -265,7 +264,7 @@ bool MrmResetManager::are_required_services_ready() const
 void MrmResetManager::finish_initialization()
 {
   init_timer_->cancel();
-  reset_redundancy_switcher_timer_ = rclcpp::create_timer(
+  reset_redundancy_switcher_timer_ = autoware::agnocast_wrapper::create_timer(
     this, get_clock(), std::chrono::seconds(5), [this]() { on_periodic_reset_check(); });
   apply_ready_state();
 }
@@ -331,8 +330,7 @@ void MrmResetManager::leave_initializing_phase()
 }
 
 bool MrmResetManager::set_initializing_flag(
-  const rclcpp::Client<SetBool>::SharedPtr & client, const char * label, bool initializing,
-  bool & flag)
+  const AUTOWARE_CLIENT_PTR(SetBool) & client, const char * label, bool initializing, bool & flag)
 {
   auto request = std::make_shared<SetBool::Request>();
   request->data = initializing;

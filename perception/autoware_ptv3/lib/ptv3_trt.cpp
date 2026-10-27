@@ -111,6 +111,30 @@ void PTv3TRT::setPublishFilteredPointcloud(
   publish_filtered_pointcloud_ = std::move(func);
 }
 
+std::unique_ptr<const cuda_blackboard::CudaPointCloud2> PTv3TRT::sizedCopy(
+  const cuda_blackboard::CudaPointCloud2 & staging)
+{
+  auto msg = std::make_unique<cuda_blackboard::CudaPointCloud2>();
+  msg->header = staging.header;
+  msg->height = staging.height;
+  msg->width = staging.width;
+  msg->fields = staging.fields;
+  msg->is_bigendian = staging.is_bigendian;
+  msg->point_step = staging.point_step;
+  msg->row_step = staging.row_step;
+  msg->is_dense = staging.is_dense;
+  const std::size_t num_bytes =
+    static_cast<std::size_t>(msg->height) * msg->width * msg->point_step;
+  msg->data = cuda_blackboard::make_unique<std::uint8_t[]>(std::max<std::size_t>(num_bytes, 1));
+  if (num_bytes > 0) {
+    CHECK_CUDA_ERROR(cudaMemcpyAsync(
+      msg->data.get(), staging.data.get(), num_bytes, cudaMemcpyDeviceToDevice, stream_));
+  }
+  // The publisher reads the copy on another stream.
+  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
+  return msg;
+}
+
 void PTv3TRT::allocateSegOutputMessages()
 {
   if (!config_.use_seg3d_head_) {
@@ -870,34 +894,15 @@ bool PTv3TRT::preProcess(
   });
   allocateSegOutputMessages();
 
-  clear_async(
-    num_points_per_voxel_d_.get(), static_cast<std::size_t>(config_.max_num_voxels_), stream_);
-  clear_async(grid_coord_d_.get(), static_cast<std::size_t>(config_.max_num_voxels_) * 3, stream_);
-  clear_async(
-    serialized_code_d_.get(), static_cast<std::size_t>(config_.max_num_voxels_) * 2, stream_);
-  if (should_run_seg3d) {
-    clear_async(pred_labels_d_.get(), static_cast<std::size_t>(config_.max_num_voxels_), stream_);
+  // Only reconstructed_probs under FULL reconstruction needs a per-frame clear:
+  // reconstructFullKernel leaves the probability rows of points without a valid voxel
+  // unwritten, and markFilteredKeepKernel reads every row. Every other buffer is written
+  // densely over the prefix its consumers read, so stale data past that prefix is never seen.
+  if (should_run_seg3d && config_.source_reconstruction_ == SourceReconstruction::FULL) {
     clear_async(
-      pred_probs_d_.get(),
-      static_cast<std::size_t>(config_.max_num_voxels_) * config_.segmentation_class_names_.size(),
+      reconstructed_probs_d_.get(),
+      static_cast<std::size_t>(config_.cloud_capacity_) * config_.segmentation_class_names_.size(),
       stream_);
-    if (config_.source_reconstruction_ == SourceReconstruction::PARTIAL) {
-      clear_async(
-        cropped_source_points_d_.get(),
-        static_cast<std::size_t>(config_.cloud_capacity_) * sizeof(CloudPointTypeXYZIRCAEDT),
-        stream_);
-    }
-    if (config_.source_reconstruction_ != SourceReconstruction::NONE) {
-      clear_async(
-        inverse_map_d_.get(), static_cast<std::size_t>(config_.densified_cloud_capacity_), stream_);
-      clear_async(
-        reconstructed_labels_d_.get(), static_cast<std::size_t>(config_.cloud_capacity_), stream_);
-      clear_async(
-        reconstructed_probs_d_.get(),
-        static_cast<std::size_t>(config_.cloud_capacity_) *
-          config_.segmentation_class_names_.size(),
-        stream_);
-    }
   }
 
   std::size_t num_cropped_points = 0;
@@ -1104,8 +1109,7 @@ bool PTv3TRT::postProcess(
     segmented_points_msg_ptr_->width = static_cast<std::uint32_t>(num_segmented_points);
     segmented_points_msg_ptr_->row_step =
       segmented_points_msg_ptr_->width * segmented_points_msg_ptr_->point_step;
-    publish_segmented_pointcloud_(std::move(segmented_points_msg_ptr_));
-    segmented_points_msg_ptr_ = nullptr;
+    publish_segmented_pointcloud_(sizedCopy(*segmented_points_msg_ptr_));
   }
 
   // Visualization pointcloud
@@ -1119,8 +1123,7 @@ bool PTv3TRT::postProcess(
     visualization_points_msg_ptr_->width = static_cast<std::uint32_t>(num_visualization_points);
     visualization_points_msg_ptr_->row_step =
       visualization_points_msg_ptr_->width * visualization_points_msg_ptr_->point_step;
-    publish_visualization_pointcloud_(std::move(visualization_points_msg_ptr_));
-    visualization_points_msg_ptr_ = nullptr;
+    publish_visualization_pointcloud_(sizedCopy(*visualization_points_msg_ptr_));
   }
 
   if (should_publish_filtered_pointcloud) {
@@ -1134,8 +1137,7 @@ bool PTv3TRT::postProcess(
     filtered_points_msg_ptr_->width = num_filtered_points;
     filtered_points_msg_ptr_->row_step =
       filtered_points_msg_ptr_->width * filtered_points_msg_ptr_->point_step;
-    publish_filtered_pointcloud_(std::move(filtered_points_msg_ptr_));
-    filtered_points_msg_ptr_ = nullptr;
+    publish_filtered_pointcloud_(sizedCopy(*filtered_points_msg_ptr_));
   }
 
   allocateSegOutputMessages();

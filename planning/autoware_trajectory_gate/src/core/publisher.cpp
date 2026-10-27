@@ -17,7 +17,7 @@
 namespace autoware::trajectory_gate
 {
 
-TrajectoryPublisher::TrajectoryPublisher(rclcpp::Node & node)
+TrajectoryPublisher::TrajectoryPublisher(autoware::agnocast_wrapper::Node & node)
 {
   pub_trajectory_ = node.create_publisher<Trajectory>("~/output/trajectory", rclcpp::QoS(1));
 }

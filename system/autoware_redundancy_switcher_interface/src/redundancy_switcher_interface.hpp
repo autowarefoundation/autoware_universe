@@ -14,6 +14,7 @@
 #ifndef REDUNDANCY_SWITCHER_INTERFACE_HPP_
 #define REDUNDANCY_SWITCHER_INTERFACE_HPP_
 
+#include "autoware/agnocast_wrapper/node.hpp"
 #include "diag_adapter.hpp"
 #include "log_adapter.hpp"
 #include "pluginlib/class_loader.hpp"
@@ -30,7 +31,7 @@
 namespace autoware::redundancy_switcher
 {
 
-class RedundancySwitcherInterface : public rclcpp::Node
+class RedundancySwitcherInterface : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit RedundancySwitcherInterface(const rclcpp::NodeOptions & options = rclcpp::NodeOptions());

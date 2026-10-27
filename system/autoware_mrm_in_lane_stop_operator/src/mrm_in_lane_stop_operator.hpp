@@ -17,7 +17,8 @@
 
 #include "mode_table.hpp"
 
-#include <autoware_utils_rclcpp/polling_subscriber.hpp>
+#include <autoware/agnocast_wrapper/node.hpp>
+#include <autoware/agnocast_wrapper/polling_subscriber.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <nav_msgs/msg/odometry.hpp>
@@ -43,7 +44,7 @@ using DrivingModeMrmState = tier4_system_msgs::msg::DrivingModeMrmState;
 using DrivingModeRequest = tier4_system_msgs::msg::DrivingModeRequest;
 using Odometry = nav_msgs::msg::Odometry;
 
-class MrmInLaneStopOperator : public rclcpp::Node
+class MrmInLaneStopOperator : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit MrmInLaneStopOperator(const rclcpp::NodeOptions & node_options);
@@ -56,16 +57,15 @@ private:
   std::string relay_service_name_;
 
   rclcpp::CallbackGroup::SharedPtr relay_group_;
-  rclcpp::Client<ChangeTopicRelayControl>::SharedPtr relay_client_;
+  AUTOWARE_CLIENT_PTR(ChangeTopicRelayControl) relay_client_;
 
-  rclcpp::Publisher<InLaneStopTrigger>::SharedPtr pub_trigger_;
-  rclcpp::Publisher<DrivingModeMrmState>::SharedPtr pub_mrm_state_;
-  rclcpp::Publisher<DrivingModeFlag>::SharedPtr pub_driving_mode_active_;
-  rclcpp::Subscription<DrivingModeRequest>::SharedPtr sub_request_;
-  rclcpp::Subscription<DrivingModeInfo>::SharedPtr sub_info_;
-  std::unique_ptr<autoware_utils_rclcpp::InterProcessPollingSubscriber<Odometry>>
-    sub_kinematic_state_;
-  rclcpp::TimerBase::SharedPtr timer_;
+  AUTOWARE_PUBLISHER_PTR(InLaneStopTrigger) pub_trigger_;
+  AUTOWARE_PUBLISHER_PTR(DrivingModeMrmState) pub_mrm_state_;
+  AUTOWARE_PUBLISHER_PTR(DrivingModeFlag) pub_driving_mode_active_;
+  AUTOWARE_SUBSCRIPTION_PTR(DrivingModeRequest) sub_request_;
+  AUTOWARE_SUBSCRIPTION_PTR(DrivingModeInfo) sub_info_;
+  autoware::agnocast_wrapper::polling::PollingSubscriber<Odometry>::SharedPtr sub_kinematic_state_;
+  AUTOWARE_TIMER_PTR timer_;
 
   void on_request(DrivingModeRequest::ConstSharedPtr msg);
   void on_info(DrivingModeInfo::ConstSharedPtr msg);

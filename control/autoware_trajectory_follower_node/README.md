@@ -14,21 +14,14 @@ By default, the controller instance with the `Controller` class as follows is us
 @startuml
 package autoware_trajectory_follower_base {
 abstract class LateralControllerBase {
-longitudinal_sync_data_
 
     virtual isReady(InputData)
     virtual run(InputData)
-    sync(LongitudinalSyncData)
-    reset()
 
 }
-abstract class LongitudinalControllerBase {
-lateral_sync_data_
+abstract class LongitudinalControllerInterface {
 
-    virtual isReady(InputData)
-    virtual run(InputData)
-    sync(LateralSyncData)
-    reset()
+    virtual run(InputData, stamp, LateralSyncData)
 
 }
 
@@ -38,10 +31,8 @@ odometry
 steering
 accel
 }
-struct LongitudinalSyncData {
-is_steer_converged
-}
 struct LateralSyncData {
+is_steer_converged
 }
 }
 
@@ -59,8 +50,7 @@ run(InputData) override
 }
 package pid_longitudinal_controller {
 class PIDLongitudinalController {
-isReady(InputData) override
-run(InputData) override
+run(InputData, stamp, LateralSyncData) override
 }
 }
 
@@ -75,17 +65,14 @@ createInputData(): InputData
 
 MPCLateralController --|> LateralControllerBase
 PurePursuitLateralController --|> LateralControllerBase
-PIDLongitudinalController --|> LongitudinalControllerBase
+PIDLongitudinalController --|> LongitudinalControllerInterface
 
-LateralSyncData --> LongitudinalControllerBase
-LateralSyncData --> LateralControllerBase
-LongitudinalSyncData --> LongitudinalControllerBase
-LongitudinalSyncData --> LateralControllerBase
+LateralSyncData ..> LongitudinalControllerInterface
 InputData ..> LateralControllerBase
-InputData ..> LongitudinalControllerBase
+InputData ..> LongitudinalControllerInterface
 
 LateralControllerBase --o Controller
-LongitudinalControllerBase --o Controller
+LongitudinalControllerInterface --o Controller
 InputData ..> Controller
 @enduml
 ```
@@ -99,20 +86,21 @@ if (!input_data) {
   return;
 }
 
-// 2. check if controllers are ready
-const bool is_lat_ready = lateral_controller_->isReady(*input_data);
-const bool is_lon_ready = longitudinal_controller_->isReady(*input_data);
-if (!is_lat_ready || !is_lon_ready) {
+// 2. check if the lateral controller is ready
+if (!lateral_controller_->isReady(*input_data)) {
   return;
 }
 
 // 3. run controllers
 const auto lat_out = lateral_controller_->run(*input_data);
-const auto lon_out = longitudinal_controller_->run(*input_data);
+const auto lon_result =
+  longitudinal_controller_->run(*input_data, stamp, previous_lateral_sync_data_);
 
-// 4. sync with each other controllers
-longitudinal_controller_->sync(lat_out.sync_data);
-lateral_controller_->sync(lon_out.sync_data);
+// 4. keep the lateral result for the longitudinal controller of the next cycle
+previous_lateral_sync_data_ = lat_out.sync_data;
+if (!lon_result) {
+  return;
+}
 
 // 5. publish control command
 control_cmd_pub_->publish(out);

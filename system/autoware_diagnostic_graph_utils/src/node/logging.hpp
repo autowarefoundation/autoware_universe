@@ -49,7 +49,7 @@ private:
   bool enable_terminal_log_;
   bool ignore_dependent_error_;
 
-  DiagNode * root_node_;
+  DiagNode * root_node_{nullptr};
   std::ostringstream dump_text_;
   std::string prev_error_graph_text_;
 };

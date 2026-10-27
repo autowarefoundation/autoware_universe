@@ -13,7 +13,7 @@ jobs:
   pr_agent_job:
     needs: prevent-no-label-execution-pr-agent
     if: ${{ needs.prevent-no-label-execution-pr-agent.outputs.run == 'true' }}
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     permissions:
       issues: write
       pull-requests: write

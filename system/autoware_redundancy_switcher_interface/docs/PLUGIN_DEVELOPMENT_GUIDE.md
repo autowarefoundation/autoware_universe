@@ -64,7 +64,8 @@ public:
   virtual ~IAdapterPlugin() = default;
 
   // Called once at node startup. Set up your transport (subscribers, threads, timers).
-  virtual void initialize(rclcpp::Node* node, std::shared_ptr<EventGateway> gateway) = 0;
+  virtual void initialize(
+    autoware::agnocast_wrapper::Node* node, std::shared_ptr<EventGateway> gateway) = 0;
 
   // Called by CommandBus for every OutputCommand. Handle what you own; ignore the rest.
   virtual void execute(const OutputCommand& command) = 0;
@@ -76,6 +77,7 @@ public:
 ## 3. Minimal Implementation
 
 ```cpp
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <redundancy_switcher_interface/plugin/i_adapter_plugin.hpp>
 #include <redundancy_switcher_interface/ir/input_events.hpp>
 #include <redundancy_switcher_interface/ir/output_commands.hpp>
@@ -87,7 +89,7 @@ namespace my_package
 class MySwitcherAdapter : public autoware::redundancy_switcher::IAdapterPlugin
 {
 public:
-  void initialize(rclcpp::Node * node,
+  void initialize(autoware::agnocast_wrapper::Node * node,
                   std::shared_ptr<autoware::redundancy_switcher::EventGateway> gateway) override
   {
     using namespace autoware::redundancy_switcher;
@@ -151,12 +153,12 @@ private:
   void send_reset_to_switcher() { /* your transport */ }
   void send_self_interruption_to_switcher(bool is_main) { /* your transport */ }
 
-  rclcpp::Node * node_{nullptr};
+  autoware::agnocast_wrapper::Node * node_{nullptr};
   std::shared_ptr<autoware::redundancy_switcher::EventGateway> gateway_;
   bool is_main_ecu_{true};
   double timeout_milli_{1000.0};
   std::optional<rclcpp::Time> last_received_;
-  rclcpp::TimerBase::SharedPtr timer_;
+  AUTOWARE_TIMER_PTR timer_;
 };
 
 }  // namespace my_package
@@ -318,11 +320,15 @@ pluginlib_export_plugin_description_file(
 
 ament_auto_add_library(my_switcher_package SHARED
   src/my_switcher_adapter.cpp)
+autoware_agnocast_wrapper_setup(my_switcher_package)
 ```
+
+`autoware_agnocast_wrapper_setup()` compiles the plugin with the same `agnocast_wrapper::Node` definition as the node that loads it.
 
 ### package.xml
 
 ```xml
+<depend>autoware_agnocast_wrapper</depend>
 <depend>autoware_redundancy_switcher_interface</depend>
 <depend>pluginlib</depend>
 ```

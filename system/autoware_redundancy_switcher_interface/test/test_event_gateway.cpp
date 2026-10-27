@@ -58,7 +58,7 @@ private:
 class SpyAdapter : public IAdapterPlugin
 {
 public:
-  void initialize(rclcpp::Node *, std::shared_ptr<EventGateway>) override {}
+  void initialize(autoware::agnocast_wrapper::Node *, std::shared_ptr<EventGateway>) override {}
 
   void execute(const OutputCommand & command) override { captured_effects_.push_back(command); }
 
