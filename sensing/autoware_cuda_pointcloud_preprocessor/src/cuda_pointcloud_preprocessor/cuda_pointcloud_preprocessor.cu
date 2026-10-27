@@ -131,7 +131,7 @@ CudaPointcloudPreprocessor::CudaPointcloudPreprocessor(
     output_point_step_ = sizeof(autoware::point_types::PointXYZIRCT);
   } else {
     point_fields_ = autoware::point_types::create_fields_point_xyzirc();
-    output_point_step_ = sizeof(OutputPointType);
+    output_point_step_ = sizeof(autoware::point_types::PointXYZIRC);
   }
 
   int num_sm{};
@@ -464,8 +464,8 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::pr
     } else {
       extractPointsLaunch(
         device_transformed_points, device_ring_outlier_mask, device_indices, num_points,
-        reinterpret_cast<OutputPointType *>(output_pointcloud_ptr_->data.get()), threads_per_block_,
-        blocks_per_grid, stream_);
+        reinterpret_cast<autoware::point_types::PointXYZIRC *>(output_pointcloud_ptr_->data.get()),
+        threads_per_block_, blocks_per_grid, stream_);
     }
   }
 
