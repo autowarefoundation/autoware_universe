@@ -38,7 +38,7 @@ bool __device__ isVisibleBeyondObstacle(
   float raw_range = raw_range_int * RANGE_DISCRETIZATION_RESOLUTION;
   float raw_world_z = __uint_as_float(raw_range_and_z & 0xFFFFFFFF);
 
-  std::uint64_t obstacle_range_and_pl = raw_element[3];
+  std::uint64_t obstacle_range_and_pl = obstacle_element[3];
   std::uint32_t obstacle_range_int = obstacle_range_and_pl >> 32;
   float obstacle_range = obstacle_range_int * RANGE_DISCRETIZATION_RESOLUTION;
   float obstacle_pl = __uint_as_float(obstacle_range_and_pl & 0xFFFFFFFF);
