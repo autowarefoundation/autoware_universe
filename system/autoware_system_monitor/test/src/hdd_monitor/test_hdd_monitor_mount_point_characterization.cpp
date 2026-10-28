@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// cspell:ignore LUKS, mmcblk, superopts, btrfs
+
 // Characterization test for how HddMonitor resolves the configured mount point
 // (`disks.diskN.name`) to a block device. Pure black box: the node is loaded through its
 // component plugin, configured through parameters, and observed only through /diagnostics.
