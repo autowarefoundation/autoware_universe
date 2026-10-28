@@ -20,7 +20,7 @@
 #include "autoware/pid_longitudinal_controller/lowpass_filter.hpp"
 #include "autoware/pid_longitudinal_controller/pid.hpp"
 #include "autoware/pid_longitudinal_controller/smooth_stop.hpp"
-#include "autoware/trajectory_follower_base/longitudinal_controller_base.hpp"
+#include "autoware/trajectory_follower_base/longitudinal_controller_interface.hpp"
 #include "rclcpp/duration.hpp"
 #include "rclcpp/time.hpp"
 

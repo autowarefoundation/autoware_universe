@@ -384,6 +384,27 @@ TEST_F(RadarObjectsAdapterNodeTest, Construct_RemapParametersOmitted_Constructs)
   EXPECT_NO_THROW(std::make_shared<RadarObjectsAdapterNode>(options));
 }
 
+// A default_* value that a float cannot represent exactly reaches the output as written: the
+// parameter is read as the double it is declared as, not through a float.
+TEST_F(RadarObjectsAdapterNodeTest, Construct_DefaultParameterNotRepresentableAsFloat_ReachesOutput)
+{
+  // Arrange: no optional field declared, so every default_* parameter is used
+  DefaultParameters defaults;
+  defaults.position_z = 0.1;
+  defaults.size_x = 4.1;
+  const RadarInfo info = make_radar_info(required_fields);
+
+  // Act
+  const auto outputs =
+    run_node_and_collect_outputs(info, {make_radar_object()}, defaults.to_options());
+  ASSERT_TRUE(outputs.has_value());
+
+  // Assert
+  const auto & detected = outputs->detections.objects.at(0);
+  EXPECT_DOUBLE_EQ(detected.kinematics.pose_with_covariance.pose.position.z, 0.1);
+  EXPECT_DOUBLE_EQ(detected.shape.dimensions.x, 4.1);
+}
+
 // ---------------------------------------------------------------------------------------------
 // The radar info gate. Radar objects are converted only after a radar info message has declared
 // all of the fields the node requires; until then every radar objects message is dropped with a

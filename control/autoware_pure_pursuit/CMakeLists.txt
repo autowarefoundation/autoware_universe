@@ -5,6 +5,7 @@ find_package(autoware_cmake REQUIRED)
 autoware_package()
 
 find_package(Eigen3 REQUIRED)
+find_package(fmt REQUIRED)
 
 include_directories(
   SYSTEM
@@ -15,34 +16,29 @@ include_directories(
 ament_auto_add_library(${PROJECT_NAME}_core SHARED
   src/${PROJECT_NAME}_core/planning_utils.cpp
   src/${PROJECT_NAME}_core/${PROJECT_NAME}.cpp
-  src/${PROJECT_NAME}_core/interpolate.cpp
 )
 
 # autoware_pure_pursuit
 ament_auto_add_library(${PROJECT_NAME}_lateral_controller SHARED
   src/${PROJECT_NAME}/${PROJECT_NAME}_lateral_controller.cpp
-  src/${PROJECT_NAME}/${PROJECT_NAME}_viz.cpp
+  src/${PROJECT_NAME}/${PROJECT_NAME}_lateral_controller_node.cpp
+  src/${PROJECT_NAME}/ros_log_writer.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}_lateral_controller
   ${PROJECT_NAME}_core
 )
 
-rclcpp_components_register_node(${PROJECT_NAME}_lateral_controller
-  PLUGIN "autoware::pure_pursuit::PurePursuitLateralController"
-  EXECUTABLE ${PROJECT_NAME}_lateral_controller_exe
-)
-
 if(BUILD_TESTING)
   set(TEST_LATERAL_CONTROLLER_EXE test_pure_pursuit_lateral_controller)
   ament_add_ros_isolated_gtest(${TEST_LATERAL_CONTROLLER_EXE}
     test/test_pure_pursuit_lateral_controller.cpp
+    test/test_pure_pursuit_lateral_controller_node.cpp
   )
   target_link_libraries(${TEST_LATERAL_CONTROLLER_EXE} ${PROJECT_NAME}_lateral_controller)
   ament_target_dependencies(${TEST_LATERAL_CONTROLLER_EXE} ament_index_cpp)
 endif()
 
 ament_auto_package(INSTALL_TO_SHARE
-  launch
   config
 )

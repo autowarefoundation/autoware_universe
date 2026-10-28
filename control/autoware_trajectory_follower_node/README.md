@@ -13,18 +13,14 @@ By default, the controller instance with the `Controller` class as follows is us
 ```plantuml
 @startuml
 package autoware_trajectory_follower_base {
-abstract class LateralControllerBase {
+abstract class LateralControllerInterface {
 
-    virtual isReady(InputData)
-    virtual run(InputData)
+    virtual run(InputData, stamp)
 
 }
-abstract class LongitudinalControllerBase {
-lateral_sync_data_
+abstract class LongitudinalControllerInterface {
 
-    virtual isReady(InputData)
-    virtual run(InputData)
-    sync(LateralSyncData)
+    virtual run(InputData, stamp, LateralSyncData)
 
 }
 
@@ -33,6 +29,7 @@ trajectory
 odometry
 steering
 accel
+steering_offset
 }
 struct LateralSyncData {
 is_steer_converged
@@ -41,20 +38,17 @@ is_steer_converged
 
 package autoware_mpc_lateral_controller {
 class MPCLateralController {
-isReady(InputData) override
-run(InputData) override
+run(InputData, stamp) override
 }
 }
 package pure_pursuit {
 class PurePursuitLateralController {
-isReady(InputData) override
-run(InputData) override
+run(InputData, stamp) override
 }
 }
 package pid_longitudinal_controller {
 class PIDLongitudinalController {
-isReady(InputData) override
-run(InputData) override
+run(InputData, stamp, LateralSyncData) override
 }
 }
 
@@ -67,16 +61,16 @@ createInputData(): InputData
 }
 }
 
-MPCLateralController --|> LateralControllerBase
-PurePursuitLateralController --|> LateralControllerBase
-PIDLongitudinalController --|> LongitudinalControllerBase
+MPCLateralController --|> LateralControllerInterface
+PurePursuitLateralController --|> LateralControllerInterface
+PIDLongitudinalController --|> LongitudinalControllerInterface
 
-LateralSyncData --> LongitudinalControllerBase
-InputData ..> LateralControllerBase
-InputData ..> LongitudinalControllerBase
+LateralSyncData ..> LongitudinalControllerInterface
+InputData ..> LateralControllerInterface
+InputData ..> LongitudinalControllerInterface
 
-LateralControllerBase --o Controller
-LongitudinalControllerBase --o Controller
+LateralControllerInterface --o Controller
+LongitudinalControllerInterface --o Controller
 InputData ..> Controller
 @enduml
 ```
@@ -90,19 +84,21 @@ if (!input_data) {
   return;
 }
 
-// 2. check if controllers are ready
-const bool is_lat_ready = lateral_controller_->isReady(*input_data);
-const bool is_lon_ready = longitudinal_controller_->isReady(*input_data);
-if (!is_lat_ready || !is_lon_ready) {
+// 2. run the lateral controller
+const auto lat_result = lateral_controller_->run(*input_data, stamp);
+if (!lat_result) {
   return;
 }
 
-// 3. run controllers
-const auto lat_out = lateral_controller_->run(*input_data);
-const auto lon_out = longitudinal_controller_->run(*input_data);
+// 3. run the longitudinal controller
+const auto lon_result =
+  longitudinal_controller_->run(*input_data, stamp, previous_lateral_sync_data_);
 
-// 4. sync the lateral result to the longitudinal controller
-longitudinal_controller_->sync(lat_out.sync_data);
+// 4. keep the lateral result for the longitudinal controller of the next cycle
+previous_lateral_sync_data_ = lat_result->sync_data;
+if (!lon_result) {
+  return;
+}
 
 // 5. publish control command
 control_cmd_pub_->publish(out);

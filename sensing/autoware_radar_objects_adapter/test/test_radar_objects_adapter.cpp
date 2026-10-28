@@ -89,12 +89,12 @@ struct DefaultParameters
   [[nodiscard]] RadarObjectsAdapterParams to_params() const
   {
     RadarObjectsAdapterParams params;
-    params.default_position_z = static_cast<float>(position_z);
-    params.default_velocity_z = static_cast<float>(velocity_z);
-    params.default_acceleration_z = static_cast<float>(acceleration_z);
-    params.default_size_x = static_cast<float>(size_x);
-    params.default_size_y = static_cast<float>(size_y);
-    params.default_size_z = static_cast<float>(size_z);
+    params.default_position_z = position_z;
+    params.default_velocity_z = velocity_z;
+    params.default_acceleration_z = acceleration_z;
+    params.default_size_x = size_x;
+    params.default_size_y = size_y;
+    params.default_size_z = size_z;
     return params;
   }
 };
@@ -102,10 +102,10 @@ struct DefaultParameters
 // The six optional fields that have a parameter, with the value DefaultParameters gives each, in
 // the order update_radar_info() reports them. orientation_std and orientation_rate_std have no
 // parameter and are never reported.
-using DefaultedField = std::pair<std::string, float>;
-const std::vector<DefaultedField> all_defaulted = {{"position_z", 0.25f},     {"velocity_z", 0.5f},
-                                                   {"acceleration_z", 0.75f}, {"size_x", 5.0f},
-                                                   {"size_y", 2.0f},          {"size_z", 1.5f}};
+using DefaultedField = std::pair<std::string, double>;
+const std::vector<DefaultedField> all_defaulted = {{"position_z", 0.25},     {"velocity_z", 0.5},
+                                                   {"acceleration_z", 0.75}, {"size_x", 5.0},
+                                                   {"size_y", 2.0},          {"size_z", 1.5}};
 
 std::vector<DefaultedField> all_defaulted_except(const std::string & declared)
 {
@@ -729,6 +729,37 @@ TEST(RadarObjectsAdapter, Detections_OptionalFields_ChoiceMadePerField)
       c.read(undeclared->detections.objects.at(0), undeclared->tracks.objects.at(0)),
       c.from_parameter);
   }
+}
+
+// The parameters above are values a float represents exactly, so they cannot tell a parameter
+// that was rounded to float on the way from one that was not. These cannot be represented as
+// float: each must reach the output as written, on whichever output carries it.
+TEST(RadarObjectsAdapter, Detections_UndeclaredFields_ParameterNotRoundedToFloat)
+{
+  // Arrange
+  DefaultParameters defaults;
+  defaults.position_z = 0.1;
+  defaults.velocity_z = 0.2;
+  defaults.acceleration_z = 0.3;
+  defaults.size_x = 4.1;
+  defaults.size_y = 1.9;
+  defaults.size_z = 1.7;
+  const RadarInfo info = make_radar_info(required_fields);
+  const RadarObject radar = make_radar_object();
+
+  // Act
+  const auto outputs = run_adapter_and_collect_outputs(info, {radar}, defaults.to_params());
+  ASSERT_TRUE(outputs.has_value());
+
+  // Assert: the parameter's value as written, not its nearest float
+  const DetectedObject & detected = outputs->detections.objects.at(0);
+  const TrackedObject & tracked = outputs->tracks.objects.at(0);
+  EXPECT_DOUBLE_EQ(detected.kinematics.pose_with_covariance.pose.position.z, 0.1);
+  EXPECT_DOUBLE_EQ(detected.kinematics.twist_with_covariance.twist.linear.z, 0.2);
+  EXPECT_DOUBLE_EQ(tracked.kinematics.acceleration_with_covariance.accel.linear.z, 0.3);
+  EXPECT_DOUBLE_EQ(detected.shape.dimensions.x, 4.1);
+  EXPECT_DOUBLE_EQ(detected.shape.dimensions.y, 1.9);
+  EXPECT_DOUBLE_EQ(detected.shape.dimensions.z, 1.7);
 }
 
 // The radar's yaw angle becomes the orientation quaternion: a rotation about z alone.

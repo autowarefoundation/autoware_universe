@@ -16,6 +16,7 @@
 #define AUTOWARE__TRAJECTORY_FOLLOWER_BASE__INPUT_DATA_HPP_
 
 #include "autoware_adapi_v1_msgs/msg/operation_mode_state.hpp"
+#include "autoware_internal_debug_msgs/msg/float32_stamped.hpp"
 #include "autoware_planning_msgs/msg/trajectory.hpp"
 #include "autoware_vehicle_msgs/msg/steering_report.hpp"
 #include "geometry_msgs/msg/accel_with_covariance_stamped.hpp"
@@ -30,6 +31,7 @@ struct InputData
   autoware_vehicle_msgs::msg::SteeringReport current_steering;
   geometry_msgs::msg::AccelWithCovarianceStamped current_accel;
   autoware_adapi_v1_msgs::msg::OperationModeState current_operation_mode;
+  autoware_internal_debug_msgs::msg::Float32Stamped steering_offset;
 };
 }  // namespace autoware::motion::control::trajectory_follower
 

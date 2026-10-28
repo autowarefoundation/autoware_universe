@@ -79,13 +79,13 @@ private:
 class ConversionConfiguration
 {
 public:
-  void add_field(std::string name, float default_value);
+  void add_field(std::string name, double default_value);
 
   // The defaulted fields, in the order they were added.
-  const std::vector<std::pair<std::string, float>> & defaulted_fields() const;
+  const std::vector<std::pair<std::string, double>> & defaulted_fields() const;
 
 private:
-  std::vector<std::pair<std::string, float>> default_fields_;
+  std::vector<std::pair<std::string, double>> default_fields_;
 };
 
 // What a radar objects message converts into: the messages to publish.
@@ -106,12 +106,12 @@ public:
 // The values used for the object fields a radar does not provide.
 struct RadarObjectsAdapterParams
 {
-  float default_position_z{0.0f};
-  float default_velocity_z{0.0f};
-  float default_acceleration_z{0.0f};
-  float default_size_x{0.0f};
-  float default_size_y{0.0f};
-  float default_size_z{0.0f};
+  double default_position_z{0.0};
+  double default_velocity_z{0.0};
+  double default_acceleration_z{0.0};
+  double default_size_x{0.0};
+  double default_size_y{0.0};
+  double default_size_z{0.0};
 };
 
 // Converts radar objects into detected objects and into tracked objects. Learns which fields the
