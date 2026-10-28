@@ -87,7 +87,7 @@ PurePursuitLateralControllerConfig PurePursuitLateralControllerNode::createConfi
 tl::expected<LateralOutput, std::string> PurePursuitLateralControllerNode::run(
   const InputData & input_data, const rclcpp::Time & stamp)
 {
-  const auto result = controller_->run(input_data, stamp);
+  const auto result = controller_->runDetailed(input_data, stamp);
 
   if (result.lookahead_debug_values) {
     pub_debug_values_->publish(*result.lookahead_debug_values);
