@@ -298,12 +298,22 @@ __global__ void fillUnknownSpaceKernel(
   }
 
   if (next_raw_range_bin_index == range_bins || next_obs_range_bin_index == range_bins) {
-    // a point at or above the scan origin height (infinite projection) casts no ground shadow
-    if (!isinf(obs_world_px)) {
-      autoware::occupancy_grid_map::utils::raytrace(
-        obs_world_x, obs_world_y, obs_world_px, obs_world_py, map_origin_x, map_origin_y,
-        map_resolution_inv, num_cells_x, num_cells_y, no_information_value, costmap_tensor);
+    float shadow_end_x = obs_world_px;
+    float shadow_end_y = obs_world_py;
+    if (isinf(obs_world_px)) {
+      // a point at or above the scan origin height has no shadow end: go on away from the scan
+      // origin to a point beyond the map
+      const float dx = obs_world_x - scan_origin_x;
+      const float dy = obs_world_y - scan_origin_y;
+      const float distance = sqrt(dx * dx + dy * dy);
+      if (distance == 0.0f) return;
+      const float scale = (num_cells_x + num_cells_y) / (map_resolution_inv * distance);
+      shadow_end_x = obs_world_x + dx * scale;
+      shadow_end_y = obs_world_y + dy * scale;
     }
+    autoware::occupancy_grid_map::utils::raytrace(
+      obs_world_x, obs_world_y, shadow_end_x, shadow_end_y, map_origin_x, map_origin_y,
+      map_resolution_inv, num_cells_x, num_cells_y, no_information_value, costmap_tensor);
     return;
   }
 
