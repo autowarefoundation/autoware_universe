@@ -107,10 +107,6 @@ Controller::Controller(const rclcpp::NodeOptions & node_options)
 
   control_cmd_pub_ = create_publisher<autoware_control_msgs::msg::Control>(
     "~/output/control_cmd", rclcpp::QoS{1}.transient_local());
-  pub_processing_time_lat_ms_ =
-    create_publisher<Float64Stamped>("~/lateral/debug/processing_time_ms", 1);
-  pub_processing_time_lon_ms_ =
-    create_publisher<Float64Stamped>("~/longitudinal/debug/processing_time_ms", 1);
   debug_marker_pub_ =
     create_publisher<visualization_msgs::msg::MarkerArray>("~/output/debug_marker", rclcpp::QoS{1});
 
@@ -257,7 +253,6 @@ void Controller::callbackTimerControl()
   }
 
   // 2. run the lateral controller
-  stop_watch_.tic("lateral");
   const auto lat_result = lateral_controller_->run(*input_data, stamp);
   if (!lat_result) {
     RCLCPP_INFO_THROTTLE(
@@ -265,14 +260,11 @@ void Controller::callbackTimerControl()
       lat_result.error().c_str());
     return;
   }
-  publishProcessingTime(stop_watch_.toc("lateral"), pub_processing_time_lat_ms_);
   const auto & lat_out = *lat_result;
 
   // 3. run the longitudinal controller
-  stop_watch_.tic("longitudinal");
   const auto lon_result =
     longitudinal_controller_->run(*input_data, stamp, previous_lateral_sync_data_);
-  publishProcessingTime(stop_watch_.toc("longitudinal"), pub_processing_time_lon_ms_);
 
   // 4. keep the lateral result for the longitudinal controller of the next cycle
   previous_lateral_sync_data_ = lat_out.sync_data;
@@ -335,15 +327,6 @@ void Controller::publishDebugMarker(
   }
 
   debug_marker_pub_->publish(debug_marker_array);
-}
-
-void Controller::publishProcessingTime(
-  const double t_ms, const rclcpp::Publisher<Float64Stamped>::SharedPtr pub)
-{
-  Float64Stamped msg{};
-  msg.stamp = this->now();
-  msg.data = t_ms;
-  pub->publish(msg);
 }
 
 std::optional<ControlHorizon> Controller::mergeLatLonHorizon(

@@ -23,6 +23,7 @@
 #include <tl_expected/expected.hpp>
 
 #include "autoware_internal_debug_msgs/msg/float32_multi_array_stamped.hpp"
+#include "autoware_internal_debug_msgs/msg/float64_stamped.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
 
 #include <memory>
@@ -56,6 +57,8 @@ private:
   rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float32MultiArrayStamped>::SharedPtr
     m_pub_debug;
   rclcpp::Publisher<MarkerArray>::SharedPtr m_pub_virtual_wall_marker;
+  rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float64Stamped>::SharedPtr
+    m_pub_processing_time_ms;
 
   rclcpp::Node::OnSetParametersCallbackHandle::SharedPtr m_set_param_res;
   rcl_interfaces::msg::SetParametersResult paramCallback(

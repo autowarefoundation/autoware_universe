@@ -14,9 +14,11 @@
 
 #include "autoware/pid_longitudinal_controller/pid_longitudinal_controller_node.hpp"
 
+#include "autoware_utils/system/stop_watch.hpp"
 #include "autoware_vehicle_info_utils/vehicle_info_utils.hpp"
 
 #include <algorithm>
+#include <chrono>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -205,6 +207,16 @@ PidLongitudinalControllerConfig create_config(rclcpp::Node & node)
 
   return config;
 }
+
+void publish_processing_time(
+  const rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float64Stamped>::SharedPtr & publisher,
+  autoware_utils::StopWatch<std::chrono::milliseconds> & stop_watch, rclcpp::Clock & clock)
+{
+  autoware_internal_debug_msgs::msg::Float64Stamped processing_time;
+  processing_time.stamp = clock.now();
+  processing_time.data = stop_watch.toc();
+  publisher->publish(processing_time);
+}
 }  // namespace
 
 PidLongitudinalControllerNode::PidLongitudinalControllerNode(
@@ -225,6 +237,9 @@ PidLongitudinalControllerNode::PidLongitudinalControllerNode(
   m_pub_debug = node.create_publisher<autoware_internal_debug_msgs::msg::Float32MultiArrayStamped>(
     "~/output/longitudinal_diagnostic", rclcpp::QoS{1});
   m_pub_virtual_wall_marker = node.create_publisher<MarkerArray>("~/virtual_wall", 1);
+  m_pub_processing_time_ms =
+    node.create_publisher<autoware_internal_debug_msgs::msg::Float64Stamped>(
+      "~/longitudinal/debug/processing_time_ms", 1);
 
   // set parameter callback
   m_set_param_res = node.add_on_set_parameters_callback(
@@ -350,6 +365,8 @@ PidLongitudinalControllerNode::run(
   const trajectory_follower::InputData & input_data, const rclcpp::Time & stamp,
   const trajectory_follower::LateralSyncData & lateral_sync_data)
 {
+  autoware_utils::StopWatch<std::chrono::milliseconds> stop_watch;
+
   const auto result =
     controller_.runDetailed(input_data, stamp, lateral_sync_data.is_steer_converged);
 
@@ -357,6 +374,8 @@ PidLongitudinalControllerNode::run(
 
   emitLogs(result);
   publishMessage(result);
+
+  publish_processing_time(m_pub_processing_time_ms, stop_watch, *clock_);
 
   return result.output;
 }

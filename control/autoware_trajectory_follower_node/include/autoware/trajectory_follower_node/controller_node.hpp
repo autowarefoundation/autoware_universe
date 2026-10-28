@@ -21,7 +21,6 @@
 #include "autoware/trajectory_follower_node/visibility_control.hpp"
 #include "autoware_utils/ros/logger_level_configure.hpp"
 #include "autoware_utils/ros/polling_subscriber.hpp"
-#include "autoware_utils/system/stop_watch.hpp"
 #include "autoware_vehicle_info_utils/vehicle_info_utils.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "tf2_ros/buffer.h"
@@ -45,7 +44,6 @@
 #include "visualization_msgs/msg/marker_array.hpp"
 #include <autoware_control_msgs/msg/detail/control_horizon__struct.hpp>
 #include <autoware_internal_debug_msgs/msg/float32_stamped.hpp>
-#include <autoware_internal_debug_msgs/msg/float64_stamped.hpp>
 
 #include <boost/optional.hpp>
 
@@ -66,8 +64,6 @@ namespace trajectory_follower_node
 
 using autoware_adapi_v1_msgs::msg::OperationModeState;
 using autoware_control_msgs::msg::ControlHorizon;
-using autoware_internal_debug_msgs::msg::Float64Stamped;
-using autoware_utils::StopWatch;
 
 namespace trajectory_follower = ::autoware::motion::control::trajectory_follower;
 
@@ -117,8 +113,6 @@ private:
 
   // Publishers
   rclcpp::Publisher<autoware_control_msgs::msg::Control>::SharedPtr control_cmd_pub_;
-  rclcpp::Publisher<Float64Stamped>::SharedPtr pub_processing_time_lat_ms_;
-  rclcpp::Publisher<Float64Stamped>::SharedPtr pub_processing_time_lon_ms_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr debug_marker_pub_;
   rclcpp::Publisher<autoware_control_msgs::msg::ControlHorizon>::SharedPtr control_cmd_horizon_pub_;
 
@@ -169,10 +163,6 @@ private:
   std::unique_ptr<autoware_utils::LoggerLevelConfigure> logger_configure_;
 
   std::unique_ptr<autoware_utils::PublishedTimePublisher> published_time_publisher_;
-
-  void publishProcessingTime(
-    const double t_ms, const rclcpp::Publisher<Float64Stamped>::SharedPtr pub);
-  StopWatch<std::chrono::milliseconds> stop_watch_;
 
   static constexpr double logger_throttle_interval = 5000;
 };
