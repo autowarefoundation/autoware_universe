@@ -179,7 +179,7 @@ tl::expected<trajectory_follower::LateralOutput, std::string> MpcLateralControll
     return tl::make_unexpected("MPC is not ready to run.");
   }
 
-  const auto result = m_controller->run(input_data, stamp);
+  const auto result = m_controller->runDetailed(input_data, stamp);
 
   publish(result);
 

@@ -157,7 +157,16 @@ std::shared_ptr<QPSolverInterface> MpcLateralController::createQPSolverInterface
   return nullptr;
 }
 
-MpcLateralControllerResult MpcLateralController::run(
+tl::expected<trajectory_follower::LateralOutput, std::string> MpcLateralController::run(
+  const trajectory_follower::InputData & input_data, const rclcpp::Time & stamp)
+{
+  if (!isReady(input_data)) {
+    return tl::make_unexpected("MPC is not ready to run.");
+  }
+  return runDetailed(input_data, stamp).output;
+}
+
+MpcLateralControllerResult MpcLateralController::runDetailed(
   trajectory_follower::InputData const & input_data, const rclcpp::Time & stamp)
 {
   MpcLateralControllerResult result;
