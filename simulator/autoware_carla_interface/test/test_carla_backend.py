@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# cspell:ignore delenv
+
 """Unit tests for selecting the CARLA client library with an environment variable."""
 
 import importlib
