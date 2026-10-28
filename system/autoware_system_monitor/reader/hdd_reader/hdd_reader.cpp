@@ -552,7 +552,7 @@ int unmount_device_with_lazy(boost::archive::text_iarchive & ia, boost::archive:
 void run(const std::string & socket_path)
 {
   // Keep default permissions restrictive when creating socket inode
-  mode_t old_umask = umask(0177);
+  mode_t old_umask = umask(0117);
 
   // Create a new socket
   int sock = socket(AF_UNIX, SOCK_STREAM, 0);
