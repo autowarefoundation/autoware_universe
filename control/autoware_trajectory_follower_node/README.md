@@ -13,10 +13,9 @@ By default, the controller instance with the `Controller` class as follows is us
 ```plantuml
 @startuml
 package autoware_trajectory_follower_base {
-abstract class LateralControllerBase {
+abstract class LateralControllerInterface {
 
-    virtual isReady(InputData)
-    virtual run(InputData)
+    virtual run(InputData, stamp)
 
 }
 abstract class LongitudinalControllerInterface {
@@ -30,6 +29,7 @@ trajectory
 odometry
 steering
 accel
+steering_offset
 }
 struct LateralSyncData {
 is_steer_converged
@@ -38,14 +38,12 @@ is_steer_converged
 
 package autoware_mpc_lateral_controller {
 class MPCLateralController {
-isReady(InputData) override
-run(InputData) override
+run(InputData, stamp) override
 }
 }
 package pure_pursuit {
 class PurePursuitLateralController {
-isReady(InputData) override
-run(InputData) override
+run(InputData, stamp) override
 }
 }
 package pid_longitudinal_controller {
@@ -63,15 +61,15 @@ createInputData(): InputData
 }
 }
 
-MPCLateralController --|> LateralControllerBase
-PurePursuitLateralController --|> LateralControllerBase
+MPCLateralController --|> LateralControllerInterface
+PurePursuitLateralController --|> LateralControllerInterface
 PIDLongitudinalController --|> LongitudinalControllerInterface
 
 LateralSyncData ..> LongitudinalControllerInterface
-InputData ..> LateralControllerBase
+InputData ..> LateralControllerInterface
 InputData ..> LongitudinalControllerInterface
 
-LateralControllerBase --o Controller
+LateralControllerInterface --o Controller
 LongitudinalControllerInterface --o Controller
 InputData ..> Controller
 @enduml
@@ -86,18 +84,18 @@ if (!input_data) {
   return;
 }
 
-// 2. check if the lateral controller is ready
-if (!lateral_controller_->isReady(*input_data)) {
+// 2. run the lateral controller
+const auto lat_result = lateral_controller_->run(*input_data, stamp);
+if (!lat_result) {
   return;
 }
 
-// 3. run controllers
-const auto lat_out = lateral_controller_->run(*input_data);
+// 3. run the longitudinal controller
 const auto lon_result =
   longitudinal_controller_->run(*input_data, stamp, previous_lateral_sync_data_);
 
 // 4. keep the lateral result for the longitudinal controller of the next cycle
-previous_lateral_sync_data_ = lat_out.sync_data;
+previous_lateral_sync_data_ = lat_result->sync_data;
 if (!lon_result) {
   return;
 }

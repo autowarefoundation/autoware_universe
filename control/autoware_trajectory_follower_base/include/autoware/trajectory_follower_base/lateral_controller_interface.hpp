@@ -12,17 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__TRAJECTORY_FOLLOWER_BASE__LATERAL_CONTROLLER_BASE_HPP_
-#define AUTOWARE__TRAJECTORY_FOLLOWER_BASE__LATERAL_CONTROLLER_BASE_HPP_
+#ifndef AUTOWARE__TRAJECTORY_FOLLOWER_BASE__LATERAL_CONTROLLER_INTERFACE_HPP_
+#define AUTOWARE__TRAJECTORY_FOLLOWER_BASE__LATERAL_CONTROLLER_INTERFACE_HPP_
 
 #include "autoware/trajectory_follower_base/control_horizon.hpp"
 #include "autoware/trajectory_follower_base/input_data.hpp"
 #include "autoware/trajectory_follower_base/sync_data.hpp"
 #include "rclcpp/rclcpp.hpp"
 
+#include <tl_expected/expected.hpp>
+
 #include "autoware_control_msgs/msg/lateral.hpp"
 
-#include <boost/optional.hpp>
+#include <string>
+
 namespace autoware::motion::control::trajectory_follower
 {
 using autoware_control_msgs::msg::Lateral;
@@ -33,16 +36,14 @@ struct LateralOutput
   LateralSyncData sync_data;
 };
 
-class LateralControllerBase
+class LateralControllerInterface
 {
 public:
-  virtual ~LateralControllerBase() = default;
-  virtual bool isReady(const InputData & input_data) = 0;
-  virtual LateralOutput run(InputData const & input_data) = 0;
-
-  virtual void set_steering_offset([[maybe_unused]] double offset) {}
+  virtual ~LateralControllerInterface() = default;
+  virtual tl::expected<LateralOutput, std::string> run(
+    const InputData & input_data, const rclcpp::Time & stamp) = 0;
 };
 
 }  // namespace autoware::motion::control::trajectory_follower
 
-#endif  // AUTOWARE__TRAJECTORY_FOLLOWER_BASE__LATERAL_CONTROLLER_BASE_HPP_
+#endif  // AUTOWARE__TRAJECTORY_FOLLOWER_BASE__LATERAL_CONTROLLER_INTERFACE_HPP_

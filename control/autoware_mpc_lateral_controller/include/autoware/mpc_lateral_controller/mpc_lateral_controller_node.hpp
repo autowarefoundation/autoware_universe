@@ -17,7 +17,7 @@
 
 #include "autoware/mpc_lateral_controller/mpc_lateral_controller.hpp"
 #include "autoware/mpc_lateral_controller/ros_log_writer.hpp"
-#include "autoware/trajectory_follower_base/lateral_controller_base.hpp"
+#include "autoware/trajectory_follower_base/lateral_controller_interface.hpp"
 #include "rclcpp/rclcpp.hpp"
 
 #include <diagnostic_updater/diagnostic_updater.hpp>
@@ -41,7 +41,7 @@ using geometry_msgs::msg::PoseStamped;
 
 /// The node side of the lateral controller. It declares the parameters, builds the
 /// controller from them, publishes what a cycle produced and writes what it reported.
-class MpcLateralControllerNode : public trajectory_follower::LateralControllerBase
+class MpcLateralControllerNode : public trajectory_follower::LateralControllerInterface
 {
 public:
   /// \param node Reference to the node used only for the component and parameter initialization.
@@ -49,16 +49,12 @@ public:
     rclcpp::Node & node, std::shared_ptr<diagnostic_updater::Updater> diag_updater);
   ~MpcLateralControllerNode() = default;
 
-  void set_steering_offset(double offset) override { m_controller->set_steering_offset(offset); }
-
   /// Read the parameters the controller needs from the node, declaring them on it.
   static MpcLateralControllerConfig createConfig(rclcpp::Node & node);
 
 private:
-  bool isReady(const trajectory_follower::InputData & input_data) override;
-
-  trajectory_follower::LateralOutput run(
-    trajectory_follower::InputData const & input_data) override;
+  tl::expected<trajectory_follower::LateralOutput, std::string> run(
+    const trajectory_follower::InputData & input_data, const rclcpp::Time & stamp) override;
 
   void publish(const MpcLateralControllerResult & result);
 

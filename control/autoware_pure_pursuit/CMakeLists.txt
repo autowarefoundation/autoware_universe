@@ -33,6 +33,7 @@ if(BUILD_TESTING)
   set(TEST_LATERAL_CONTROLLER_EXE test_pure_pursuit_lateral_controller)
   ament_add_ros_isolated_gtest(${TEST_LATERAL_CONTROLLER_EXE}
     test/test_pure_pursuit_lateral_controller.cpp
+    test/test_pure_pursuit_lateral_controller_node.cpp
   )
   target_link_libraries(${TEST_LATERAL_CONTROLLER_EXE} ${PROJECT_NAME}_lateral_controller)
   ament_target_dependencies(${TEST_LATERAL_CONTROLLER_EXE} ament_index_cpp)

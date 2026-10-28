@@ -32,20 +32,21 @@
 
 #include "autoware/pure_pursuit/autoware_pure_pursuit_lateral_controller.hpp"
 #include "autoware/pure_pursuit/ros_log_writer.hpp"
-#include "autoware/trajectory_follower_base/lateral_controller_base.hpp"
+#include "autoware/trajectory_follower_base/lateral_controller_interface.hpp"
 #include "rclcpp/rclcpp.hpp"
 
 #include "autoware_internal_debug_msgs/msg/float32_multi_array_stamped.hpp"
 #include "autoware_planning_msgs/msg/trajectory.hpp"
 
 #include <memory>
+#include <string>
 
-using autoware::motion::control::trajectory_follower::LateralControllerBase;
+using autoware::motion::control::trajectory_follower::LateralControllerInterface;
 
 namespace autoware::pure_pursuit
 {
 
-class PurePursuitLateralControllerNode : public LateralControllerBase
+class PurePursuitLateralControllerNode : public LateralControllerInterface
 {
 public:
   /// \param node Reference to the node used only for the component and parameter initialization.
@@ -70,8 +71,8 @@ private:
   /**
    * @brief compute control command for path follow with a constant control period
    */
-  bool isReady([[maybe_unused]] const InputData & input_data) override;
-  LateralOutput run(const InputData & input_data) override;
+  tl::expected<LateralOutput, std::string> run(
+    const InputData & input_data, const rclcpp::Time & stamp) override;
 };
 
 }  // namespace autoware::pure_pursuit
