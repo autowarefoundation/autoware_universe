@@ -720,7 +720,9 @@ void HddMonitor::updateHddInfoList()
 
   // Receive messages from a socket
   char buf[1024] = "";
-  ret = recv(sock, buf, sizeof(buf) - 1, 0);
+  // The number of bytes received has to be kept, ret is reused by close() below
+  const int received = recv(sock, buf, sizeof(buf) - 1, 0);
+  ret = received;
   if (ret < 0) {
     connect_diag_.summary(DiagStatus::ERROR, "recv error");
     connect_diag_.add("recv", strerror(errno));
@@ -745,7 +747,9 @@ void HddMonitor::updateHddInfoList()
 
   // Restore HDD information list
   try {
-    std::istringstream iss(buf);
+    // The response is not a C string. Constructing the stream from the pointer would stop at
+    // the first NUL and cut the archive in the middle of a token.
+    std::istringstream iss(std::string(buf, received));
     boost::archive::text_iarchive ia(iss);
     ia >> hdd_info_list_;
   } catch (const std::exception & e) {
@@ -946,7 +950,9 @@ int HddMonitor::unmountDevice(std::string & device)
 
   // Receive messages from a socket
   char buf[1024] = "";
-  ret = recv(sock, buf, sizeof(buf) - 1, 0);
+  // The number of bytes received has to be kept, ret is reused by close() below
+  const int received = recv(sock, buf, sizeof(buf) - 1, 0);
+  ret = received;
   if (ret < 0) {
     RCLCPP_ERROR(get_logger(), "socket recv error. %s", strerror(errno));
     close(sock);
@@ -970,7 +976,8 @@ int HddMonitor::unmountDevice(std::string & device)
 
   // Restore responses
   try {
-    std::istringstream iss(buf);
+    // See updateHddInfoList() for why the stream is not constructed from the pointer
+    std::istringstream iss(std::string(buf, received));
     boost::archive::text_iarchive ia(iss);
     ia >> responses;
   } catch (const std::exception & e) {
