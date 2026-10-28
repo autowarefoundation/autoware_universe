@@ -20,9 +20,10 @@ import math
 import re
 import threading
 
-import carla
 from numpy import random
 from six import iteritems
+
+from ..carla_backend import carla
 
 
 def calculate_velocity(actor):
