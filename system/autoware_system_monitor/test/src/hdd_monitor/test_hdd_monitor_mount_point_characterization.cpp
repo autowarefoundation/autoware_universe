@@ -15,23 +15,12 @@
 // cspell:ignore LUKS, mmcblk, superopts, btrfs
 
 // Characterization test for how HddMonitor resolves the configured mount point
-// (`disks.diskN.name`) to a block device. Pure black box: the node is loaded through its
-// component plugin, configured through parameters, and observed only through /diagnostics.
-// No production header is included and no private member is reached into.
+// (`disks.diskN.name`) to a block device. Black box: the node is loaded as a component and
+// observed only through /diagnostics.
 //
-// HOW TO READ A RUN. Each case points the monitor at a mount point discovered from
-// /proc/self/mountinfo at run time, so what actually gets checked depends on what this machine
-// has mounted. A case with nothing to run against SKIPS, and a skip means "not checked here" --
-// never "covered", and never "broken". What each case needs:
-//
-//   most cases          any device-backed partition other than "/"
-//   BindMountedDisk_*   a bind mount, or a btrfs subvolume
-//   DeviceMapperDisk_*  a mounted LUKS (or LVM) volume, so in practice a real ECU
-//
-// So a green run on a workstation says nothing at all about the LUKS path -- that case will
-// have skipped. Read the skip list before concluding anything about it. For the same reason
-// the partition suffix strip is only ever checked for the disk type this host happens to have,
-// NVMe or SATA, never both.
+// Each case needs a matching mount point on the machine running it and SKIPS without one,
+// printing why. A skip means "not checked here", so a green run proves nothing about a case
+// that skipped -- and the LUKS one needs a real ECU.
 
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp_components/component_manager.hpp>
