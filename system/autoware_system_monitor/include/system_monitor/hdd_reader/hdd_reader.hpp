@@ -24,8 +24,6 @@
 #include <boost/serialization/serialization.hpp>
 #include <boost/serialization/string.hpp>
 
-#include <sys/stat.h>
-
 #include <bitset>
 #include <map>
 #include <string>
@@ -189,20 +187,6 @@ inline bool validate_unmount_device_name(const std::string & part_device)
           part_device.find("/dev/mapper/") == 0 || part_device.find("/dev/dm-") == 0);
   // cspell:enable
   // clang-format on
-}
-
-/**
- * @brief check if the path refers to a block device (symbolic links are followed)
- * @param [in] path path to check
- * @return true if the path refers to a block device
- */
-inline bool is_block_device(const std::string & path)
-{
-  struct stat st{};
-  if (stat(path.c_str(), &st) != 0) {
-    return false;
-  }
-  return S_ISBLK(st.st_mode);
 }
 
 #endif  // SYSTEM_MONITOR__HDD_READER__HDD_READER_HPP_

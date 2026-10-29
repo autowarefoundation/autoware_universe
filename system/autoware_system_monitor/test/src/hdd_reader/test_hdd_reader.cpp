@@ -15,10 +15,7 @@
 #include "system_monitor/hdd_reader/hdd_reader.hpp"
 
 #include <gtest/gtest.h>
-#include <unistd.h>
 
-#include <cstdlib>
-#include <filesystem>
 #include <string>
 
 TEST(HddReaderTest, ValidDevicePath)
@@ -81,37 +78,4 @@ TEST(HddReaderTest, ContainsDirectoryTraversal)
   EXPECT_FALSE(contains_directory_traversal("/dev/mapper/name."));
   EXPECT_FALSE(contains_directory_traversal(""));
   // cspell:enable
-}
-
-TEST(HddReaderTest, NotBlockDevice)
-{
-  // Character device
-  EXPECT_FALSE(is_block_device("/dev/null"));
-  // Directory
-  EXPECT_FALSE(is_block_device("/dev"));
-  // Non-existent path
-  EXPECT_FALSE(is_block_device("/dev/this_device_does_not_exist"));
-  EXPECT_FALSE(is_block_device(""));
-
-  // Regular file
-  char file_path[] = "/tmp/test_hdd_reader_XXXXXX";
-  const int fd = mkstemp(file_path);
-  ASSERT_NE(fd, -1);
-  close(fd);
-  EXPECT_FALSE(is_block_device(file_path));
-  unlink(file_path);
-}
-
-TEST(HddReaderTest, BlockDevice)
-{
-  // Find any block device available on the test machine
-  std::error_code ec;
-  for (const auto & entry : std::filesystem::directory_iterator("/sys/class/block", ec)) {
-    const std::string dev_path = "/dev/" + entry.path().filename().string();
-    if (std::filesystem::is_block_file(dev_path, ec)) {
-      EXPECT_TRUE(is_block_device(dev_path));
-      return;
-    }
-  }
-  GTEST_SKIP() << "No block device found on this machine";
 }

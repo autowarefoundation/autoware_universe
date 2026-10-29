@@ -521,13 +521,6 @@ int unmount_device_with_lazy(boost::archive::text_iarchive & ia, boost::archive:
       continue;
     }
 
-    if (!is_block_device(unmount_device.part_device_)) {
-      syslog(LOG_ERR, "Not a block device. %s\n", unmount_device.part_device_.c_str());
-      ret = -1;
-      responses.push_back(ret);
-      continue;
-    }
-
     boost::process::child c(
       "/usr/bin/umount", "-l", unmount_device.part_device_.c_str(),
       boost::process::std_out > is_out, boost::process::std_err > is_err);
