@@ -20,61 +20,97 @@
 #include <cuda_runtime.h>
 
 #include <cstdint>
-#include <type_traits>
+#include <optional>
 
 namespace autoware::pointcloud_preprocessor
 {
 
-template <typename PointT>
-__global__ void transform_kernel(
-  const PointT * input_points, int num_points, TransformStruct transform,
-  std::uint32_t time_offset_ns, PointT * output_points)
-{
-  int idx = blockIdx.x * blockDim.x + threadIdx.x;
-  if (idx < num_points) {
-    float x = input_points[idx].x;
-    float y = input_points[idx].y;
-    float z = input_points[idx].z;
+using autoware::point_types::PointXYZIRC;
+using autoware::point_types::PointXYZIRCT;
 
-    output_points[idx].x =
-      transform.m11 * x + transform.m12 * y + transform.m13 * z + transform.translation_x;
-    output_points[idx].y =
-      transform.m21 * x + transform.m22 * y + transform.m23 * z + transform.translation_y;
-    output_points[idx].z =
-      transform.m31 * x + transform.m32 * y + transform.m33 * z + transform.translation_z;
-    output_points[idx].intensity = input_points[idx].intensity;
-    output_points[idx].return_type = input_points[idx].return_type;
-    output_points[idx].channel = input_points[idx].channel;
-    if constexpr (std::is_same_v<PointT, autoware::point_types::PointXYZIRCT>) {
-      output_points[idx].time_stamp = input_points[idx].time_stamp + time_offset_ns;
-    }
+namespace
+{
+
+constexpr int threads_per_block = 256;
+
+/// Writes the transformed x/y/z and the untouched i/r/c of `input` to `output`. The fields that
+/// only some point formats have (time_stamp) are the caller's job.
+template <typename PointT>
+__device__ void transform_xyzirc(
+  const PointT & input, const TransformStruct & transform, PointT & output)
+{
+  const float x = input.x;
+  const float y = input.y;
+  const float z = input.z;
+
+  output.x = transform.m11 * x + transform.m12 * y + transform.m13 * z + transform.translation_x;
+  output.y = transform.m21 * x + transform.m22 * y + transform.m23 * z + transform.translation_y;
+  output.z = transform.m31 * x + transform.m32 * y + transform.m33 * z + transform.translation_z;
+  output.intensity = input.intensity;
+  output.return_type = input.return_type;
+  output.channel = input.channel;
+}
+
+__global__ void transform_kernel(
+  const PointXYZIRC * input_points, int num_points, TransformStruct transform,
+  PointXYZIRC * output_points)
+{
+  const int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  if (idx < num_points) {
+    transform_xyzirc(input_points[idx], transform, output_points[idx]);
   }
 }
 
-template <typename PointT>
-void transform_launch(
-  const PointT * input_points, int num_points, TransformStruct transform,
-  std::uint32_t time_offset_ns, PointT * output_points, cudaStream_t & stream)
+__global__ void transform_kernel(
+  const PointXYZIRCT * input_points, int num_points, TransformStruct transform,
+  std::uint32_t time_offset_ns, PointXYZIRCT * output_points)
 {
-  // `num_points <= 0` would result in an invalid number of `blocks_per_grid`,
-  // causing a `cudaErrorInvalidConfiguration`. Exit early instead.
+  const int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  if (idx < num_points) {
+    transform_xyzirc(input_points[idx], transform, output_points[idx]);
+    output_points[idx].time_stamp = input_points[idx].time_stamp + time_offset_ns;
+  }
+}
+
+/// Returns the grid size for `num_points`, or nullopt if there is nothing to launch:
+/// `num_points <= 0` would result in an invalid `blocks_per_grid`, causing a
+/// `cudaErrorInvalidConfiguration`.
+std::optional<int> blocks_per_grid_for(int num_points)
+{
   if (num_points <= 0) {
+    return std::nullopt;
+  }
+  return (num_points + threads_per_block - 1) / threads_per_block;
+}
+
+}  // namespace
+
+void transform_launch(
+  const PointXYZIRC * input_points, int num_points, TransformStruct transform,
+  PointXYZIRC * output_points, cudaStream_t & stream)
+{
+  const auto blocks_per_grid = blocks_per_grid_for(num_points);
+  if (!blocks_per_grid) {
     return;
   }
 
-  constexpr int threads_per_block = 256;
-  const int block_per_grid = (num_points + threads_per_block - 1) / threads_per_block;
-
-  transform_kernel<<<block_per_grid, threads_per_block, 0, stream>>>(
-    input_points, num_points, transform, time_offset_ns, output_points);
+  transform_kernel<<<*blocks_per_grid, threads_per_block, 0, stream>>>(
+    input_points, num_points, transform, output_points);
   CHECK_CUDA_ERROR(cudaGetLastError());
 }
 
-template void transform_launch<autoware::point_types::PointXYZIRC>(
-  const autoware::point_types::PointXYZIRC *, int, TransformStruct, std::uint32_t,
-  autoware::point_types::PointXYZIRC *, cudaStream_t &);
-template void transform_launch<autoware::point_types::PointXYZIRCT>(
-  const autoware::point_types::PointXYZIRCT *, int, TransformStruct, std::uint32_t,
-  autoware::point_types::PointXYZIRCT *, cudaStream_t &);
+void transform_launch(
+  const PointXYZIRCT * input_points, int num_points, TransformStruct transform,
+  std::uint32_t time_offset_ns, PointXYZIRCT * output_points, cudaStream_t & stream)
+{
+  const auto blocks_per_grid = blocks_per_grid_for(num_points);
+  if (!blocks_per_grid) {
+    return;
+  }
+
+  transform_kernel<<<*blocks_per_grid, threads_per_block, 0, stream>>>(
+    input_points, num_points, transform, time_offset_ns, output_points);
+  CHECK_CUDA_ERROR(cudaGetLastError());
+}
 
 }  // namespace autoware::pointcloud_preprocessor

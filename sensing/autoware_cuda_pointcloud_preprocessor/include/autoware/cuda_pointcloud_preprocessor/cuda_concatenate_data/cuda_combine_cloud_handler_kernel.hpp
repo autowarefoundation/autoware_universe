@@ -40,13 +40,18 @@ struct TransformStruct
   float m33;
 };
 
-/// Applies `transform` to `input_points` and writes the result to `output_points`. PointT is
-/// autoware::point_types::PointXYZIRC or PointXYZIRCT; for the latter, `time_offset_ns` is added
-/// to every point's time_stamp.
-template <typename PointT>
+/// Applies `transform` to `input_points` and writes the result to `output_points`.
 void transform_launch(
-  const PointT * input_points, int num_points, TransformStruct transform,
-  std::uint32_t time_offset_ns, PointT * output_points, cudaStream_t & stream);
+  const autoware::point_types::PointXYZIRC * input_points, int num_points,
+  TransformStruct transform, autoware::point_types::PointXYZIRC * output_points,
+  cudaStream_t & stream);
+
+/// Applies `transform` to `input_points` and writes the result to `output_points`, adding
+/// `time_offset_ns` to every point's time_stamp.
+void transform_launch(
+  const autoware::point_types::PointXYZIRCT * input_points, int num_points,
+  TransformStruct transform, std::uint32_t time_offset_ns,
+  autoware::point_types::PointXYZIRCT * output_points, cudaStream_t & stream);
 
 }  // namespace autoware::pointcloud_preprocessor
 
