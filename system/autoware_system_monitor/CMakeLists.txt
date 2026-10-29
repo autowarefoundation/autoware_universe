@@ -256,6 +256,18 @@ if(BUILD_TESTING)
     COMMENT "Copying free1 dummy executable to the test directory"
   )
 
+  # HDD Monitor mount point characterization test.
+  # Black box: loads the node through its component plugin, so no production source is compiled in.
+  ament_add_ros_isolated_gtest(test_hdd_monitor_mount_point_characterization
+    test/src/hdd_monitor/test_hdd_monitor_mount_point_characterization.cpp
+  )
+
+  ament_target_dependencies(test_hdd_monitor_mount_point_characterization
+    "rclcpp"
+    "rclcpp_components"
+    "diagnostic_msgs"
+  )
+
 endif()
 
 # TODO(yunus.caliskan): Port the tests to ROS 2, robustify the tests.
