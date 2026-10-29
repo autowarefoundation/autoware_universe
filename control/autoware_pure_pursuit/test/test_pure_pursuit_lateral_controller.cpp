@@ -281,7 +281,7 @@ TEST(PurePursuitLateralControllerTest, StraightPathKeepsTheSteeringNeutral)
   PurePursuitLateralController controller(make_default_config(), no_log);
   const auto input = Input().following(straight_path()).planned_at(1.0).driving_at(1.0);
 
-  const auto output = controller.run(input, at(0.0)).output;
+  const auto output = controller.runDetailed(input, at(0.0)).output;
 
   EXPECT_NEAR(output.control_cmd.steering_tire_angle, 0.0, 1e-6);
 }
@@ -294,7 +294,7 @@ TEST(PurePursuitLateralControllerTest, LeftArcIsSteeredAtTheAngleTheRadiusRequir
   PurePursuitLateralController controller(make_default_config(), no_log);
   const auto input = Input().following(arc_path(arc_radius)).planned_at(1.0).driving_at(1.0);
 
-  const auto output = controller.run(input, at(0.0)).output;
+  const auto output = controller.runDetailed(input, at(0.0)).output;
 
   const double angle_holding_the_circle = std::atan(wheel_base / arc_radius);
   EXPECT_NEAR(
@@ -307,7 +307,7 @@ TEST(PurePursuitLateralControllerTest, RightArcIsSteeredAtTheAngleTheRadiusRequi
   PurePursuitLateralController controller(make_default_config(), no_log);
   const auto input = Input().following(arc_path(-arc_radius)).planned_at(1.0).driving_at(1.0);
 
-  const auto output = controller.run(input, at(0.0)).output;
+  const auto output = controller.runDetailed(input, at(0.0)).output;
 
   const double angle_holding_the_circle = -std::atan(wheel_base / arc_radius);
   EXPECT_NEAR(
@@ -321,7 +321,7 @@ TEST(PurePursuitLateralControllerTest, EgoLeftOfThePathIsSteeredToTheRight)
   const auto input =
     Input().following(straight_path()).planned_at(1.0).driving_at(1.0).beside_the_path(0.2);
 
-  const auto output = controller.run(input, at(0.0)).output;
+  const auto output = controller.runDetailed(input, at(0.0)).output;
 
   EXPECT_LT(output.control_cmd.steering_tire_angle, 0.0f);
 }
@@ -332,7 +332,7 @@ TEST(PurePursuitLateralControllerTest, EgoRightOfThePathIsSteeredToTheLeft)
   const auto input =
     Input().following(straight_path()).planned_at(1.0).driving_at(1.0).beside_the_path(-0.2);
 
-  const auto output = controller.run(input, at(0.0)).output;
+  const auto output = controller.runDetailed(input, at(0.0)).output;
 
   EXPECT_GT(output.control_cmd.steering_tire_angle, 0.0f);
 }
@@ -351,12 +351,12 @@ TEST(PurePursuitLateralControllerTest, LateralDistancePastTheThresholdReducesThe
   };
   PurePursuitLateralController inside(make_default_config(), no_log);
   const auto command_inside =
-    inside.run(at_distance(lateral_error_threshold - lateral_error_step), at(0.0))
+    inside.runDetailed(at_distance(lateral_error_threshold - lateral_error_step), at(0.0))
       .output.control_cmd.steering_tire_angle;
   PurePursuitLateralController outside(make_default_config(), no_log);
 
   const auto output =
-    outside.run(at_distance(lateral_error_threshold + lateral_error_step), at(0.0)).output;
+    outside.runDetailed(at_distance(lateral_error_threshold + lateral_error_step), at(0.0)).output;
 
   EXPECT_GT(output.control_cmd.steering_tire_angle, command_inside);
 }
@@ -375,10 +375,10 @@ TEST(PurePursuitLateralControllerTest, ReversePathReducesTheCommand)
   };
   PurePursuitLateralController forward(make_default_config(), no_log);
   const auto command_forward =
-    forward.run(at_planned_speed(1.0), at(0.0)).output.control_cmd.steering_tire_angle;
+    forward.runDetailed(at_planned_speed(1.0), at(0.0)).output.control_cmd.steering_tire_angle;
   PurePursuitLateralController reverse(make_default_config(), no_log);
 
-  const auto output = reverse.run(at_planned_speed(-1.0), at(0.0)).output;
+  const auto output = reverse.runDetailed(at_planned_speed(-1.0), at(0.0)).output;
 
   EXPECT_GT(output.control_cmd.steering_tire_angle, command_forward);
 }
@@ -395,7 +395,7 @@ TEST(PurePursuitLateralControllerTest, PathWithTooFewSamplesKeepsTheSteeringNeut
                        .driving_at(1.0)
                        .beside_the_path(0.2);
 
-  const auto output = controller.run(input, at(0.0)).output;
+  const auto output = controller.runDetailed(input, at(0.0)).output;
 
   EXPECT_FLOAT_EQ(output.control_cmd.steering_tire_angle, 0.0f);
 }
@@ -407,14 +407,15 @@ TEST(PurePursuitLateralControllerTest, PathBeyondTheSearchRadiusRepeatsThePrevio
 {
   PurePursuitLateralController controller(make_default_config(), no_log);
   const auto on_the_path = Input().following(arc_path(arc_radius)).planned_at(1.0).driving_at(1.0);
-  const auto previous = controller.run(on_the_path, at(first_cycle_time)).output.control_cmd;
+  const auto previous =
+    controller.runDetailed(on_the_path, at(first_cycle_time)).output.control_cmd;
   const auto far_from_the_path = Input()
                                    .following(arc_path(arc_radius))
                                    .planned_at(1.0)
                                    .driving_at(1.0)
                                    .beside_the_path(2.0 * nearest_search_radius);
 
-  const auto output = controller.run(far_from_the_path, at(second_cycle_time)).output;
+  const auto output = controller.runDetailed(far_from_the_path, at(second_cycle_time)).output;
 
   EXPECT_FLOAT_EQ(output.control_cmd.steering_tire_angle, previous.steering_tire_angle);
   EXPECT_EQ(
@@ -427,7 +428,7 @@ TEST(PurePursuitLateralControllerTest, CommandCarriesTheTimeOfTheCycle)
   PurePursuitLateralController controller(make_default_config(), no_log);
   const auto input = Input().following(straight_path()).planned_at(1.0).driving_at(1.0);
 
-  const auto output = controller.run(input, at(first_cycle_time)).output;
+  const auto output = controller.runDetailed(input, at(first_cycle_time)).output;
 
   EXPECT_EQ(rclcpp::Time(output.control_cmd.stamp).nanoseconds(), to_nanoseconds(first_cycle_time));
 }
@@ -443,7 +444,7 @@ TEST(PurePursuitLateralControllerTest, MeasuredAngleCloseToTheCommandConvergesTh
                        .driving_at(1.0)
                        .steering_at(0.5 * converged_steer_rad);
 
-  const auto output = controller.run(input, at(0.0)).output;
+  const auto output = controller.runDetailed(input, at(0.0)).output;
 
   EXPECT_TRUE(output.sync_data.is_steer_converged);
 }
@@ -457,7 +458,7 @@ TEST(PurePursuitLateralControllerTest, MeasuredAngleFarFromTheCommandHoldsTheSte
                        .driving_at(1.0)
                        .steering_at(2.0 * converged_steer_rad);
 
-  const auto output = controller.run(input, at(0.0)).output;
+  const auto output = controller.runDetailed(input, at(0.0)).output;
 
   EXPECT_FALSE(output.sync_data.is_steer_converged);
 }
@@ -470,12 +471,13 @@ TEST(PurePursuitLateralControllerTest, PathSmoothingRaisesTheCommandOnACurve)
 {
   const auto input = Input().following(arc_path(arc_radius)).planned_at(1.0).driving_at(1.0);
   PurePursuitLateralController plain(make_default_config(), no_log);
-  const auto command_plain = plain.run(input, at(0.0)).output.control_cmd.steering_tire_angle;
+  const auto command_plain =
+    plain.runDetailed(input, at(0.0)).output.control_cmd.steering_tire_angle;
   auto smoothing_config = make_default_config();
   smoothing_config.enable_path_smoothing = true;
   PurePursuitLateralController smoothing(smoothing_config, no_log);
 
-  const auto output = smoothing.run(input, at(0.0)).output;
+  const auto output = smoothing.runDetailed(input, at(0.0)).output;
 
   EXPECT_GT(output.control_cmd.steering_tire_angle, command_plain);
 }
@@ -493,7 +495,7 @@ TEST(PurePursuitLateralControllerTest, LookaheadDistanceStopsAtTheUpperLimit)
   const auto input =
     Input().following(straight_path()).planned_at(speed).driving_at(speed).beside_the_path(offset);
 
-  const auto output = controller.run(input, at(0.0)).output;
+  const auto output = controller.runDetailed(input, at(0.0)).output;
 
   // The ego stands `offset` to the left of a straight path, so the point it aims at lies
   // `offset` to its right.
@@ -515,7 +517,7 @@ TEST(PurePursuitLateralControllerTest, PredictedTrajectoryIsReturned)
   PurePursuitLateralController controller(make_default_config(), no_log);
   const InputData input = Input().following(straight_path()).planned_at(1.0).driving_at(1.0);
 
-  const auto predicted = controller.run(input, at(0.0)).predicted_trajectory;
+  const auto predicted = controller.runDetailed(input, at(0.0)).predicted_trajectory;
 
   ASSERT_TRUE(predicted);
   ASSERT_GE(predicted->points.size(), 2u);
@@ -554,7 +556,7 @@ TEST(PurePursuitLateralControllerTest, DISABLED_CurvatureOfThePathShortensTheLoo
                        .driving_at(speed)
                        .beside_the_path(-offset);
 
-  const auto output = controller.run(input, at(0.0)).output;
+  const auto output = controller.runDetailed(input, at(0.0)).output;
 
   const double d = ld_velocity_ratio * speed - ld_curvature_ratio / arc_radius;
   // The ego stands at (0, -offset) and the path circle has its centre at (0, arc_radius). The
