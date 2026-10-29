@@ -141,7 +141,7 @@ protected:
       /*publish_synchronized_pointcloud=*/false,
       /*keep_input_frame_in_synchronized_pointcloud=*/false,
       autoware::pointcloud_preprocessor::MatchingStrategyType::naive,
-      autoware::pointcloud_preprocessor::OutputPointType::XYZIRC);
+      autoware::pointcloud_preprocessor::OutputPointFormat::XYZIRC);
   }
 
   std::optional<CombineCloudHandler<CudaPointCloud2>> handler_;

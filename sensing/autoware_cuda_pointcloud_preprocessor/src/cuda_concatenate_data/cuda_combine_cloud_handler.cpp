@@ -37,10 +37,10 @@ CombineCloudHandler<cuda_blackboard::CudaPointCloud2>::CombineCloudHandler(
   const std::vector<std::string> & input_topics, std::string output_frame,
   bool is_motion_compensated, bool publish_synchronized_pointcloud,
   bool keep_input_frame_in_synchronized_pointcloud, MatchingStrategyType matching_strategy,
-  OutputPointType output_point_type)
+  OutputPointFormat output_point_format)
 : CombineCloudHandlerBase(
     input_topics, output_frame, is_motion_compensated, publish_synchronized_pointcloud,
-    keep_input_frame_in_synchronized_pointcloud, matching_strategy, output_point_type)
+    keep_input_frame_in_synchronized_pointcloud, matching_strategy, output_point_format)
 {
   for (const auto & topic : input_topics_) {
     CudaConcatStruct cuda_concat_struct;
@@ -73,7 +73,7 @@ bool CombineCloudHandler<cuda_blackboard::CudaPointCloud2>::is_input_layout_supp
   if (cloud.point_step != output_point_step_) {
     return false;
   }
-  return output_point_type_ == OutputPointType::XYZIRCT
+  return output_point_format_ == OutputPointFormat::XYZIRCT
            ? autoware::point_types::is_data_layout_compatible_with_point_xyzirct(cloud.fields)
            : autoware::point_types::is_data_layout_compatible_with_point_xyzirc(cloud.fields);
 }
@@ -82,13 +82,13 @@ void CombineCloudHandler<cuda_blackboard::CudaPointCloud2>::launch_transform(
   const std::uint8_t * input, int num_points, const TransformStruct & transform,
   std::uint32_t time_offset_ns, std::uint8_t * output, cudaStream_t & stream) const
 {
-  if (output_point_type_ == OutputPointType::XYZIRCT) {
+  if (output_point_format_ == OutputPointFormat::XYZIRCT) {
     transform_launch(
       reinterpret_cast<const PointXYZIRCT *>(input), num_points, transform, time_offset_ns,
       reinterpret_cast<PointXYZIRCT *>(output), stream);
   } else {
     transform_launch(
-      reinterpret_cast<const PointXYZIRC *>(input), num_points, transform, time_offset_ns,
+      reinterpret_cast<const PointXYZIRC *>(input), num_points, transform,
       reinterpret_cast<PointXYZIRC *>(output), stream);
   }
 }

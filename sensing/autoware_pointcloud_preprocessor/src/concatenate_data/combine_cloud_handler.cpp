@@ -87,7 +87,7 @@ void CombineCloudHandler<sensor_msgs::msg::PointCloud2>::convert_to_output_cloud
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input_cloud,
   sensor_msgs::msg::PointCloud2::UniquePtr & output_cloud, std::uint32_t time_offset_ns) const
 {
-  if (output_point_type_ == OutputPointType::XYZIRCT) {
+  if (output_point_format_ == OutputPointFormat::XYZIRCT) {
     convert_cloud<PointXYZIRCT, autoware::point_types::PointXYZIRCTGenerator>(
       input_cloud, output_cloud, time_offset_ns);
   } else {
@@ -193,7 +193,7 @@ void CombineCloudHandler<sensor_msgs::msg::PointCloud2>::initialize_concatenated
     // also keeps the output layout-compatible when every input cloud is empty and nothing is ever
     // appended.
     auto & concatenate_cloud = *result.concatenate_cloud_ptr;
-    if (output_point_type_ == OutputPointType::XYZIRCT) {
+    if (output_point_format_ == OutputPointFormat::XYZIRCT) {
       PointCloud2Modifier<PointXYZIRCT, autoware::point_types::PointXYZIRCTGenerator>
         concatenate_cloud_modifier{concatenate_cloud, output_frame_};
     } else {

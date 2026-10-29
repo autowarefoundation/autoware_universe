@@ -63,7 +63,7 @@ using autoware::pointcloud_preprocessor::ConcatenationDiagnosticsOptions;
 using autoware::pointcloud_preprocessor::ConcatenationDiagnosticsSummary;
 using autoware::pointcloud_preprocessor::IncomingCloudInfo;
 using autoware::pointcloud_preprocessor::MatchingStrategyType;
-using autoware::pointcloud_preprocessor::OutputPointType;
+using autoware::pointcloud_preprocessor::OutputPointFormat;
 using autoware::pointcloud_preprocessor::ReferenceWindow;
 using point_cloud_msg_wrapper::PointCloud2Modifier;
 using sensor_msgs::msg::PointCloud2;
@@ -232,7 +232,7 @@ int main(int argc, char ** argv)
     input_topics, output_frame, /*is_motion_compensated=*/true,
     /*publish_synchronized_pointcloud=*/false,
     /*keep_input_frame_in_synchronized_pointcloud=*/false, MatchingStrategyType::advanced,
-    OutputPointType::XYZIRC);
+    OutputPointFormat::XYZIRC);
 
   // Transforms the node would look up from tf2. Here they are handed over directly, which is what
   // makes an offline run reproducible: no TF listener, no waiting, no lookup failures.

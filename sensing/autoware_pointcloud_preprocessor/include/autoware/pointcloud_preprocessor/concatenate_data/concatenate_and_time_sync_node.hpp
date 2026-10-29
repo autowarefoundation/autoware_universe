@@ -93,7 +93,7 @@ private:
     std::string input_twist_topic_type;
     std::vector<std::string> input_topics;
     std::string output_frame;
-    OutputPointType output_point_type;
+    OutputPointFormat output_point_format;
     MatchingStrategyType matching_strategy;
   } params_;
 

@@ -43,7 +43,7 @@ namespace autoware::pointcloud_preprocessor
 
 /// Point type of the published clouds. XYZIRCT keeps each point's time_stamp, rebased onto the
 /// concatenated cloud's header stamp.
-enum class OutputPointType { XYZIRC, XYZIRCT };
+enum class OutputPointFormat { XYZIRC, XYZIRCT };
 
 enum class MotionCompensationStatus {
   kValid = 0,
@@ -79,20 +79,21 @@ public:
     const std::vector<std::string> & input_topics, std::string output_frame,
     bool is_motion_compensated, bool publish_synchronized_pointcloud,
     bool keep_input_frame_in_synchronized_pointcloud, MatchingStrategyType matching_strategy,
-    OutputPointType output_point_type)
+    OutputPointFormat output_point_format)
   : input_topics_(input_topics),
     output_frame_(output_frame),
     is_motion_compensated_(is_motion_compensated),
     publish_synchronized_pointcloud_(publish_synchronized_pointcloud),
     keep_input_frame_in_synchronized_pointcloud_(keep_input_frame_in_synchronized_pointcloud),
-    output_point_type_(output_point_type),
+    output_point_format_(output_point_format),
     output_fields_(
-      output_point_type == OutputPointType::XYZIRCT
+      output_point_format == OutputPointFormat::XYZIRCT
         ? autoware::point_types::create_fields_point_xyzirct()
         : autoware::point_types::create_fields_point_xyzirc()),
     output_point_step_(
-      output_point_type == OutputPointType::XYZIRCT ? sizeof(autoware::point_types::PointXYZIRCT)
-                                                    : sizeof(autoware::point_types::PointXYZIRC)),
+      output_point_format == OutputPointFormat::XYZIRCT
+        ? sizeof(autoware::point_types::PointXYZIRCT)
+        : sizeof(autoware::point_types::PointXYZIRC)),
     concatenation_info_manager_(matching_strategy, input_topics)
   {
   }
@@ -132,7 +133,7 @@ protected:
   bool is_motion_compensated_;
   bool publish_synchronized_pointcloud_;
   bool keep_input_frame_in_synchronized_pointcloud_;
-  OutputPointType output_point_type_;
+  OutputPointFormat output_point_format_;
   std::vector<sensor_msgs::msg::PointField> output_fields_;
   std::uint32_t output_point_step_;
   std::unordered_map<std::string, Eigen::Matrix4f> sensor_to_output_transforms_;

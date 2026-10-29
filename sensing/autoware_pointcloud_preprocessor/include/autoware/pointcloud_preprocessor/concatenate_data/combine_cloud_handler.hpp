@@ -46,10 +46,10 @@ public:
     const std::vector<std::string> & input_topics, std::string output_frame,
     bool is_motion_compensated, bool publish_synchronized_pointcloud,
     bool keep_input_frame_in_synchronized_pointcloud, MatchingStrategyType matching_strategy,
-    OutputPointType output_point_type)
+    OutputPointFormat output_point_format)
   : CombineCloudHandlerBase(
       input_topics, output_frame, is_motion_compensated, publish_synchronized_pointcloud,
-      keep_input_frame_in_synchronized_pointcloud, matching_strategy, output_point_type)
+      keep_input_frame_in_synchronized_pointcloud, matching_strategy, output_point_format)
   {
   }
 

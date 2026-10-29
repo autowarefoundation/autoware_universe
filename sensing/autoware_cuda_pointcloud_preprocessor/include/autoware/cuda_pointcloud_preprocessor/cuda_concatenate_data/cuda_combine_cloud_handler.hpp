@@ -43,7 +43,7 @@ protected:
   std::size_t max_concat_pointcloud_size_{0};
   std::mutex mutex_;
 
-  /// Dispatches transform_launch on the configured output point type.
+  /// Dispatches transform_launch on the configured output point format.
   void launch_transform(
     const std::uint8_t * input, int num_points, const TransformStruct & transform,
     std::uint32_t time_offset_ns, std::uint8_t * output, cudaStream_t & stream) const;
@@ -53,7 +53,7 @@ public:
     const std::vector<std::string> & input_topics, std::string output_frame,
     bool is_motion_compensated, bool publish_synchronized_pointcloud,
     bool keep_input_frame_in_synchronized_pointcloud, MatchingStrategyType matching_strategy,
-    OutputPointType output_point_type);
+    OutputPointFormat output_point_format);
 
   ConcatenatedCloudResult<cuda_blackboard::CudaPointCloud2> combine_pointclouds(
     std::unordered_map<

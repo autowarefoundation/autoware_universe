@@ -41,7 +41,7 @@
 
 using autoware::pointcloud_preprocessor::CloudCollector;
 using autoware::pointcloud_preprocessor::CombineCloudHandler;
-using autoware::pointcloud_preprocessor::OutputPointType;
+using autoware::pointcloud_preprocessor::OutputPointFormat;
 using autoware::pointcloud_preprocessor::PointCloud2Traits;
 using autoware::pointcloud_preprocessor::PointCloudConcatenateDataSynchronizerComponent;
 
@@ -76,12 +76,12 @@ protected:
       std::make_shared<PointCloudConcatenateDataSynchronizerComponent>(node_options);
     combine_cloud_handler_ = std::make_shared<CombineCloudHandler<sensor_msgs::msg::PointCloud2>>(
       input_topics, "base_link", true, true, true,
-      autoware::pointcloud_preprocessor::MatchingStrategyType::advanced, OutputPointType::XYZIRC);
+      autoware::pointcloud_preprocessor::MatchingStrategyType::advanced, OutputPointFormat::XYZIRC);
     combine_cloud_handler_xyzirct_ =
       std::make_shared<CombineCloudHandler<sensor_msgs::msg::PointCloud2>>(
         input_topics, "base_link", true, true, true,
         autoware::pointcloud_preprocessor::MatchingStrategyType::advanced,
-        OutputPointType::XYZIRCT);
+        OutputPointFormat::XYZIRCT);
 
     collector_ = std::make_shared<CloudCollector<PointCloud2Traits>>(
       std::dynamic_pointer_cast<PointCloudConcatenateDataSynchronizerComponent>(
