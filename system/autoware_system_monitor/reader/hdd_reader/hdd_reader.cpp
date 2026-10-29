@@ -582,18 +582,6 @@ void run(const std::string & socket_path)
     return;
   }
 
-  // Explicitly set the final permission mode. Do NOT allow other users to access the socket.
-  const mode_t socket_mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP;  // 0660
-  ret = fchmod(sock, socket_mode);
-  if (ret < 0) {
-    syslog(
-      LOG_ERR, "Failed to set the socket to be accessible by all users. %s\n", strerror(errno));
-    close(sock);
-    unlink(socket_path.c_str());
-    umask(old_umask);  // Restore the old umask
-    return;
-  }
-
   // Restore the previous umask after socket creation
   umask(old_umask);
 
