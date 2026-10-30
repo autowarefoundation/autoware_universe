@@ -87,7 +87,7 @@ ControlCmdGate::ControlCmdGate(const rclcpp::NodeOptions & options)
 
   const auto inputs = declare_parameter<std::vector<int>>("inputs");
   for (const auto & input : inputs) {
-    if (input == builtin || input == unknown) {
+    if (input == source_types::builtin || input == source_types::unknown) {
       throw std::invalid_argument("input source '" + std::to_string(input) + "' is reserved");
     }
   }
@@ -103,7 +103,7 @@ ControlCmdGate::ControlCmdGate(const rclcpp::NodeOptions & options)
 
     std::vector<std::unique_ptr<CommandSource>> sources;
     {
-      auto source = std::make_unique<BuiltinEmergency>(builtin, "builtin", *this);
+      auto source = std::make_unique<BuiltinEmergency>(source_types::builtin, "builtin", *this);
       source->set_prev_control(prev_control);
       sources.push_back(std::move(source));
     }
@@ -135,7 +135,7 @@ ControlCmdGate::ControlCmdGate(const rclcpp::NodeOptions & options)
   }
 
   // Select initial command source. Note that the select function calls on_change_source.
-  selector_->select_builtin_source(builtin);
+  selector_->select_builtin_source(source_types::builtin);
   publish_source_status();
   publish_filter_status();
 

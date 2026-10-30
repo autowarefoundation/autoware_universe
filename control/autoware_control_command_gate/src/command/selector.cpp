@@ -14,7 +14,6 @@
 
 #include "selector.hpp"
 
-#include <autoware_command_mode_types/sources.hpp>
 #include <rclcpp/logging.hpp>
 
 #include <memory>
@@ -27,8 +26,8 @@ namespace autoware::control_command_gate
 
 CommandSelector::CommandSelector(const rclcpp::Logger & logger) : logger_(logger)
 {
-  builtin_source_ = autoware::command_mode_types::sources::unknown;
-  current_source_ = autoware::command_mode_types::sources::unknown;
+  builtin_source_ = source_types::unknown;
+  current_source_ = source_types::unknown;
 }
 
 void CommandSelector::add_source(std::unique_ptr<CommandSource> && source)
