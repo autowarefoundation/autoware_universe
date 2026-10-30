@@ -135,9 +135,11 @@ void AbstractPlanningAlgorithm::setMap(const nav_msgs::msg::OccupancyGrid & cost
     is_collision_table_initialized = true;
   }
 
-  const double base2front = collision_vehicle_shape_.length - collision_vehicle_shape_.base2back;
+  const double base2front =
+    collision_vehicle_info_.vehicle_length_m - collision_vehicle_info_.rear_overhang_m;
   nb_of_margin_cells_ = std::ceil(
-    std::hypot(0.5 * collision_vehicle_shape_.width, base2front) / costmap_.info.resolution);
+    std::hypot(0.5 * collision_vehicle_info_.vehicle_width_m, base2front) /
+    costmap_.info.resolution);
 }
 
 double AbstractPlanningAlgorithm::getDistanceToObstacle(const geometry_msgs::msg::Pose & pose) const
@@ -232,13 +234,13 @@ void AbstractPlanningAlgorithm::computeCollisionIndexes(
   std::vector<IndexXY> & vertex_indexes_2d) const
 {
   IndexXYT base_index{0, 0, theta_index};
-  const VehicleShape & vehicle_shape = collision_vehicle_shape_;
+  const vehicle_info_utils::VehicleInfo & vehicle_info = collision_vehicle_info_;
 
   // Define the robot as rectangle
-  const double back = -1.0 * vehicle_shape.base2back;
-  const double front = vehicle_shape.length - vehicle_shape.base2back;
-  const double right = -1.0 * vehicle_shape.width / 2.0;
-  const double left = vehicle_shape.width / 2.0;
+  const double back = -1.0 * vehicle_info.rear_overhang_m;
+  const double front = vehicle_info.vehicle_length_m - vehicle_info.rear_overhang_m;
+  const double right = -1.0 * vehicle_info.vehicle_width_m / 2.0;
+  const double left = vehicle_info.vehicle_width_m / 2.0;
 
   const auto base_pose = index2pose(costmap_, base_index, planner_common_param_.theta_size);
   const auto base_theta = tf2::getYaw(base_pose.orientation);
@@ -326,10 +328,12 @@ bool AbstractPlanningAlgorithm::detectCollision(const IndexXYT & base_index) con
 
   double obstacle_edt = getObstacleEDT(base_index).distance;
 
+  const auto [max_dimension, min_dimension] = collision_vehicle_info_.calcMaxMinDimension();
+
   // if nearest obstacle is further than largest dimension, no collision is guaranteed
   // if nearest obstacle is closer than smallest dimension, collision is guaranteed
-  if (obstacle_edt > collision_vehicle_shape_.max_dimension) return false;
-  if (obstacle_edt < collision_vehicle_shape_.min_dimension) return true;
+  if (obstacle_edt > max_dimension) return false;
+  if (obstacle_edt < min_dimension) return true;
 
   const auto & coll_indexes_2d = coll_indexes_table_[base_index.theta];
   for (const auto & coll_index_2d : coll_indexes_2d) {

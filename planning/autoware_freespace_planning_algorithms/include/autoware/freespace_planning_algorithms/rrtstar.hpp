@@ -18,6 +18,7 @@
 #include "autoware/freespace_planning_algorithms/abstract_algorithm.hpp"
 #include "autoware/freespace_planning_algorithms/rrtstar_core.hpp"
 
+#include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <vector>
@@ -38,14 +39,15 @@ class RRTStar : public AbstractPlanningAlgorithm
 {
 public:
   RRTStar(
-    const PlannerCommonParam & planner_common_param, const VehicleShape & original_vehicle_shape,
+    const PlannerCommonParam & planner_common_param,
+    const vehicle_info_utils::VehicleInfo & original_vehicle_info,
     const RRTStarParam & rrtstar_param, const rclcpp::Clock::SharedPtr & clock);
 
   RRTStar(
-    const PlannerCommonParam & planner_common_param, const VehicleShape & original_vehicle_shape,
-    rclcpp::Node & node)
+    const PlannerCommonParam & planner_common_param,
+    const vehicle_info_utils::VehicleInfo & original_vehicle_info, rclcpp::Node & node)
   : RRTStar(
-      planner_common_param, original_vehicle_shape,
+      planner_common_param, original_vehicle_info,
       RRTStarParam{
         node.declare_parameter<bool>("rrtstar.enable_update"),
         node.declare_parameter<bool>("rrtstar.use_informed_sampling"),
