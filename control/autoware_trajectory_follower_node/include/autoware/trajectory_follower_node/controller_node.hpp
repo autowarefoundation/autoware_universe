@@ -21,28 +21,18 @@
 #include "autoware/trajectory_follower_node/visibility_control.hpp"
 #include "autoware_utils/ros/logger_level_configure.hpp"
 #include "autoware_utils/ros/polling_subscriber.hpp"
-#include "autoware_vehicle_info_utils/vehicle_info_utils.hpp"
 #include "rclcpp/rclcpp.hpp"
-#include "tf2_ros/buffer.h"
-#include "tf2_ros/transform_listener.h"
 
-#include <Eigen/Core>
-#include <Eigen/Geometry>
 #include <autoware_utils/ros/published_time_publisher.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
-#include <tf2/utils.hpp>
 
 #include "autoware_control_msgs/msg/control.hpp"
 #include "autoware_control_msgs/msg/control_horizon.hpp"
 #include "autoware_control_msgs/msg/longitudinal.hpp"
 #include "autoware_planning_msgs/msg/trajectory.hpp"
-#include "geometry_msgs/msg/accel_stamped.hpp"
 #include "geometry_msgs/msg/accel_with_covariance_stamped.hpp"
-#include "geometry_msgs/msg/pose_stamped.hpp"
 #include "nav_msgs/msg/odometry.hpp"
-#include "tf2_msgs/msg/tf_message.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
-#include <autoware_control_msgs/msg/detail/control_horizon__struct.hpp>
 #include <autoware_internal_debug_msgs/msg/float32_stamped.hpp>
 
 #include <boost/optional.hpp>
@@ -50,8 +40,6 @@
 #include <memory>
 #include <optional>
 #include <string>
-#include <utility>
-#include <vector>
 
 namespace autoware::motion::control
 {

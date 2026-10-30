@@ -19,14 +19,10 @@
 #include "autoware/pure_pursuit/autoware_pure_pursuit_lateral_controller_node.hpp"
 #include "autoware_utils/ros/marker_helper.hpp"
 
-#include <algorithm>
 #include <cstdint>
-#include <limits>
 #include <memory>
-#include <numeric>
 #include <stdexcept>
 #include <string>
-#include <utility>
 #include <vector>
 
 namespace
