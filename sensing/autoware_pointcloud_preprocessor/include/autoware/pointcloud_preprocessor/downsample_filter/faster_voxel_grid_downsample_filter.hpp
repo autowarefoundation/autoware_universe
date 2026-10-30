@@ -35,6 +35,8 @@ public:
   FasterVoxelGridDownsampleFilter();
   void set_voxel_size(float voxel_size_x, float voxel_size_y, float voxel_size_z);
   void set_field_offsets(const PointCloud2ConstPtr & input, const rclcpp::Logger & logger);
+  void set_roi_parameters(
+    float x_min, float x_max, float y_min, float y_max, bool enable_roi_exclusion);
   void filter(
     const PointCloud2ConstPtr & input, PointCloud2 & output, const TransformInfo & transform_info,
     const rclcpp::Logger & logger);
@@ -80,6 +82,13 @@ private:
   int intensity_index_;
   int intensity_offset_;
   bool offset_initialized_;
+
+  // ROI parameters
+  float roi_x_min_;
+  float roi_x_max_;
+  float roi_y_min_;
+  float roi_y_max_;
+  bool enable_roi_exclusion_;
 
   Eigen::Vector4f get_point_from_global_offset(
     const PointCloud2ConstPtr & input, size_t global_offset);
