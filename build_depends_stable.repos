@@ -1,9 +1,13 @@
 # Do not add core (core/*) dependency repositories here.
 # Core packages are provided pre-built by the CI Docker image, and their versions
 # are defined by the image tag. Adding them here would cause redundant rebuilds.
-# The only exception is core/cuda/cuda_blackboard below, because the CI images do not contain it.
+# The exceptions are the core/cuda/* repositories below, because the CPU-only CI images do not contain them.
 repositories:
   # core
+  core/cuda/autoware_cuda:
+    type: git
+    url: https://github.com/autowarefoundation/autoware_cuda.git
+    version: 1.0.0
   core/cuda/cuda_blackboard:
     type: git
     url: https://github.com/autowarefoundation/cuda_blackboard.git
