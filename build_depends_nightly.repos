@@ -3,13 +3,20 @@
 # Do not add core (core/*) dependency repositories here.
 # Core packages are provided pre-built by the CI Docker image, and their versions
 # are defined by the image tag. Adding them here would cause redundant rebuilds.
-# The only exception is core/autoware_core below, which is frequently co-developed
-# with Universe and pinned to main so unreleased changes can be tested.
+# The exceptions are core/autoware_core below, which is frequently co-developed
+# with Universe and pinned to main so unreleased changes can be tested, and the
+# temporary core/cuda/autoware_cuda entry below.
 repositories:
   # core
   core/autoware_core:
     type: git
     url: https://github.com/autowarefoundation/autoware_core.git
+    version: main
+  # TODO(xmfcx): Remove after the CI images contain autoware_cuda.
+  # https://github.com/autowarefoundation/autoware/issues/7340
+  core/cuda/autoware_cuda:
+    type: git
+    url: https://github.com/autowarefoundation/autoware_cuda.git
     version: main
   # universe
   universe/external/tier4_autoware_msgs:
