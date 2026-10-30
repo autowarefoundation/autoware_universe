@@ -168,5 +168,25 @@ struct DrivableAreaExpansionParameters
   }
 };
 
+/// @brief Convert the given strings to linestring types, ignoring the "NONE" placeholder
+/// @details A ROS parameter cannot hold an empty list since its type cannot be deduced from it, so
+/// "NONE" is used to express an empty list like in the run_out module. Dropping it here lets the
+/// checks using these types take their "no type" early return instead of querying the map for
+/// types that can never match.
+/// @param[in] type_strings type strings in format "type" or "type.subtype"
+/// @return the linestring types without the "NONE" placeholder
+inline std::vector<DrivableAreaExpansionParameters::LinestringType> to_linestring_types(
+  const std::vector<std::string> & type_strings)
+{
+  constexpr auto none = "NONE";
+  std::vector<DrivableAreaExpansionParameters::LinestringType> types;
+  for (const auto & type_string : type_strings) {
+    if (type_string != none) {
+      types.emplace_back(type_string);
+    }
+  }
+  return types;
+}
+
 }  // namespace autoware::behavior_path_planner::drivable_area_expansion
 #endif  // AUTOWARE__BEHAVIOR_PATH_PLANNER_COMMON__UTILS__DRIVABLE_AREA_EXPANSION__PARAMETERS_HPP_
