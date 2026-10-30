@@ -65,10 +65,10 @@ public:
   /**
    * @brief Test the external command converter's check_remote_topic_rate method under
    * different circumstances:
-   * @param received_data wether to simulate if the emergency heartbeat and gate mode messages have
+   * @param received_data whether to simulate if the emergency heartbeat and gate mode messages have
    * been received or not
    * @param is_external set the gate mode to Auto or External
-   * @param time_has_passed wether to sleep for a certain time to make sure the timeout period of
+   * @param time_has_passed whether to sleep for a certain time to make sure the timeout period of
    * the function has expired or not.
    */
   bool test_check_remote_topic_rate(bool received_data, bool is_auto, bool time_has_passed)
@@ -94,10 +94,10 @@ public:
   /**
    * @brief Test the external command converter's check_emergency_stop_topic_timeout method under
    * different circumstances:
-   * @param received_data wether to simulate if the emergency heartbeat and gate mode messages have
+   * @param received_data whether to simulate if the emergency heartbeat and gate mode messages have
    * been received or not
    * @param is_auto set the gate mode to Auto or External
-   * @param time_has_passed wether to sleep for a certain time to make sure the timeout period of
+   * @param time_has_passed whether to sleep for a certain time to make sure the timeout period of
    * the function has expired or not.
    */
   bool test_check_emergency_stop_topic_timeout(
