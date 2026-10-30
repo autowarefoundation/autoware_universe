@@ -234,15 +234,9 @@ BlindSpotDecision BlindSpotModule::modifyPathVelocityDetail(
     return InternalError{"failed to compute ego predicted trajectory"};
   }
 
-  const auto & first_line = (turn_direction_ == TurnDirection::Left)
-                              ? *virtual_ego_straight_path_after_turning
-                              : virtual_blind_lane_boundary_after_turning;
-  const auto & second_line = (turn_direction_ == TurnDirection::Left)
-                               ? virtual_blind_lane_boundary_after_turning
-                               : *virtual_ego_straight_path_after_turning;
-  const auto ego_passage_interval = compute_passage_time_interval(
-    ego_future_profile, planner_data.vehicle_info_.createFootprint(0.0, 0.0), first_line,
-    second_line);
+  const auto ego_passage_interval = compute_ego_passage_time_interval(
+    ego_future_profile, planner_data.vehicle_info_.createFootprint(0.0, 0.0),
+    *virtual_ego_straight_path_after_turning, virtual_blind_lane_boundary_after_turning);
   if (!ego_passage_interval) {
     return InternalError{"failed to compute ego_passage_interval"};
   }
