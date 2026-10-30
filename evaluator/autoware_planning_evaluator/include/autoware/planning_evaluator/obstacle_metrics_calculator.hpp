@@ -191,7 +191,7 @@ class ObstacleMetricsCalculator
 public:
   struct Parameters
   {
-    bool worst_only = true;
+    bool worst_only = false;
 
     // for metrics calculation
     bool use_ego_traj_vel = false;
