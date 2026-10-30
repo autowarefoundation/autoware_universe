@@ -30,13 +30,28 @@
 
 #include "autoware/pure_pursuit/autoware_pure_pursuit_lateral_controller_node.hpp"
 
+#include <autoware_utils/system/stop_watch.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 
+#include <chrono>
 #include <memory>
 #include <string>
 
 namespace autoware::pure_pursuit
 {
+namespace
+{
+void publish_processing_time(
+  const rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float64Stamped>::SharedPtr & publisher,
+  autoware_utils::StopWatch<std::chrono::milliseconds> & stop_watch, rclcpp::Clock & clock)
+{
+  autoware_internal_debug_msgs::msg::Float64Stamped processing_time;
+  processing_time.stamp = clock.now();
+  processing_time.data = stop_watch.toc();
+  publisher->publish(processing_time);
+}
+}  // namespace
+
 PurePursuitLateralControllerNode::PurePursuitLateralControllerNode(rclcpp::Node & node)
 : clock_(node.get_clock()),
   logger_(node.get_logger().get_child("lateral_controller")),
@@ -51,6 +66,10 @@ PurePursuitLateralControllerNode::PurePursuitLateralControllerNode(rclcpp::Node 
   // Publish predicted trajectory
   pub_predicted_trajectory_ = node.create_publisher<autoware_planning_msgs::msg::Trajectory>(
     "~/output/predicted_trajectory", 1);
+
+  pub_processing_time_ms_ =
+    node.create_publisher<autoware_internal_debug_msgs::msg::Float64Stamped>(
+      "~/lateral/debug/processing_time_ms", 1);
 }
 
 PurePursuitLateralControllerConfig PurePursuitLateralControllerNode::createConfig(
@@ -87,6 +106,8 @@ PurePursuitLateralControllerConfig PurePursuitLateralControllerNode::createConfi
 tl::expected<LateralOutput, std::string> PurePursuitLateralControllerNode::run(
   const InputData & input_data, const rclcpp::Time & stamp)
 {
+  autoware_utils::StopWatch<std::chrono::milliseconds> stop_watch;
+
   const auto result = controller_->runDetailed(input_data, stamp);
 
   if (result.lookahead_debug_values) {
@@ -95,6 +116,8 @@ tl::expected<LateralOutput, std::string> PurePursuitLateralControllerNode::run(
   if (result.predicted_trajectory) {
     pub_predicted_trajectory_->publish(*result.predicted_trajectory);
   }
+
+  publish_processing_time(pub_processing_time_ms_, stop_watch, *clock_);
 
   return result.output;
 }
