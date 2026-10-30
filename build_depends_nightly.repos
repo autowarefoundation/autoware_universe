@@ -12,7 +12,7 @@ repositories:
     type: git
     url: https://github.com/autowarefoundation/autoware_core.git
     version: main
-  # TODO(xmfcx): Remove after the CI images contain autoware_cuda.
+  # TODO: Remove after the CI images contain autoware_cuda.
   # https://github.com/autowarefoundation/autoware/issues/7340
   core/cuda/autoware_cuda:
     type: git
