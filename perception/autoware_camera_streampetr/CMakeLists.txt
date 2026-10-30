@@ -143,6 +143,14 @@ if(TRT_AVAIL AND CUDA_AVAIL)
     DESTINATION lib
   )
 
+  if(BUILD_TESTING)
+    ament_add_gtest(test_ego_pose_bindings
+      test/test_ego_pose_bindings.cpp
+    )
+    target_include_directories(test_ego_pose_bindings PRIVATE include)
+    ament_target_dependencies(test_ego_pose_bindings tf2_geometry_msgs)
+  endif()
+
   ament_auto_package(
     INSTALL_TO_SHARE
       launch

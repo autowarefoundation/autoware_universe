@@ -77,6 +77,8 @@ private:
   // Helper methods for step function
   bool validate_camera_sync();
   void reset_system_state();
+  // Drops the temporal memory; the next inference starts a new stream.
+  void start_new_stream();
   bool prepare_inference_data(const rclcpp::Time & stamp);
   void cleanup_on_failure();
   // One cycle's detections and timing.
@@ -111,8 +113,7 @@ private:
     const rclcpp::Time & timestamp_now,
     diagnostic_msgs::msg::DiagnosticStatus::_level_type current_level);
 
-  std::optional<std::pair<std::vector<float>, std::vector<float>>> get_ego_pose_vector(
-    const rclcpp::Time & stamp);
+  std::optional<tf2::Transform> lookup_map_to_base(const rclcpp::Time & stamp);
   std::optional<std::vector<float>> get_camera_extrinsics_vector();
 
   // Helper methods for camera extrinsics computation
@@ -146,14 +147,15 @@ private:
   tf2_ros::TransformListener tf_listener_;
   const size_t rois_number_;
 
-  geometry_msgs::msg::TransformStamped initial_transform_;
-  bool initial_transform_set_ = false;
+  // map -> base_link of the last frame the head ran on; unset at the start of a stream.
+  std::optional<tf2::Transform> previous_map_to_base_;
   std::unique_ptr<CameraDataStore> data_store_;
   const float max_camera_time_diff_;
   const int anchor_camera_id_;
   std::unique_ptr<StreamPetrNetwork> network_;
 
   // State variables for refactored step method
+  tf2::Transform current_map_to_base_;
   std::pair<std::vector<float>, std::vector<float>> current_ego_pose_;
   std::vector<float> current_extrinsics_;
   float current_prediction_timestamp_;
