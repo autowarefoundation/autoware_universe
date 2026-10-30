@@ -62,6 +62,12 @@ rclcpp_components_register_node(
         EXECUTABLE ${PROJECT_NAME}_node
 )
 
+if(BUILD_TESTING)
+  ament_add_ros_isolated_gtest(test_control_performance_analysis_core
+    test/test_control_performance_analysis_core.cpp)
+  target_link_libraries(test_control_performance_analysis_core control_performance_analysis_core)
+endif()
+
 ament_auto_package(
         INSTALL_TO_SHARE
         launch
