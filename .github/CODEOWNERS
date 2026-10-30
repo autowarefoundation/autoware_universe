@@ -1,7 +1,6 @@
 ### Automatically generated from package.xml ###
 common/autoware_boundary_departure_checker/** alqudah.mohammad@tier4.jp maxime.clement@tier4.jp zulfaqar.azmi@tier4.jp
 common/autoware_component_interface_specs_universe/** isamu.takagi@tier4.jp yukihiro.saito@tier4.jp
-common/autoware_cuda_dependency_meta/** esteve.fernandez@tier4.jp
 common/autoware_deprecated_boundary_departure_checker/** Kotakkucu@gmail.com alqudah.mohammad@tier4.jp kyoichi.sugahara@tier4.jp maxime.clement@tier4.jp zulfaqar.azmi@tier4.jp
 common/autoware_fake_test_node/** opensource@apex.ai shumpei.wakabayashi@tier4.jp tomoya.kimura@tier4.jp
 common/autoware_glog_component/** takamasa.horibe@tier4.jp
@@ -97,7 +96,6 @@ perception/autoware_simple_object_merger/** masaki.baba.2@tier4.jp taekjin.lee@t
 perception/autoware_tensorrt_bevdet/** cynthia.liu@autocore.ai yliuhb@connect.ust.hk
 perception/autoware_tensorrt_bevformer/** dhinesh.panneerselvam@multicorewareinc.com kokseang.tan@tier4.jp naveen.sathiyaseelan@multicorewareinc.com rahul.sundar@multicorewareinc.com ramaseshan.subramanian@multicorewareinc.com selventhiran@multicorewareinc.com
 perception/autoware_tensorrt_classifier/** kotaro.uetake@tier4.jp masato.saeki@tier4.jp taekjin.lee@tier4.jp yoshi.ri@tier4.jp
-perception/autoware_tensorrt_common/** amadeusz.szymko.2@tier4.jp dan.umeda@tier4.jp kenzo.lobos@tier4.jp manato.hirabayashi@tier4.jp masato.saeki@tier4.jp max.schmeller@tier4.jp yihsiang.fang@tier4.jp
 perception/autoware_tensorrt_plugins/** amadeusz.szymko.2@tier4.jp kenzo.lobos@tier4.jp kotaro.uetake@tier4.jp manato.hirabayashi@tier4.jp masato.saeki@tier4.jp max.schmeller@tier4.jp
 perception/autoware_tensorrt_yolox/** dan.umeda@tier4.jp kotaro.uetake@tier4.jp manato.hirabayashi@tier4.jp masato.saeki@tier4.jp
 perception/autoware_tracking_object_merger/** lei.gu@tier4.jp taekjin.lee@tier4.jp yoshi.ri@tier4.jp yukihiro.saito@tier4.jp
@@ -182,7 +180,6 @@ planning/sampling_based_planner/autoware_path_sampler/** maxime.clement@tier4.jp
 planning/sampling_based_planner/autoware_sampler_common/** maxime.clement@tier4.jp
 sensing/autoware_calibration_status_classifier/** amadeusz.szymko.2@tier4.jp manato.hirabayashi@tier4.jp patiphon.narksri.2@tier4.jp
 sensing/autoware_cuda_pointcloud_preprocessor/** amadeusz.szymko.2@tier4.jp david.wong@tier4.jp kenzo.lobos@tier4.jp manato.hirabayashi@tier4.jp max.schmeller@tier4.jp yihsiang.fang@tier4.jp
-sensing/autoware_cuda_utils/** amadeusz.szymko.2@tier4.jp kenzo.lobos@tier4.jp manato.hirabayashi@tier4.jp
 sensing/autoware_image_transport_decompressor/** kenzo.lobos@tier4.jp yukihiro.saito@tier4.jp
 sensing/autoware_imu_corrector/** manato.hirabayashi@tier4.jp sergioreyes.sanchez@tier4.jp taiki.yamada@tier4.jp yamato.ando@tier4.jp yoshi.ri@tier4.jp
 sensing/autoware_pcl_extensions/** amadeusz.szymko.2@tier4.jp david.wong@tier4.jp
