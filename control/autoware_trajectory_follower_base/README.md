@@ -16,12 +16,12 @@ We can implement a detailed controller by deriving the longitudinal and lateral 
 There are lateral and longitudinal base interface classes and each algorithm inherits from this class to implement.
 The interface class has the following base functions.
 
-- `isReady()`: Check if the control is ready to compute. Only the lateral controller has this function.
 - `run()`: Compute control commands and return to [Trajectory Follower Nodes](../autoware_trajectory_follower_node/README.md). This must be implemented by inherited algorithms.
-  - The longitudinal controller receives the time of the cycle and `LateralSyncData`, the output of the lateral controller in the previous cycle, as arguments.
+  - Both controllers receive `InputData` and the time of the cycle as arguments.
+  - The longitudinal controller also receives `LateralSyncData`, the output of the lateral controller in the previous cycle, as an argument.
     - `is_steer_converged`: steer angle convergence
       - allow keeping stopped until steer is converged.
-  - If the control command cannot be computed, the longitudinal controller returns the reason as a string.
+  - If the control command cannot be computed, the controller returns the reason as a string.
 
 See [the Design of Trajectory Follower Nodes](../autoware_trajectory_follower_node/README.md#Design) for how these functions work in the node.
 

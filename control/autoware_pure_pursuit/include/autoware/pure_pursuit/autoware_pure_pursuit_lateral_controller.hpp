@@ -32,7 +32,7 @@
 
 #include "autoware/pure_pursuit/autoware_pure_pursuit.hpp"
 #include "autoware/pure_pursuit/log_writer.hpp"
-#include "autoware/trajectory_follower_base/lateral_controller_base.hpp"
+#include "autoware/trajectory_follower_base/lateral_controller_interface.hpp"
 #include "rclcpp/time.hpp"
 
 #include <autoware/motion_utils/resample/resample.hpp>
@@ -48,9 +48,11 @@
 
 #include <memory>
 #include <optional>
+#include <string>
 #include <vector>
 
 using autoware::motion::control::trajectory_follower::InputData;
+using autoware::motion::control::trajectory_follower::LateralControllerInterface;
 using autoware::motion::control::trajectory_follower::LateralOutput;
 using autoware_control_msgs::msg::Lateral;
 using autoware_planning_msgs::msg::Trajectory;
@@ -96,7 +98,7 @@ struct PurePursuitLateralControllerResult
   std::optional<Trajectory> predicted_trajectory;
 };
 
-class PurePursuitLateralController
+class PurePursuitLateralController : public LateralControllerInterface
 {
 public:
   /// \param writer Where the controller writes its log. It has to outlive this object.
@@ -105,7 +107,13 @@ public:
 
   /// Compute the command of one control cycle.
   /// \param stamp Time of the cycle. The command and the lookahead debug values have this stamp.
-  PurePursuitLateralControllerResult run(const InputData & input_data, const rclcpp::Time & stamp);
+  PurePursuitLateralControllerResult runDetailed(
+    const InputData & input_data, const rclcpp::Time & stamp);
+
+  /// Compute the command of one control cycle. The debug values are dropped.
+  /// \param stamp Time of the cycle. The command has this stamp.
+  tl::expected<LateralOutput, std::string> run(
+    const InputData & input_data, const rclcpp::Time & stamp) override;
 
 private:
   const LogWriter & writer_;

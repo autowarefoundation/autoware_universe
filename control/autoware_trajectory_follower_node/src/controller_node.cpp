@@ -19,16 +19,10 @@
 #include "autoware/pure_pursuit/autoware_pure_pursuit_lateral_controller_node.hpp"
 #include "autoware_utils/ros/marker_helper.hpp"
 
-#include <autoware/trajectory_follower_base/lateral_controller_base.hpp>
-
-#include <algorithm>
 #include <cstdint>
-#include <limits>
 #include <memory>
-#include <numeric>
 #include <stdexcept>
 #include <string>
-#include <utility>
 #include <vector>
 
 namespace
@@ -109,10 +103,6 @@ Controller::Controller(const rclcpp::NodeOptions & node_options)
 
   control_cmd_pub_ = create_publisher<autoware_control_msgs::msg::Control>(
     "~/output/control_cmd", rclcpp::QoS{1}.transient_local());
-  pub_processing_time_lat_ms_ =
-    create_publisher<Float64Stamped>("~/lateral/debug/processing_time_ms", 1);
-  pub_processing_time_lon_ms_ =
-    create_publisher<Float64Stamped>("~/longitudinal/debug/processing_time_ms", 1);
   debug_marker_pub_ =
     create_publisher<visualization_msgs::msg::MarkerArray>("~/output/debug_marker", rclcpp::QoS{1});
 
@@ -120,7 +110,7 @@ Controller::Controller(const rclcpp::NodeOptions & node_options)
     create_subscription<autoware_internal_debug_msgs::msg::Float32Stamped>(
       "~/input/steering_offset_update", rclcpp::QoS{1}.transient_local(),
       [this](const autoware_internal_debug_msgs::msg::Float32Stamped::ConstSharedPtr msg) {
-        lateral_controller_->set_steering_offset(static_cast<double>(msg->data));
+        steering_offset_ = *msg;
       });
 
   if (enable_control_cmd_horizon_pub_) {
@@ -238,6 +228,7 @@ boost::optional<trajectory_follower::InputData> Controller::createInputData(rclc
   input_data.current_steering = *current_steering_ptr_;
   input_data.current_accel = *current_accel_ptr_;
   input_data.current_operation_mode = *current_operation_mode_ptr_;
+  input_data.steering_offset = steering_offset_;
 
   return input_data;
 }
@@ -257,23 +248,19 @@ void Controller::callbackTimerControl()
     return;
   }
 
-  // 2. check if the lateral controller is ready
-  if (!lateral_controller_->isReady(*input_data)) {
+  // 2. run the lateral controller
+  const auto lat_result = lateral_controller_->run(*input_data, stamp);
+  if (!lat_result) {
     RCLCPP_INFO_THROTTLE(
-      get_logger(), *get_clock(), 5000,
-      "Control is skipped since lateral controller is not ready to run.");
+      get_logger(), *get_clock(), 5000, "Control is skipped since lateral controller failed: %s",
+      lat_result.error().c_str());
     return;
   }
+  const auto & lat_out = *lat_result;
 
-  // 3. run controllers
-  stop_watch_.tic("lateral");
-  const auto lat_out = lateral_controller_->run(*input_data);
-  publishProcessingTime(stop_watch_.toc("lateral"), pub_processing_time_lat_ms_);
-
-  stop_watch_.tic("longitudinal");
+  // 3. run the longitudinal controller
   const auto lon_result =
     longitudinal_controller_->run(*input_data, stamp, previous_lateral_sync_data_);
-  publishProcessingTime(stop_watch_.toc("longitudinal"), pub_processing_time_lon_ms_);
 
   // 4. keep the lateral result for the longitudinal controller of the next cycle
   previous_lateral_sync_data_ = lat_out.sync_data;
@@ -336,15 +323,6 @@ void Controller::publishDebugMarker(
   }
 
   debug_marker_pub_->publish(debug_marker_array);
-}
-
-void Controller::publishProcessingTime(
-  const double t_ms, const rclcpp::Publisher<Float64Stamped>::SharedPtr pub)
-{
-  Float64Stamped msg{};
-  msg.stamp = this->now();
-  msg.data = t_ms;
-  pub->publish(msg);
 }
 
 std::optional<ControlHorizon> Controller::mergeLatLonHorizon(

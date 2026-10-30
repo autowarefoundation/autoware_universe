@@ -236,6 +236,16 @@ if(BUILD_TESTING)
 
   target_link_libraries(test_mem_monitor mem_monitor_lib  ${Boost_LIBRARIES} ${LIBRARIES})
 
+  ament_add_ros_isolated_gtest(test_hdd_reader
+    test/src/hdd_reader/test_hdd_reader.cpp
+  )
+
+  target_include_directories(test_hdd_reader
+    PRIVATE "include"
+  )
+
+  target_link_libraries(test_hdd_reader ${Boost_LIBRARIES} ${LIBRARIES})
+
   # helper free command to failed free command.
   add_executable(free1 test/src/mem_monitor/free1.cpp)
 
@@ -244,6 +254,18 @@ if(BUILD_TESTING)
     POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:free1> $<TARGET_FILE_DIR:test_mem_monitor>
     COMMENT "Copying free1 dummy executable to the test directory"
+  )
+
+  # HDD Monitor mount point characterization test.
+  # Black box: loads the node through its component plugin, so no production source is compiled in.
+  ament_add_ros_isolated_gtest(test_hdd_monitor_mount_point_characterization
+    test/src/hdd_monitor/test_hdd_monitor_mount_point_characterization.cpp
+  )
+
+  ament_target_dependencies(test_hdd_monitor_mount_point_characterization
+    "rclcpp"
+    "rclcpp_components"
+    "diagnostic_msgs"
   )
 
 endif()
