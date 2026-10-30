@@ -48,6 +48,32 @@ void add_markers(
   prev_nb = markers.size();
 }
 
+std::string make_elapsed_time_text(
+  const std::optional<rclcpp::Time> & detection_time, const rclcpp::Time & now)
+{
+  if (!detection_time) {
+    return "unavailable\n";
+  }
+
+  const auto detection_time_value = *detection_time;
+  return std::to_string((now - detection_time_value).seconds()) + "s\n";
+}
+
+std::string make_collision_marker_text(
+  const std::string & object_uuid, const ObjectStopDecision & decision, const rclcpp::Time & now)
+{
+  auto text = object_uuid.substr(0, 5) + "\\n";
+  if (decision.should_be_avoided()) {
+    text += "avoiding\\nlast detection = ";
+    text += make_elapsed_time_text(decision.last_stop_decision_time, now);
+    return text;
+  }
+
+  text += "first detection = ";
+  text += make_elapsed_time_text(decision.start_detection_time, now);
+  return text;
+}
+
 std::vector<visualization_msgs::msg::Marker> make_collision_markers(
   const ObjectStopDecisionMap & object_map, const std::string & ns, const double z,
   const rclcpp::Time & now)
@@ -63,16 +89,7 @@ std::vector<visualization_msgs::msg::Marker> make_collision_markers(
   marker.color = autoware_utils::create_marker_color(0.6, 0.0, 0.6, 1.0);
   for (const auto & [object_uuid, decision] : object_map) {
     marker.type = visualization_msgs::msg::Marker::TEXT_VIEW_FACING;
-    marker.text = object_uuid.substr(0, 5) + "\n";
-    if (decision.should_be_avoided()) {
-      marker.text += "avoiding\nlast detection = ";
-      marker.text += std::to_string((now - *decision.last_stop_decision_time).seconds());
-      marker.text += "s\n";
-    } else {
-      marker.text += "first detection = ";
-      marker.text += std::to_string((now - *decision.start_detection_time).seconds());
-      marker.text += "s\n";
-    }
+    marker.text = make_collision_marker_text(object_uuid, decision, now);
     marker.pose.position = decision.collision_point;
     marker.pose.position.z = z;
     markers.push_back(marker);
