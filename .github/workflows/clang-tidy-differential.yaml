@@ -54,10 +54,14 @@ jobs:
       - name: Check if clang-tidy config changed
         id: check-config-changed
         run: |
-          if git diff --name-only "origin/${{ github.base_ref }}"...HEAD | grep -q '^\.clang-tidy-ci$'; then
-            echo "config-changed=true" >> $GITHUB_OUTPUT
-          else
+          # get-modified-packages does the same setup, but it runs after this step.
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git fetch origin "${{ github.base_ref }}"
+          # A git error counts as a change, so clang-tidy checks all packages.
+          if git diff --quiet "origin/${{ github.base_ref }}"...HEAD -- .clang-tidy-ci; then
             echo "config-changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "config-changed=true" >> $GITHUB_OUTPUT
           fi
         shell: bash
 
