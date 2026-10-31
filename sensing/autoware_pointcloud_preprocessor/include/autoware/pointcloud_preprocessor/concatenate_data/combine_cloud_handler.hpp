@@ -32,6 +32,7 @@
 namespace autoware::pointcloud_preprocessor
 {
 using autoware::point_types::PointXYZIRC;
+using autoware::point_types::PointXYZIRCT;
 using point_cloud_msg_wrapper::PointCloud2Modifier;
 
 template <typename PointCloudMsgT>
@@ -44,10 +45,11 @@ public:
   CombineCloudHandler(
     const std::vector<std::string> & input_topics, std::string output_frame,
     bool is_motion_compensated, bool publish_synchronized_pointcloud,
-    bool keep_input_frame_in_synchronized_pointcloud, MatchingStrategyType matching_strategy)
+    bool keep_input_frame_in_synchronized_pointcloud, MatchingStrategyType matching_strategy,
+    OutputPointFormat output_point_format)
   : CombineCloudHandlerBase(
       input_topics, output_frame, is_motion_compensated, publish_synchronized_pointcloud,
-      keep_input_frame_in_synchronized_pointcloud, matching_strategy)
+      keep_input_frame_in_synchronized_pointcloud, matching_strategy, output_point_format)
   {
   }
 
@@ -60,6 +62,8 @@ public:
 
   void allocate_pointclouds() override {};
 
+  bool is_input_layout_supported(const sensor_msgs::msg::PointCloud2 & cloud) const override;
+
 protected:
   /// @brief TimeHash defines a custom hash function for builtin_interfaces::msg::Time by using
   /// its nanoseconds representation as the hash value.
@@ -71,9 +75,16 @@ protected:
     }
   };
 
-  static void convert_to_xyzirc_cloud(
+  /// @brief Rewrite `input_cloud` into the configured output point type. For XYZIRCT,
+  /// `time_offset_ns` is added to every point's time_stamp.
+  void convert_to_output_cloud(
     const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input_cloud,
-    sensor_msgs::msg::PointCloud2::UniquePtr & xyzirc_cloud);
+    sensor_msgs::msg::PointCloud2::UniquePtr & output_cloud, std::uint32_t time_offset_ns) const;
+
+  template <typename PointT, typename GeneratorT>
+  static void convert_cloud(
+    const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input_cloud,
+    sensor_msgs::msg::PointCloud2::UniquePtr & output_cloud, std::uint32_t time_offset_ns);
 
   /// @brief Transform `in` into `out` with a 4x4 matrix (replaces pcl_ros::transformPointCloud).
   /// Points with a non-finite coordinate are left unchanged, matching pcl_ros.
@@ -82,7 +93,7 @@ protected:
     const Eigen::Matrix4f & transform, const sensor_msgs::msg::PointCloud2 & in,
     sensor_msgs::msg::PointCloud2 & out);
 
-  /// @brief Append the points of `src` to `dst`. Both must use the PointXYZIRC layout.
+  /// @brief Append the points of `src` to `dst`. Both must use the output point layout.
   static void append_pointcloud(
     const sensor_msgs::msg::PointCloud2 & src, sensor_msgs::msg::PointCloud2 & dst);
 
@@ -101,7 +112,7 @@ private:
       topic_to_cloud_map,
     ConcatenatedCloudResult<sensor_msgs::msg::PointCloud2> & result);
 
-  /// @brief Allocate the output cloud (XYZIRC layout) and its concatenation info.
+  /// @brief Allocate the output cloud (output point layout) and its concatenation info.
   void initialize_concatenated_cloud(
     const std::unordered_map<std::string, sensor_msgs::msg::PointCloud2::ConstSharedPtr> &
       topic_to_cloud_map,

@@ -23,6 +23,7 @@
 #include "autoware/pointcloud_preprocessor/concatenate_data/collector_info.hpp"
 
 #include <autoware/cuda_utils/cuda_gtest_utils.hpp>
+#include <autoware/point_types/types.hpp>
 #include <cuda_blackboard/cuda_pointcloud2.hpp>
 #include <cuda_blackboard/cuda_unique_ptr.hpp>
 
@@ -41,9 +42,9 @@
 
 namespace
 {
+using autoware::point_types::PointXYZIRC;
 using autoware::pointcloud_preprocessor::CombineCloudHandler;
 using autoware::pointcloud_preprocessor::NaiveCollectorInfo;
-using autoware::pointcloud_preprocessor::PointTypeStruct;
 using cuda_blackboard::CudaPointCloud2;
 
 constexpr char kOutputFrame[] = "base_link";
@@ -70,7 +71,7 @@ std::vector<sensor_msgs::msg::PointField> make_xyzirc_fields()
 // Build a CudaPointCloud2 in the output frame (so no transform is needed) with its points uploaded
 // to device memory.
 CudaPointCloud2::ConstSharedPtr make_cloud(
-  const std::vector<PointTypeStruct> & points, const std::string & frame_id = kOutputFrame)
+  const std::vector<PointXYZIRC> & points, const std::string & frame_id = kOutputFrame)
 {
   auto cloud = std::make_shared<CudaPointCloud2>();
   cloud->header.frame_id = frame_id;
@@ -80,35 +81,35 @@ CudaPointCloud2::ConstSharedPtr make_cloud(
   cloud->width = static_cast<uint32_t>(points.size());
   cloud->fields = make_xyzirc_fields();
   cloud->is_bigendian = false;
-  cloud->point_step = sizeof(PointTypeStruct);
+  cloud->point_step = sizeof(PointXYZIRC);
   cloud->row_step = cloud->point_step * cloud->width;
   cloud->is_dense = true;
 
-  const std::size_t bytes = points.size() * sizeof(PointTypeStruct);
+  const std::size_t bytes = points.size() * sizeof(PointXYZIRC);
   cloud->data = cuda_blackboard::make_unique<std::uint8_t[]>(bytes);
   cudaMemcpy(cloud->data.get(), points.data(), bytes, cudaMemcpyHostToDevice);
   return cloud;
 }
 
-std::vector<PointTypeStruct> read_back(const CudaPointCloud2 & cloud)
+std::vector<PointXYZIRC> read_back(const CudaPointCloud2 & cloud)
 {
   const std::size_t num_points = static_cast<std::size_t>(cloud.width) * cloud.height;
-  std::vector<PointTypeStruct> points(num_points);
+  std::vector<PointXYZIRC> points(num_points);
   cudaMemcpy(
-    points.data(), cloud.data.get(), num_points * sizeof(PointTypeStruct), cudaMemcpyDeviceToHost);
+    points.data(), cloud.data.get(), num_points * sizeof(PointXYZIRC), cudaMemcpyDeviceToHost);
   return points;
 }
 
-PointTypeStruct point(float x, float y, float z)
+PointXYZIRC point(float x, float y, float z)
 {
-  PointTypeStruct p{};
+  PointXYZIRC p{};
   p.x = x;
   p.y = y;
   p.z = z;
   return p;
 }
 
-bool contains(const std::vector<PointTypeStruct> & points, float x, float y, float z)
+bool contains(const std::vector<PointXYZIRC> & points, float x, float y, float z)
 {
   constexpr float kTolerance = 1e-5f;
   for (const auto & p : points) {
@@ -139,7 +140,8 @@ protected:
       /*is_motion_compensated=*/false,
       /*publish_synchronized_pointcloud=*/false,
       /*keep_input_frame_in_synchronized_pointcloud=*/false,
-      autoware::pointcloud_preprocessor::MatchingStrategyType::naive);
+      autoware::pointcloud_preprocessor::MatchingStrategyType::naive,
+      autoware::pointcloud_preprocessor::OutputPointFormat::XYZIRC);
   }
 
   std::optional<CombineCloudHandler<CudaPointCloud2>> handler_;

@@ -828,6 +828,7 @@ private:
       {"input_twist_topic_type", params_.input_twist_topic_type},
       {"input_topics", input_topics_},
       {"output_frame", std::string(output_frame)},
+      {"output_point_type", "XYZIRC"},
       {"matching_strategy.type", params_.matching_strategy}};
 
     if (params_.matching_strategy == "advanced") {
