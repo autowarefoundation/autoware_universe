@@ -6,7 +6,7 @@ on:
 
 jobs:
   check-if-relevant-files-changed:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     outputs:
       run-check: ${{ steps.paths_filter.outputs.json_or_yaml }}
     steps:
@@ -22,7 +22,7 @@ jobs:
   json-schema-check:
     needs: check-if-relevant-files-changed
     if: needs.check-if-relevant-files-changed.outputs.run-check == 'true'
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -42,7 +42,7 @@ jobs:
   no-relevant-changes:
     needs: check-if-relevant-files-changed
     if: needs.check-if-relevant-files-changed.outputs.run-check == 'false'
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Dummy step
         run: echo "No relevant changes, passing check"

@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #pragma once
-#include <ament_index_cpp/get_package_share_directory.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/opencv.hpp>
 
@@ -42,33 +41,37 @@ struct ShapeImgParam
 /**
  * @brief Draw traffic light shapes on the camera view image.
  * @param image Camera view image.
+ * @param image_dir Directory holding the shape images, passed in so that this file needs no
+ * package lookup of its own.
  * @param params Shape parameters to load shape image.
  * @param size Shape image size to resize.
  * @param position Top-left position of a ROI.
  * @param color Rectangle color.
  * @param probability Classification probability.
  */
-void drawShape(
-  cv::Mat & image, const std::vector<ShapeImgParam> & params, int size, const cv::Point & position,
-  const cv::Scalar & color, float probability);
+void draw_shape(
+  cv::Mat & image, const std::string & image_dir, const std::vector<ShapeImgParam> & params,
+  int size, const cv::Point & position, const cv::Scalar & color, float probability);
 
 /**
  * @brief Load shape images and concatenate them.
+ * @param image_dir Directory holding the shape images.
  * @param params Parameters for each shape image.
  * @param size Image size to resize.
  * @param scale_factor Scale factor to resize.
  * @return If no parameter is specified returns empty Mat, otherwise returns horizontally
  * concatenated image.
  */
-cv::Mat loadShapeImage(
-  const std::vector<ShapeImgParam> & params, int size, double scale_factor = 0.3);
+cv::Mat load_shape_image(
+  const std::string & image_dir, const std::vector<ShapeImgParam> & params, int size,
+  double scale_factor = 0.3);
 
 /**
  * @brief Load parameter of circle.
  *
  * @return Parameter of circle.
  */
-inline ShapeImgParam circleImgParam()
+inline ShapeImgParam circle_img_param()
 {
   return {"circle.png", false, false};
 }
@@ -78,7 +81,7 @@ inline ShapeImgParam circleImgParam()
  *
  * @return Parameter of left-arrow.
  */
-inline ShapeImgParam leftArrowImgParam()
+inline ShapeImgParam left_arrow_img_param()
 {
   return {"left_arrow.png", false, false};
 }
@@ -88,7 +91,7 @@ inline ShapeImgParam leftArrowImgParam()
  *
  * @return Parameter of right-arrow, the image is flipped left-arrow horizontally.
  */
-inline ShapeImgParam rightArrowImgParam()
+inline ShapeImgParam right_arrow_img_param()
 {
   return {"left_arrow.png", true, false};
 }
@@ -98,7 +101,7 @@ inline ShapeImgParam rightArrowImgParam()
  *
  * @return Parameter of straight-arrow.
  */
-inline ShapeImgParam straightArrowImgParam()
+inline ShapeImgParam straight_arrow_img_param()
 {
   return {"straight_arrow.png", false, false};
 }
@@ -108,7 +111,7 @@ inline ShapeImgParam straightArrowImgParam()
  *
  * @return Parameter of down-arrow, the image is flipped straight-arrow vertically.
  */
-inline ShapeImgParam downArrowImgParam()
+inline ShapeImgParam down_arrow_img_param()
 {
   return {"straight_arrow.png", false, true};
 }
@@ -118,7 +121,7 @@ inline ShapeImgParam downArrowImgParam()
  *
  * @return Parameter of straight-left-arrow, the image is flipped down-left-arrow vertically.
  */
-inline ShapeImgParam straightLeftArrowImgParam()
+inline ShapeImgParam straight_left_arrow_img_param()
 {
   return {"down_left_arrow.png", false, true};
 }
@@ -129,7 +132,7 @@ inline ShapeImgParam straightLeftArrowImgParam()
  * @return Parameter of straight-right-arrow, the image is flipped down-left-arrow both horizontally
  * and vertically.
  */
-inline ShapeImgParam straightRightArrowImgParam()
+inline ShapeImgParam straight_right_arrow_img_param()
 {
   return {"down_left_arrow.png", true, true};
 }
@@ -139,7 +142,7 @@ inline ShapeImgParam straightRightArrowImgParam()
  *
  * @return Parameter of down-left-arrow.
  */
-inline ShapeImgParam downLeftArrowImgParam()
+inline ShapeImgParam down_left_arrow_img_param()
 {
   return {"down_left_arrow.png", false, false};
 }
@@ -149,7 +152,7 @@ inline ShapeImgParam downLeftArrowImgParam()
  *
  * @return Parameter of down-right-arrow, the image is flipped straight-arrow horizontally.
  */
-inline ShapeImgParam downRightArrowImgParam()
+inline ShapeImgParam down_right_arrow_img_param()
 {
   return {"down_left_arrow.png", true, false};
 }
@@ -159,7 +162,7 @@ inline ShapeImgParam downRightArrowImgParam()
  *
  * @return Parameter of cross-arrow.
  */
-inline ShapeImgParam crossImgParam()
+inline ShapeImgParam cross_img_param()
 {
   return {"cross.png", false, false};
 }
@@ -169,7 +172,7 @@ inline ShapeImgParam crossImgParam()
  *
  * @return Parameter of unkown shape.
  */
-inline ShapeImgParam unknownImgParam()
+inline ShapeImgParam unknown_img_param()
 {
   return {"unknown.png", false, false};
 }
@@ -177,14 +180,15 @@ inline ShapeImgParam unknownImgParam()
 /**
  * @brief Draw traffic light shapes on the camera view image.
  * @param image Camera view image.
+ * @param image_dir Directory holding the shape images.
  * @param shapes Shape names.
  * @param size Shape image size to resize.
  * @param position Top-left position of a ROI.
  * @param color Color of traffic light.
  * @param probability Classification probability.
  */
-void drawTrafficLightShape(
-  cv::Mat & image, const std::vector<std::string> & shapes, int size, const cv::Point & position,
-  const cv::Scalar & color, float probability);
+void draw_traffic_light_shape(
+  cv::Mat & image, const std::string & image_dir, const std::vector<std::string> & shapes, int size,
+  const cv::Point & position, const cv::Scalar & color, float probability);
 
 }  // namespace autoware::traffic_light::visualization

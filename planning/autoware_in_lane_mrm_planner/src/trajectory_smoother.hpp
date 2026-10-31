@@ -17,6 +17,7 @@
 
 #include "type_alias.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware/path_smoother/common_structs.hpp>
 #include <autoware/path_smoother/elastic_band.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -33,7 +34,7 @@ namespace autoware::in_lane_mrm_planner
 class TrajectorySmoother
 {
 public:
-  void initialize(rclcpp::Node * node, const Params & params);
+  void initialize(autoware::agnocast_wrapper::Node * node, const Params & params);
 
   void smooth(TrajectoryPoints & points, const geometry_msgs::msg::Pose & ego_pose);
 

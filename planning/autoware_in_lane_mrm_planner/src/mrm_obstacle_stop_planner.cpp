@@ -39,18 +39,19 @@ using obstacle_stop::PointCloud;
 }  // namespace
 
 void MrmObstacleStopPlanner::initialize(
-  rclcpp::Node * node, const VehicleInfo & vehicle_info, const Params & params)
+  autoware::agnocast_wrapper::Node * node, const VehicleInfo & vehicle_info, const Params & params)
 {
   node_ = node;
   vehicle_info_ = vehicle_info;
   params_ = params.obstacle_stop;
 
-  tf_buffer_ = std::make_unique<tf2_ros::Buffer>(node_->get_clock());
-  tf_listener_ = std::make_unique<tf2_ros::TransformListener>(*tf_buffer_);
+  tf_buffer_ = std::make_unique<autoware::agnocast_wrapper::Buffer>(node_->get_clock());
+  tf_listener_ =
+    std::make_unique<autoware::agnocast_wrapper::TransformListener>(*tf_buffer_, *node_);
 
   planning_factor_interface_ =
-    std::make_unique<autoware::planning_factor_interface::PlanningFactorInterface>(
-      node_, "in_lane_mrm_obstacle_stop_planner");
+    std::make_unique<autoware::planning_factor_interface::PlanningFactorInterfaceT<
+      autoware::agnocast_wrapper::Node>>(node_, "in_lane_mrm_obstacle_stop_planner");
 
   pointcloud_filter_ = std::make_unique<obstacle_stop::PointCloudFilter>(
     params_.pointcloud.voxel_grid_filter.x, params_.pointcloud.voxel_grid_filter.y,

@@ -24,6 +24,8 @@
 #include <boost/geometry/strategies/cartesian/buffer_point_circle.hpp>
 #include <boost/geometry/strategies/cartesian/buffer_side_straight.hpp>
 
+#include <cmath>
+
 namespace autoware::motion_velocity_planner::obstacle_velocity_limiter
 {
 
@@ -58,12 +60,24 @@ linestring_t bicycleProjectionLine(
   line.reserve(params.points_per_projection);
   line.emplace_back(origin.x, origin.y);
   const auto dt = params.duration / (params.points_per_projection - 1);
-  const auto rotation_rate = params.velocity * std::tan(steering_angle) / params.wheel_base;
+  const auto curvature = std::tan(steering_angle) / params.wheel_base;
   for (auto i = 1; i < params.points_per_projection; ++i) {
     const auto t = i * dt;
-    const auto heading = params.heading + rotation_rate * t;
-    const auto length = params.velocity * t + params.extra_length;
-    line.emplace_back(origin.x + length * std::cos(heading), origin.y + length * std::sin(heading));
+    // distance traveled along the arc and corresponding heading change
+    const auto distance = params.velocity * t;
+    const auto d_heading = curvature * distance;
+    const auto heading = params.heading + d_heading;
+    // the chord of the arc has length distance * sinc(d_heading / 2) and is oriented along the
+    // average heading
+    const auto half_d_heading = d_heading / 2.0;
+    const auto sinc =
+      std::abs(half_d_heading) < 1e-6 ? 1.0 : std::sin(half_d_heading) / half_d_heading;
+    const auto chord_length = distance * sinc;
+    const auto chord_heading = params.heading + half_d_heading;
+    // the extra length is applied along the heading reached at the end of the arc
+    line.emplace_back(
+      origin.x + chord_length * std::cos(chord_heading) + params.extra_length * std::cos(heading),
+      origin.y + chord_length * std::sin(chord_heading) + params.extra_length * std::sin(heading));
   }
   return line;
 }

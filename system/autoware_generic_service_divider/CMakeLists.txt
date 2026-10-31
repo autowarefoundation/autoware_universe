@@ -31,10 +31,11 @@ ament_auto_add_library(${PROJECT_NAME}_node_component SHARED
 )
 target_link_libraries(${PROJECT_NAME}_node_component ${PROJECT_NAME}_core)
 
-rclcpp_components_register_node(${PROJECT_NAME}_node_component
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}_node_component
   PLUGIN "generic_service_divider::GenericServiceDividerNode"
   EXECUTABLE ${PROJECT_NAME}_node
-  EXECUTOR MultiThreadedExecutor
+  ROS2_EXECUTOR MultiThreadedExecutor
+  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
 )
 
 pluginlib_export_plugin_description_file(${PROJECT_NAME} plugins.xml)

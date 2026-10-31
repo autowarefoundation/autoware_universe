@@ -77,12 +77,13 @@ public:
    * @param center_x X-coordinate of the center point.
    * @param center_y Y-coordinate of the center point.
    * @param center_z Z-coordinate of the center point.
+   * @param center_yaw Yaw of the center point [rad].
    * @param max_segments Maximum number of segments to select.
    * @return Vector of lane segment indices.
    */
   std::vector<int64_t> select_route_segment_indices(
     const LaneletRoute & route, const double center_x, const double center_y, const double center_z,
-    const int64_t max_segments) const;
+    const double center_yaw, const int64_t max_segments) const;
 
   /**
    * @brief Select lane segment indices based on distances and constraints.
@@ -117,12 +118,14 @@ public:
    * @param center_x X-coordinate of ego center.
    * @param center_y Y-coordinate of ego center.
    * @param center_z Z-coordinate of ego center.
+   * @param center_yaw Yaw of ego center [rad].
    * @param traffic_light_id_map Map of traffic light IDs to signal data.
    * @return TrafficLightGroup: cached signal if perception available, UNKNOWN element if not, or
    *         empty (traffic_light_group_id=0, elements empty) if no traffic light on route.
    */
   autoware_perception_msgs::msg::TrafficLightGroup get_first_traffic_light_on_route(
     const LaneletRoute & route, const double center_x, const double center_y, const double center_z,
+    const double center_yaw,
     const std::map<lanelet::Id, TrafficSignalStamped> & traffic_light_id_map) const;
 
   /**

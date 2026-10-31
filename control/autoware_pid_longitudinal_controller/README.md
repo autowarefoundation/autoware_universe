@@ -153,8 +153,6 @@ Set the following from the [controller_node](../autoware_trajectory_follower_nod
 Return LongitudinalOutput which contains the following to the controller node
 
 - `autoware_control_msgs/Longitudinal`: command to control the longitudinal motion of the vehicle. It contains the target velocity and target acceleration.
-- LongitudinalSyncData
-  - velocity convergence(currently not used)
 
 ### PIDController class
 

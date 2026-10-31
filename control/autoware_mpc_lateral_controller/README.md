@@ -172,6 +172,18 @@ nearest time on the trajectory was determined:
 | temporal_window_min       | lower bound of the time window used to search for the observed time      |
 | temporal_window_max       | upper bound of the time window used to search for the observed time      |
 
+The `~/output/lateral_diagnostic` topic carries the following values at the end of its array.
+The first four are written only when `vehicle_model_type` is `dynamics`. The other vehicle
+models leave them at zero.
+
+| Index | Description                                          |
+| :---- | :--------------------------------------------------- |
+| 27    | lateral error derivative, before the low pass filter |
+| 28    | yaw error derivative, before the low pass filter     |
+| 29    | lateral error derivative                             |
+| 30    | yaw error derivative                                 |
+| 31    | wall time the call of the QP solver took [ms]        |
+
 ### How to tune MPC parameters
 
 #### Set kinematics information

@@ -26,10 +26,11 @@
 #include <sensor_msgs/point_cloud2_iterator.hpp>
 
 #include <gtest/gtest.h>
-#include <tf2_ros/static_transform_broadcaster.h>
 
 #include <algorithm>
 #include <chrono>
+#include <cmath>
+#include <limits>
 #include <memory>
 #include <string>
 #include <thread>
@@ -69,24 +70,17 @@ protected:
 
     concatenate_node_ =
       std::make_shared<PointCloudConcatenateDataSynchronizerComponent>(node_options);
-    combine_cloud_handler_ = std::make_shared<CombineCloudHandler<PointCloud2Traits>>(
-      *concatenate_node_, input_topics, "base_link", true, true, true);
+    combine_cloud_handler_ = std::make_shared<CombineCloudHandler<sensor_msgs::msg::PointCloud2>>(
+      input_topics, "base_link", true, true, true,
+      autoware::pointcloud_preprocessor::MatchingStrategyType::advanced);
 
     collector_ = std::make_shared<CloudCollector<PointCloud2Traits>>(
       std::dynamic_pointer_cast<PointCloudConcatenateDataSynchronizerComponent>(
         concatenate_node_->shared_from_this()),
       combine_cloud_handler_, number_of_pointcloud, timeout_sec, collector_debug_mode);
 
-    // Setup TF
-    tf_broadcaster_ = std::make_shared<tf2_ros::StaticTransformBroadcaster>(concatenate_node_);
-    tf_broadcaster_->sendTransform(generate_static_transform_msgs());
-
-    // Spin the node for a while to ensure transforms are published
-    auto start = std::chrono::steady_clock::now();
-    auto timeout = std::chrono::milliseconds(100);
-    while (std::chrono::steady_clock::now() - start < timeout) {
-      rclcpp::spin_some(concatenate_node_);
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    for (const auto & transform : generate_static_transform_msgs()) {
+      ASSERT_TRUE(combine_cloud_handler_->set_transform(transform));
     }
   }
 
@@ -172,9 +166,8 @@ protected:
   }
 
   std::shared_ptr<PointCloudConcatenateDataSynchronizerComponent> concatenate_node_;
-  std::shared_ptr<CombineCloudHandler<PointCloud2Traits>> combine_cloud_handler_;
+  std::shared_ptr<CombineCloudHandler<sensor_msgs::msg::PointCloud2>> combine_cloud_handler_;
   std::shared_ptr<CloudCollector<PointCloud2Traits>> collector_;
-  std::shared_ptr<tf2_ros::StaticTransformBroadcaster> tf_broadcaster_;
 
   static constexpr int32_t timestamp_seconds{10};
   static constexpr uint32_t timestamp_nanoseconds{100'000'000};
@@ -354,7 +347,8 @@ TEST_F(ConcatenateCloudTest, TestConcatenateClouds)
 
   auto
     [concatenate_cloud_ptr, concatenation_info_ptr, topic_to_transformed_cloud_map,
-     topic_to_original_stamp_map] = collector_->concatenate_pointclouds(topic_to_cloud_map);
+     topic_to_original_stamp_map, motion_compensation_status, dropped_sources_missing_transform] =
+      collector_->concatenate_pointclouds(topic_to_cloud_map);
 
   // test output concatenate cloud
   // No input twist, so it will not do the motion compensation
@@ -478,6 +472,86 @@ TEST_F(ConcatenateCloudTest, TestConcatenateClouds)
   EXPECT_FLOAT_EQ(top_timestamp.seconds(), topic_to_original_stamp_map["lidar_top"]);
   EXPECT_FLOAT_EQ(left_timestamp.seconds(), topic_to_original_stamp_map["lidar_left"]);
   EXPECT_FLOAT_EQ(right_timestamp.seconds(), topic_to_original_stamp_map["lidar_right"]);
+}
+
+TEST_F(ConcatenateCloudTest, TestConcatenateCloudsLeavesNonFinitePointsUnchanged)
+{
+  // Like pcl_ros::transformPointCloud, a point with a non-finite coordinate must pass through every
+  // transform unchanged instead of having the NaN/Inf spread to its other coordinates.
+  const float nan = std::numeric_limits<float>::quiet_NaN();
+  const float inf = std::numeric_limits<float>::infinity();
+  const std::vector<Eigen::Vector3f> points{
+    Eigen::Vector3f(nan, 1.0f, 2.0f), Eigen::Vector3f(1.0f, 2.0f, inf),
+    Eigen::Vector3f(10.0f, 0.0f, 0.0f)};
+
+  // lidar_top is rotated and translated relative to base_link, so no transform is the identity.
+  sensor_msgs::msg::PointCloud2 cloud;
+  cloud.header.stamp = rclcpp::Time(timestamp_seconds, timestamp_nanoseconds, RCL_ROS_TIME);
+  cloud.header.frame_id = "lidar_top";
+  cloud.height = 1;
+  cloud.is_dense = false;
+  sensor_msgs::PointCloud2Modifier modifier(cloud);
+  modifier.setPointCloud2Fields(
+    6, "x", 1, sensor_msgs::msg::PointField::FLOAT32, "y", 1, sensor_msgs::msg::PointField::FLOAT32,
+    "z", 1, sensor_msgs::msg::PointField::FLOAT32, "intensity", 1,
+    sensor_msgs::msg::PointField::UINT8, "return_type", 1, sensor_msgs::msg::PointField::UINT8,
+    "channel", 1, sensor_msgs::msg::PointField::UINT16);
+  modifier.resize(points.size());
+
+  sensor_msgs::PointCloud2Iterator<float> iter_x(cloud, "x");
+  sensor_msgs::PointCloud2Iterator<float> iter_y(cloud, "y");
+  sensor_msgs::PointCloud2Iterator<float> iter_z(cloud, "z");
+  for (const auto & point : points) {
+    *iter_x = point.x();
+    *iter_y = point.y();
+    *iter_z = point.z();
+    ++iter_x;
+    ++iter_y;
+    ++iter_z;
+  }
+
+  std::unordered_map<std::string, sensor_msgs::msg::PointCloud2::ConstSharedPtr> topic_to_cloud_map;
+  topic_to_cloud_map["lidar_top"] = std::make_shared<sensor_msgs::msg::PointCloud2>(cloud);
+
+  auto result = collector_->concatenate_pointclouds(topic_to_cloud_map);
+
+  const auto read_points = [](const sensor_msgs::msg::PointCloud2 & msg) {
+    std::vector<Eigen::Vector3f> out;
+    sensor_msgs::PointCloud2ConstIterator<float> it_x(msg, "x");
+    sensor_msgs::PointCloud2ConstIterator<float> it_y(msg, "y");
+    sensor_msgs::PointCloud2ConstIterator<float> it_z(msg, "z");
+    for (; it_x != it_x.end(); ++it_x, ++it_y, ++it_z) {
+      out.emplace_back(*it_x, *it_y, *it_z);
+    }
+    return out;
+  };
+  const auto expect_unchanged = [](const Eigen::Vector3f & actual, const Eigen::Vector3f & input) {
+    for (int axis = 0; axis < 3; ++axis) {
+      if (std::isnan(input[axis])) {
+        EXPECT_TRUE(std::isnan(actual[axis])) << "axis " << axis;
+      } else {
+        EXPECT_EQ(actual[axis], input[axis]) << "axis " << axis;
+      }
+    }
+  };
+
+  // In base_link: the sensor-to-output transform and motion compensation were applied.
+  const auto concatenated = read_points(*result.concatenate_cloud_ptr);
+  ASSERT_EQ(concatenated.size(), points.size());
+  expect_unchanged(concatenated[0], points[0]);
+  expect_unchanged(concatenated[1], points[1]);
+  EXPECT_TRUE(concatenated[2].allFinite());
+  EXPECT_GT((concatenated[2] - points[2]).norm(), standard_tolerance);
+
+  // Back in lidar_top: the inverse transform was applied on top, so the finite point round-trips.
+  const auto synchronized =
+    read_points(*result.topic_to_transformed_cloud_map.value().at("lidar_top"));
+  ASSERT_EQ(synchronized.size(), points.size());
+  expect_unchanged(synchronized[0], points[0]);
+  expect_unchanged(synchronized[1], points[1]);
+  EXPECT_NEAR(synchronized[2].x(), points[2].x(), standard_tolerance);
+  EXPECT_NEAR(synchronized[2].y(), points[2].y(), standard_tolerance);
+  EXPECT_NEAR(synchronized[2].z(), points[2].z(), standard_tolerance);
 }
 
 TEST_F(ConcatenateCloudTest, TestProcessSingleCloud)

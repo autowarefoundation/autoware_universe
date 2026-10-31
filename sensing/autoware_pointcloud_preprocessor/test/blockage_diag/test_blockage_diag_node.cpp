@@ -65,7 +65,7 @@ protected:
 
     // Create executor
     executor_ = std::make_shared<rclcpp::executors::SingleThreadedExecutor>();
-    executor_->add_node(blockage_diag_node_);
+    executor_->add_node(blockage_diag_node_->get_node_base_interface());
     executor_->add_node(test_node_);
 
     // Create publisher for input topic (blockage_diag subscribes to "input")

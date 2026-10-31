@@ -1,0 +1,24 @@
+<launch>
+  <arg name="config" default="$(find-pkg-share autoware_default_adapi_universe)/config/default_adapi.param.yaml" description="Path to the adapi parameter file"/>
+
+  <!-- With ENABLE_AGNOCAST=1 the nodes run standalone, so the container is only needed without Agnocast -->
+  <arg name="use_agnocast" default="$(env ENABLE_AGNOCAST 0)"/>
+  <node_container
+    pkg="rclcpp_components"
+    exec="component_container_mt"
+    name="container"
+    namespace="adapi"
+    ros_args="--log-level adapi.container:=WARN"
+    unless="$(eval &quot;'$(var use_agnocast)' == '1'&quot;)"
+  />
+
+  <autoware_node pkg="autoware_default_adapi_universe" exec="heartbeat_node" name="heartbeat" namespace="adapi/node" target="/adapi/container" output="screen">
+    <param from="$(var config)"/>
+  </autoware_node>
+  <autoware_node pkg="autoware_default_adapi_universe" exec="diagnostics_node" name="diagnostics" namespace="adapi/node" target="/adapi/container" output="screen">
+    <param from="$(var config)"/>
+  </autoware_node>
+  <autoware_node pkg="autoware_default_adapi_universe" exec="fail_safe_node" name="fail_safe" namespace="adapi/node" target="/adapi/container" output="screen">
+    <param from="$(var config)"/>
+  </autoware_node>
+</launch>
