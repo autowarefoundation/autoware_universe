@@ -28,6 +28,10 @@
 #include <autoware_utils/ros/parameter.hpp>
 #include <autoware_utils/ros/update_param.hpp>
 #include <autoware_utils/ros/uuid_helper.hpp>
+#include <autoware_utils_geometry/boost_geometry.hpp>
+
+#include <boost/geometry/algorithms/envelope.hpp>
+#include <boost/geometry/index/rtree.hpp>
 
 #include <algorithm>
 #include <iostream>
@@ -233,6 +237,28 @@ ObstacleSlowDownModule::convert_point_cloud_to_slow_down_points(
   const PointCloud::Ptr filtered_points_ptr = pointcloud.get_filtered_pointcloud_ptr();
   const std::vector<pcl::PointIndices> clusters = pointcloud.get_cluster_indices();
 
+  // Cheap pre-filtering. The lateral offset calculation below scans all the trajectory points for
+  // every point, so its cost is (the number of points) x (the number of trajectory points). A point
+  // outside the bounding boxes of all the decimated trajectory polygons is outside all the
+  // polygons, and the precise filtering below always rejects it. Skipping such a point before the
+  // lateral offset calculation does not change the result.
+  using BoxWithIndex = std::pair<autoware_utils_geometry::Box2d, size_t>;
+  std::vector<BoxWithIndex> traj_poly_boxes;
+  traj_poly_boxes.reserve(decimated_traj_polys_with_lat_margin.size());
+  constexpr double box_margin = 1e-3;  // [m] keep the points on the boundary of the polygons
+  for (size_t i = 0; i < decimated_traj_polys_with_lat_margin.size(); ++i) {
+    namespace bg = boost::geometry;
+    auto box = bg::return_envelope<autoware_utils_geometry::Box2d>(
+      decimated_traj_polys_with_lat_margin.at(i));
+    bg::set<bg::min_corner, 0>(box, bg::get<bg::min_corner, 0>(box) - box_margin);
+    bg::set<bg::min_corner, 1>(box, bg::get<bg::min_corner, 1>(box) - box_margin);
+    bg::set<bg::max_corner, 0>(box, bg::get<bg::max_corner, 0>(box) + box_margin);
+    bg::set<bg::max_corner, 1>(box, bg::get<bg::max_corner, 1>(box) + box_margin);
+    traj_poly_boxes.emplace_back(box, i);
+  }
+  const boost::geometry::index::rtree<BoxWithIndex, boost::geometry::index::rstar<16>>
+    traj_poly_rtree(traj_poly_boxes);
+
   // 3. convert clusters to obstacles
   for (const auto & cluster_indices : clusters) {
     double ego_to_slow_down_front_collision_distance = std::numeric_limits<double>::max();
@@ -244,6 +270,14 @@ ObstacleSlowDownModule::convert_point_cloud_to_slow_down_points(
     for (const auto & index : cluster_indices.indices) {
       const auto obstacle_point = autoware::motion_velocity_planner::utils::to_geometry_point(
         filtered_points_ptr->points[index]);
+      // 0. cheap pre-filtering - filters out point-cloud points outside all the trajectory polygons
+      if (
+        traj_poly_rtree.qbegin(
+          boost::geometry::index::intersects(
+            autoware_utils_geometry::Point2d(obstacle_point.x, obstacle_point.y))) ==
+        traj_poly_rtree.qend()) {
+        continue;
+      }
       // 1. brief filtering - filters out point-cloud points that are far from the trajectory
       // laterally The lateral distance of the obstacle-point to trajectory is measured below
       const auto current_lat_dist_from_obstacle_to_traj =
