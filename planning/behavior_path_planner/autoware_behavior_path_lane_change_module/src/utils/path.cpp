@@ -22,6 +22,7 @@
 
 #include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/motion_utils/trajectory/path_shift.hpp>
+#include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_frenet_planner/frenet_planner.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
 #include <range/v3/action/insert.hpp>
@@ -102,12 +103,20 @@ PathWithLaneId get_reference_path_from_target_lane(
   });
 
   constexpr double epsilon = 1e-4;
-  if (s_end - s_start + epsilon < lane_changing_length) {
+  if (lane_changing_length <= 0.0 || s_end - s_start + epsilon < lane_changing_length) {
     return PathWithLaneId();
   }
 
   const auto lane_changing_reference_path =
     route_handler.getCenterLinePath(target_lanes, s_start, s_end);
+
+  // the resampling below needs lane_changing_length within the arc length of the centerline path
+  if (
+    lane_changing_reference_path.points.size() < 2 ||
+    autoware::motion_utils::calcArcLength(lane_changing_reference_path.points) + epsilon <
+      lane_changing_length) {
+    return PathWithLaneId();
+  }
 
   return autoware::behavior_path_planner::utils::resamplePathWithSpline(
     lane_changing_reference_path, resample_interval, true, {0.0, lane_changing_length});
@@ -565,10 +574,21 @@ std::vector<lane_change::TrajectoryGroup> generate_frenet_candidates(
       common_data_ptr->lc_param_ptr->lane_change_finish_judge_buffer;
     const auto max_lc_len = transient_data.lane_changing_length.max;
     const auto max_lane_changing_length = std::min(dist_to_end_from_lc_start, max_lc_len);
+    if (max_lane_changing_length <= 0.0) {
+      RCLCPP_DEBUG(get_logger(), "Reject: no lane changing length left before the terminal end!");
+      continue;
+    }
 
     constexpr auto resample_interval = 0.5;
-    const auto target_lane_reference_path = get_reference_path_from_target_lane(
-      common_data_ptr, lc_start_pose, max_lane_changing_length, resample_interval);
+    PathWithLaneId target_lane_reference_path;
+    try {
+      target_lane_reference_path = get_reference_path_from_target_lane(
+        common_data_ptr, lc_start_pose, max_lane_changing_length, resample_interval);
+    } catch (const std::exception & e) {
+      RCLCPP_WARN(
+        get_logger(), "Reject: failed to get the target lane reference path: %s", e.what());
+      continue;
+    }
     if (target_lane_reference_path.points.empty()) {
       continue;
     }
