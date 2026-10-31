@@ -97,14 +97,24 @@ InLaneMrmPlannerNode::InLaneMrmPlannerNode(const rclcpp::NodeOptions & options)
   vehicle_info_(autoware::vehicle_info_utils::VehicleInfoUtils(*this).getVehicleInfo()),
   time_keeper_(std::make_shared<autoware_utils_debug::TimeKeeper>()),
   velocity_planner_(params_),
-  trajectory_validator_(params_),
-  route_subscriber_(this, "~/input/route", rclcpp::QoS{1}.transient_local()),
-  vector_map_subscriber_(this, "~/input/vector_map", rclcpp::QoS{1}.transient_local()),
-  kinematic_state_subscriber_(this, "~/input/kinematic_state"),
-  acceleration_subscriber_(this, "~/input/acceleration"),
-  objects_subscriber_(this, "~/input/objects"),
-  trigger_subscriber_(this, "~/input/trigger", rclcpp::QoS{1}.reliable().transient_local())
+  trajectory_validator_(params_)
 {
+  route_subscriber_ = namespace_polling::create_polling_subscriber<
+    LaneletRoute, namespace_polling::polling_policy::Newest>(
+    this, "~/input/route", rclcpp::QoS{1}.transient_local());
+  vector_map_subscriber_ = namespace_polling::create_polling_subscriber<
+    LaneletMapBin, namespace_polling::polling_policy::Newest>(
+    this, "~/input/vector_map", rclcpp::QoS{1}.transient_local());
+  kinematic_state_subscriber_ =
+    namespace_polling::create_polling_subscriber<Odometry>(this, "~/input/kinematic_state");
+  acceleration_subscriber_ =
+    namespace_polling::create_polling_subscriber<AccelWithCovarianceStamped>(
+      this, "~/input/acceleration");
+  objects_subscriber_ =
+    namespace_polling::create_polling_subscriber<PredictedObjects>(this, "~/input/objects");
+  trigger_subscriber_ = namespace_polling::create_polling_subscriber<InLaneStopTrigger>(
+    this, "~/input/trigger", rclcpp::QoS{1}.reliable().transient_local());
+
   path_planner_ =
     std::make_unique<PathPlanner>(get_logger(), get_clock(), time_keeper_, params_, vehicle_info_);
   trajectory_planner_ =
@@ -116,7 +126,7 @@ InLaneMrmPlannerNode::InLaneMrmPlannerNode(const rclcpp::NodeOptions & options)
   pub_trajectory_ = create_publisher<Trajectory>("~/output/trajectory", 1);
   pub_debug_status_ = create_publisher<Float32MultiArrayStamped>("~/debug/planner_status", 1);
 
-  timer_ = rclcpp::create_timer(
+  timer_ = autoware::agnocast_wrapper::create_timer(
     this, get_clock(), rclcpp::Rate(params_.planning_frequency_hz).period(),
     std::bind(&InLaneMrmPlannerNode::on_timer, this));
 
@@ -350,7 +360,7 @@ InLaneMrmPlannerNode::InputData InLaneMrmPlannerNode::take_data()
 {
   InputData input_data;
 
-  if (const auto msg = route_subscriber_.take_data()) {
+  if (const auto msg = route_subscriber_->take_data()) {
     if (!msg->segments.empty()) {
       route_ptr_ = msg;
     } else {
@@ -359,27 +369,27 @@ InLaneMrmPlannerNode::InputData InLaneMrmPlannerNode::take_data()
   }
   input_data.route_ptr = route_ptr_;
 
-  if (const auto msg = vector_map_subscriber_.take_data()) {
+  if (const auto msg = vector_map_subscriber_->take_data()) {
     lanelet_map_bin_ptr_ = msg;
   }
   input_data.lanelet_map_bin_ptr = lanelet_map_bin_ptr_;
 
-  if (const auto msg = kinematic_state_subscriber_.take_data()) {
+  if (const auto msg = kinematic_state_subscriber_->take_data()) {
     odometry_ptr_ = msg;
   }
   input_data.odometry_ptr = odometry_ptr_;
 
-  if (const auto msg = acceleration_subscriber_.take_data()) {
+  if (const auto msg = acceleration_subscriber_->take_data()) {
     acceleration_ptr_ = msg;
   }
   input_data.acceleration_ptr = acceleration_ptr_;
 
-  if (const auto msg = objects_subscriber_.take_data()) {
+  if (const auto msg = objects_subscriber_->take_data()) {
     objects_ptr_ = msg;
   }
   input_data.objects_ptr = objects_ptr_;
 
-  if (const auto msg = trigger_subscriber_.take_data()) {
+  if (const auto msg = trigger_subscriber_->take_data()) {
     trigger_ptr_ = msg;
   }
   input_data.trigger_ptr = trigger_ptr_;

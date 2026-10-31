@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_vehicle_msgs/msg/gear_command.hpp>
@@ -21,7 +22,7 @@
 namespace autoware::in_lane_mrm_planner
 {
 
-class MrmInLaneStopAuxiliaryCommandsNode : public rclcpp::Node
+class MrmInLaneStopAuxiliaryCommandsNode : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit MrmInLaneStopAuxiliaryCommandsNode(const rclcpp::NodeOptions & options)
@@ -36,7 +37,7 @@ public:
     pub_turn_ = create_publisher<autoware_vehicle_msgs::msg::TurnIndicatorsCommand>(
       "~/output/turn_indicators_command", rclcpp::QoS{1});
 
-    timer_ = rclcpp::create_timer(
+    timer_ = autoware::agnocast_wrapper::create_timer(
       this, get_clock(), rclcpp::Rate(publish_hz).period(),
       std::bind(&MrmInLaneStopAuxiliaryCommandsNode::on_timer, this));
   }
@@ -62,10 +63,10 @@ private:
     pub_turn_->publish(turn);
   }
 
-  rclcpp::Publisher<autoware_vehicle_msgs::msg::GearCommand>::SharedPtr pub_gear_;
-  rclcpp::Publisher<autoware_vehicle_msgs::msg::HazardLightsCommand>::SharedPtr pub_hazard_;
-  rclcpp::Publisher<autoware_vehicle_msgs::msg::TurnIndicatorsCommand>::SharedPtr pub_turn_;
-  rclcpp::TimerBase::SharedPtr timer_;
+  AUTOWARE_PUBLISHER_PTR(autoware_vehicle_msgs::msg::GearCommand) pub_gear_;
+  AUTOWARE_PUBLISHER_PTR(autoware_vehicle_msgs::msg::HazardLightsCommand) pub_hazard_;
+  AUTOWARE_PUBLISHER_PTR(autoware_vehicle_msgs::msg::TurnIndicatorsCommand) pub_turn_;
+  AUTOWARE_TIMER_PTR timer_;
 };
 
 }  // namespace autoware::in_lane_mrm_planner

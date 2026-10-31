@@ -18,6 +18,7 @@
 #include "deceleration_profile.hpp"
 #include "steering_hold_stop_logic.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_control_msgs/msg/control.hpp>
@@ -40,7 +41,7 @@ using geometry_msgs::msg::AccelWithCovarianceStamped;
 using nav_msgs::msg::Odometry;
 using tier4_system_msgs::msg::InLaneStopTrigger;
 
-class MrmSteeringHoldStopOperator : public rclcpp::Node
+class MrmSteeringHoldStopOperator : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit MrmSteeringHoldStopOperator(const rclcpp::NodeOptions & node_options);
@@ -64,17 +65,17 @@ private:
   DecelerationProfiles profiles_;
 
   // Subscribers
-  rclcpp::Subscription<InLaneStopTrigger>::SharedPtr sub_trigger_;
-  rclcpp::Subscription<SteeringReport>::SharedPtr sub_steering_;
-  rclcpp::Subscription<Odometry>::SharedPtr sub_odometry_;
-  rclcpp::Subscription<AccelWithCovarianceStamped>::SharedPtr sub_acceleration_;
+  AUTOWARE_SUBSCRIPTION_PTR(InLaneStopTrigger) sub_trigger_;
+  AUTOWARE_SUBSCRIPTION_PTR(SteeringReport) sub_steering_;
+  AUTOWARE_SUBSCRIPTION_PTR(Odometry) sub_odometry_;
+  AUTOWARE_SUBSCRIPTION_PTR(AccelWithCovarianceStamped) sub_acceleration_;
 
   // Publishers
-  rclcpp::Publisher<Control>::SharedPtr pub_control_;
-  rclcpp::Publisher<Float32MultiArrayStamped>::SharedPtr pub_debug_status_;
+  AUTOWARE_PUBLISHER_PTR(Control) pub_control_;
+  AUTOWARE_PUBLISHER_PTR(Float32MultiArrayStamped) pub_debug_status_;
 
   // Timer
-  rclcpp::TimerBase::SharedPtr timer_;
+  AUTOWARE_TIMER_PTR timer_;
 
   // Logic
   std::unique_ptr<SteeringHoldStopLogic> logic_;

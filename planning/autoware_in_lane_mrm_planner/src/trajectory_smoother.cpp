@@ -19,7 +19,7 @@
 namespace autoware::in_lane_mrm_planner
 {
 
-void TrajectorySmoother::initialize(rclcpp::Node * node, const Params & params)
+void TrajectorySmoother::initialize(autoware::agnocast_wrapper::Node * node, const Params & params)
 {
   (void)params;
 

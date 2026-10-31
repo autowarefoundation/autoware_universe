@@ -1,0 +1,96 @@
+# Resolves rosdep keys for every package in this repository, so a pull request
+# cannot break a package it never touched. build-and-test-differential.yaml
+# covers only the modified packages, and build-and-test-daily.yaml covers them
+# all but once a day, buried in an hours-long build. This is that resolution
+# step on its own, with no build.
+name: rosdep-check-pr
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  rosdep-check:
+    name: rosdep-check (${{ matrix.rosdistro }})
+    strategy:
+      fail-fast: false
+      matrix:
+        rosdistro: [humble, jazzy]
+
+        include:
+          - rosdistro: humble
+            container: ghcr.io/autowarefoundation/autoware:universe-dependencies-humble
+          - rosdistro: jazzy
+            container: ghcr.io/autowarefoundation/autoware:universe-dependencies-jazzy
+
+    runs-on: ubuntu-24.04
+    container:
+      image: ${{ matrix.container }}
+
+    steps:
+      - name: Check out PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Show disk space before the tasks
+        run: df -h
+        shell: bash
+
+      - name: Prepare build_depends.repos file (main branch)
+        if: ${{ github.event.pull_request.base.ref != 'humble' && github.event.pull_request.base.ref != 'jazzy' }}
+        uses: ./.github/actions/combine-repos-action
+        with:
+          base_file: build_depends_stable.repos
+          overlay_file: build_depends_nightly.repos
+          output_file: build_depends.repos
+
+      - name: Prepare build_depends.repos file (humble/jazzy branch)
+        if: ${{ github.event.pull_request.base.ref == 'humble' || github.event.pull_request.base.ref == 'jazzy' }}
+        run: cp build_depends_stable.repos build_depends.repos
+        shell: bash
+
+      - name: Import the source-built dependencies
+        run: |
+          set -eo pipefail
+          # Mirrors build-and-test-differential.yaml: colcon-build@v1 imports
+          # these into dependency_ws, so the same layout is reproduced here.
+          mkdir -p dependency_ws
+          vcs import --recursive dependency_ws < build_depends.repos
+          echo "Checking $(find . -name package.xml | wc -l) packages"
+        shell: bash
+
+      - name: Resolve dependencies with rosdep
+        env:
+          ROS_DISTRO: ${{ matrix.rosdistro }}
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          set -eo pipefail
+          sudo apt-get -yqq update
+          # ROS_DISTRO is set above, so this matches what colcon-build@v1 runs.
+          rosdep update
+          # Core packages are provided pre-built by the image under /opt/autoware;
+          # sourcing it keeps resolution consistent with the build workflows.
+          if [ -f "/opt/ros/${ROS_DISTRO}/setup.sh" ]; then
+            . "/opt/ros/${ROS_DISTRO}/setup.sh"
+          fi
+          if [ -f /opt/autoware/setup.sh ]; then
+            . /opt/autoware/setup.sh
+          fi
+          # dependency_ws lives under ./, so this covers this repository and the
+          # source-built dependencies in one pass.
+          rosdep install -y --from-paths ./ --ignore-src --rosdistro "${ROS_DISTRO}"
+        shell: bash
+
+      - name: Show disk space after the tasks
+        if: always()
+        run: df -h
+        shell: bash

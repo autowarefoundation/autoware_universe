@@ -41,7 +41,8 @@ DrivingModeManager::DrivingModeManager(const rclcpp::NodeOptions & options)
   init_ = std::make_unique<ManagerInit>(std::make_unique<RosInterface>(this), plugin);
 
   const auto period = rclcpp::Rate(rate_).period();
-  timer_ = rclcpp::create_timer(this, get_clock(), period, [this]() { on_timer_init(); });
+  timer_ = autoware::agnocast_wrapper::create_timer(
+    this, get_clock(), period, [this]() { on_timer_init(); });
 
   const auto gate_change_timeout = declare_parameter<double>("timeouts.gate_change");
   PlatformModeTask::timeout = gate_change_timeout;
@@ -66,7 +67,8 @@ void DrivingModeManager::on_timer_init()
 
   const auto period = rclcpp::Rate(rate_).period();
   timer_->cancel();
-  timer_ = rclcpp::create_timer(this, get_clock(), period, [this]() { on_timer_main(); });
+  timer_ = autoware::agnocast_wrapper::create_timer(
+    this, get_clock(), period, [this]() { on_timer_main(); });
 }
 
 void DrivingModeManager::on_timer_main()

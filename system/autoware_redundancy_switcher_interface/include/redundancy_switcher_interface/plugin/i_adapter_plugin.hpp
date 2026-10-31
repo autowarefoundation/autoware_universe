@@ -19,7 +19,7 @@
 #include <memory>
 
 // Forward declaration only; keeps this header ROS-free for pure GTest of Processor/EventGateway.
-namespace rclcpp
+namespace autoware::agnocast_wrapper
 {
 class Node;
 }
@@ -35,7 +35,8 @@ class IAdapterPlugin
 public:
   virtual ~IAdapterPlugin() = default;
 
-  virtual void initialize(rclcpp::Node * node, std::shared_ptr<EventGateway> gateway) = 0;
+  virtual void initialize(
+    autoware::agnocast_wrapper::Node * node, std::shared_ptr<EventGateway> gateway) = 0;
 
   // Process only the effect types this adapter owns; ignore all others.
   // Do not call gateway_->submit() synchronously from here — deadlock risk.

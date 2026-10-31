@@ -19,7 +19,7 @@
   <arg name="output_gate_turn" default="/control/control_command_gate/inputs/in_lane_stop/turn_indicators"/>
   <arg name="auxiliary_commands_publish_hz" default="10.0"/>
 
-  <node pkg="autoware_in_lane_mrm_planner" exec="autoware_in_lane_mrm_planner_node" name="in_lane_mrm_planner" output="screen">
+  <autoware_node pkg="autoware_in_lane_mrm_planner" exec="autoware_in_lane_mrm_planner_node" name="in_lane_mrm_planner" output="screen">
     <param from="$(var param_path)"/>
     <param from="$(var eb_param_path)"/>
 
@@ -31,12 +31,12 @@
     <remap from="~/input/trigger" to="$(var input_trigger_topic)"/>
     <remap from="~/output/trajectory" to="$(var output_trajectory)"/>
     <remap from="~/debug/planner_status" to="$(var output_planner_status)"/>
-  </node>
+  </autoware_node>
 
-  <node pkg="autoware_in_lane_mrm_planner" exec="mrm_in_lane_stop_auxiliary_commands_node" name="mrm_in_lane_stop_auxiliary_commands" output="screen">
+  <autoware_node pkg="autoware_in_lane_mrm_planner" exec="mrm_in_lane_stop_auxiliary_commands_node" name="mrm_in_lane_stop_auxiliary_commands" output="screen">
     <param name="publish_hz" value="$(var auxiliary_commands_publish_hz)"/>
     <remap from="~/output/gear_command" to="$(var output_gate_gear)"/>
     <remap from="~/output/hazard_lights_command" to="$(var output_gate_hazard)"/>
     <remap from="~/output/turn_indicators_command" to="$(var output_gate_turn)"/>
-  </node>
+  </autoware_node>
 </launch>

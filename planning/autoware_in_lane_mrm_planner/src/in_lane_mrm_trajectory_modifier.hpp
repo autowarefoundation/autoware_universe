@@ -19,6 +19,7 @@
 #include "mrm_road_border_stop_planner.hpp"
 #include "type_alias.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 namespace autoware::in_lane_mrm_planner
@@ -27,7 +28,9 @@ namespace autoware::in_lane_mrm_planner
 class InLaneMrmTrajectoryModifier
 {
 public:
-  void initialize(rclcpp::Node * node, const VehicleInfo & vehicle_info, const Params & params);
+  void initialize(
+    autoware::agnocast_wrapper::Node * node, const VehicleInfo & vehicle_info,
+    const Params & params);
   void update_params(const Params & params);
   void set_objects(const PredictedObjects & objects);
   void set_lanelet_map(const lanelet::LaneletMapPtr & lanelet_map_ptr);

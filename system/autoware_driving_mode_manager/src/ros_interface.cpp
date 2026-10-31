@@ -24,7 +24,7 @@
 namespace autoware::driving_mode_manager
 {
 
-RosInterface::RosInterface(rclcpp::Node * node) : node_(node)
+RosInterface::RosInterface(autoware::agnocast_wrapper::Node * node) : node_(node)
 {
   using std::placeholders::_1;
   using std::placeholders::_2;

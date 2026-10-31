@@ -102,6 +102,33 @@ TEST(TestLongitudinalControllerUtils, calcStopDistance)
   EXPECT_EQ(longitudinal_utils::calcStopDistance(current_pose, traj, max_dist, max_yaw), 3.0);
 }
 
+TEST(TestLongitudinalControllerUtils, calcStopDistanceRepeatedTerminalPose)
+{
+  autoware_planning_msgs::msg::Trajectory traj;
+  const std::vector<double> positions{0.0, 1.0, 2.0, 3.0, 3.0, 3.0};
+  for (size_t i = 0; i < positions.size(); ++i) {
+    autoware_planning_msgs::msg::TrajectoryPoint point;
+    point.pose.position.x = positions[i];
+    point.pose.orientation.w = 1.0;
+    point.longitudinal_velocity_mps = i < 3 ? 1.0 : 0.0;
+    traj.points.push_back(point);
+  }
+  geometry_msgs::msg::Pose current_pose;
+  current_pose.orientation.w = 1.0;
+  EXPECT_DOUBLE_EQ(longitudinal_utils::calcStopDistance(current_pose, traj, 3.0, 0.7), 3.0);
+  current_pose.position.x = 1.25;
+  EXPECT_DOUBLE_EQ(longitudinal_utils::calcStopDistance(current_pose, traj, 3.0, 0.7), 1.75);
+  current_pose.position.x = 2.75;
+  EXPECT_DOUBLE_EQ(longitudinal_utils::calcStopDistance(current_pose, traj, 3.0, 0.7), 0.25);
+  current_pose.position.x = 3.25;
+  EXPECT_DOUBLE_EQ(longitudinal_utils::calcStopDistance(current_pose, traj, 3.0, 0.7), -0.25);
+  current_pose.position.x = 1.25;
+  for (auto & point : traj.points) {
+    point.longitudinal_velocity_mps = 1.0;
+  }
+  EXPECT_DOUBLE_EQ(longitudinal_utils::calcStopDistance(current_pose, traj, 3.0, 0.7), 1.75);
+}
+
 TEST(TestLongitudinalControllerUtils, getPitchByPose)
 {
   tf2::Quaternion quaternion_tf;

@@ -61,12 +61,11 @@ MrmInLaneStopOperator::MrmInLaneStopOperator(const rclcpp::NodeOptions & node_op
   sub_info_ = create_subscription<DrivingModeInfo>(
     "~/input/driving_mode_info", rclcpp::QoS(1).transient_local(),
     std::bind(&MrmInLaneStopOperator::on_info, this, std::placeholders::_1));
-  sub_kinematic_state_ =
-    std::make_unique<autoware_utils_rclcpp::InterProcessPollingSubscriber<Odometry>>(
-      this, "/localization/kinematic_state");
+  sub_kinematic_state_ = autoware::agnocast_wrapper::polling::create_polling_subscriber<Odometry>(
+    this, "/localization/kinematic_state");
 
   // timer
-  timer_ = rclcpp::create_timer(
+  timer_ = autoware::agnocast_wrapper::create_timer(
     this, get_clock(), rclcpp::Rate(10).period(),
     std::bind(&MrmInLaneStopOperator::on_timer, this));
 }

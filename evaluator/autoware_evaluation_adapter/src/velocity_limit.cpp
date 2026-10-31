@@ -33,7 +33,7 @@ VelocityLimit::VelocityLimit(const rclcpp::NodeOptions & options) : Node("veloci
     std::bind(&VelocityLimit::on_message, this, _1));
 }
 
-void VelocityLimit::on_message(const VelocityLimitStatus::SharedPtr)
+void VelocityLimit::on_message(const VelocityLimitStatus::ConstSharedPtr)
 {
   is_ready_ = true;
 }

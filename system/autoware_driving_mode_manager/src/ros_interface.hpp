@@ -17,6 +17,7 @@
 
 #include "type/interface.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware_driving_mode_manager/msg/debug_mode_flags.hpp>
 #include <autoware_driving_mode_manager/msg/debug_mode_request.hpp>
 
@@ -47,7 +48,7 @@ namespace autoware::driving_mode_manager
 class RosInterface : public Interface
 {
 public:
-  explicit RosInterface(rclcpp::Node * node);
+  explicit RosInterface(autoware::agnocast_wrapper::Node * node);
   void init(MainLogic * logic) override { logic_ = logic; }
 
   bool get_enable_debug_topics() const override { return enable_debug_topics_; }
@@ -98,31 +99,31 @@ private:
   MainLogic * logic_;
   bool enable_debug_topics_;
 
-  rclcpp::Node * node_;
-  rclcpp::Client<TrajectorySourceSrv>::SharedPtr cli_trajectory_source_;
-  rclcpp::Client<ChangeCommandSourceSrv>::SharedPtr cli_command_source_;
-  rclcpp::Client<ChangeCommandFilterSrv>::SharedPtr cli_command_filter_;
-  rclcpp::Client<ControlModeCommandSrv>::SharedPtr cli_control_mode_command_;
-  rclcpp::Publisher<OperationModeStateMsg>::SharedPtr pub_operation_mode_state_;
-  rclcpp::Publisher<MrmStateMsg>::SharedPtr pub_mrm_state_;
+  autoware::agnocast_wrapper::Node * node_;
+  AUTOWARE_CLIENT_PTR(TrajectorySourceSrv) cli_trajectory_source_;
+  AUTOWARE_CLIENT_PTR(ChangeCommandSourceSrv) cli_command_source_;
+  AUTOWARE_CLIENT_PTR(ChangeCommandFilterSrv) cli_command_filter_;
+  AUTOWARE_CLIENT_PTR(ControlModeCommandSrv) cli_control_mode_command_;
+  AUTOWARE_PUBLISHER_PTR(OperationModeStateMsg) pub_operation_mode_state_;
+  AUTOWARE_PUBLISHER_PTR(MrmStateMsg) pub_mrm_state_;
 
-  rclcpp::Subscription<DrivingModeFlagMsg>::SharedPtr sub_driving_mode_available_;
-  rclcpp::Subscription<DrivingModeFlagMsg>::SharedPtr sub_driving_mode_active_;
-  rclcpp::Subscription<DrivingModeFlagMsg>::SharedPtr sub_driving_mode_stable_;
-  rclcpp::Subscription<DrivingModeFlagMsg>::SharedPtr sub_driving_mode_continuable_;
-  rclcpp::Subscription<DrivingModeMrmStateMsg>::SharedPtr sub_driving_mode_mrm_state_;
-  rclcpp::Subscription<TrajectorySourceMsg>::SharedPtr sub_trajectory_source_;
-  rclcpp::Subscription<CommandSourceMsg>::SharedPtr sub_command_source_;
-  rclcpp::Subscription<CommandFilterMsg>::SharedPtr sub_command_filter_;
-  rclcpp::Subscription<ControlModeReportMsg>::SharedPtr sub_control_mode_report_;
-  rclcpp::Service<ChangeOperationModeSrv>::SharedPtr srv_operation_mode_;
-  rclcpp::Service<ChangeAutowareControlSrv>::SharedPtr srv_autoware_control_;
-  rclcpp::Service<ChangeMrmRequestSrv>::SharedPtr srv_mrm_request_;
-  rclcpp::Publisher<DiagnosticArrayMsg>::SharedPtr pub_diagnostics_;
-  rclcpp::Publisher<DrivingModeRequestMsg>::SharedPtr pub_driving_mode_request_;
-  rclcpp::Publisher<DrivingModeInfoMsg>::SharedPtr pub_driving_mode_info_;
-  rclcpp::Publisher<DebugModeFlagsMsg>::SharedPtr pub_debug_mode_flag_;
-  rclcpp::Publisher<DebugModeRequestMsg>::SharedPtr pub_debug_mode_request_;
+  AUTOWARE_SUBSCRIPTION_PTR(DrivingModeFlagMsg) sub_driving_mode_available_;
+  AUTOWARE_SUBSCRIPTION_PTR(DrivingModeFlagMsg) sub_driving_mode_active_;
+  AUTOWARE_SUBSCRIPTION_PTR(DrivingModeFlagMsg) sub_driving_mode_stable_;
+  AUTOWARE_SUBSCRIPTION_PTR(DrivingModeFlagMsg) sub_driving_mode_continuable_;
+  AUTOWARE_SUBSCRIPTION_PTR(DrivingModeMrmStateMsg) sub_driving_mode_mrm_state_;
+  AUTOWARE_SUBSCRIPTION_PTR(TrajectorySourceMsg) sub_trajectory_source_;
+  AUTOWARE_SUBSCRIPTION_PTR(CommandSourceMsg) sub_command_source_;
+  AUTOWARE_SUBSCRIPTION_PTR(CommandFilterMsg) sub_command_filter_;
+  AUTOWARE_SUBSCRIPTION_PTR(ControlModeReportMsg) sub_control_mode_report_;
+  AUTOWARE_SERVICE_PTR(ChangeOperationModeSrv) srv_operation_mode_;
+  AUTOWARE_SERVICE_PTR(ChangeAutowareControlSrv) srv_autoware_control_;
+  AUTOWARE_SERVICE_PTR(ChangeMrmRequestSrv) srv_mrm_request_;
+  AUTOWARE_PUBLISHER_PTR(DiagnosticArrayMsg) pub_diagnostics_;
+  AUTOWARE_PUBLISHER_PTR(DrivingModeRequestMsg) pub_driving_mode_request_;
+  AUTOWARE_PUBLISHER_PTR(DrivingModeInfoMsg) pub_driving_mode_info_;
+  AUTOWARE_PUBLISHER_PTR(DebugModeFlagsMsg) pub_debug_mode_flag_;
+  AUTOWARE_PUBLISHER_PTR(DebugModeRequestMsg) pub_debug_mode_request_;
 
   void on_driving_mode_available(const DrivingModeFlagMsg & msg);
   void on_driving_mode_active(const DrivingModeFlagMsg & msg);

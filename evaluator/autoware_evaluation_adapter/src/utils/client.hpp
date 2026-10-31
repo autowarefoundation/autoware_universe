@@ -17,6 +17,8 @@
 
 #include "response.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
+
 #include <chrono>
 #include <utility>
 
@@ -26,9 +28,8 @@ namespace autoware::evaluation_adapter::utils
 using ResponseStatus = tier4_external_api_msgs::msg::ResponseStatus;
 
 template <typename ServiceT>
-std::pair<ResponseStatus, typename ServiceT::Response::SharedPtr> sync_call(
-  typename rclcpp::Client<ServiceT>::SharedPtr client,
-  const typename ServiceT::Request::SharedPtr & request,
+std::pair<ResponseStatus, AUTOWARE_CLIENT_RESPONSE_PTR(ServiceT)> sync_call(
+  AUTOWARE_CLIENT_PTR(ServiceT) client, const typename ServiceT::Request::SharedPtr & request,
   const std::chrono::nanoseconds & timeout = std::chrono::seconds(2))
 {
   if (!client->service_is_ready()) {

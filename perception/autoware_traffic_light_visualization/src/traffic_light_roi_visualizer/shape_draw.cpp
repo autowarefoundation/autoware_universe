@@ -26,16 +26,16 @@
 
 namespace autoware::traffic_light::visualization
 {
-void drawShape(
-  cv::Mat & image, const std::vector<ShapeImgParam> & params, int size, const cv::Point & position,
-  const cv::Scalar & color, float probability)
+void draw_shape(
+  cv::Mat & image, const std::string & image_dir, const std::vector<ShapeImgParam> & params,
+  int size, const cv::Point & position, const cv::Scalar & color, float probability)
 {
   // skip if the roi position is set as (0,0), which means it is undetected
   if (position.x == 0 && position.y == 0) {
     return;
   }
   // load concatenated shape image
-  const auto shape_img = loadShapeImage(params, size);
+  const auto shape_img = load_shape_image(image_dir, params, size);
 
   // Calculate the width of the text
   std::string prob_str = std::to_string(static_cast<int>(round(probability * 100))) + "%";
@@ -69,7 +69,7 @@ void drawShape(
   if (!shape_img.empty()) {
     // Create ROI on the destination image
     const int shape_y_offset = fill_rect_h / 4;
-    auto shapeRoi = image(
+    auto shape_roi = image(
       cv::Rect(
         rect_position.x + 5, rect_position.y + shape_y_offset, shape_img.cols, shape_img.rows));
 
@@ -78,26 +78,24 @@ void drawShape(
       for (int x = 0; x < shape_img.cols; ++x) {
         const auto & pixel = shape_img.at<cv::Vec4b>(y, x);
         if (pixel[3] != 0) {  // Only non-transparent pixels
-          shapeRoi.at<cv::Vec3b>(y, x) = cv::Vec3b(pixel[0], pixel[1], pixel[2]);
+          shape_roi.at<cv::Vec3b>(y, x) = cv::Vec3b(pixel[0], pixel[1], pixel[2]);
         }
       }
     }
   }
 }
 
-cv::Mat loadShapeImage(const std::vector<ShapeImgParam> & params, int size, double scale_factor)
+cv::Mat load_shape_image(
+  const std::string & image_dir, const std::vector<ShapeImgParam> & params, int size,
+  double scale_factor)
 {
   if (params.empty()) {
     return {};
   }
 
-  static const auto img_dir =
-    ament_index_cpp::get_package_share_directory("autoware_traffic_light_visualization") +
-    "/images/";
-
   std::vector<cv::Mat> src_img;
   for (const auto & param : params) {
-    auto filepath = img_dir + param.filename;
+    auto filepath = image_dir + param.filename;
     auto img = cv::imread(filepath, cv::IMREAD_UNCHANGED);
 
     cv::resize(img, img, cv::Size(size, size), scale_factor, scale_factor, cv::INTER_AREA);
@@ -117,33 +115,33 @@ cv::Mat loadShapeImage(const std::vector<ShapeImgParam> & params, int size, doub
   return dst;
 }
 
-void drawTrafficLightShape(
-  cv::Mat & image, const std::vector<std::string> & shapes, int size, const cv::Point & position,
-  const cv::Scalar & color, float probability)
+void draw_traffic_light_shape(
+  cv::Mat & image, const std::string & image_dir, const std::vector<std::string> & shapes, int size,
+  const cv::Point & position, const cv::Scalar & color, float probability)
 {
   using ShapeImgParamFunction = std::function<ShapeImgParam()>;
 
-  static const std::unordered_map<std::string, ShapeImgParamFunction> shapeToParamFunction = {
-    {"circle", circleImgParam},
-    {"left", leftArrowImgParam},
-    {"right", rightArrowImgParam},
-    {"straight", straightArrowImgParam},
-    {"down", downArrowImgParam},
-    {"straight_left", straightLeftArrowImgParam},
-    {"straight_right", straightRightArrowImgParam},
-    {"down_left", downLeftArrowImgParam},
-    {"down_right", downRightArrowImgParam},
-    {"cross", crossImgParam},
-    {"unknown", unknownImgParam}};
+  static const std::unordered_map<std::string, ShapeImgParamFunction> shape_to_param_function = {
+    {"circle", circle_img_param},
+    {"left", left_arrow_img_param},
+    {"right", right_arrow_img_param},
+    {"straight", straight_arrow_img_param},
+    {"down", down_arrow_img_param},
+    {"straight_left", straight_left_arrow_img_param},
+    {"straight_right", straight_right_arrow_img_param},
+    {"down_left", down_left_arrow_img_param},
+    {"down_right", down_right_arrow_img_param},
+    {"cross", cross_img_param},
+    {"unknown", unknown_img_param}};
 
   std::vector<ShapeImgParam> params;
   for (const auto & shape : shapes) {
-    if (shapeToParamFunction.find(shape) != shapeToParamFunction.end()) {
-      auto func = shapeToParamFunction.at(shape);
+    if (shape_to_param_function.find(shape) != shape_to_param_function.end()) {
+      auto func = shape_to_param_function.at(shape);
       params.emplace_back(func());
     }
   }
 
-  drawShape(image, params, size, position, color, probability);
+  draw_shape(image, image_dir, params, size, position, color, probability);
 }
 }  // namespace autoware::traffic_light::visualization
