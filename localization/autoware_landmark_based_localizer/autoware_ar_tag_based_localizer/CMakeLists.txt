@@ -13,6 +13,7 @@ find_package(ament_cmake_auto REQUIRED)
 ament_auto_find_build_dependencies()
 
 find_package(OpenCV REQUIRED)
+find_package(autoware_agnocast_wrapper REQUIRED)
 
 ament_auto_add_library(${PROJECT_NAME} SHARED
   src/ar_tag_based_localizer.cpp
@@ -23,11 +24,18 @@ target_include_directories(${PROJECT_NAME}
   ${OpenCV_INCLUDE_DIRS}
 )
 target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBRARIES})
+ament_target_dependencies(${PROJECT_NAME} autoware_agnocast_wrapper)
+if(DEFINED ENV{ENABLE_AGNOCAST} AND "$ENV{ENABLE_AGNOCAST}" STREQUAL "1")
+  find_package(agnocastlib REQUIRED)
+  ament_target_dependencies(${PROJECT_NAME} agnocastlib)
+endif()
+autoware_agnocast_wrapper_setup(${PROJECT_NAME})
 
-rclcpp_components_register_node(${PROJECT_NAME}
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   PLUGIN "ArTagBasedLocalizer"
   EXECUTABLE ${PROJECT_NAME}_node
-  EXECUTOR SingleThreadedExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
+  ROS2_EXECUTOR SingleThreadedExecutor
 )
 
 if(BUILD_TESTING)
@@ -41,6 +49,11 @@ if(BUILD_TESTING)
     ${OpenCV_INCLUDE_DIRS}
   )
   target_link_libraries(test_${PROJECT_NAME}  ${OpenCV_LIBRARIES})
+  ament_target_dependencies(test_${PROJECT_NAME} autoware_agnocast_wrapper)
+  if(DEFINED ENV{ENABLE_AGNOCAST} AND "$ENV{ENABLE_AGNOCAST}" STREQUAL "1")
+    ament_target_dependencies(test_${PROJECT_NAME} agnocastlib)
+  endif()
+  autoware_agnocast_wrapper_setup(test_${PROJECT_NAME})
 endif()
 
 ament_auto_package(
