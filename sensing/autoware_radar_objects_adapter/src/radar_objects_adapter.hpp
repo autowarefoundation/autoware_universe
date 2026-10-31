@@ -15,19 +15,29 @@
 #ifndef RADAR_OBJECTS_ADAPTER_HPP_
 #define RADAR_OBJECTS_ADAPTER_HPP_
 
+// The conversion has three parts, composed by RadarObjectsAdapter: the classification remap
+// (ClassificationRemapper), the conversion of one radar object into a tracked object
+// (TrackedObjectConverter, parameterized by how the optional fields are filled and by how a
+// tracked object's id is made), and the derivation of the detected object from the tracked one.
+
 #include <tl/expected.hpp>
 
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
 #include <autoware_perception_msgs/msg/object_classification.hpp>
+#include <autoware_perception_msgs/msg/tracked_object.hpp>
 #include <autoware_perception_msgs/msg/tracked_objects.hpp>
 #include <autoware_sensing_msgs/msg/radar_classification.hpp>
 #include <autoware_sensing_msgs/msg/radar_info.hpp>
+#include <autoware_sensing_msgs/msg/radar_object.hpp>
 #include <autoware_sensing_msgs/msg/radar_objects.hpp>
+#include <unique_identifier_msgs/msg/uuid.hpp>
 
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <map>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
@@ -39,6 +49,10 @@ namespace autoware::radar_objects_adapter
 
 using RadarClassification = autoware_sensing_msgs::msg::RadarClassification;
 using ObjectClassification = autoware_perception_msgs::msg::ObjectClassification;
+
+// ---------------------------------------------------------------------------------------------
+// Classification remap
+// ---------------------------------------------------------------------------------------------
 
 // The classification remap as label ids, built from the radar label -> perception label names of
 // the parameters.
@@ -58,6 +72,101 @@ struct ClassificationRemapParseResult
 ClassificationRemapParseResult make_classification_remap_from_string_pair(
   const std::map<std::string, std::string> & classification_remap_str);
 
+// The remap every radar needs, whatever it reports: the labels the perception pipeline has no
+// use for (HAZARD, OVER_DRIVABLE, UNDER_DRIVABLE) become UNKNOWN.
+ClassificationRemap perception_friendly_classification_remap();
+
+// Turns the classifications of a radar object into perception classifications: one entry per
+// radar entry, in order, with the probability copied and the label looked up in one table. The
+// table is the perception-friendly remap with the sensor-dependent one laid over it (the
+// classification_remap parameters, which correct what the radar in use is known to report
+// unreliably), so that the sensor's entry wins where both say something. A label neither
+// mentions becomes UNKNOWN.
+class ClassificationRemapper
+{
+public:
+  ClassificationRemapper(
+    const ClassificationRemap & perception_friendly, const ClassificationRemap & sensor_dependent);
+
+  std::vector<autoware_perception_msgs::msg::ObjectClassification> operator()(
+    const std::vector<autoware_sensing_msgs::msg::RadarClassification> & classifications) const;
+
+  const ClassificationRemap & combined() const { return combined_; }
+
+private:
+  ClassificationRemap combined_;
+};
+
+// ---------------------------------------------------------------------------------------------
+// Tracked object conversion
+// ---------------------------------------------------------------------------------------------
+
+// How a tracked object's id is made from the radar's 32-bit object id. A function, so that the
+// conversion can be given another way of making ids.
+using GenerateObjectUUID =
+  std::function<unique_identifier_msgs::msg::UUID::_uuid_type(std::uint32_t object_id)>;
+
+// The way the node makes them: the id, least significant byte first, then the hash of the input
+// topic name, least significant byte first, then zeros. The hash tells the tracks of one radar
+// from those of another when they are merged downstream.
+class ObjectUUIDGenerator
+{
+public:
+  explicit ObjectUUIDGenerator(const std::string & topic_name);
+
+  unique_identifier_msgs::msg::UUID::_uuid_type operator()(std::uint32_t object_id) const;
+
+private:
+  std::array<std::uint8_t, sizeof(std::size_t)> topic_hash_code_;
+};
+
+// How the optional object fields are filled when a radar object is converted. Each of the six
+// that have a default_* parameter is copied from the object when the radar provides it (nullopt)
+// and otherwise set to the value held here, the parameter's, as the double the object fields
+// are. The two standard deviations have no parameter: when the radar does not provide one, the
+// variance it would set stays zero.
+//
+// The parameters alone make the configuration for a radar that provides no optional field; the
+// adapter makes the one it converts with from them and a valid radar info, which declares what
+// the radar provides.
+struct ConversionConfiguration
+{
+  std::optional<double> default_position_z;
+  std::optional<double> default_velocity_z;
+  std::optional<double> default_acceleration_z;
+  std::optional<double> default_size_x;
+  std::optional<double> default_size_y;
+  std::optional<double> default_size_z;
+
+  bool orientation_std_provided{false};
+  bool orientation_rate_std_provided{false};
+
+  // The fields set to a parameter's value, with the value, in the order the node warns about
+  // them.
+  std::vector<std::pair<std::string, double>> defaulted_fields() const;
+};
+
+// Converts one radar object into a tracked object: everything the radar reports about it, with
+// the optional fields filled as the configuration says, the velocity and the acceleration
+// rotated into the object's frame, and the id made by the given function. The classification is
+// not set here; the remapper supplies it.
+class TrackedObjectConverter
+{
+public:
+  TrackedObjectConverter(const ConversionConfiguration & config, GenerateObjectUUID generate_uuid);
+
+  autoware_perception_msgs::msg::TrackedObject operator()(
+    const autoware_sensing_msgs::msg::RadarObject & input_object) const;
+
+private:
+  ConversionConfiguration config_;
+  GenerateObjectUUID generate_uuid_;
+};
+
+// ---------------------------------------------------------------------------------------------
+// The adapter
+// ---------------------------------------------------------------------------------------------
+
 // Why a radar info cannot be used: the required fields it does not declare. what() names them.
 class InvalidRadarInfo : public std::runtime_error
 {
@@ -72,20 +181,6 @@ public:
 
 private:
   std::vector<std::string> missing_required_fields_;
-};
-
-// What the adapter decided from a valid radar info about how it will convert: so far, which
-// optional fields the radar does not provide and the parameter value used in place of each.
-class ConversionConfiguration
-{
-public:
-  void add_field(std::string name, double default_value);
-
-  // The defaulted fields, in the order they were added.
-  const std::vector<std::pair<std::string, double>> & defaulted_fields() const;
-
-private:
-  std::vector<std::pair<std::string, double>> default_fields_;
 };
 
 // What a radar objects message converts into: the messages to publish.
@@ -103,7 +198,8 @@ public:
   MissingRadarInfo();
 };
 
-// The values used for the object fields a radar does not provide.
+// The values used for the object fields a radar does not provide: the six default_* parameters,
+// as the node hands them to the adapter.
 struct RadarObjectsAdapterParams
 {
   double default_position_z{0.0};
@@ -112,6 +208,10 @@ struct RadarObjectsAdapterParams
   double default_size_x{0.0};
   double default_size_y{0.0};
   double default_size_z{0.0};
+
+  // The configuration for a radar that provides no optional field: each parameter in place of
+  // its field. The adapter takes away the entries for the fields a radar info declares.
+  [[nodiscard]] ConversionConfiguration to_config() const;
 };
 
 // Converts radar objects into detected objects and into tracked objects. Learns which fields the
@@ -124,9 +224,9 @@ public:
     const std::string & topic_name);
 
   // What the adapter decided from a radar info: the configuration it will convert with (the
-  // optional fields it will fill from a parameter instead of the object), or why it cannot
-  // convert at all. The node logs this; the adapter is where the field -> parameter pairing
-  // lives. Nothing is decided from an invalid radar info.
+  // parameters, less the fields the radar provides), or why it cannot convert at all. The node
+  // logs this; the adapter is where the field -> parameter pairing lives. Nothing is decided
+  // from an invalid radar info.
   tl::expected<ConversionConfiguration, InvalidRadarInfo> update_radar_info(
     const autoware_sensing_msgs::msg::RadarInfo & radar_info_msg);
 
@@ -136,54 +236,17 @@ public:
     const autoware_sensing_msgs::msg::RadarObjects & input_msg) const;
 
 private:
-  void radar_cov_to_detection_pose_cov(
-    const std::array<float, 6> & radar_pose_cov, const double orientation_std,
-    std::array<double, 36> & pose_cov) const;
-
-  void radar_cov_to_detection_twist_cov(
-    const std::array<float, 6> & radar_twist_cov, const float yaw, const float yaw_rate_std,
-    std::array<double, 36> & twist_cov) const;
-
-  static void radar_cov_to_detection_acceleration_cov(
-    const std::array<float, 6> & radar_acceleration_cov, const float yaw,
-    std::array<double, 36> & acceleration_cov);
-
-  template <typename ObjectType>
-  void populate_common_fields(
-    const autoware_sensing_msgs::msg::RadarObject & input_object, ObjectType & output_object,
-    const float yaw) const;
-
-  void populate_classifications(
-    const std::vector<autoware_sensing_msgs::msg::RadarClassification> & input_classifications,
-    std::vector<autoware_perception_msgs::msg::ObjectClassification> & output_classifications)
-    const;
-
-  autoware_perception_msgs::msg::DetectedObjects to_detected_objects(
-    const autoware_sensing_msgs::msg::RadarObjects & input_msg) const;
-  autoware_perception_msgs::msg::TrackedObjects to_tracked_objects(
-    const autoware_sensing_msgs::msg::RadarObjects & input_msg) const;
-
-  RadarObjectsAdapterParams params_;
+  // The parameters as a configuration: the converter gets this less the fields the radar
+  // provides.
+  ConversionConfiguration config_;
+  GenerateObjectUUID generate_uuid_;
+  ClassificationRemapper classification_remapper_;
 
   std::unordered_map<std::string, autoware_sensing_msgs::msg::RadarFieldInfo> field_info_map_;
-
-  bool valid_radar_info_{false};
-
   std::vector<std::string> required_attributes_;
 
-  bool position_z_available_{false};
-  bool velocity_z_available_{false};
-  bool acceleration_z_available_{false};
-  bool size_x_available_{false};
-  bool size_y_available_{false};
-  bool size_z_available_{false};
-
-  bool orientation_std_available_{false};
-  bool orientation_rate_std_available_{false};
-
-  ClassificationRemap classification_remap_;
-
-  std::array<std::uint8_t, sizeof(std::size_t)> topic_hash_code_;
+  // Set once a radar info has declared every required field; converts nothing before.
+  std::optional<TrackedObjectConverter> tracked_object_converter_;
 };
 
 }  // namespace autoware::radar_objects_adapter
