@@ -23,9 +23,11 @@
 #include <tf2/utils.hpp>
 
 #include <boost/geometry/algorithms/correct.hpp>
+#include <boost/geometry/algorithms/envelope.hpp>
 #include <boost/geometry/algorithms/intersects.hpp>
 #include <boost/geometry/algorithms/overlaps.hpp>
 #include <boost/geometry/algorithms/union.hpp>
+#include <boost/geometry/geometries/box.hpp>
 #include <boost/geometry/strategies/strategies.hpp>
 
 #include <algorithm>
@@ -572,6 +574,18 @@ bool checkSafetyWithIntegralPredictedPolygon(
   return true;
 }
 
+namespace
+{
+bool intersects_with_broad_phase(const Polygon2d & a, const Polygon2d & b)
+{
+  bg::model::box<Point2d> a_box;
+  bg::model::box<Point2d> b_box;
+  bg::envelope(a, a_box);
+  bg::envelope(b, b_box);
+  return bg::intersects(a_box, b_box) && bg::intersects(a, b);
+}
+}  // namespace
+
 bool checkCollision(
   const PathWithLaneId & planned_path,
   const std::vector<PoseWithVelocityStamped> & predicted_ego_path,
@@ -639,7 +653,7 @@ std::optional<Polygon2d> check_collision(
     return std::nullopt;
   }
 
-  if (boost::geometry::intersects(ego_polygon, obj_polygon)) {
+  if (intersects_with_broad_phase(ego_polygon, obj_polygon)) {
     if (debug) {
       debug->unsafe_reason = "overlap_polygon";
       debug->expected_ego_pose = ego_pose;
@@ -683,7 +697,7 @@ std::optional<Polygon2d> check_collision(
                         obj_pose_with_poly, lon_offset, lat_margin, is_stopping_object, debug);
 
   // check intersects with extended polygon
-  if (!boost::geometry::intersects(*extended_ego_polygon_opt, extended_obj_polygon)) {
+  if (!intersects_with_broad_phase(*extended_ego_polygon_opt, extended_obj_polygon)) {
     return std::nullopt;
   }
 
