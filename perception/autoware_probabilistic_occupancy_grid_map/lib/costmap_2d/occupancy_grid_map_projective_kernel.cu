@@ -38,7 +38,7 @@ bool __device__ isVisibleBeyondObstacle(
   float raw_range = raw_range_int * RANGE_DISCRETIZATION_RESOLUTION;
   float raw_world_z = __uint_as_float(raw_range_and_z & 0xFFFFFFFF);
 
-  std::uint64_t obstacle_range_and_pl = raw_element[3];
+  std::uint64_t obstacle_range_and_pl = obstacle_element[3];
   std::uint32_t obstacle_range_int = obstacle_range_and_pl >> 32;
   float obstacle_range = obstacle_range_int * RANGE_DISCRETIZATION_RESOLUTION;
   float obstacle_pl = __uint_as_float(obstacle_range_and_pl & 0xFFFFFFFF);
@@ -163,8 +163,8 @@ __global__ void prepareObstacleTensorKernel(
   std::uint32_t world_y_int = __float_as_uint(map_point.y());
   std::uint32_t world_z_int = __float_as_uint(map_point.z());
 
-  const float scan_z = translation_scan_origin->z();
-  const float obstacle_z = map_point.z() - translation_scan_origin->z();
+  const float scan_z = translation_scan_origin->z() - translation_map->z();
+  const float obstacle_z = map_point.z() - translation_map->z();
   const float dz = scan_z - obstacle_z;
 
   float projected_length, projected_world_x, projected_world_y;
@@ -231,10 +231,6 @@ __global__ void fillEmptySpaceKernel(
   float world_x = __uint_as_float(range_and_x & 0xFFFFFFFF);
   float world_y = __uint_as_float(range_and_y & 0xFFFFFFFF);
 
-  if (world_x < map_origin_x || world_y < map_origin_y) {
-    return;
-  }
-
   autoware::occupancy_grid_map::utils::raytrace(
     scan_origin_x, scan_origin_y, world_x, world_y, map_origin_x, map_origin_y, map_resolution_inv,
     num_cells_x, num_cells_y, empty_value, costmap_tensor);
@@ -246,17 +242,13 @@ __global__ void fillUnknownSpaceKernel(
   const std::size_t range_bins, const float map_resolution_inv, const float scan_origin_x,
   const float scan_origin_y, const float scan_origin_z, const float map_origin_x,
   const float map_origin_y, const float robot_pose_z, const int num_cells_x, const int num_cells_y,
-  std::uint8_t free_space_value, std::uint8_t no_information_value, std::uint8_t * costmap_tensor)
+  std::uint8_t no_information_value, std::uint8_t * free_space_mask, std::uint8_t * costmap_tensor)
 {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
   if (idx >= angle_bins * range_bins) return;
 
   int angle_bin_index = idx / range_bins;
   int range_bin_index = idx % range_bins;
-
-  if (range_bin_index == range_bins - 1) {
-    return;
-  }
 
   std::uint64_t obs_range_and_x =
     obstacle_points_tensor[6 * (angle_bin_index * range_bins + range_bin_index) + 0];
@@ -273,14 +265,14 @@ __global__ void fillUnknownSpaceKernel(
   float obs_world_px = __uint_as_float(obs_range_and_px & 0xFFFFFFFF);
   float obs_world_py = __uint_as_float(obs_range_and_py & 0xFFFFFFFF);
 
-  if (obs_range_int == 0xFFFFFFFF || obs_world_x < map_origin_x || obs_world_y < map_origin_y) {
+  if (obs_range_int == 0xFFFFFFFF) {
     return;
   }
 
   int next_raw_range_bin_index = range_bin_index + 1;
   int next_obs_range_bin_index = range_bin_index + 1;
 
-  for (; next_raw_range_bin_index < range_bins - 1; next_raw_range_bin_index++) {
+  for (; next_raw_range_bin_index < range_bins; next_raw_range_bin_index++) {
     std::uint64_t next_raw_range_and_x =
       raw_points_tensor[6 * (angle_bin_index * range_bins + next_raw_range_bin_index) + 0];
     std::uint32_t next_raw_range_int = next_raw_range_and_x >> 32;
@@ -295,7 +287,7 @@ __global__ void fillUnknownSpaceKernel(
     }
   }
 
-  for (; next_obs_range_bin_index < range_bins - 1; next_obs_range_bin_index++) {
+  for (; next_obs_range_bin_index < range_bins; next_obs_range_bin_index++) {
     std::uint64_t next_obs_range_and_x =
       obstacle_points_tensor[6 * (angle_bin_index * range_bins + next_obs_range_bin_index) + 0];
     std::uint32_t next_obs_range_int = next_obs_range_and_x >> 32;
@@ -303,6 +295,26 @@ __global__ void fillUnknownSpaceKernel(
     if (next_obs_range_int != 0xFFFFFFFF) {
       break;
     }
+  }
+
+  if (next_raw_range_bin_index == range_bins || next_obs_range_bin_index == range_bins) {
+    float shadow_end_x = obs_world_px;
+    float shadow_end_y = obs_world_py;
+    if (isinf(obs_world_px)) {
+      // a point at or above the scan origin height has no shadow end: go on away from the scan
+      // origin to a point beyond the map
+      const float dx = obs_world_x - scan_origin_x;
+      const float dy = obs_world_y - scan_origin_y;
+      const float distance = sqrt(dx * dx + dy * dy);
+      if (distance == 0.0f) return;
+      const float scale = (num_cells_x + num_cells_y) / (map_resolution_inv * distance);
+      shadow_end_x = obs_world_x + dx * scale;
+      shadow_end_y = obs_world_y + dy * scale;
+    }
+    autoware::occupancy_grid_map::utils::raytrace(
+      obs_world_x, obs_world_y, shadow_end_x, shadow_end_y, map_origin_x, map_origin_y,
+      map_resolution_inv, num_cells_x, num_cells_y, no_information_value, costmap_tensor);
+    return;
   }
 
   const std::uint64_t next_obs_range_and_x =
@@ -336,20 +348,6 @@ __global__ void fillUnknownSpaceKernel(
   const float next_raw_world_px = __uint_as_float(next_raw_range_and_px & 0xFFFFFFFF);
   const float next_raw_world_py = __uint_as_float(next_raw_range_and_py & 0xFFFFFFFF);
 
-  if (next_raw_range_int == 0xFFFFFFFF) {
-    autoware::occupancy_grid_map::utils::raytrace(
-      obs_world_x, obs_world_y, obs_world_px, obs_world_py, map_origin_x, map_origin_y,
-      map_resolution_inv, num_cells_x, num_cells_y, no_information_value, costmap_tensor);
-    return;
-  }
-
-  if (next_obs_range_int == 0xFFFFFFFF) {
-    autoware::occupancy_grid_map::utils::raytrace(
-      obs_world_x, obs_world_y, obs_world_px, obs_world_py, map_origin_x, map_origin_y,
-      map_resolution_inv, num_cells_x, num_cells_y, no_information_value, costmap_tensor);
-    return;
-  }
-
   float next_raw_range = next_raw_range_int * RANGE_DISCRETIZATION_RESOLUTION;
   float raw_to_obs_distance = abs(next_raw_range - obs_range);
 
@@ -358,24 +356,16 @@ __global__ void fillUnknownSpaceKernel(
   }
 
   if (raw_to_obs_distance < obs_to_obs_distance) {
-    if (next_raw_world_x < map_origin_x || next_raw_world_y < map_origin_y) {
-      return;
-    }
-
     autoware::occupancy_grid_map::utils::raytrace(
       obs_world_x, obs_world_y, next_raw_world_x, next_raw_world_y, map_origin_x, map_origin_y,
       map_resolution_inv, num_cells_x, num_cells_y, no_information_value, costmap_tensor);
 
     autoware::occupancy_grid_map::utils::setCellValue(
       next_raw_world_x, next_raw_world_y, map_origin_x, map_origin_y, map_resolution_inv,
-      num_cells_x, num_cells_y, free_space_value, costmap_tensor);
+      num_cells_x, num_cells_y, 1, free_space_mask);
     return;
   } else {
     // fill with no information between obstacles
-
-    if (next_obs_world_x < map_origin_x || next_obs_world_y < map_origin_y) {
-      return;
-    }
 
     autoware::occupancy_grid_map::utils::raytrace(
       obs_world_x, obs_world_y, next_obs_world_x, next_obs_world_y, map_origin_x, map_origin_y,
@@ -383,6 +373,16 @@ __global__ void fillUnknownSpaceKernel(
 
     return;
   }
+}
+
+__global__ void applyFreeSpaceMaskKernel(
+  const std::uint8_t * free_space_mask, const int num_cells, std::uint8_t free_space_value,
+  std::uint8_t * costmap_tensor)
+{
+  const int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  if (idx >= num_cells || free_space_mask[idx] == 0) return;
+
+  costmap_tensor[idx] = free_space_value;
 }
 
 __global__ void fillObstaclesKernel(
@@ -430,9 +430,9 @@ __global__ void fillObstaclesKernel(
   next_obs_range_bin_index = std::min<int>(next_obs_range_bin_index, range_bins - 1);
 
   std::uint64_t next_obs_range_and_x =
-    obstacle_points_tensor[6 * (angle_bin_index * range_bins + range_bin_index) + 0];
+    obstacle_points_tensor[6 * (angle_bin_index * range_bins + next_obs_range_bin_index) + 0];
   std::uint64_t next_obs_range_and_y =
-    obstacle_points_tensor[6 * (angle_bin_index * range_bins + range_bin_index) + 1];
+    obstacle_points_tensor[6 * (angle_bin_index * range_bins + next_obs_range_bin_index) + 1];
 
   std::uint32_t next_obs_range_int = next_obs_range_and_x >> 32;
   float next_obs_range = next_obs_range_int * RANGE_DISCRETIZATION_RESOLUTION;
@@ -440,10 +440,6 @@ __global__ void fillObstaclesKernel(
   float next_obs_world_y = __uint_as_float(next_obs_range_and_y & 0xFFFFFFFF);
 
   if (next_obs_range_int == 0xFFFFFFFF || abs(next_obs_range - range) > distance_margin) {
-    return;
-  }
-
-  if (next_obs_world_x < map_origin_x || next_obs_world_y < map_origin_y) {
     return;
   }
 
@@ -508,17 +504,25 @@ void fillUnknownSpaceLaunch(
   const std::size_t range_bins, const float map_resolution_inv, const float scan_origin_x,
   const float scan_origin_y, const float scan_origin_z, const float map_origin_x,
   const float map_origin_y, const float robot_pose_z, const int num_cells_x, const int num_cells_y,
-  std::uint8_t free_space_value, std::uint8_t no_information_value, std::uint8_t * costmap_tensor,
-  cudaStream_t stream)
+  std::uint8_t free_space_value, std::uint8_t no_information_value, std::uint8_t * free_space_mask,
+  std::uint8_t * costmap_tensor, cudaStream_t stream)
 {
   const int threads_per_block = 256;
   const int num_blocks = (angle_bins * range_bins + threads_per_block - 1) / threads_per_block;
+  const int num_cells = num_cells_x * num_cells_y;
+
+  // the FREE cells are written after all the NO_INFO rays, so FREE wins over them
+  cudaMemsetAsync(free_space_mask, 0, num_cells * sizeof(std::uint8_t), stream);
 
   fillUnknownSpaceKernel<<<num_blocks, threads_per_block, 0, stream>>>(
     raw_points_tensor, obstacle_points_tensor, obstacle_separation_threshold, angle_bins,
     range_bins, map_resolution_inv, scan_origin_x, scan_origin_y, scan_origin_z, map_origin_x,
-    map_origin_y, robot_pose_z, num_cells_x, num_cells_y, free_space_value, no_information_value,
+    map_origin_y, robot_pose_z, num_cells_x, num_cells_y, no_information_value, free_space_mask,
     costmap_tensor);
+
+  const int num_cell_blocks = (num_cells + threads_per_block - 1) / threads_per_block;
+  applyFreeSpaceMaskKernel<<<num_cell_blocks, threads_per_block, 0, stream>>>(
+    free_space_mask, num_cells, free_space_value, costmap_tensor);
 }
 
 void fillObstaclesLaunch(

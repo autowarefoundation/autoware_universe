@@ -109,10 +109,6 @@ __global__ void fillEmptySpaceKernel(
   float world_x = __uint_as_float(range_and_x & 0xFFFFFFFF);
   float world_y = __uint_as_float(range_and_y & 0xFFFFFFFF);
 
-  if (world_x < map_origin_x || world_y < map_origin_y) {
-    return;
-  }
-
   autoware::occupancy_grid_map::utils::raytrace(
     scan_origin_x, scan_origin_y, world_x, world_y, map_origin_x, map_origin_y, map_resolution_inv,
     num_cells_x, num_cells_y, empty_value, costmap_tensor);
@@ -124,7 +120,7 @@ __global__ void fillUnknownSpaceKernel(
   const std::size_t angle_bins, const std::size_t range_bins, const float map_resolution_inv,
   const float scan_origin_x, const float scan_origin_y, const float map_origin_x,
   const float map_origin_y, const int num_cells_x, const int num_cells_y,
-  std::uint8_t free_space_value, std::uint8_t no_information_value,
+  std::uint8_t no_information_value, std::uint8_t * __restrict__ free_space_mask,
   std::uint8_t * __restrict__ costmap_tensor)
 {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -146,7 +142,7 @@ __global__ void fillUnknownSpaceKernel(
   float obs_world_x = __uint_as_float(obs_range_and_x & 0xFFFFFFFF);
   float obs_world_y = __uint_as_float(obs_range_and_y & 0xFFFFFFFF);
 
-  if (obs_range_int == 0xFFFFFFFF || obs_world_x < map_origin_x || obs_world_y < map_origin_y) {
+  if (obs_range_int == 0xFFFFFFFF) {
     return;
   }
 
@@ -191,9 +187,7 @@ __global__ void fillUnknownSpaceKernel(
   const float next_raw_world_y = __uint_as_float(next_raw_range_and_y & 0xFFFFFFFF);
 
   if (next_obs_range_int == 0xFFFFFFFF) {
-    if (
-      next_raw_range_int == 0xFFFFFFFF || next_raw_world_x < map_origin_x ||
-      next_raw_world_y < map_origin_y) {
+    if (next_raw_range_int == 0xFFFFFFFF) {
       return;
     }
 
@@ -205,7 +199,7 @@ __global__ void fillUnknownSpaceKernel(
 
     autoware::occupancy_grid_map::utils::setCellValue(
       next_raw_world_x, next_raw_world_y, map_origin_x, map_origin_y, map_resolution_inv,
-      num_cells_x, num_cells_y, free_space_value, costmap_tensor);
+      num_cells_x, num_cells_y, 1, free_space_mask);
     return;
   }
 
@@ -216,10 +210,6 @@ __global__ void fillUnknownSpaceKernel(
     return;
   } else if (next_raw_range_int == 0xFFFFFFFF) {
     // fill with no information between obstacles
-
-    if (next_obs_world_x < map_origin_x || next_obs_world_y < map_origin_y) {
-      return;
-    }
 
     autoware::occupancy_grid_map::utils::raytrace(
       obs_world_x, obs_world_y, next_obs_world_x, next_obs_world_y, map_origin_x, map_origin_y,
@@ -234,24 +224,16 @@ __global__ void fillUnknownSpaceKernel(
   if (raw_to_obs_distance < obs_to_obs_distance) {
     // fill with free space between raw and obstacle
 
-    if (next_raw_world_x < map_origin_x || next_raw_world_y < map_origin_y) {
-      return;
-    }
-
     autoware::occupancy_grid_map::utils::raytrace(
       obs_world_x, obs_world_y, next_raw_world_x, next_raw_world_y, map_origin_x, map_origin_y,
       map_resolution_inv, num_cells_x, num_cells_y, no_information_value, costmap_tensor);
 
     autoware::occupancy_grid_map::utils::setCellValue(
       next_raw_world_x, next_raw_world_y, map_origin_x, map_origin_y, map_resolution_inv,
-      num_cells_x, num_cells_y, free_space_value, costmap_tensor);
+      num_cells_x, num_cells_y, 1, free_space_mask);
     return;
   } else {
     // fill with no information between obstacles
-
-    if (next_obs_world_x < map_origin_x || next_obs_world_y < map_origin_y) {
-      return;
-    }
 
     autoware::occupancy_grid_map::utils::raytrace(
       obs_world_x, obs_world_y, next_obs_world_x, next_obs_world_y, map_origin_x, map_origin_y,
@@ -259,6 +241,16 @@ __global__ void fillUnknownSpaceKernel(
 
     return;
   }
+}
+
+__global__ void applyFreeSpaceMaskKernel(
+  const std::uint8_t * __restrict__ free_space_mask, const int num_cells,
+  std::uint8_t free_space_value, std::uint8_t * __restrict__ costmap_tensor)
+{
+  const int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  if (idx >= num_cells || free_space_mask[idx] == 0) return;
+
+  costmap_tensor[idx] = free_space_value;
 }
 
 __global__ void fillObstaclesKernel(
@@ -306,9 +298,9 @@ __global__ void fillObstaclesKernel(
   next_obs_range_bin_index = std::min<int>(next_obs_range_bin_index, range_bins - 1);
 
   std::uint64_t next_obs_range_and_x =
-    obstacle_points_tensor[2 * (angle_bin_index * range_bins + range_bin_index) + 0];
+    obstacle_points_tensor[2 * (angle_bin_index * range_bins + next_obs_range_bin_index) + 0];
   std::uint64_t next_obs_range_and_y =
-    obstacle_points_tensor[2 * (angle_bin_index * range_bins + range_bin_index) + 1];
+    obstacle_points_tensor[2 * (angle_bin_index * range_bins + next_obs_range_bin_index) + 1];
 
   std::uint32_t next_obs_range_int = next_obs_range_and_x >> 32;
   float next_obs_range = next_obs_range_int * RANGE_DISCRETIZATION_RESOLUTION;
@@ -316,10 +308,6 @@ __global__ void fillObstaclesKernel(
   float next_obs_world_y = __uint_as_float(next_obs_range_and_y & 0xFFFFFFFF);
 
   if (next_obs_range_int == 0xFFFFFFFF || abs(next_obs_range - range) > distance_margin) {
-    return;
-  }
-
-  if (next_obs_world_x < map_origin_x || next_obs_world_y < map_origin_y) {
     return;
   }
 
@@ -364,16 +352,24 @@ void fillUnknownSpaceLaunch(
   const float distance_margin, const std::size_t angle_bins, const std::size_t range_bins,
   const float map_resolution_inv, const float scan_origin_x, const float scan_origin_y,
   const float map_origin_x, const float map_origin_y, const int num_cells_x, const int num_cells_y,
-  std::uint8_t free_space_value, std::uint8_t no_information_value, std::uint8_t * costmap_tensor,
-  cudaStream_t stream)
+  std::uint8_t free_space_value, std::uint8_t no_information_value, std::uint8_t * free_space_mask,
+  std::uint8_t * costmap_tensor, cudaStream_t stream)
 {
   const int threadsPerBlock = 256;
   const int blocksPerGrid = (angle_bins * range_bins + threadsPerBlock - 1) / threadsPerBlock;
+  const int num_cells = num_cells_x * num_cells_y;
+
+  // the FREE cells are written after all the NO_INFO rays, so FREE wins over them
+  cudaMemsetAsync(free_space_mask, 0, num_cells * sizeof(std::uint8_t), stream);
 
   fillUnknownSpaceKernel<<<blocksPerGrid, threadsPerBlock, 0, stream>>>(
     raw_points_tensor, obstacle_points_tensor, distance_margin, angle_bins, range_bins,
     map_resolution_inv, scan_origin_x, scan_origin_y, map_origin_x, map_origin_y, num_cells_x,
-    num_cells_y, free_space_value, no_information_value, costmap_tensor);
+    num_cells_y, no_information_value, free_space_mask, costmap_tensor);
+
+  const int cellBlocksPerGrid = (num_cells + threadsPerBlock - 1) / threadsPerBlock;
+  applyFreeSpaceMaskKernel<<<cellBlocksPerGrid, threadsPerBlock, 0, stream>>>(
+    free_space_mask, num_cells, free_space_value, costmap_tensor);
 }
 
 void fillObstaclesLaunch(
