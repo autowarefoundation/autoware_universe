@@ -294,8 +294,6 @@ std::int32_t GetIndicesPairsPlugin::enqueue(
   cudaError_t const status = cudaMemcpyAsync(
     num_act_out_data, &num_act_out_real, sizeof(std::int32_t), cudaMemcpyHostToDevice, stream);
 
-  cudaStreamSynchronize(stream);
-
   return status;
 }
 
