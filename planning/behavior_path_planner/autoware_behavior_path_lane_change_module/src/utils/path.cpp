@@ -50,6 +50,7 @@ using autoware::behavior_path_planner::lane_change::LCParamPtr;
 using autoware::behavior_path_planner::LaneChangePhaseMetrics;
 using autoware::behavior_path_planner::ShiftLine;
 using autoware::behavior_path_planner::lane_change::TrajectoryGroup;
+using autoware::behavior_path_planner::utils::lane_change::get_logger;
 using autoware::frenet_planner::FrenetState;
 using autoware::frenet_planner::SamplingParameters;
 using autoware::route_handler::Direction;
@@ -118,8 +119,13 @@ PathWithLaneId get_reference_path_from_target_lane(
     return PathWithLaneId();
   }
 
-  return autoware::behavior_path_planner::utils::resamplePathWithSpline(
-    lane_changing_reference_path, resample_interval, true, {0.0, lane_changing_length});
+  try {
+    return autoware::behavior_path_planner::utils::resamplePathWithSpline(
+      lane_changing_reference_path, resample_interval, true, {0.0, lane_changing_length});
+  } catch (const std::exception & e) {
+    RCLCPP_WARN(get_logger(), "failed to resample the target lane reference path: %s", e.what());
+    return PathWithLaneId();
+  }
 }
 
 ShiftLine get_lane_changing_shift_line(
@@ -574,21 +580,10 @@ std::vector<lane_change::TrajectoryGroup> generate_frenet_candidates(
       common_data_ptr->lc_param_ptr->lane_change_finish_judge_buffer;
     const auto max_lc_len = transient_data.lane_changing_length.max;
     const auto max_lane_changing_length = std::min(dist_to_end_from_lc_start, max_lc_len);
-    if (max_lane_changing_length <= 0.0) {
-      RCLCPP_DEBUG(get_logger(), "Reject: no lane changing length left before the terminal end!");
-      continue;
-    }
 
     constexpr auto resample_interval = 0.5;
-    PathWithLaneId target_lane_reference_path;
-    try {
-      target_lane_reference_path = get_reference_path_from_target_lane(
-        common_data_ptr, lc_start_pose, max_lane_changing_length, resample_interval);
-    } catch (const std::exception & e) {
-      RCLCPP_WARN(
-        get_logger(), "Reject: failed to get the target lane reference path: %s", e.what());
-      continue;
-    }
+    const auto target_lane_reference_path = get_reference_path_from_target_lane(
+      common_data_ptr, lc_start_pose, max_lane_changing_length, resample_interval);
     if (target_lane_reference_path.points.empty()) {
       continue;
     }
