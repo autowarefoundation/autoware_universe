@@ -1,7 +1,17 @@
 # Do not add core (core/*) dependency repositories here.
 # Core packages are provided pre-built by the CI Docker image, and their versions
 # are defined by the image tag. Adding them here would cause redundant rebuilds.
+# The exceptions are the core/cuda/* repositories below, because the CPU-only CI images do not contain them.
 repositories:
+  # core
+  core/cuda/autoware_cuda:
+    type: git
+    url: https://github.com/autowarefoundation/autoware_cuda.git
+    version: 1.0.0
+  core/cuda/cuda_blackboard:
+    type: git
+    url: https://github.com/autowarefoundation/cuda_blackboard.git
+    version: 0.5.0
   # universe
   universe/external/tier4_autoware_msgs:
     type: git
@@ -20,10 +30,6 @@ repositories:
     type: git
     url: https://github.com/tier4/glog.git
     version: ea36766fdc2ac8e8c8e3ac988ae69acd6d09bb30
-  universe/external/cuda_blackboard:
-    type: git
-    url: https://github.com/autowarefoundation/cuda_blackboard.git
-    version: 0.5.0
   universe/external/negotiated:
     type: git
     url: https://github.com/osrf/negotiated.git
