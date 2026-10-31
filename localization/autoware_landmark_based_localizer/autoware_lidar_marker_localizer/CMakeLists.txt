@@ -11,6 +11,7 @@ link_directories(${PCL_LIBRARY_DIRS})
 
 ament_auto_add_library(${PROJECT_NAME} SHARED
   src/lidar_marker_localizer.cpp
+  src/marker_detector.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}
@@ -27,6 +28,8 @@ rclcpp_components_register_node(${PROJECT_NAME}
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   ament_lint_auto_find_test_dependencies()
+  ament_auto_add_gtest(test_lidar_marker_localizer test/test_lidar_marker_localizer.cpp)
+  target_include_directories(test_lidar_marker_localizer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 endif()
 
 ament_auto_package(INSTALL_TO_SHARE

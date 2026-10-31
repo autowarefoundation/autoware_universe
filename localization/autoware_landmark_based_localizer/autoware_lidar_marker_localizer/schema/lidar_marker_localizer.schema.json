@@ -27,6 +27,11 @@
           "description": "The name of the markers listed in the HD map.",
           "default": "reflector"
         },
+        "road_surface_mode": {
+          "type": "boolean",
+          "description": "Detect markers on the road surface instead of markers on a vertical surface. In this mode the lateral position is not observed: the y of the detected marker is fixed to marker_to_vehicle_offset_y, so the lateral position of the output pose is the mapped marker position minus this offset. Use this mode only where the lateral position of the vehicle relative to the marker is known (e.g. the vehicle always passes the marker on a fixed path). marker_height_from_ground is used as the height of the road surface marker (typically 0.0), reference_ring_number is not used, and the debug grids are drawn horizontally around marker_to_vehicle_offset_y.",
+          "default": false
+        },
         "resolution": {
           "type": "number",
           "description": "Grid size for marker detection algorithm. [m]",
