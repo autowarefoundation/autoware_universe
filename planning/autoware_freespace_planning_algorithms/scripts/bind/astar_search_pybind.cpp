@@ -15,6 +15,7 @@
 #include "autoware/freespace_planning_algorithms/abstract_algorithm.hpp"
 #include "autoware/freespace_planning_algorithms/astar_search.hpp"
 
+#include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp/serialization.hpp>
 
@@ -178,17 +179,16 @@ PYBIND11_MODULE(autoware_freespace_planning_algorithms_pybind, p)
       .def_readwrite(
         "obstacle_threshold",
         &freespace_planning_algorithms::PlannerCommonParam::obstacle_threshold);
-  auto pyVehicleShape =
-    py::class_<freespace_planning_algorithms::VehicleShape>(p, "VehicleShape")
+  auto pyVehicleInfo =
+    py::class_<autoware::vehicle_info_utils::VehicleInfo>(p, "VehicleInfo")
       .def(py::init<>())
       .def(py::init<double, double, double, double, double>())
-      .def("setMinMaxDimension", &freespace_planning_algorithms::VehicleShape::setMinMaxDimension)
-      .def_readwrite("length", &freespace_planning_algorithms::VehicleShape::length)
-      .def_readwrite("width", &freespace_planning_algorithms::VehicleShape::width)
-      .def_readwrite("base_length", &freespace_planning_algorithms::VehicleShape::base_length)
-      .def_readwrite("max_steering", &freespace_planning_algorithms::VehicleShape::max_steering)
-      .def_readwrite("base2back", &freespace_planning_algorithms::VehicleShape::base2back)
-      .def_readwrite("min_dimension", &freespace_planning_algorithms::VehicleShape::min_dimension);
+      .def_readwrite("length", &autoware::vehicle_info_utils::VehicleInfo::vehicle_length_m)
+      .def_readwrite("width", &autoware::vehicle_info_utils::VehicleInfo::vehicle_width_m)
+      .def_readwrite("base_length", &autoware::vehicle_info_utils::VehicleInfo::wheel_base_m)
+      .def_readwrite(
+        "max_steering", &autoware::vehicle_info_utils::VehicleInfo::max_steer_angle_rad)
+      .def_readwrite("base2back", &autoware::vehicle_info_utils::VehicleInfo::rear_overhang_m);
 
   auto pyAbstractPlanningAlgorithm =
     py::class_<freespace_planning_algorithms::AbstractPlanningAlgorithm>(
@@ -200,8 +200,7 @@ PYBIND11_MODULE(autoware_freespace_planning_algorithms_pybind, p)
     .def(
       py::init<
         freespace_planning_algorithms::PlannerCommonParam &,
-        freespace_planning_algorithms::VehicleShape &,
-        freespace_planning_algorithms::AstarParam &>())
+        autoware::vehicle_info_utils::VehicleInfo &, freespace_planning_algorithms::AstarParam &>())
     .def("setMap", &AstarSearchPython::setMapByte)
     .def("makePlan", &AstarSearchPython::makePlanByte)
     .def("getWaypoints", &AstarSearchPython::getWaypointsAsVector)
