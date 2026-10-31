@@ -23,8 +23,6 @@
 
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/search/pcl_search.h>
-#include <tf2_ros/buffer.h>
-#include <tf2_ros/transform_listener.h>
 
 #include <memory>
 
@@ -35,17 +33,9 @@ class VoxelBasedCompareMapFilterComponent : public autoware::pointcloud_preproce
   using PointCloud2 = sensor_msgs::msg::PointCloud2;
   using PointCloud2ConstPtr = sensor_msgs::msg::PointCloud2::ConstSharedPtr;
 
-  using PointIndices = pcl_msgs::msg::PointIndices;
-  using PointIndicesPtr = PointIndices::SharedPtr;
-  using PointIndicesConstPtr = PointIndices::ConstSharedPtr;
-
 protected:
   void filter(
     const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output) override;
-  void input_indices_callback(
-    const PointCloud2ConstPtr cloud, const PointIndicesConstPtr indices) override;
-
-  bool convert_output_costly(std::unique_ptr<PointCloud2> & output) override;
 
 private:
   // pcl::SegmentDifferences<pcl::PointXYZ> impl_;
@@ -53,8 +43,6 @@ private:
   // interfaces
   std::unique_ptr<VoxelGridMapLoader> voxel_grid_map_loader_;
   rclcpp::Subscription<PointCloud2>::SharedPtr sub_map_;
-  tf2_ros::Buffer tf_buffer_;
-  tf2_ros::TransformListener tf_listener_;
 
   // parameters
   double distance_threshold_;
