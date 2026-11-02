@@ -7,8 +7,16 @@
   <maintainer email="isamu.takagi@tier4.jp">Takagi, Isamu</maintainer>
   <license>Apache License 2.0</license>
 
+  <!-- From vehicle_cmd_gate maintainers. -->
+  <author email="yukinari.hisaki.2@tier4.jp">Yukinari Hisaki</author>
+  <author email="arjun.ram@tier4.jp">Arjun Ram</author>
+  <author email="takayuki.murooka@tier4.jp">Takayuki Murooka</author>
+  <author email="hiroki.ota@tier4.jp">Hiroki OTA</author>
+
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
   <buildtool_depend>autoware_cmake</buildtool_depend>
+
+  <build_depend>rosidl_default_generators</build_depend>
 
   <depend>autoware_agnocast_wrapper</depend>
   <depend>autoware_command_mode_types</depend>
@@ -25,8 +33,12 @@
   <depend>tier4_external_api_msgs</depend>
   <depend>tier4_system_msgs</depend>
 
+  <exec_depend>rosidl_default_runtime</exec_depend>
+
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>autoware_lint_common</test_depend>
+
+  <member_of_group>rosidl_interface_packages</member_of_group>
 
   <export>
     <build_type>ament_cmake</build_type>

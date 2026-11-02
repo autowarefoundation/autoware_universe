@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "../../src/vehicle_cmd_gate.hpp"
 #include "ament_index_cpp/get_package_share_directory.hpp"
+#include "control_command_gate.hpp"
 
 #include <gtest/gtest.h>
 
@@ -56,10 +56,8 @@ const std::vector<double> lat_jerk_lim_for_steer_cmd = {1.7, 1.3, 0.9, 0.6};
 const std::vector<double> steer_cmd_diff_lim_from_current_steer = {0.5, 0.4, 0.2, 0.1};
 const double wheelbase = 2.89;
 
-using autoware::vehicle_cmd_gate::VehicleCmdGate;
+using autoware::control_command_gate::ControlCmdGate;
 
-using autoware_adapi_v1_msgs::msg::MrmState;
-using autoware_adapi_v1_msgs::msg::OperationModeState;
 using autoware_control_msgs::msg::Control;
 using autoware_vehicle_msgs::msg::GearCommand;
 using autoware_vehicle_msgs::msg::HazardLightsCommand;
@@ -67,10 +65,7 @@ using autoware_vehicle_msgs::msg::SteeringReport;
 using autoware_vehicle_msgs::msg::TurnIndicatorsCommand;
 using geometry_msgs::msg::AccelWithCovarianceStamped;
 using nav_msgs::msg::Odometry;
-using tier4_control_msgs::msg::GateMode;
 using tier4_external_api_msgs::msg::Emergency;
-using Heartbeat = autoware_adapi_v1_msgs::msg::ManualOperatorHeartbeat;
-using EngageMsg = autoware_vehicle_msgs::msg::Engage;
 
 class PubSubNode : public rclcpp::Node
 {
@@ -88,15 +83,9 @@ public:
     rclcpp::QoS qos{1};
     qos.transient_local();
 
-    pub_external_emergency_stop_heartbeat_ =
-      create_publisher<Heartbeat>("input/external_emergency_stop_heartbeat", qos);
-    pub_engage_ = create_publisher<EngageMsg>("input/engage", qos);
-    pub_gate_mode_ = create_publisher<GateMode>("input/gate_mode", qos);
     pub_odom_ = create_publisher<Odometry>("/localization/kinematic_state", qos);
     pub_acc_ = create_publisher<AccelWithCovarianceStamped>("input/acceleration", qos);
     pub_steer_ = create_publisher<SteeringReport>("input/steering", qos);
-    pub_operation_mode_ = create_publisher<OperationModeState>("input/operation_mode", qos);
-    pub_mrm_state_ = create_publisher<MrmState>("input/mrm_state", qos);
 
     pub_auto_control_cmd_ = create_publisher<Control>("input/auto/control_cmd", qos);
     pub_auto_turn_indicator_cmd_ =
@@ -108,14 +97,9 @@ public:
 
   rclcpp::Subscription<Control>::SharedPtr sub_cmd_;
 
-  rclcpp::Publisher<Heartbeat>::SharedPtr pub_external_emergency_stop_heartbeat_;
-  rclcpp::Publisher<EngageMsg>::SharedPtr pub_engage_;
-  rclcpp::Publisher<GateMode>::SharedPtr pub_gate_mode_;
   rclcpp::Publisher<Odometry>::SharedPtr pub_odom_;
   rclcpp::Publisher<AccelWithCovarianceStamped>::SharedPtr pub_acc_;
   rclcpp::Publisher<SteeringReport>::SharedPtr pub_steer_;
-  rclcpp::Publisher<OperationModeState>::SharedPtr pub_operation_mode_;
-  rclcpp::Publisher<MrmState>::SharedPtr pub_mrm_state_;
   rclcpp::Publisher<Control>::SharedPtr pub_auto_control_cmd_;
   rclcpp::Publisher<TurnIndicatorsCommand>::SharedPtr pub_auto_turn_indicator_cmd_;
   rclcpp::Publisher<HazardLightsCommand>::SharedPtr pub_auto_hazard_light_cmd_;
@@ -128,22 +112,6 @@ public:
   // publish except for the control_cmd
   void publishDefaultTopicsNoSpin()
   {
-    {
-      Heartbeat msg;
-      msg.stamp = now();
-      pub_external_emergency_stop_heartbeat_->publish(msg);
-    }
-    {
-      EngageMsg msg;
-      msg.stamp = now();
-      msg.engage = true;
-      pub_engage_->publish(msg);
-    }
-    {
-      GateMode msg;
-      msg.data = GateMode::AUTO;
-      pub_gate_mode_->publish(msg);
-    }
     {
       Odometry msg;  // initialized for zero pose and twist
       msg.header.frame_id = "baselink";
@@ -174,20 +142,6 @@ public:
         msg.steering_tire_angle = cmd_history_.back()->lateral.steering_tire_angle;
       }
       pub_steer_->publish(msg);
-    }
-    {
-      OperationModeState msg;
-      msg.stamp = now();
-      msg.mode = OperationModeState::AUTONOMOUS;
-      msg.is_autoware_control_enabled = true;
-      pub_operation_mode_->publish(msg);
-    }
-    {
-      MrmState msg;
-      msg.stamp = now();
-      msg.state = MrmState::NORMAL;
-      msg.behavior = MrmState::NONE;
-      pub_mrm_state_->publish(msg);
     }
     {
       TurnIndicatorsCommand msg;
@@ -375,7 +329,7 @@ public:
   }
 };
 
-std::shared_ptr<VehicleCmdGate> generateNode()
+std::shared_ptr<ControlCmdGate> generateNode()
 {
   auto node_options = rclcpp::NodeOptions{};
 
@@ -405,7 +359,7 @@ std::shared_ptr<VehicleCmdGate> generateNode()
   override("nominal.lat_jerk_lim_for_steer_cmd", lat_jerk_lim_for_steer_cmd);
   override("nominal.steer_cmd_diff_lim_from_current_steer", steer_cmd_diff_lim_from_current_steer);
 
-  return std::make_shared<VehicleCmdGate>(node_options);
+  return std::make_shared<ControlCmdGate>(node_options);
 }
 
 class TestFixture : public ::testing::TestWithParam<CmdParams>
@@ -413,7 +367,7 @@ class TestFixture : public ::testing::TestWithParam<CmdParams>
 protected:
   void SetUp() override
   {
-    vehicle_cmd_gate_node_ = generateNode();
+    control_cmd_gate_node_ = generateNode();
     cmd_generator_.p_ = GetParam();
   }
 
@@ -423,7 +377,7 @@ protected:
   }
 
   PubSubNode pub_sub_node_;
-  std::shared_ptr<VehicleCmdGate> vehicle_cmd_gate_node_;
+  std::shared_ptr<ControlCmdGate> control_cmd_gate_node_;
   ControlCmdGenerator cmd_generator_;
 };
 
@@ -452,7 +406,7 @@ TEST_P(TestFixture, CheckFilterForSinCmd)
     pub_sub_node_.publishDefaultTopicsNoSpin();
     for (int j = 0; j < 20; ++j) {
       rclcpp::spin_some(pub_sub_node_.get_node_base_interface());
-      rclcpp::spin_some(vehicle_cmd_gate_node_->get_node_base_interface());
+      rclcpp::spin_some(control_cmd_gate_node_->get_node_base_interface());
     }
 
     auto end_time = std::chrono::steady_clock::now();
