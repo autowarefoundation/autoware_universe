@@ -133,16 +133,15 @@ private:
   // features), 2-4 rulebook (INT32), then one of
   //   5 inputs: no bias;
   //   6 inputs: 5 bias [C_out], same type as the features (FP16/FP32 only);
-  //   7 inputs (INT8 features): 5 weight_scale, 6 bias, each FP32 [C_out] or [0] (a zero-length
-  //     tensor is absent).
+  //   7 inputs: 5 weight_scale, 6 bias, each FP32 [C_out] or [0] (a zero-length tensor is absent).
   //
   // The features' type selects the mode; the inputs and attributes each mode accepts:
   //
   //                 FP16 / FP32 features      INT8 features
-  //   inputs        5 or 6                    7
+  //   inputs        5, 6 or 7                 7
   //   filters       same type as features     INT8
-  //   weight_scale  -                         [C_out]
-  //   bias          -                         [0] or [C_out]
+  //   weight_scale  [0]                       [C_out]
+  //   bias          [0] or [C_out]            [0] or [C_out]
   //   input_scale   absent                    required: the scale of the QuantizeLinear in front
   //   output_type   absent                    required: "f16"
   //   output_scale  absent or 1.0             absent or 1.0
@@ -176,8 +175,9 @@ private:
   std::int32_t enqueueInt8(
     PluginTensorDesc const * input_desc, void const * const * inputs, void * const * outputs,
     cudaStream_t stream) noexcept;
-  /// Device buffer of the INT8 GEMM's per-channel scale followed by a zero bias, filled on the
-  /// first enqueue (input data is only available there).
+  /// Device copy of the bias (seven inputs) in the features' type, or the INT8 GEMM's
+  /// per-channel scale followed by a zero bias, filled on the first enqueue (input data is only
+  /// available there).
   /// Allocated in ``configurePlugin`` (build) and ``onShapeChange`` (runtime) so no cudaMalloc
   /// runs inside CUDA graph capture. Idempotent for an unchanged C_out.
   std::int32_t allocateEpilogueConstants(std::int64_t c_out) noexcept;

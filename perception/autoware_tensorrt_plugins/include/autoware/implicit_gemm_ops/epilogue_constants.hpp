@@ -15,6 +15,7 @@
 #ifndef AUTOWARE__IMPLICIT_GEMM_OPS__EPILOGUE_CONSTANTS_HPP_
 #define AUTOWARE__IMPLICIT_GEMM_OPS__EPILOGUE_CONSTANTS_HPP_
 
+#include <cuda_fp16.h>
 #include <cuda_runtime.h>
 
 #include <cstdint>
@@ -25,5 +26,9 @@
 void launch_scale_per_channel(
   const float * weight_scale, float input_scale, float * out, std::int64_t c_out,
   cudaStream_t stream);
+
+/// FP32 bias to FP16, for spconv's FP16 kernels, which add a bias of the activation type.
+void launch_float_to_half(
+  const float * input, __half * output, std::int64_t num_elements, cudaStream_t stream);
 
 #endif  // AUTOWARE__IMPLICIT_GEMM_OPS__EPILOGUE_CONSTANTS_HPP_

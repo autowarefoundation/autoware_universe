@@ -27,6 +27,15 @@ __global__ void scale_per_channel_kernel(
     out[idx] = input_scale * weight_scale[idx];
   }
 }
+
+__global__ void float_to_half_kernel(
+  const float * __restrict__ input, __half * __restrict__ output, std::int64_t num_elements)
+{
+  std::int64_t idx = static_cast<std::int64_t>(blockIdx.x) * blockDim.x + threadIdx.x;
+  if (idx < num_elements) {
+    output[idx] = __float2half_rn(input[idx]);
+  }
+}
 }  // namespace
 
 void launch_scale_per_channel(
@@ -35,4 +44,11 @@ void launch_scale_per_channel(
 {
   int grid = static_cast<int>((c_out + kBlockSize - 1) / kBlockSize);
   scale_per_channel_kernel<<<grid, kBlockSize, 0, stream>>>(weight_scale, input_scale, out, c_out);
+}
+
+void launch_float_to_half(
+  const float * input, __half * output, std::int64_t num_elements, cudaStream_t stream)
+{
+  int grid = static_cast<int>((num_elements + kBlockSize - 1) / kBlockSize);
+  float_to_half_kernel<<<grid, kBlockSize, 0, stream>>>(input, output, num_elements);
 }

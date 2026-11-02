@@ -243,11 +243,6 @@ bool ImplicitGemmPlugin::checkContract(
       std::string("the filters are ") + type_name(filters) + " but the features are " +
       type_name(features));
   }
-  if (num_inputs == NUM_PLUGIN_INPUTS_SCALE_BIAS) {
-    return fail(
-      std::string(type_name(features)) +
-      " features take 5 or 6 inputs; 7 (weight_scale, bias) are for INT8 features");
-  }
   if (params_.has_input_scale != 0) {
     return fail(
       std::string("input_scale is set but the features are ") + type_name(features) +
@@ -325,10 +320,17 @@ std::int32_t ImplicitGemmPlugin::configurePlugin(
   if (num_inputs == NUM_PLUGIN_INPUTS_SCALE_BIAS) {
     std::int64_t const scale_length = vector_length(in[INOUT_WEIGHT_SCALE_INDEX].desc.dims);
     std::int64_t const bias_length = vector_length(in[INOUT_BIAS_INDEX].desc.dims);
-    if (scale_length != c_out) {
+    if (is_int8 && scale_length != c_out) {
       refuse(
         layer_name_, "INT8 features need input 5 (weight_scale) as [C_out=" +
                        std::to_string(c_out) + "], got [" + std::to_string(scale_length) + "]");
+      return -1;
+    }
+    if (!is_int8 && scale_length != 0) {
+      refuse(
+        layer_name_, std::string(type_name(in[INOUT_IN_FEATURES_INDEX].desc.type)) +
+                       " features take no weight_scale: input 5 must be [0], got [" +
+                       std::to_string(scale_length) + "]");
       return -1;
     }
     if (bias_length != 0 && bias_length != c_out) {
@@ -492,10 +494,10 @@ std::int32_t ImplicitGemmPlugin::enqueue(
 
   tv::Tensor out_features = tv::from_blob(outputs[0], {num_act_out, num_out_features}, dtype, 0);
 
-  // Wrap the optional per-channel bias (BN-folded, 6th ONNX input) into a tv::Tensor.
+  // Wrap the optional per-channel bias (BN-folded, 6th or 7th ONNX input) into a tv::Tensor.
   // When present, spconv fuses it inside the GEMM kernel instead of a separate bias_add kernel.
-  // bias_tv stays empty (default-constructed) when there are only 5 inputs (no bias), in which
-  // case implicit_gemm runs without a bias term.
+  // bias_tv stays empty (default-constructed) without a bias, in which case implicit_gemm runs
+  // without a bias term.
   tv::Tensor bias_tv{};
   if (num_plugin_inputs_ == NUM_PLUGIN_INPUTS_BIAS) {
     auto const bias_type = input_desc[INOUT_OPTIONAL_BIAS_INDEX].type;
@@ -503,6 +505,35 @@ std::int32_t ImplicitGemmPlugin::enqueue(
     validate_and_wrap_bias_tensor(
       inputs[INOUT_OPTIONAL_BIAS_INDEX], c_bias, dtype, bias_type, input_features.device(),
       &bias_tv);
+  } else if (
+    num_plugin_inputs_ == NUM_PLUGIN_INPUTS_SCALE_BIAS &&
+    vector_length(input_desc[INOUT_BIAS_INDEX].dims) > 0) {
+    // Seven inputs: the bias is FP32. Spconv's FP16 kernels add a bias of the activation dtype,
+    // so an FP16 layer adds a copy converted once.
+    PLUGIN_ASSERT(input_desc[INOUT_BIAS_INDEX].type == DataType::kFLOAT);
+    std::int64_t const c_bias = input_desc[INOUT_BIAS_INDEX].dims.d[0];
+    PLUGIN_ASSERT(c_bias == num_out_features);
+    if (dtype == tv::float32) {
+      bias_tv = tv::from_blob(
+        const_cast<void *>(inputs[INOUT_BIAS_INDEX]), {c_bias}, tv::float32,
+        input_features.device());
+    } else {
+      if (allocateEpilogueConstants(c_bias) != 0) {
+        return -1;
+      }
+      std::lock_guard<std::mutex> lock(epilogue_constants_mutex_);
+      if (!epilogue_constants_filled_) {
+        launch_float_to_half(
+          static_cast<float const *>(inputs[INOUT_BIAS_INDEX]),
+          static_cast<__half *>(epilogue_constants_ptr_), c_bias, stream);
+        if (PLUGIN_CUDA_CHECK(cudaGetLastError()) != cudaSuccess) {
+          return -1;
+        }
+        epilogue_constants_filled_ = true;
+      }
+      bias_tv =
+        tv::from_blob(epilogue_constants_ptr_, {c_bias}, tv::float16, input_features.device());
+    }
   }
 
   std::vector<tv::Tensor> pair_mask_splits;
@@ -669,6 +700,7 @@ std::int32_t ImplicitGemmPlugin::allocateEpilogueConstants(std::int64_t c_out) n
   }
   releaseEpilogueConstants();
 
+  // Room for either use: the INT8 GEMM's FP32 scale and zero bias, or an FP16 copy of the bias.
   cudaError_t const status =
     cudaMalloc(&epilogue_constants_ptr_, static_cast<std::size_t>(2 * c_out) * sizeof(float));
   if (status != cudaSuccess) {
