@@ -128,6 +128,9 @@ std::vector<ConcatenatedFrame<PointCloudMsgT>> CloudConcatenator<PointCloudMsgT>
     if (is_late(frame_of(reference, incoming_cloud_info))) {
       ++stats_.late_clouds_rejected;
       stats_.last_late_topic = topic;
+      Collector alone{{}, reference.reference_time, reference.noise_window, arrival_time};
+      alone.topic_to_cloud[topic] = std::move(cloud);
+      outputs.push_back(emit(std::move(alone), ConcatenatedFrameStatus::kLate));
       return outputs;
     }
     while (max_open_collectors_ != 0 && collectors_.size() >= max_open_collectors_) {

@@ -583,7 +583,7 @@ CloudConcatenator with_frame_closed_before_right(
 }
 }  // namespace
 
-TEST(CloudConcatenatorLateClouds, AdvancedRejectsACloudWhoseFrameAlreadyClosed)
+TEST(CloudConcatenatorLateClouds, AdvancedEmitsACloudWhoseFrameAlreadyClosedAtOnce)
 {
   // Arrange
   auto concatenator = with_frame_closed_before_right(MatchingStrategyType::advanced, kRejectLate);
@@ -592,11 +592,30 @@ TEST(CloudConcatenatorLateClouds, AdvancedRejectsACloudWhoseFrameAlreadyClosed)
   const auto frames = concatenator.process_cloud("lidar_right", make_cloud(10, 80'000'000), 100.26);
 
   // Assert
-  // Nothing is opened for it, so no one-cloud frame follows.
-  EXPECT_TRUE(frames.empty());
+  // The same one-cloud frame the timeout would have produced, now, and no collector stays open.
+  ASSERT_EQ(frames.size(), 1u);
+  EXPECT_EQ(frames[0].status, ConcatenatedFrameStatus::kLate);
+  EXPECT_EQ(frames[0].result.concatenate_cloud_ptr->width, kPointsPerCloud);
+  EXPECT_DOUBLE_EQ(frames[0].reference_time, 10.0);
   EXPECT_FALSE(concatenator.next_deadline().has_value());
   EXPECT_EQ(concatenator.stats().late_clouds_rejected, 1u);
   EXPECT_EQ(concatenator.stats().last_late_topic, "lidar_right");
+}
+
+TEST(CloudConcatenatorLateClouds, ALateFrameDoesNotMoveTheWatermark)
+{
+  // Arrange
+  // After the late right(10.08) went out, a cloud for the even older frame 9.90 arrives.
+  auto concatenator = with_frame_closed_before_right(MatchingStrategyType::advanced, kRejectLate);
+  static_cast<void>(concatenator.process_cloud("lidar_right", make_cloud(10, 80'000'000), 100.26));
+
+  // Act
+  const auto frames = concatenator.process_cloud("lidar_top", make_cloud(9, 900'000'000), 100.27);
+
+  // Assert
+  ASSERT_EQ(frames.size(), 1u);
+  EXPECT_EQ(frames[0].status, ConcatenatedFrameStatus::kLate);
+  EXPECT_EQ(concatenator.stats().late_clouds_rejected, 2u);
 }
 
 TEST(CloudConcatenatorLateClouds, WithoutThePolicyALateCloudOpensACollector)
@@ -689,7 +708,7 @@ TEST(CloudConcatenatorLateClouds, TheClockGoingBackResetsTheWatermark)
   EXPECT_EQ(concatenator.stats().late_clouds_rejected, 0u);
 }
 
-TEST(CloudConcatenatorLateClouds, NaiveRejectsACloudStampedBeforeTheEmittedFrame)
+TEST(CloudConcatenatorLateClouds, NaiveEmitsACloudStampedBeforeTheEmittedFrameAtOnce)
 {
   // Arrange
   // Naive has no offsets, so the frame is judged by header stamps: right(10.00) is at or before
@@ -703,7 +722,8 @@ TEST(CloudConcatenatorLateClouds, NaiveRejectsACloudStampedBeforeTheEmittedFrame
   const auto frames = concatenator.process_cloud("lidar_right", make_cloud(10, 0), 100.26);
 
   // Assert
-  EXPECT_TRUE(frames.empty());
+  ASSERT_EQ(frames.size(), 1u);
+  EXPECT_EQ(frames[0].status, ConcatenatedFrameStatus::kLate);
   EXPECT_FALSE(concatenator.next_deadline().has_value());
   EXPECT_EQ(concatenator.stats().late_clouds_rejected, 1u);
 }

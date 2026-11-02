@@ -250,9 +250,10 @@ void PointCloudConcatenateDataSynchronizerComponentTemplated<MsgTraits>::show_de
     log_stream << "Naive strategy:\n Collector's timestamp: " << frame.first_arrival_time
                << " seconds\n";
   }
-  log_stream << "Closed by: "
-             << (frame.status == ConcatenatedFrameStatus::kComplete ? "completion" : "timeout")
-             << "\n";
+  const char * closed_by = frame.status == ConcatenatedFrameStatus::kComplete ? "completion"
+                           : frame.status == ConcatenatedFrameStatus::kLate   ? "late arrival"
+                                                                              : "timeout";
+  log_stream << "Closed by: " << closed_by << "\n";
   log_stream << "Pointclouds: [";
   std::string separator;
   for (const auto & [topic, stamp] : frame.result.topic_to_original_stamp_map) {
@@ -285,8 +286,8 @@ void PointCloudConcatenateDataSynchronizerComponentTemplated<
   if (stats.late_clouds_rejected > reported_stats_.late_clouds_rejected) {
     RCLCPP_WARN_STREAM_THROTTLE(
       this->get_logger(), *this->get_clock(), 1000,
-      "Dropped a cloud from '" << stats.last_late_topic
-                               << "' that arrived after its frame was already published.");
+      "A cloud from '" << stats.last_late_topic
+                       << "' arrived after its frame was already published.");
   }
   reported_stats_ = stats;
 }
