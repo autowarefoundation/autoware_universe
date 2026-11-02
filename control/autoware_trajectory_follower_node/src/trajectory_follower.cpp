@@ -18,8 +18,10 @@
 
 #include <cmath>
 #include <cstdint>
+#include <memory>
 #include <numeric>
 #include <sstream>
+#include <utility>
 #include <vector>
 
 namespace autoware::motion::control::trajectory_follower_node
@@ -43,6 +45,24 @@ std::vector<T> resampleHorizonByZeroOrderHold(
   return resampled_horizon;
 }
 
+std::optional<TrajectoryFollowerError> checkTimeOut(
+  const trajectory_follower::LateralOutput & lat_out,
+  const trajectory_follower::LongitudinalOutput & lon_out, const rclcpp::Time & stamp,
+  const double timeout_thr_sec)
+{
+  // TODO(Horibe): Think specification. This comes from the old implementation.
+  if ((stamp - rclcpp::Time(lat_out.control_cmd.stamp)).seconds() > timeout_thr_sec) {
+    return TrajectoryFollowerError{
+      TrajectoryFollowerError::Level::error,
+      "Lateral control command too old, control_cmd will not be published."};
+  }
+  if ((stamp - rclcpp::Time(lon_out.control_cmd.stamp)).seconds() > timeout_thr_sec) {
+    return TrajectoryFollowerError{
+      TrajectoryFollowerError::Level::error,
+      "Longitudinal control command too old, control_cmd will not be published."};
+  }
+  return std::nullopt;
+}
 }  // namespace
 
 std::optional<autoware_control_msgs::msg::ControlHorizon> mergeLatLonHorizon(
@@ -140,6 +160,62 @@ visualization_msgs::msg::MarkerArray createDebugMarker(
   }
 
   return debug_marker_array;
+}
+
+TrajectoryFollower::TrajectoryFollower(
+  const TrajectoryFollowerConfig & config,
+  std::unique_ptr<trajectory_follower::LateralControllerInterface> lateral_controller,
+  std::unique_ptr<trajectory_follower::LongitudinalControllerInterface> longitudinal_controller)
+: config_(config),
+  lateral_controller_(std::move(lateral_controller)),
+  longitudinal_controller_(std::move(longitudinal_controller))
+{
+}
+
+tl::expected<TrajectoryFollowerResult, TrajectoryFollowerError> TrajectoryFollower::run(
+  const trajectory_follower::InputData & input_data, const rclcpp::Time & stamp)
+{
+  // 1. run the lateral controller
+  const auto lat_result = lateral_controller_->run(input_data, stamp);
+  if (!lat_result) {
+    return tl::make_unexpected(
+      TrajectoryFollowerError{
+        TrajectoryFollowerError::Level::info,
+        "Control is skipped since lateral controller failed: " + lat_result.error()});
+  }
+  const auto & lat_out = *lat_result;
+
+  // 2. run the longitudinal controller
+  const auto lon_result =
+    longitudinal_controller_->run(input_data, stamp, previous_lateral_sync_data_);
+
+  // 3. keep the lateral result for the longitudinal controller of the next cycle
+  previous_lateral_sync_data_ = lat_out.sync_data;
+  if (!lon_result) {
+    return tl::make_unexpected(
+      TrajectoryFollowerError{
+        TrajectoryFollowerError::Level::info,
+        "Control is skipped since longitudinal controller failed: " + lon_result.error()});
+  }
+  const auto & lon_out = *lon_result;
+
+  if (const auto timeout_error = checkTimeOut(lat_out, lon_out, stamp, config_.timeout_thr_sec)) {
+    return tl::make_unexpected(*timeout_error);
+  }
+
+  // 4. merge the outputs of the two controllers
+  TrajectoryFollowerResult result;
+  result.control_cmd.stamp = stamp;
+  result.control_cmd.lateral = lat_out.control_cmd;
+  result.control_cmd.longitudinal = lon_out.control_cmd;
+  result.predicted_trajectory = lat_out.predicted_trajectory;
+  result.debug_marker = createDebugMarker(input_data, lat_out, stamp);
+  if (config_.enable_control_cmd_horizon) {
+    result.control_cmd_horizon =
+      mergeLatLonHorizon(lat_out.control_cmd_horizon, lon_out.control_cmd_horizon, stamp);
+  }
+
+  return result;
 }
 
 }  // namespace autoware::motion::control::trajectory_follower_node

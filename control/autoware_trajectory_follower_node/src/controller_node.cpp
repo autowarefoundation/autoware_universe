@@ -21,6 +21,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <utility>
 
 namespace autoware::motion::control::trajectory_follower_node
 {
@@ -48,35 +49,41 @@ Controller::Controller(const rclcpp::NodeOptions & node_options)
   diag_updater_->setHardwareID("trajectory_follower_node");
   diag_updater_->add("incoming_message_timeout", this, &Controller::check_cyclic_message_timeout);
 
+  std::unique_ptr<trajectory_follower::LateralControllerInterface> lateral_controller;
   const auto lateral_controller_mode =
     getLateralControllerMode(declare_parameter<std::string>("lateral_controller_mode"));
   switch (lateral_controller_mode) {
     case LateralControllerMode::MPC: {
-      lateral_controller_ =
-        std::make_shared<mpc_lateral_controller::MpcLateralControllerNode>(*this, diag_updater_);
+      lateral_controller =
+        std::make_unique<mpc_lateral_controller::MpcLateralControllerNode>(*this, diag_updater_);
       break;
     }
     case LateralControllerMode::PURE_PURSUIT: {
-      lateral_controller_ =
-        std::make_shared<autoware::pure_pursuit::PurePursuitLateralControllerNode>(*this);
+      lateral_controller =
+        std::make_unique<autoware::pure_pursuit::PurePursuitLateralControllerNode>(*this);
       break;
     }
     default:
       throw std::domain_error("[LateralController] invalid algorithm");
   }
 
+  std::unique_ptr<trajectory_follower::LongitudinalControllerInterface> longitudinal_controller;
   const auto longitudinal_controller_mode =
     getLongitudinalControllerMode(declare_parameter<std::string>("longitudinal_controller_mode"));
   switch (longitudinal_controller_mode) {
     case LongitudinalControllerMode::PID: {
-      longitudinal_controller_ =
-        std::make_shared<pid_longitudinal_controller::PidLongitudinalControllerNode>(
+      longitudinal_controller =
+        std::make_unique<pid_longitudinal_controller::PidLongitudinalControllerNode>(
           *this, diag_updater_);
       break;
     }
     default:
       throw std::domain_error("[LongitudinalController] invalid algorithm");
   }
+
+  trajectory_follower_ = std::make_unique<TrajectoryFollower>(
+    TrajectoryFollowerConfig{timeout_thr_sec_, enable_control_cmd_horizon_pub_},
+    std::move(lateral_controller), std::move(longitudinal_controller));
 
   control_cmd_pub_ = create_publisher<autoware_control_msgs::msg::Control>(
     "~/output/control_cmd", rclcpp::QoS{1}.transient_local());
@@ -175,25 +182,6 @@ bool Controller::processData(rclcpp::Clock & clock)
   return is_ready;
 }
 
-bool Controller::isTimeOut(
-  const trajectory_follower::LongitudinalOutput & lon_out,
-  const trajectory_follower::LateralOutput & lat_out, const rclcpp::Time & stamp)
-{
-  if ((stamp - lat_out.control_cmd.stamp).seconds() > timeout_thr_sec_) {
-    RCLCPP_ERROR_THROTTLE(
-      get_logger(), *get_clock(), 5000 /*ms*/,
-      "Lateral control command too old, control_cmd will not be published.");
-    return true;
-  }
-  if ((stamp - lon_out.control_cmd.stamp).seconds() > timeout_thr_sec_) {
-    RCLCPP_ERROR_THROTTLE(
-      get_logger(), *get_clock(), 5000 /*ms*/,
-      "Longitudinal control command too old, control_cmd will not be published.");
-    return true;
-  }
-  return false;
-}
-
 boost::optional<trajectory_follower::InputData> Controller::createInputData(rclcpp::Clock & clock)
 {
   if (!processData(clock)) {
@@ -215,8 +203,6 @@ void Controller::callbackTimerControl()
 {
   // read the time once for this control cycle
   const rclcpp::Time stamp = this->now();
-  autoware_control_msgs::msg::Control out;
-  out.stamp = stamp;
 
   // 1. create input data
   const auto input_data = createInputData(*get_clock());
@@ -226,52 +212,34 @@ void Controller::callbackTimerControl()
     return;
   }
 
-  // 2. run the lateral controller
-  const auto lat_result = lateral_controller_->run(*input_data, stamp);
-  if (!lat_result) {
-    RCLCPP_INFO_THROTTLE(
-      get_logger(), *get_clock(), 5000, "Control is skipped since lateral controller failed: %s",
-      lat_result.error().c_str());
+  // 2. run the lateral and longitudinal controllers
+  const auto result = trajectory_follower_->run(*input_data, stamp);
+  if (!result) {
+    const auto & error = result.error();
+    if (error.level == TrajectoryFollowerError::Level::error) {
+      RCLCPP_ERROR_THROTTLE(get_logger(), *get_clock(), 5000, "%s", error.message.c_str());
+    } else {
+      RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 5000, "%s", error.message.c_str());
+    }
     return;
   }
-  const auto & lat_out = *lat_result;
-
-  // 3. run the longitudinal controller
-  const auto lon_result =
-    longitudinal_controller_->run(*input_data, stamp, previous_lateral_sync_data_);
-
-  // 4. keep the lateral result for the longitudinal controller of the next cycle
-  previous_lateral_sync_data_ = lat_out.sync_data;
-  if (!lon_result) {
-    RCLCPP_INFO_THROTTLE(
-      get_logger(), *get_clock(), 5000,
-      "Control is skipped since longitudinal controller failed: %s", lon_result.error().c_str());
-    return;
-  }
-  const auto & lon_out = *lon_result;
-
-  // TODO(Horibe): Think specification. This comes from the old implementation.
-  if (isTimeOut(lon_out, lat_out, stamp)) return;
 
   // 4.5. update diagnostics
   diag_updater_->force_update();
 
   // 5. publish control command
-  out.lateral = lat_out.control_cmd;
-  out.longitudinal = lon_out.control_cmd;
-  control_cmd_pub_->publish(out);
-  if (lat_out.predicted_trajectory) {
-    predicted_trajectory_pub_->publish(*lat_out.predicted_trajectory);
+  control_cmd_pub_->publish(result->control_cmd);
+  if (result->predicted_trajectory) {
+    predicted_trajectory_pub_->publish(*result->predicted_trajectory);
   }
 
   // 6. publish debug
-  published_time_publisher_->publish_if_subscribed(control_cmd_pub_, out.stamp);
-  debug_marker_pub_->publish(createDebugMarker(*input_data, lat_out, stamp));
+  published_time_publisher_->publish_if_subscribed(control_cmd_pub_, result->control_cmd.stamp);
+  debug_marker_pub_->publish(result->debug_marker);
 
   // 7. publish experimental topic
   if (enable_control_cmd_horizon_pub_) {
-    const auto control_horizon =
-      mergeLatLonHorizon(lat_out.control_cmd_horizon, lon_out.control_cmd_horizon, stamp);
+    const auto & control_horizon = result->control_cmd_horizon;
     if (control_horizon.has_value()) {
       control_cmd_horizon_pub_->publish(control_horizon.value());
     }

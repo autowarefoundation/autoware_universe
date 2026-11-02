@@ -15,7 +15,6 @@
 #ifndef AUTOWARE__TRAJECTORY_FOLLOWER_NODE__CONTROLLER_NODE_HPP_
 #define AUTOWARE__TRAJECTORY_FOLLOWER_NODE__CONTROLLER_NODE_HPP_
 
-#include "autoware/trajectory_follower_base/lateral_controller_interface.hpp"
 #include "autoware/trajectory_follower_base/longitudinal_controller_interface.hpp"
 #include "autoware/trajectory_follower_node/trajectory_follower.hpp"
 #include "autoware/trajectory_follower_node/visibility_control.hpp"
@@ -42,7 +41,6 @@
 
 namespace autoware::motion::control
 {
-using trajectory_follower::LateralOutput;
 using trajectory_follower::LongitudinalOutput;
 namespace trajectory_follower_node
 {
@@ -69,10 +67,7 @@ private:
   std::shared_ptr<diagnostic_updater::Updater>
     diag_updater_;  // Diagnostic updater for publishing diagnostic data.
 
-  // output of the lateral controller in the previous cycle, passed to the longitudinal controller
-  trajectory_follower::LateralSyncData previous_lateral_sync_data_;
-  std::shared_ptr<trajectory_follower::LongitudinalControllerInterface> longitudinal_controller_;
-  std::shared_ptr<trajectory_follower::LateralControllerInterface> lateral_controller_;
+  std::unique_ptr<TrajectoryFollower> trajectory_follower_;
 
   // Subscribers
   autoware_utils::InterProcessPollingSubscriber<autoware_planning_msgs::msg::Trajectory>
@@ -123,8 +118,6 @@ private:
   boost::optional<trajectory_follower::InputData> createInputData(rclcpp::Clock & clock);
   void callbackTimerControl();
   bool processData(rclcpp::Clock & clock);
-  bool isTimeOut(
-    const LongitudinalOutput & lon_out, const LateralOutput & lat_out, const rclcpp::Time & stamp);
   void check_cyclic_message_timeout(diagnostic_updater::DiagnosticStatusWrapper & stat);
   LateralControllerMode getLateralControllerMode(const std::string & algorithm_name) const;
   LongitudinalControllerMode getLongitudinalControllerMode(
