@@ -14,6 +14,8 @@
 
 #pragma once
 
+#include "cloud_concatenator.hpp"
+
 #include <diagnostic_msgs/msg/diagnostic_status.hpp>
 
 #include <optional>
@@ -68,6 +70,13 @@ std::unordered_map<std::string, double> latency_ms_per_topic(
 /// order. Shared by the node and the offline pipeline.
 diagnostic_msgs::msg::DiagnosticStatus build_diagnostic_status(
   const ConcatenationDiagnosticsSummary & summary, const std::vector<std::string> & input_topics,
+  const ConcatenationDiagnosticsOptions & options = {});
+
+/// Convenience overload building the summary from an emitted frame (the offline path).
+/// @throws std::invalid_argument when the frame carries no concatenated cloud.
+diagnostic_msgs::msg::DiagnosticStatus build_diagnostic_status(
+  const ConcatenatedFrame<sensor_msgs::msg::PointCloud2> & frame,
+  const std::vector<std::string> & input_topics,
   const ConcatenationDiagnosticsOptions & options = {});
 
 }  // namespace autoware::pointcloud_preprocessor

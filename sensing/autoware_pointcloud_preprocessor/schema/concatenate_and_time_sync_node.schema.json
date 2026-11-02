@@ -47,7 +47,7 @@
         "publish_previous_but_late_pointcloud": {
           "type": "boolean",
           "default": false,
-          "description": "Flag to indicate if a concatenated point cloud should be published if its timestamp is earlier than the previous published concatenated point cloud."
+          "description": "Flag to indicate if a concatenated point cloud should be published if its timestamp is earlier than the previous published concatenated point cloud. When false, an input cloud that arrives after its frame was already published is reported and dropped on arrival instead of waiting out a new collector."
         },
         "synchronized_pointcloud_postfix": {
           "type": "string",
