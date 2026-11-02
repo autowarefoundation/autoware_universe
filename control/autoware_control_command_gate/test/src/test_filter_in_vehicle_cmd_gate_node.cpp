@@ -333,13 +333,13 @@ std::shared_ptr<ControlCmdGate> generateNode()
 {
   auto node_options = rclcpp::NodeOptions{};
 
-  const auto vehicle_cmd_gate_dir =
-    ament_index_cpp::get_package_share_directory("autoware_vehicle_cmd_gate");
+  const auto control_command_gate_dir =
+    ament_index_cpp::get_package_share_directory("autoware_control_command_gate");
   const auto vehicle_info_util_dir =
     ament_index_cpp::get_package_share_directory("autoware_vehicle_info_utils");
 
   node_options.arguments(
-    {"--ros-args", "--params-file", vehicle_cmd_gate_dir + "/config/vehicle_cmd_gate.param.yaml",
+    {"--ros-args", "--params-file", control_command_gate_dir + "/config/default.param.yaml",
      "--ros-args", "--params-file", vehicle_info_util_dir + "/config/vehicle_info.param.yaml"});
 
   node_options.append_parameter_override(

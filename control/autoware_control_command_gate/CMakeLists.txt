@@ -42,7 +42,7 @@ target_link_libraries(${PROJECT_NAME} "${cpp_typesupport_target}")
 
 if(BUILD_TESTING)
   ament_add_ros_isolated_gtest(${PROJECT_NAME}_test
-    #test/src/test_main.cpp
+    "test/src/test_main.cpp"
     "test/src/test_vehicle_cmd_filter.cpp"
     "test/src/test_filter_in_vehicle_cmd_gate_node.cpp"
   )
