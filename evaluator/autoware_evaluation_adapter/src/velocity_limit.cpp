@@ -39,7 +39,7 @@ void VelocityLimit::on_message(const VelocityLimitStatus::ConstSharedPtr)
 }
 
 void VelocityLimit::on_service(
-  const VelocityLimitService ::Request::SharedPtr req,
+  const VelocityLimitService::Request::SharedPtr req,
   const VelocityLimitService::Response::SharedPtr res)
 {
   if (!is_ready_) {

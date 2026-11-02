@@ -1,0 +1,87 @@
+# This file is automatically synced from:
+# https://github.com/autowarefoundation/sync-file-templates
+# To make changes, update the source repository and follow the guidelines in its README.
+
+name: comment-docs-artifact
+
+# Comments the download link of the built site on a pull request from a fork.
+# The deploy-docs-pr job cannot comment there, because a pull request from a fork gets a read-only token.
+# GitHub runs this workflow from the default branch, so a pull request cannot change it.
+# It checks out no code and reads only the GitHub API.
+
+on:
+  workflow_run:
+    workflows:
+      - deploy-docs
+    types:
+      - completed
+
+permissions: {}
+
+jobs:
+  comment-docs-artifact:
+    if: ${{ github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: read
+      pull-requests: write
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.event.workflow_run.head_repository.full_name }}-${{ github.event.workflow_run.head_branch }}
+    steps:
+      # The pull request comes from the GitHub API, never from the run or its artifact.
+      # A run of an older commit is skipped, and so is a run that published a preview instead of an artifact.
+      - name: Find the pull request and the artifact
+        id: find
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          HEAD_REPO: ${{ github.event.workflow_run.head_repository.full_name }}
+          HEAD_OWNER: ${{ github.event.workflow_run.head_repository.owner.login }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          set -eu
+
+          pr_number=$(gh api -X GET "repos/$GITHUB_REPOSITORY/pulls" -f state=open -f head="$HEAD_OWNER:$HEAD_BRANCH" \
+            --jq '[.[] | select(.head.sha == env.HEAD_SHA and .head.repo.full_name == env.HEAD_REPO) | .number] | if length == 1 then .[0] else empty end')
+          if [ -z "$pr_number" ]; then
+            echo "No open pull request has $HEAD_SHA as its head commit, so there is nothing to comment."
+            exit 0
+          fi
+
+          artifact_id=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/artifacts?name=docs-pr-$pr_number" \
+            --jq '[.artifacts[] | select(.expired | not) | .id] | first // empty')
+          if [ -z "$artifact_id" ]; then
+            echo "The run has no site artifact for pull request $pr_number, so the preview was published instead."
+            exit 0
+          fi
+
+          {
+            echo "pr-number=$pr_number"
+            echo "artifact-url=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/artifacts/$artifact_id"
+            echo "run-url=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$RUN_ID"
+          } >> "$GITHUB_OUTPUT"
+        shell: bash
+
+      - name: Find PR comment
+        id: find-comment
+        if: ${{ steps.find.outputs.pr-number != '' }}
+        uses: peter-evans/find-comment@v4
+        with:
+          issue-number: ${{ steps.find.outputs.pr-number }}
+          comment-author: github-actions[bot]
+          body-includes: <!-- comment-docs-artifact -->
+
+      - name: Update PR comment
+        if: ${{ steps.find.outputs.pr-number != '' }}
+        uses: peter-evans/create-or-update-comment@v5
+        with:
+          comment-id: ${{ steps.find-comment.outputs.comment-id }}
+          issue-number: ${{ steps.find.outputs.pr-number }}
+          body: |
+            <!-- comment-docs-artifact -->
+            This pull request comes from a fork, so its documentation site is built but not published.
+
+            - Download the site of commit ${{ github.event.workflow_run.head_sha }}: [docs-pr-${{ steps.find.outputs.pr-number }}](${{ steps.find.outputs.artifact-url }}). You must be signed in to GitHub. The site is kept for 90 days.
+            - Follow the steps in the [run summary](${{ steps.find.outputs.run-url }}) to view it on your computer.
+          edit-mode: replace
