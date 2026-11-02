@@ -17,7 +17,6 @@
 #include "autoware/mpc_lateral_controller/mpc_lateral_controller_node.hpp"
 #include "autoware/pid_longitudinal_controller/pid_longitudinal_controller_node.hpp"
 #include "autoware/pure_pursuit/autoware_pure_pursuit_lateral_controller_node.hpp"
-#include "autoware_utils/ros/marker_helper.hpp"
 
 #include <memory>
 #include <stdexcept>
@@ -267,7 +266,7 @@ void Controller::callbackTimerControl()
 
   // 6. publish debug
   published_time_publisher_->publish_if_subscribed(control_cmd_pub_, out.stamp);
-  publishDebugMarker(*input_data, lat_out, stamp);
+  debug_marker_pub_->publish(createDebugMarker(*input_data, lat_out, stamp));
 
   // 7. publish experimental topic
   if (enable_control_cmd_horizon_pub_) {
@@ -277,34 +276,6 @@ void Controller::callbackTimerControl()
       control_cmd_horizon_pub_->publish(control_horizon.value());
     }
   }
-}
-
-void Controller::publishDebugMarker(
-  const trajectory_follower::InputData & input_data,
-  const trajectory_follower::LateralOutput & lat_out, const rclcpp::Time & stamp) const
-{
-  visualization_msgs::msg::MarkerArray debug_marker_array{};
-
-  // steer converged marker
-  {
-    auto marker = autoware_utils::create_default_marker(
-      "map", stamp, "steer_converged", 0, visualization_msgs::msg::Marker::TEXT_VIEW_FACING,
-      autoware_utils::create_marker_scale(0.0, 0.0, 1.0),
-      autoware_utils::create_marker_color(1.0, 1.0, 1.0, 0.99));
-    marker.pose = input_data.current_odometry.pose.pose;
-
-    std::stringstream ss;
-    const double current = input_data.current_steering.steering_tire_angle;
-    const double cmd = lat_out.control_cmd.steering_tire_angle;
-    const double diff = current - cmd;
-    ss << "current:" << current << " cmd:" << cmd << " diff:" << diff
-       << (lat_out.sync_data.is_steer_converged ? " (converged)" : " (not converged)");
-    marker.text = ss.str();
-
-    debug_marker_array.markers.push_back(marker);
-  }
-
-  debug_marker_pub_->publish(debug_marker_array);
 }
 
 }  // namespace autoware::motion::control::trajectory_follower_node

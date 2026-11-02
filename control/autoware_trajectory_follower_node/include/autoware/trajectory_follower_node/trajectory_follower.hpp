@@ -16,10 +16,13 @@
 #define AUTOWARE__TRAJECTORY_FOLLOWER_NODE__TRAJECTORY_FOLLOWER_HPP_
 
 #include "autoware/trajectory_follower_base/control_horizon.hpp"
+#include "autoware/trajectory_follower_base/input_data.hpp"
+#include "autoware/trajectory_follower_base/lateral_controller_interface.hpp"
 
 #include <rclcpp/time.hpp>
 
 #include "autoware_control_msgs/msg/control_horizon.hpp"
+#include "visualization_msgs/msg/marker_array.hpp"
 
 #include <optional>
 
@@ -41,6 +44,11 @@ std::optional<autoware_control_msgs::msg::ControlHorizon> mergeLatLonHorizon(
   const trajectory_follower::LateralHorizon & lateral_horizon,
   const trajectory_follower::LongitudinalHorizon & longitudinal_horizon,
   const rclcpp::Time & stamp);
+
+/// Draw how far the steering of the vehicle is from the command, for rviz.
+visualization_msgs::msg::MarkerArray createDebugMarker(
+  const trajectory_follower::InputData & input_data,
+  const trajectory_follower::LateralOutput & lat_out, const rclcpp::Time & stamp);
 
 }  // namespace autoware::motion::control::trajectory_follower_node
 

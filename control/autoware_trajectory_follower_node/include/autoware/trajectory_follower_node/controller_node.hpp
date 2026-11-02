@@ -129,9 +129,6 @@ private:
   LateralControllerMode getLateralControllerMode(const std::string & algorithm_name) const;
   LongitudinalControllerMode getLongitudinalControllerMode(
     const std::string & algorithm_name) const;
-  void publishDebugMarker(
-    const trajectory_follower::InputData & input_data,
-    const trajectory_follower::LateralOutput & lat_out, const rclcpp::Time & stamp) const;
 
   std::unique_ptr<autoware_utils::LoggerLevelConfigure> logger_configure_;
 

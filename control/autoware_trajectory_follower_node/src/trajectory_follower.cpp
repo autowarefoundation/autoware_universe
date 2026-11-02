@@ -14,9 +14,12 @@
 
 #include "autoware/trajectory_follower_node/trajectory_follower.hpp"
 
+#include "autoware_utils/ros/marker_helper.hpp"
+
 #include <cmath>
 #include <cstdint>
 #include <numeric>
+#include <sstream>
 #include <vector>
 
 namespace autoware::motion::control::trajectory_follower_node
@@ -109,6 +112,34 @@ std::optional<autoware_control_msgs::msg::ControlHorizon> mergeLatLonHorizon(
     control_horizon.controls.push_back(control);
   }
   return control_horizon;
+}
+
+visualization_msgs::msg::MarkerArray createDebugMarker(
+  const trajectory_follower::InputData & input_data,
+  const trajectory_follower::LateralOutput & lat_out, const rclcpp::Time & stamp)
+{
+  visualization_msgs::msg::MarkerArray debug_marker_array{};
+
+  // steer converged marker
+  {
+    auto marker = autoware_utils::create_default_marker(
+      "map", stamp, "steer_converged", 0, visualization_msgs::msg::Marker::TEXT_VIEW_FACING,
+      autoware_utils::create_marker_scale(0.0, 0.0, 1.0),
+      autoware_utils::create_marker_color(1.0, 1.0, 1.0, 0.99));
+    marker.pose = input_data.current_odometry.pose.pose;
+
+    std::stringstream ss;
+    const double current = input_data.current_steering.steering_tire_angle;
+    const double cmd = lat_out.control_cmd.steering_tire_angle;
+    const double diff = current - cmd;
+    ss << "current:" << current << " cmd:" << cmd << " diff:" << diff
+       << (lat_out.sync_data.is_steer_converged ? " (converged)" : " (not converged)");
+    marker.text = ss.str();
+
+    debug_marker_array.markers.push_back(marker);
+  }
+
+  return debug_marker_array;
 }
 
 }  // namespace autoware::motion::control::trajectory_follower_node
