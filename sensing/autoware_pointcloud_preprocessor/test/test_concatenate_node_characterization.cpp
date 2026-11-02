@@ -416,9 +416,6 @@ protected:
   void TearDown() override
   {
     executor_.reset();
-    // TODO(sasakisasaki): this drops one reference but does not destroy the node. The node
-    // owns its CloudCollectors and each collector owns the node back, so the shared_ptr cycle
-    // keeps both alive. Harmless here, but production wants ros2_parent_node_ to be weak.
     node_wrapper_ = rclcpp_components::NodeInstanceWrapper();
     test_node_.reset();
   }
@@ -1713,7 +1710,7 @@ TEST_F(ConcatenateNodeTest, SynchronizedCloudIsStampedWithTheConcatenatedStamp)
 }
 
 // ---------------------------------------------------------------------------------------
-// A source that never arrives. Covers the CloudCollector timeout timer.
+// A source that never arrives. Covers the timeout timer.
 // ---------------------------------------------------------------------------------------
 
 TEST_F(ConcatenateNodeTest, PublishesRemainingSourcesAfterTimeout)
@@ -1875,12 +1872,14 @@ TEST_F(ConcatenateNodeTest, PublishesInfoEvenForACloudItDrops)
   const double late = base_stamp_sec - 1.0;
 
   // Act
-  publish_all_clouds(late);
+  // One sensor's cloud from one second earlier, i.e. well inside rosbag_length: it arrived after
+  // its frame was published, so it is reported at once instead of waiting out a collector.
+  publish_cloud(0, late);
   const auto info = await_concatenation_info();
 
   // Assert
   EXPECT_EQ(rclcpp::Time(info.header.stamp), to_time(late));
-  EXPECT_TRUE(info.concatenation_success);
+  EXPECT_FALSE(info.concatenation_success);
   EXPECT_TRUE(concatenated_clouds_.empty());
 }
 
@@ -2074,18 +2073,51 @@ TEST_F(ConcatenateNodeTest, DiagnosticsReportsErrorWhenACloudIsDroppedAsLate)
   const double late = base_stamp_sec - 1.0;
 
   // Act
-  publish_all_clouds(late);
+  publish_cloud(0, late);
   const auto status = await_diagnostic();
 
   // Assert
   EXPECT_EQ(status.level, DiagnosticStatus::ERROR);
   EXPECT_EQ(
     status.message,
-    "Concatenated pointcloud was dropped due to its timestamp is earlier than the latest "
-    "published one");
+    "Concatenated pointcloud was dropped due to missing topics and its timestamp is earlier than "
+    "the latest published one");
   // The diagnostic still describes the cloud that was dropped.
   EXPECT_EQ(
     get_diagnostic_value(status, "Concatenated pointcloud timestamp"), format_seconds(late));
+}
+
+TEST_F(ConcatenateNodeTest, DiagnosticsReportsErrorWhenAFrameIsDroppedAsLate)
+{
+  // Arrange
+  // Frame A is left incomplete; frame B, 0.1 s later, completes and is published first. When A
+  // times out its stamp is older than the last published one, so it is dropped as late.
+  NodeParams params;
+  params.is_motion_compensated = false;
+  params.publish_previous_but_late_pointcloud = false;
+  params.rosbag_length = 10.0;
+  start(params);
+  const auto stamps_a = publish_clouds_from(base_stamp_sec, {0, 1});
+  publish_all_clouds(base_stamp_sec + 0.1);
+
+  // Act
+  // Long enough for B to be published and for A to time out behind it.
+  wait_out_the_timeout();
+
+  // Assert
+  ASSERT_EQ(concatenated_clouds_.size(), 1u);
+  ASSERT_EQ(concatenation_infos_.size(), 2u);
+  EXPECT_EQ(rclcpp::Time(concatenation_infos_.back().header.stamp), to_time(stamps_a.front()));
+  ASSERT_FALSE(diagnostics_.empty());
+  const auto & status = diagnostics_.back();
+  EXPECT_EQ(status.level, DiagnosticStatus::ERROR);
+  EXPECT_EQ(
+    status.message,
+    "Concatenated pointcloud was dropped due to missing topics and its timestamp is earlier than "
+    "the latest published one");
+  EXPECT_EQ(
+    get_diagnostic_value(status, "Concatenated pointcloud timestamp"),
+    format_seconds(stamps_a.front()));
 }
 
 // ---------------------------------------------------------------------------------------
