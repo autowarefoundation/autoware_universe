@@ -34,6 +34,14 @@ namespace autoware::pointcloud_preprocessor
 using autoware::point_types::PointXYZIRC;
 using point_cloud_msg_wrapper::PointCloud2Modifier;
 
+/// Combines one collector's clouds into a single cloud in the output frame. Specialized per message
+/// type: PointCloud2 here, cuda_blackboard::CudaPointCloud2 in
+/// autoware_cuda_pointcloud_preprocessor.
+///
+/// Not thread-safe: calls must not overlap. The CUDA specialization's mutex only guards its buffer
+/// pool; the transform cache and twist queue in CombineCloudHandlerBase are unguarded. The
+/// concatenation node guarantees this by keeping all its callbacks in its default (mutually
+/// exclusive) callback group.
 template <typename PointCloudMsgT>
 class CombineCloudHandler;
 

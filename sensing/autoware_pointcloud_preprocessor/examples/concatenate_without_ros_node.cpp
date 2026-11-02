@@ -26,11 +26,9 @@
 // To confirm the core really is ROS-runtime-free:
 //   ldd ./build/autoware_pointcloud_preprocessor/concatenate_without_ros_node | grep rclcpp
 
-#include "autoware/pointcloud_preprocessor/concatenate_data/cloud_collector_core.hpp"
+#include "autoware/pointcloud_preprocessor/concatenate_data/cloud_concatenator.hpp"
 #include "autoware/pointcloud_preprocessor/concatenate_data/collector_info.hpp"
-#include "autoware/pointcloud_preprocessor/concatenate_data/combine_cloud_handler.hpp"
 #include "autoware/pointcloud_preprocessor/concatenate_data/concatenation_diagnostics.hpp"
-#include "autoware/pointcloud_preprocessor/concatenate_data/matching_policy.hpp"
 #include "autoware/pointcloud_preprocessor/concatenate_data/matching_strategy_type.hpp"
 
 #include <algorithm>
@@ -40,6 +38,7 @@
 #include <cstdlib>
 #include <iomanip>
 #include <iostream>
+#include <iterator>
 #include <memory>
 #include <numeric>
 #include <string>
@@ -53,17 +52,12 @@ namespace
 using autoware::point_types::PointXYZIRC;
 using autoware::point_types::PointXYZIRCGenerator;
 using autoware::pointcloud_preprocessor::AdvancedCollectorInfo;
-using autoware::pointcloud_preprocessor::AdvancedMatchingPolicy;
 using autoware::pointcloud_preprocessor::build_diagnostic_status;
-using autoware::pointcloud_preprocessor::CandidateCollectorState;
-using autoware::pointcloud_preprocessor::CloudCollectorCore;
-using autoware::pointcloud_preprocessor::CollectorInfoBase;
-using autoware::pointcloud_preprocessor::CombineCloudHandler;
+using autoware::pointcloud_preprocessor::CloudConcatenator;
+using autoware::pointcloud_preprocessor::ConcatenatedFrame;
+using autoware::pointcloud_preprocessor::ConcatenatedFrameStatus;
 using autoware::pointcloud_preprocessor::ConcatenationDiagnosticsOptions;
-using autoware::pointcloud_preprocessor::ConcatenationDiagnosticsSummary;
-using autoware::pointcloud_preprocessor::IncomingCloudInfo;
 using autoware::pointcloud_preprocessor::MatchingStrategyType;
-using autoware::pointcloud_preprocessor::ReferenceWindow;
 using point_cloud_msg_wrapper::PointCloud2Modifier;
 using sensor_msgs::msg::PointCloud2;
 
@@ -225,17 +219,21 @@ int main(int argc, char ** argv)
     argc > 3 ? parse_size(argv[3], default_warmup_iterations) : default_warmup_iterations;
 
   // ---------------------------------------------------------------------------------------
-  // 1. Build the core. No node, no parameters server - the configuration is just arguments.
+  // 1. Build the core. No node, no parameter server - the configuration is just arguments.
+  //    This is the same object the concatenation node drives from its subscriptions.
   // ---------------------------------------------------------------------------------------
-  CombineCloudHandler<PointCloud2> handler(
-    input_topics, output_frame, /*is_motion_compensated=*/true,
+  const std::vector<double> offsets(input_topics.size(), 0.0);
+  const std::vector<double> noise_windows(input_topics.size(), 0.02);
+  CloudConcatenator<PointCloud2> concatenator(
+    input_topics, output_frame, /*timeout_sec=*/0.2, /*is_motion_compensated=*/true,
     /*publish_synchronized_pointcloud=*/false,
-    /*keep_input_frame_in_synchronized_pointcloud=*/false, MatchingStrategyType::advanced);
+    /*keep_input_frame_in_synchronized_pointcloud=*/false, MatchingStrategyType::advanced, offsets,
+    noise_windows);
 
   // Transforms the node would look up from tf2. Here they are handed over directly, which is what
   // makes an offline run reproducible: no TF listener, no waiting, no lookup failures.
   for (size_t i = 0; i < sensor_frames.size(); ++i) {
-    if (!handler.set_transform(make_transform(i))) {
+    if (!concatenator.set_transform(make_transform(i))) {
       std::cerr << "transform for " << sensor_frames[i] << " does not reach " << output_frame
                 << "\n";
       return EXIT_FAILURE;
@@ -244,64 +242,46 @@ int main(int argc, char ** argv)
 
   // Ego motion the node would take from /twist. Without this the core reports
   // kNoTwistAvailable and leaves the clouds untransformed.
-  handler.process_twist(make_twist(base_stamp_sec));
+  concatenator.process_twist(make_twist(base_stamp_sec));
 
   // ---------------------------------------------------------------------------------------
-  // 2. Group the clouds exactly as the node's collectors would, using the same policy object.
-  //    This is the part the node drives from subscription callbacks and a timeout timer; here
-  //    it is a plain loop over inputs that are already in hand.
+  // 2. Feed the clouds in arrival order. Matching, grouping and the timeout are the core's job;
+  //    the node does exactly this from its subscription callbacks, with now() as the arrival
+  //    time. Offline the arrival time comes from the data, so there is no clock and no timer.
   // ---------------------------------------------------------------------------------------
-  const std::vector<double> offsets(input_topics.size(), 0.0);
-  const std::vector<double> noise_windows(input_topics.size(), 0.02);
-  const AdvancedMatchingPolicy policy(input_topics, offsets, noise_windows);
-
-  // The same collector the node uses, minus the timer and the node back-pointer.
-  CloudCollectorCore<PointCloud2> collector(input_topics.size(), /*timeout_sec=*/0.2);
-  std::vector<CandidateCollectorState> collectors;
-  bool ready = false;
-
+  std::unordered_map<std::string, PointCloud2::ConstSharedPtr> topic_to_cloud_map;
+  std::vector<ConcatenatedFrame<PointCloud2>> frames;
   for (size_t i = 0; i < input_topics.size(); ++i) {
     const double stamp_sec = base_stamp_sec + static_cast<double>(i) * stamp_step_sec;
     auto cloud = make_cloud(i, stamp_sec, points_per_cloud);
+    topic_to_cloud_map[input_topics[i]] = cloud;  // kept aside for the benchmark below
 
-    IncomingCloudInfo incoming;
-    incoming.topic_name = input_topics[i];
-    incoming.cloud_timestamp = stamp_sec;
-    incoming.cloud_arrival_time = stamp_sec;  // offline: arrival order follows stamp order
-
-    if (!policy.match(collectors, incoming).has_value()) {
-      // No collector wants this cloud, so it opens one - same decision the node makes.
-      const auto reference = policy.reference_for(incoming);
-      collectors.push_back({reference.reference_time, reference.noise_window, false});
-      collector.set_info(
-        std::make_shared<AdvancedCollectorInfo>(reference.reference_time, reference.noise_window));
-    }
-    collectors.front().has_topic = true;
-
-    // Offline the arrival time comes from the bag, not a wall clock, so the collector can answer
-    // is_timed_out() itself - no rclcpp timer anywhere.
-    const auto added = collector.add(input_topics[i], std::move(cloud), stamp_sec);
-    ready = added.ready_to_concatenate;
+    auto emitted = concatenator.process_cloud(input_topics[i], std::move(cloud), stamp_sec);
+    frames.insert(
+      frames.end(), std::make_move_iterator(emitted.begin()),
+      std::make_move_iterator(emitted.end()));
   }
-
-  auto topic_to_cloud_map = collector.topic_to_cloud_map();
-  const auto collector_info = collector.get_info();
+  // Nothing is left open: the three clouds completed one collector. A stream that ends with an
+  // incomplete collector would call concatenator.flush() here to close it as a timeout.
+  if (frames.size() != 1) {
+    std::cerr << "expected one concatenated frame, got " << frames.size() << "\n";
+    return EXIT_FAILURE;
+  }
+  const ConcatenatedFrame<PointCloud2> & frame = frames.front();
+  auto & result = frame.result;
 
   // ---------------------------------------------------------------------------------------
-  // 3. Concatenate. One call, fully synchronous, no executor involved.
-  // ---------------------------------------------------------------------------------------
-  auto result = handler.combine_pointclouds(topic_to_cloud_map, collector_info);
-  collector.mark_finished();
-
-  // ---------------------------------------------------------------------------------------
-  // 3b. Time that one call, and nothing else.
+  // 3. Time the combine alone.
   //
-  // Building the clouds, the transforms, the twist and the grouping all happened above and stay
-  // outside the clock. combine_pointclouds() only reads topic_to_cloud_map, so re-running it is
-  // side-effect free and every iteration does identical work. The returned result is destroyed
-  // after the clock is read, so deallocation is not counted - matching the node, which hands the
-  // result straight to the publisher.
+  // process_cloud() above already ran it once; to measure it in isolation, call the handler the
+  // concatenator wraps on the clouds kept aside. combine_pointclouds() only reads the map, so
+  // every iteration does identical work. The returned result is destroyed after the clock is
+  // read, so deallocation is not counted - matching the node, which hands the result straight to
+  // the publisher.
   // ---------------------------------------------------------------------------------------
+  auto & handler = concatenator.combine_cloud_handler();
+  const auto collector_info =
+    std::make_shared<AdvancedCollectorInfo>(frame.reference_time, frame.noise_window);
   using clock = std::chrono::steady_clock;
   volatile size_t sink = 0;  // keeps the optimizer from eliding the call
 
@@ -334,7 +314,7 @@ int main(int argc, char ** argv)
             << "  points     : " << point_count(cloud) << "\n"
             << "  point_step : " << cloud.point_step << "\n"
             << "  sources    : " << info.source_info.size() << "\n"
-            << "  collectors : " << collectors.size() << "\n\n";
+            << "  frames     : " << frames.size() << "\n\n";
 
   print_timing(samples_ms, point_count(cloud));
   std::cout << "\n";
@@ -346,10 +326,14 @@ int main(int argc, char ** argv)
     "every source contributed its points");
   all_ok &=
     check(to_seconds(cloud.header.stamp) == base_stamp_sec, "stamp is the oldest input stamp");
-  all_ok &= check(collectors.size() == 1, "all three clouds landed in one collector");
-  all_ok &= check(ready, "the collector reported the group complete");
-  all_ok &=
-    check(!collector.is_timed_out(base_stamp_sec + 0.1), "the group completed before its timeout");
+  all_ok &= check(
+    frame.status == ConcatenatedFrameStatus::kComplete,
+    "the collector closed on completion, not on its timeout");
+  all_ok &= check(!concatenator.next_deadline().has_value(), "no collector is left open");
+  all_ok &= check(
+    concatenator.stats().force_dropped_collectors == 0 &&
+      concatenator.stats().duplicate_topic_inserts == 0,
+    "no collector was force-dropped and no topic arrived twice");
   all_ok &= check(info.source_info.size() == input_topics.size(), "info describes every source");
   all_ok &= check(
     result.motion_compensation_status ==
@@ -358,17 +342,11 @@ int main(int argc, char ** argv)
   all_ok &= check(
     result.dropped_sources_missing_transform.empty(), "no source was dropped for a missing TF");
 
-  // The diagnostics the node publishes are built by the core too, so they can be inspected
-  // offline without a diagnostic_updater.
-  ConcatenationDiagnosticsSummary summary;
-  summary.concatenated_cloud_timestamp_sec = to_seconds(cloud.header.stamp);
-  summary.is_concatenated_cloud_empty = point_count(cloud) == 0;
-  summary.reference_window = ReferenceWindow{base_stamp_sec, noise_windows.front()};
-  summary.topic_to_original_stamp = result.topic_to_original_stamp_map;
-
+  // The diagnostics the node publishes are built by the core too, straight from the frame, so
+  // they can be inspected offline without a diagnostic_updater.
   ConcatenationDiagnosticsOptions options;
   options.node_name = "concatenate_without_ros_node";
-  const auto status = build_diagnostic_status(summary, input_topics, options);
+  const auto status = build_diagnostic_status(frame, input_topics, options);
 
   std::cout << "\ndiagnostics\n  level   : " << static_cast<int>(status.level)
             << "\n  message : " << status.message << "\n";
