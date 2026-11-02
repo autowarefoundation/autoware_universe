@@ -19,6 +19,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -54,11 +55,12 @@ CloudConcatenator<PointCloudMsgT>::CloudConcatenator(
   bool keep_input_frame_in_synchronized_pointcloud, MatchingStrategyType matching_strategy,
   const std::optional<std::vector<double>> & lidar_timestamp_offsets,
   const std::optional<std::vector<double>> & lidar_timestamp_noise_window,
-  std::size_t max_open_collectors)
+  std::size_t max_open_collectors, LateCloudPolicy late_cloud_policy)
 : input_topics_(input_topics),
   timeout_sec_(timeout_sec),
   matching_strategy_(matching_strategy),
   max_open_collectors_(max_open_collectors),
+  late_cloud_policy_(late_cloud_policy),
   matching_policy_(make_matching_policy(
     input_topics, matching_strategy, lidar_timestamp_offsets, lidar_timestamp_noise_window)),
   handler_(
@@ -115,17 +117,25 @@ std::vector<ConcatenatedFrame<PointCloudMsgT>> CloudConcatenator<PointCloudMsgT>
     matching_policy_->match(candidates, incoming_cloud_info);
 
   // (3) No match -> start a new collector (matching window from the policy-provided reference,
-  // timeout starting at this cloud's arrival). When the collector limit is reached, make room first
-  // by discarding the collector with the oldest reference (mirrors the node's fixed collector
-  // pool).
+  // timeout starting at this cloud's arrival), unless the cloud is late (see LateCloudPolicy). When
+  // the collector limit is reached, make room first by discarding the collector with the oldest
+  // reference (mirrors the node's fixed collector pool).
   std::size_t index = 0;
   if (matched_index.has_value()) {
     index = *matched_index;
   } else {
+    const MatchingReference reference = matching_policy_->reference_for(incoming_cloud_info);
+    if (is_late(frame_of(reference, incoming_cloud_info))) {
+      ++stats_.late_clouds_rejected;
+      stats_.last_late_topic = topic;
+      Collector alone{{}, reference.reference_time, reference.noise_window, arrival_time};
+      alone.topic_to_cloud[topic] = std::move(cloud);
+      outputs.push_back(emit(std::move(alone), ConcatenatedFrameStatus::kLate));
+      return outputs;
+    }
     while (max_open_collectors_ != 0 && collectors_.size() >= max_open_collectors_) {
       drop_oldest_collector();
     }
-    const MatchingReference reference = matching_policy_->reference_for(incoming_cloud_info);
     collectors_.push_back(
       Collector{{}, reference.reference_time, reference.noise_window, arrival_time});
     index = collectors_.size() - 1;
@@ -157,6 +167,8 @@ CloudConcatenator<PointCloudMsgT>::close_expired_collectors(double now_sec)
   // its creation (a rosbag restarted under use_sim_time), since it would otherwise wait for that
   // time to return. The deadline is the same sum next_deadline() reports, so a timer armed exactly
   // at it closes the collector (now - creation >= timeout can round just short of it).
+  const bool clock_went_back = now_sec < last_time_sec_;
+  last_time_sec_ = now_sec;
   std::vector<Collector> stale;
   std::vector<Collector> open;
   for (auto & collector : collectors_) {
@@ -179,7 +191,35 @@ CloudConcatenator<PointCloudMsgT>::close_expired_collectors(double now_sec)
   for (auto & collector : stale) {
     outputs.push_back(emit(std::move(collector), ConcatenatedFrameStatus::kTimeout));
   }
+  if (clock_went_back) {
+    // The replayed stream starts over, and the collectors just closed belong to the time before
+    // the jump, so they must not set the bar for it.
+    emitted_frame_watermark_.reset();
+  }
   return outputs;
+}
+
+template <typename PointCloudMsgT>
+double CloudConcatenator<PointCloudMsgT>::frame_of(
+  const MatchingReference & reference, const IncomingCloudInfo & incoming_cloud_info) const
+{
+  return matching_strategy_ == MatchingStrategyType::advanced ? reference.reference_time
+                                                              : incoming_cloud_info.cloud_timestamp;
+}
+
+template <typename PointCloudMsgT>
+bool CloudConcatenator<PointCloudMsgT>::is_late(double frame)
+{
+  if (!late_cloud_policy_.reject_late_clouds || !emitted_frame_watermark_.has_value()) {
+    return false;
+  }
+  const double behind = *emitted_frame_watermark_ - frame;
+  if (behind < 0.0) return false;  // a newer frame
+  if (behind > late_cloud_policy_.replay_jump_sec) {
+    emitted_frame_watermark_.reset();  // a replay restart, not a straggler
+    return false;
+  }
+  return true;
 }
 
 template <typename PointCloudMsgT>
@@ -234,6 +274,17 @@ ConcatenatedFrame<PointCloudMsgT> CloudConcatenator<PointCloudMsgT>::emit(
       std::make_shared<AdvancedCollectorInfo>(collector.reference_time, collector.noise_window);
   } else {
     collector_info = std::make_shared<NaiveCollectorInfo>(collector.creation_arrival);
+  }
+
+  double emitted_frame = collector.reference_time;
+  if (matching_strategy_ != MatchingStrategyType::advanced) {
+    emitted_frame = -std::numeric_limits<double>::infinity();
+    for (const auto & entry : collector.topic_to_cloud) {
+      emitted_frame = std::max(emitted_frame, to_seconds(entry.second->header.stamp));
+    }
+  }
+  if (!emitted_frame_watermark_.has_value() || emitted_frame > *emitted_frame_watermark_) {
+    emitted_frame_watermark_ = emitted_frame;
   }
 
   ConcatenatedFrame<PointCloudMsgT> frame{

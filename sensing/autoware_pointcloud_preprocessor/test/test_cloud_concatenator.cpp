@@ -40,6 +40,7 @@ namespace
 using autoware::pointcloud_preprocessor::build_diagnostic_status;
 using autoware::pointcloud_preprocessor::ConcatenatedFrameStatus;
 using autoware::pointcloud_preprocessor::ConcatenationDiagnosticsOptions;
+using autoware::pointcloud_preprocessor::LateCloudPolicy;
 using autoware::pointcloud_preprocessor::MatchingStrategyType;
 using autoware::pointcloud_preprocessor::parse_matching_strategy;
 using CloudConcatenator =
@@ -549,6 +550,208 @@ TEST(ConcatenationDiagnostics, OptionalLatencyAndProcessingTime)
   for (const auto & topic : kInputTopics) {
     EXPECT_EQ(values.at("Latency (ms): " + topic), "100.000000");
   }
+}
+
+// ---------------------------------------------------------------------------------------
+// Clouds that arrive after their collector has already closed (LateCloudPolicy).
+// ---------------------------------------------------------------------------------------
+
+namespace
+{
+constexpr LateCloudPolicy kRejectLate{/*reject_late_clouds=*/true, /*replay_jump_sec=*/10.0};
+
+CloudConcatenator make_concatenator(MatchingStrategyType strategy, LateCloudPolicy policy)
+{
+  const bool advanced = strategy == MatchingStrategyType::advanced;
+  return CloudConcatenator(
+    kInputTopics, kOutputFrame, /*timeout_sec=*/0.2, false, false, false, strategy,
+    advanced ? std::optional(kOffsets) : std::nullopt,
+    advanced ? std::optional(kNoise) : std::nullopt,
+    /*max_open_collectors=*/0, policy);
+}
+
+// Frame 10.00 times out with top and left at 100.25; right(10.08) arrives 0.06 s after that.
+CloudConcatenator with_frame_closed_before_right(
+  MatchingStrategyType strategy, LateCloudPolicy policy)
+{
+  auto concatenator = make_concatenator(strategy, policy);
+  static_cast<void>(concatenator.process_cloud("lidar_top", make_cloud(10, 0), 100.00));
+  static_cast<void>(concatenator.process_cloud("lidar_left", make_cloud(10, 40'000'000), 100.01));
+  const auto timed_out = concatenator.close_expired_collectors(100.25);
+  EXPECT_EQ(timed_out.size(), 1u);
+  return concatenator;
+}
+}  // namespace
+
+TEST(CloudConcatenatorLateClouds, AdvancedEmitsACloudWhoseFrameAlreadyClosedAtOnce)
+{
+  // Arrange
+  auto concatenator = with_frame_closed_before_right(MatchingStrategyType::advanced, kRejectLate);
+
+  // Act
+  const auto frames = concatenator.process_cloud("lidar_right", make_cloud(10, 80'000'000), 100.26);
+
+  // Assert
+  // The same one-cloud frame the timeout would have produced, now, and no collector stays open.
+  ASSERT_EQ(frames.size(), 1u);
+  EXPECT_EQ(frames[0].status, ConcatenatedFrameStatus::kLate);
+  EXPECT_EQ(frames[0].result.concatenate_cloud_ptr->width, kPointsPerCloud);
+  EXPECT_DOUBLE_EQ(frames[0].reference_time, 10.0);
+  EXPECT_FALSE(concatenator.next_deadline().has_value());
+  EXPECT_EQ(concatenator.stats().late_clouds_rejected, 1u);
+  EXPECT_EQ(concatenator.stats().last_late_topic, "lidar_right");
+}
+
+TEST(CloudConcatenatorLateClouds, ALateFrameDoesNotMoveTheWatermark)
+{
+  // Arrange
+  // After the late right(10.08) went out, a cloud for the even older frame 9.90 arrives.
+  auto concatenator = with_frame_closed_before_right(MatchingStrategyType::advanced, kRejectLate);
+  static_cast<void>(concatenator.process_cloud("lidar_right", make_cloud(10, 80'000'000), 100.26));
+
+  // Act
+  const auto frames = concatenator.process_cloud("lidar_top", make_cloud(9, 900'000'000), 100.27);
+
+  // Assert
+  ASSERT_EQ(frames.size(), 1u);
+  EXPECT_EQ(frames[0].status, ConcatenatedFrameStatus::kLate);
+  EXPECT_EQ(concatenator.stats().late_clouds_rejected, 2u);
+}
+
+TEST(CloudConcatenatorLateClouds, WithoutThePolicyALateCloudOpensACollector)
+{
+  // Arrange
+  auto concatenator =
+    with_frame_closed_before_right(MatchingStrategyType::advanced, LateCloudPolicy{});
+
+  // Act
+  const auto on_arrival =
+    concatenator.process_cloud("lidar_right", make_cloud(10, 80'000'000), 100.26);
+  const auto later = concatenator.close_expired_collectors(100.50);
+
+  // Assert
+  // The historical behavior: a collector holds a slot for timeout_sec and goes out alone.
+  EXPECT_TRUE(on_arrival.empty());
+  ASSERT_EQ(later.size(), 1u);
+  EXPECT_EQ(later[0].result.concatenate_cloud_ptr->width, kPointsPerCloud);
+  EXPECT_EQ(concatenator.stats().late_clouds_rejected, 0u);
+}
+
+TEST(CloudConcatenatorLateClouds, ACloudForAStillOpenFrameIsNotLate)
+{
+  // Arrange
+  // Frame 10.10 completes before frame 10.00 times out, so the watermark is ahead of frame 10.00
+  // while its collector is still open; its right cloud must still join it.
+  auto concatenator = make_concatenator(MatchingStrategyType::advanced, kRejectLate);
+  static_cast<void>(concatenator.process_cloud("lidar_top", make_cloud(10, 0), 100.00));
+  static_cast<void>(concatenator.process_cloud("lidar_left", make_cloud(10, 40'000'000), 100.01));
+  static_cast<void>(concatenator.process_cloud("lidar_top", make_cloud(10, 100'000'000), 100.10));
+  static_cast<void>(concatenator.process_cloud("lidar_left", make_cloud(10, 140'000'000), 100.11));
+  const auto newer = concatenator.process_cloud("lidar_right", make_cloud(10, 180'000'000), 100.12);
+  ASSERT_EQ(newer.size(), 1u);
+
+  // Act
+  const auto frames = concatenator.process_cloud("lidar_right", make_cloud(10, 80'000'000), 100.15);
+
+  // Assert
+  ASSERT_EQ(frames.size(), 1u);
+  EXPECT_EQ(frames[0].status, ConcatenatedFrameStatus::kComplete);
+  EXPECT_DOUBLE_EQ(frames[0].reference_time, 10.0);
+  EXPECT_EQ(concatenator.stats().late_clouds_rejected, 0u);
+}
+
+TEST(CloudConcatenatorLateClouds, AReplayJumpResetsTheWatermark)
+{
+  // Arrange
+  // Stamps jump back 15 s (> replay_jump_sec) while the arrival clock keeps going: a rosbag loop
+  // on wall clock. The looped frame must be concatenated, not rejected as late.
+  auto concatenator = make_concatenator(MatchingStrategyType::advanced, kRejectLate);
+  static_cast<void>(concatenator.process_cloud("lidar_top", make_cloud(20, 0), 100.00));
+  static_cast<void>(concatenator.process_cloud("lidar_left", make_cloud(20, 40'000'000), 100.01));
+  static_cast<void>(concatenator.process_cloud("lidar_right", make_cloud(20, 80'000'000), 100.02));
+
+  // Act
+  static_cast<void>(concatenator.process_cloud("lidar_top", make_cloud(5, 0), 100.10));
+  static_cast<void>(concatenator.process_cloud("lidar_left", make_cloud(5, 40'000'000), 100.11));
+  const auto frames = concatenator.process_cloud("lidar_right", make_cloud(5, 80'000'000), 100.12);
+
+  // Assert
+  ASSERT_EQ(frames.size(), 1u);
+  EXPECT_EQ(frames[0].status, ConcatenatedFrameStatus::kComplete);
+  EXPECT_DOUBLE_EQ(frames[0].reference_time, 5.0);
+  EXPECT_EQ(concatenator.stats().late_clouds_rejected, 0u);
+}
+
+TEST(CloudConcatenatorLateClouds, TheClockGoingBackResetsTheWatermark)
+{
+  // Arrange
+  // A rosbag restarted under use_sim_time: the arrival clock goes from 100.x back to 50.x, the
+  // frame left open before the jump is closed by that step, and the replayed frame (1 s before
+  // the one already emitted, i.e. within replay_jump_sec) must still be concatenated.
+  auto concatenator = make_concatenator(MatchingStrategyType::advanced, kRejectLate);
+  static_cast<void>(concatenator.process_cloud("lidar_top", make_cloud(10, 0), 100.00));
+  static_cast<void>(concatenator.process_cloud("lidar_left", make_cloud(10, 40'000'000), 100.01));
+  static_cast<void>(concatenator.process_cloud("lidar_right", make_cloud(10, 80'000'000), 100.02));
+  static_cast<void>(concatenator.process_cloud("lidar_top", make_cloud(10, 100'000'000), 100.10));
+
+  // Act
+  const auto closed_by_jump = concatenator.process_cloud("lidar_top", make_cloud(9, 0), 50.00);
+  static_cast<void>(concatenator.process_cloud("lidar_left", make_cloud(9, 40'000'000), 50.01));
+  const auto frames = concatenator.process_cloud("lidar_right", make_cloud(9, 80'000'000), 50.02);
+
+  // Assert
+  ASSERT_EQ(closed_by_jump.size(), 1u);
+  EXPECT_EQ(closed_by_jump[0].status, ConcatenatedFrameStatus::kTimeout);
+  ASSERT_EQ(frames.size(), 1u);
+  EXPECT_EQ(frames[0].status, ConcatenatedFrameStatus::kComplete);
+  EXPECT_DOUBLE_EQ(frames[0].reference_time, 9.0);
+  EXPECT_EQ(concatenator.stats().late_clouds_rejected, 0u);
+}
+
+TEST(CloudConcatenatorLateClouds, NaiveEmitsACloudStampedBeforeTheEmittedFrameAtOnce)
+{
+  // Arrange
+  // Naive has no offsets, so the frame is judged by header stamps: right(10.00) is at or before
+  // the newest stamp of the emitted frame (10.04).
+  auto concatenator = make_concatenator(MatchingStrategyType::naive, kRejectLate);
+  static_cast<void>(concatenator.process_cloud("lidar_top", make_cloud(10, 0), 100.00));
+  static_cast<void>(concatenator.process_cloud("lidar_left", make_cloud(10, 40'000'000), 100.01));
+  ASSERT_EQ(concatenator.close_expired_collectors(100.25).size(), 1u);
+
+  // Act
+  const auto frames = concatenator.process_cloud("lidar_right", make_cloud(10, 0), 100.26);
+
+  // Assert
+  ASSERT_EQ(frames.size(), 1u);
+  EXPECT_EQ(frames[0].status, ConcatenatedFrameStatus::kLate);
+  EXPECT_FALSE(concatenator.next_deadline().has_value());
+  EXPECT_EQ(concatenator.stats().late_clouds_rejected, 1u);
+}
+
+TEST(CloudConcatenatorLateClouds, NaiveStillLetsALateCloudJoinAnOpenNewerFrame)
+{
+  // Arrange
+  // Known limitation: naive matching uses arrival times only, so a late cloud that finds an open
+  // collector missing its topic joins it before the policy is consulted. Top and left stream at
+  // 10 Hz, right is held up; frame 10.00 times out at 100.20 while 10.10 and 10.20 are open.
+  auto concatenator = make_concatenator(MatchingStrategyType::naive, kRejectLate);
+  static_cast<void>(concatenator.process_cloud("lidar_top", make_cloud(10, 0), 100.00));
+  static_cast<void>(concatenator.process_cloud("lidar_left", make_cloud(10, 0), 100.01));
+  static_cast<void>(concatenator.process_cloud("lidar_top", make_cloud(10, 100'000'000), 100.10));
+  static_cast<void>(concatenator.process_cloud("lidar_left", make_cloud(10, 100'000'000), 100.11));
+  const auto timed_out =
+    concatenator.process_cloud("lidar_top", make_cloud(10, 200'000'000), 100.20);
+  static_cast<void>(concatenator.process_cloud("lidar_left", make_cloud(10, 200'000'000), 100.21));
+  ASSERT_EQ(timed_out.size(), 1u);
+
+  // Act
+  const auto frames = concatenator.process_cloud("lidar_right", make_cloud(10, 0), 100.26);
+
+  // Assert
+  ASSERT_EQ(frames.size(), 1u);
+  EXPECT_EQ(frames[0].status, ConcatenatedFrameStatus::kComplete);
+  EXPECT_DOUBLE_EQ(frames[0].result.topic_to_original_stamp_map.at("lidar_right"), 10.0);
+  EXPECT_EQ(concatenator.stats().late_clouds_rejected, 0u);
 }
 
 int main(int argc, char ** argv)

@@ -109,7 +109,8 @@ PointCloudConcatenateDataSynchronizerComponentTemplated<MsgTraits>::
     params_.input_topics, params_.output_frame, params_.timeout_sec, params_.is_motion_compensated,
     params_.publish_synchronized_pointcloud, params_.keep_input_frame_in_synchronized_pointcloud,
     params_.matching_strategy, lidar_timestamp_offsets, lidar_timestamp_noise_window,
-    max_open_collectors);
+    max_open_collectors,
+    LateCloudPolicy{!params_.publish_previous_but_late_pointcloud, params_.rosbag_length});
 
   // Diagnostic Updater
   diagnostics_interface_ =
@@ -249,9 +250,10 @@ void PointCloudConcatenateDataSynchronizerComponentTemplated<MsgTraits>::show_de
     log_stream << "Naive strategy:\n Collector's timestamp: " << frame.first_arrival_time
                << " seconds\n";
   }
-  log_stream << "Closed by: "
-             << (frame.status == ConcatenatedFrameStatus::kComplete ? "completion" : "timeout")
-             << "\n";
+  const char * closed_by = frame.status == ConcatenatedFrameStatus::kComplete ? "completion"
+                           : frame.status == ConcatenatedFrameStatus::kLate   ? "late arrival"
+                                                                              : "timeout";
+  log_stream << "Closed by: " << closed_by << "\n";
   log_stream << "Pointclouds: [";
   std::string separator;
   for (const auto & [topic, stamp] : frame.result.topic_to_original_stamp_map) {
@@ -280,6 +282,12 @@ void PointCloudConcatenateDataSynchronizerComponentTemplated<
       "Reset the oldest collector because the number of processing collectors is equal to the "
       "limit of ("
         << max_open_collectors << ").");
+  }
+  if (stats.late_clouds_rejected > reported_stats_.late_clouds_rejected) {
+    RCLCPP_WARN_STREAM_THROTTLE(
+      this->get_logger(), *this->get_clock(), 1000,
+      "A cloud from '" << stats.last_late_topic
+                       << "' arrived after its frame was already published.");
   }
   reported_stats_ = stats;
 }

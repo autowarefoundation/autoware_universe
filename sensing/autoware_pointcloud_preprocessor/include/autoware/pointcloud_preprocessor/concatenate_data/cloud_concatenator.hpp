@@ -25,6 +25,7 @@
 #include <sensor_msgs/msg/point_cloud2.hpp>
 
 #include <cstddef>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <string>
@@ -37,6 +38,7 @@ namespace autoware::pointcloud_preprocessor
 enum class ConcatenatedFrameStatus {
   kComplete,  // every input topic contributed a cloud
   kTimeout,   // the collector was closed before all topics arrived
+  kLate,      // a single cloud that arrived after its frame was emitted (see LateCloudPolicy)
 };
 
 // One concatenated frame emitted by the concatenator, tagged with why it was emitted and with the
@@ -64,6 +66,32 @@ struct CloudConcatenatorStats
   // symptom of a mis-tuned noise window). last_duplicate_topic names the most recent offender.
   std::size_t duplicate_topic_inserts{0};
   std::string last_duplicate_topic{};
+  // Clouds emitted alone as kLate frames because their frame had already been emitted (see
+  // LateCloudPolicy). last_late_topic names the most recent one.
+  std::size_t late_clouds_rejected{0};
+  std::string last_late_topic{};
+};
+
+/// What to do with a cloud that matches no open collector and belongs to a frame at or before the
+/// last emitted one, i.e. it arrived after its collector closed. Without a policy it opens a new
+/// collector, holds a slot for timeout_sec, and goes out as a one-cloud timeout frame. With it,
+/// the same one-cloud frame goes out at once, tagged kLate, and no collector is opened; the
+/// caller sees the same frame it would have seen timeout_sec later and handles it the same way
+/// (the node drops it as late and reports it in the diagnostics).
+///
+/// A cloud's frame is its offset-corrected reference under advanced and its header stamp under
+/// naive. Only clouds that match nothing are checked, so under naive (arrival-time matching) a late
+/// cloud that finds an open collector missing its topic still joins it.
+struct LateCloudPolicy
+{
+  /// Emit late clouds at once as kLate frames (counted in
+  /// CloudConcatenatorStats::late_clouds_rejected) instead of opening a collector. false keeps the
+  /// historical behavior. The node sets this to !publish_previous_but_late_pointcloud.
+  bool reject_late_clouds{false};
+  /// A cloud more than this many seconds before the last emitted frame is not late but a replay
+  /// restart (a rosbag loop): the watermark resets and the cloud opens a collector normally. The
+  /// node passes rosbag_length, the same bound it applies to late frames.
+  double replay_jump_sec{0.0};
 };
 
 /// Stateful, ROS-runtime-free point cloud concatenation: takes a stream of input clouds and
@@ -91,13 +119,14 @@ public:
   /// @param max_open_collectors when non-zero, opening a collector beyond this limit first discards
   /// the open collector with the oldest reference (unpublished), mirroring the node's fixed
   /// collector pool; 0 keeps the collector count unbounded (offline default).
+  /// @param late_cloud_policy see LateCloudPolicy; the default treats no cloud as late.
   CloudConcatenator(
     const std::vector<std::string> & input_topics, const std::string & output_frame,
     double timeout_sec, bool is_motion_compensated, bool publish_synchronized_pointcloud,
     bool keep_input_frame_in_synchronized_pointcloud, MatchingStrategyType matching_strategy,
     const std::optional<std::vector<double>> & lidar_timestamp_offsets = std::nullopt,
     const std::optional<std::vector<double>> & lidar_timestamp_noise_window = std::nullopt,
-    std::size_t max_open_collectors = 0);
+    std::size_t max_open_collectors = 0, LateCloudPolicy late_cloud_policy = LateCloudPolicy{});
 
   /// Inject one sensor->output extrinsic (header.frame_id = output frame, child_frame_id = sensor
   /// frame), as provided by TF.
@@ -156,6 +185,11 @@ private:
   // Discard (unpublished) the open collector with the oldest reference to make room for a new one.
   void drop_oldest_collector();
 
+  // Late-cloud check (see LateCloudPolicy); a replay jump resets the watermark.
+  [[nodiscard]] double frame_of(
+    const MatchingReference & reference, const IncomingCloudInfo & incoming_cloud_info) const;
+  [[nodiscard]] bool is_late(double frame);
+
   // Combine the collector's clouds and package them as an emitted frame.
   [[nodiscard]] ConcatenatedFrame<PointCloudMsgT> emit(
     Collector && collector, ConcatenatedFrameStatus status);
@@ -164,12 +198,15 @@ private:
   double timeout_sec_;
   MatchingStrategyType matching_strategy_;
   std::size_t max_open_collectors_;
+  LateCloudPolicy late_cloud_policy_;
   // Declared before handler_ so the advanced-parameter validation rejects bad input before the
   // handler is constructed.
   std::unique_ptr<MatchingPolicy> matching_policy_;
   CombineCloudHandler<PointCloudMsgT> handler_;
   std::vector<Collector> collectors_;
   CloudConcatenatorStats stats_;
+  std::optional<double> emitted_frame_watermark_;  // frame of the newest emitted collector
+  double last_time_sec_{-std::numeric_limits<double>::infinity()};
 };
 
 }  // namespace autoware::pointcloud_preprocessor
