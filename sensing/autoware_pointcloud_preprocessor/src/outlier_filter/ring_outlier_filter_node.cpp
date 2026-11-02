@@ -30,6 +30,53 @@ namespace autoware::pointcloud_preprocessor
 {
 using autoware::point_types::PointXYZIRADRT;
 
+namespace
+{
+using autoware::point_types::PointXYZIRCAEDT;
+
+// Returns the number of points skipped because their channel is out of range
+size_t group_points_by_ring(
+  const sensor_msgs::msg::PointCloud2 & input, const size_t channel_offset,
+  const size_t max_points_num_per_ring, std::vector<std::vector<size_t>> & ring2indices)
+{
+  for (auto & indices : ring2indices) {
+    indices.reserve(max_points_num_per_ring);
+  }
+
+  size_t num_points_with_invalid_ring = 0;
+  for (size_t data_idx = 0; data_idx + channel_offset + sizeof(uint16_t) <= input.data.size();
+       data_idx += input.point_step) {
+    const uint16_t ring =
+      *reinterpret_cast<const uint16_t *>(&input.data[data_idx + channel_offset]);
+    if (ring >= ring2indices.size()) {
+      ++num_points_with_invalid_ring;
+      continue;
+    }
+    ring2indices[ring].push_back(data_idx);
+  }
+  return num_points_with_invalid_ring;
+}
+
+std::vector<pcl::PointCloud<PointXYZIRCAEDT>> split_points_by_ring(
+  const pcl::PointCloud<PointXYZIRCAEDT> & cloud, const uint32_t vertical_bins)
+{
+  std::vector<pcl::PointCloud<PointXYZIRCAEDT>> ring_point_clouds(vertical_bins);
+  for (const auto & point : cloud.points) {
+    if (point.channel < vertical_bins) {
+      ring_point_clouds[point.channel].push_back(point);
+    }
+  }
+  return ring_point_clouds;
+}
+
+// Float rounding can give num_bins for an azimuth just below max_azimuth
+uint32_t to_bin_index(
+  const float azimuth, const float min_azimuth, const float resolution, const uint32_t num_bins)
+{
+  return std::min(static_cast<uint32_t>((azimuth - min_azimuth) / resolution), num_bins - 1);
+}
+}  // namespace
+
 RingOutlierFilterComponent::RingOutlierFilterComponent(const rclcpp::NodeOptions & options)
 : Filter("RingOutlierFilter", options)
 {
@@ -108,18 +155,14 @@ void RingOutlierFilterComponent::faster_filter(
   const auto input_return_type_offset =
     input->fields.at(static_cast<size_t>(InputPointIndex::ReturnType)).offset;
 
-  std::vector<std::vector<size_t>> ring2indices;
-  ring2indices.reserve(max_rings_num_);
-
-  for (uint16_t i = 0; i < max_rings_num_; i++) {
-    ring2indices.push_back(std::vector<size_t>());
-    ring2indices.back().reserve(max_points_num_per_ring_);
-  }
-
-  for (size_t data_idx = 0; data_idx < input->data.size(); data_idx += input->point_step) {
-    const uint16_t ring =
-      *reinterpret_cast<const uint16_t *>(&input->data[data_idx + input_channel_offset]);
-    ring2indices[ring].push_back(data_idx);
+  std::vector<std::vector<size_t>> ring2indices(max_rings_num_);
+  const size_t num_points_with_invalid_ring =
+    group_points_by_ring(*input, input_channel_offset, max_points_num_per_ring_, ring2indices);
+  if (num_points_with_invalid_ring > 0) {
+    RCLCPP_WARN_THROTTLE(
+      get_logger(), *get_clock(), 5000,
+      "Skipped %zu points whose channel is not less than max_rings_num (%u).",
+      num_points_with_invalid_ring, static_cast<unsigned int>(max_rings_num_));
   }
 
   // walk range: [walk_first_idx, walk_last_idx]
@@ -182,7 +225,7 @@ void RingOutlierFilterComponent::faster_filter(
             &input->data[indices[i] + input_return_type_offset]);
           output_ptr->return_type = return_type;
 
-          const std::uint8_t & channel = *reinterpret_cast<const std::uint8_t *>(
+          const std::uint16_t & channel = *reinterpret_cast<const std::uint16_t *>(
             &input->data[indices[i] + input_channel_offset]);
           output_ptr->channel = channel;
 
@@ -235,8 +278,8 @@ void RingOutlierFilterComponent::faster_filter(
           &input->data[indices[i] + input_return_type_offset]);
         output_ptr->return_type = return_type;
 
-        const std::uint8_t & channel =
-          *reinterpret_cast<const std::uint8_t *>(&input->data[indices[i] + input_channel_offset]);
+        const std::uint16_t & channel =
+          *reinterpret_cast<const std::uint16_t *>(&input->data[indices[i] + input_channel_offset]);
         output_ptr->channel = channel;
 
         output_size += output.point_step;
@@ -411,16 +454,11 @@ float RingOutlierFilterComponent::calculate_visibility_score(
   const float max_azimuth = max_azimuth_deg_ * (M_PI / 180.f);
   const float min_azimuth = min_azimuth_deg_ * (M_PI / 180.f);
 
-  const uint32_t horizontal_resolution =
-    static_cast<uint32_t>((max_azimuth - min_azimuth) / horizontal_bins);
+  const float horizontal_resolution =
+    (max_azimuth - min_azimuth) / static_cast<float>(horizontal_bins);
 
-  std::vector<pcl::PointCloud<InputPointType>> ring_point_clouds(vertical_bins);
+  const auto ring_point_clouds = split_points_by_ring(*input_cloud, vertical_bins);
   cv::Mat frequency_image(cv::Size(horizontal_bins, vertical_bins), CV_8UC1, cv::Scalar(0));
-
-  // Split points into rings
-  for (const auto & point : input_cloud->points) {
-    ring_point_clouds.at(point.channel).push_back(point);
-  }
 
   // Calculate frequency for each bin in each ring
   for (const auto & ring_points : ring_point_clouds) {
@@ -433,8 +471,8 @@ float RingOutlierFilterComponent::calculate_visibility_score(
       if (point.azimuth < min_azimuth || point.azimuth >= max_azimuth) continue;
       if (point.distance >= max_distance_) continue;
 
-      const uint bin_index =
-        static_cast<uint>((point.azimuth - min_azimuth) / horizontal_resolution);
+      const uint32_t bin_index =
+        to_bin_index(point.azimuth, min_azimuth, horizontal_resolution, horizontal_bins);
 
       frequency_in_ring[bin_index]++;
       frequency_in_ring[bin_index] =

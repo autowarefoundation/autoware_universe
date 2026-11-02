@@ -55,6 +55,8 @@ protected:
     const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output,
     const TransformInfo & transform_info) override;
 
+  float calculate_visibility_score(const PointCloud2 & input) const;
+
   rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float32Stamped>::SharedPtr visibility_pub_;
 
 private:
@@ -99,7 +101,6 @@ private:
 
   void set_up_pointcloud_format(
     const PointCloud2ConstPtr & input, PointCloud2 & formatted_points, size_t points_size);
-  float calculate_visibility_score(const PointCloud2 & input) const;
   void publish_diagnostics(const std::vector<std::shared_ptr<const DiagnosticsBase>> & diagnostics);
 
 public:
