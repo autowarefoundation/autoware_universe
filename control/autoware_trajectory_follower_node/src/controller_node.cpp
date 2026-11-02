@@ -19,31 +19,9 @@
 #include "autoware/pure_pursuit/autoware_pure_pursuit_lateral_controller_node.hpp"
 #include "autoware_utils/ros/marker_helper.hpp"
 
-#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <string>
-#include <vector>
-
-namespace
-{
-template <typename T>
-std::vector<T> resampleHorizonByZeroOrderHold(
-  const std::vector<T> & original_horizon, const double original_time_step_ms,
-  const double new_time_step_ms)
-{
-  std::vector<T> resampled_horizon{};
-  const size_t step_factor = static_cast<size_t>(original_time_step_ms / new_time_step_ms);
-  const size_t resampled_size = original_horizon.size() * step_factor;
-  resampled_horizon.reserve(resampled_size);
-  for (const auto & command : original_horizon) {
-    for (size_t i = 0; i < step_factor; ++i) {
-      resampled_horizon.push_back(command);
-    }
-  }
-  return resampled_horizon;
-}
-}  // namespace
 
 namespace autoware::motion::control::trajectory_follower_node
 {
@@ -327,75 +305,6 @@ void Controller::publishDebugMarker(
   }
 
   debug_marker_pub_->publish(debug_marker_array);
-}
-
-std::optional<ControlHorizon> Controller::mergeLatLonHorizon(
-  const LateralHorizon & lateral_horizon, const LongitudinalHorizon & longitudinal_horizon,
-  const rclcpp::Time & stamp)
-{
-  if (lateral_horizon.controls.empty() || longitudinal_horizon.controls.empty()) {
-    return std::nullopt;
-  }
-
-  autoware_control_msgs::msg::ControlHorizon control_horizon{};
-  control_horizon.stamp = stamp;
-
-  // If either of the horizons has only one control, repeat the control to match the other horizon.
-  if (lateral_horizon.controls.size() == 1) {
-    control_horizon.time_step_ms = longitudinal_horizon.time_step_ms;
-    const auto lateral = lateral_horizon.controls.front();
-    for (const auto & longitudinal : longitudinal_horizon.controls) {
-      autoware_control_msgs::msg::Control control;
-      control.longitudinal = longitudinal;
-      control.lateral = lateral;
-      control.stamp = stamp;
-      control_horizon.controls.push_back(control);
-    }
-    return control_horizon;
-  }
-  if (longitudinal_horizon.controls.size() == 1) {
-    control_horizon.time_step_ms = lateral_horizon.time_step_ms;
-    const auto longitudinal = longitudinal_horizon.controls.front();
-    for (const auto & lateral : lateral_horizon.controls) {
-      autoware_control_msgs::msg::Control control;
-      control.longitudinal = longitudinal;
-      control.lateral = lateral;
-      control.stamp = stamp;
-      control_horizon.controls.push_back(control);
-    }
-    return control_horizon;
-  }
-
-  // If both horizons have multiple controls, align the time steps and zero-order hold the controls.
-  // calculate greatest common divisor of time steps
-  const auto gcd_double = [](const double a, const double b) {
-    const double precision = 1e9;
-    const std::int64_t int_a = static_cast<std::int64_t>(round(a * precision));
-    const std::int64_t int_b = static_cast<std::int64_t>(round(b * precision));
-    return static_cast<double>(std::gcd(int_a, int_b)) / precision;
-  };
-  const double time_step_ms =
-    gcd_double(lateral_horizon.time_step_ms, longitudinal_horizon.time_step_ms);
-  control_horizon.time_step_ms = time_step_ms;
-
-  const auto lateral_controls = resampleHorizonByZeroOrderHold(
-    lateral_horizon.controls, lateral_horizon.time_step_ms, time_step_ms);
-  const auto longitudinal_controls = resampleHorizonByZeroOrderHold(
-    longitudinal_horizon.controls, longitudinal_horizon.time_step_ms, time_step_ms);
-
-  if (lateral_controls.size() != longitudinal_controls.size()) {
-    return std::nullopt;
-  }
-
-  const size_t num_steps = lateral_controls.size();
-  for (size_t i = 0; i < num_steps; ++i) {
-    autoware_control_msgs::msg::Control control{};
-    control.stamp = stamp;
-    control.lateral = lateral_controls.at(i);
-    control.longitudinal = longitudinal_controls.at(i);
-    control_horizon.controls.push_back(control);
-  }
-  return control_horizon;
 }
 
 }  // namespace autoware::motion::control::trajectory_follower_node

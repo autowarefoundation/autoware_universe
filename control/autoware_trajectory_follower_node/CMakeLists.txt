@@ -7,7 +7,9 @@ autoware_package()
 set(CONTROLLER_NODE controller_node)
 ament_auto_add_library(${CONTROLLER_NODE} SHARED
   include/autoware/trajectory_follower_node/controller_node.hpp
+  include/autoware/trajectory_follower_node/trajectory_follower.hpp
   src/controller_node.cpp
+  src/trajectory_follower.cpp
 )
 
 autoware_agnocast_wrapper_register_node(${CONTROLLER_NODE}

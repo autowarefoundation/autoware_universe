@@ -15,9 +15,9 @@
 #ifndef AUTOWARE__TRAJECTORY_FOLLOWER_NODE__CONTROLLER_NODE_HPP_
 #define AUTOWARE__TRAJECTORY_FOLLOWER_NODE__CONTROLLER_NODE_HPP_
 
-#include "autoware/trajectory_follower_base/control_horizon.hpp"
 #include "autoware/trajectory_follower_base/lateral_controller_interface.hpp"
 #include "autoware/trajectory_follower_base/longitudinal_controller_interface.hpp"
+#include "autoware/trajectory_follower_node/trajectory_follower.hpp"
 #include "autoware/trajectory_follower_node/visibility_control.hpp"
 #include "autoware_utils/ros/logger_level_configure.hpp"
 #include "autoware_utils/ros/polling_subscriber.hpp"
@@ -38,20 +38,16 @@
 #include <boost/optional.hpp>
 
 #include <memory>
-#include <optional>
 #include <string>
 
 namespace autoware::motion::control
 {
-using trajectory_follower::LateralHorizon;
 using trajectory_follower::LateralOutput;
-using trajectory_follower::LongitudinalHorizon;
 using trajectory_follower::LongitudinalOutput;
 namespace trajectory_follower_node
 {
 
 using autoware_adapi_v1_msgs::msg::OperationModeState;
-using autoware_control_msgs::msg::ControlHorizon;
 
 namespace trajectory_follower = ::autoware::motion::control::trajectory_follower;
 
@@ -136,19 +132,6 @@ private:
   void publishDebugMarker(
     const trajectory_follower::InputData & input_data,
     const trajectory_follower::LateralOutput & lat_out, const rclcpp::Time & stamp) const;
-  /**
-   * @brief merge lateral and longitudinal horizons
-   * @details If one of the commands has only one control, repeat the control to match the other
-   *          horizon. If each horizon has different time intervals, resample them to match the size
-   *          with the greatest common divisor.
-   * @param lateral_horizon lateral horizon
-   * @param longitudinal_horizon longitudinal horizon
-   * @param stamp stamp
-   * @return merged control horizon
-   */
-  static std::optional<ControlHorizon> mergeLatLonHorizon(
-    const LateralHorizon & lateral_horizon, const LongitudinalHorizon & longitudinal_horizon,
-    const rclcpp::Time & stamp);
 
   std::unique_ptr<autoware_utils::LoggerLevelConfigure> logger_configure_;
 
