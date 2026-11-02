@@ -101,6 +101,7 @@ private:
 
   // Publishers
   rclcpp::Publisher<autoware_control_msgs::msg::Control>::SharedPtr control_cmd_pub_;
+  rclcpp::Publisher<autoware_planning_msgs::msg::Trajectory>::SharedPtr predicted_trajectory_pub_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr debug_marker_pub_;
   rclcpp::Publisher<autoware_control_msgs::msg::ControlHorizon>::SharedPtr control_cmd_horizon_pub_;
 

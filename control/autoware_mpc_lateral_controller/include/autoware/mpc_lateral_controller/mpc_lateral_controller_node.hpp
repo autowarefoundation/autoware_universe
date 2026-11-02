@@ -77,7 +77,6 @@ private:
   std::shared_ptr<diagnostic_updater::Updater> diag_updater_;
   rclcpp::Node::OnSetParametersCallbackHandle::SharedPtr m_set_param_res;
 
-  rclcpp::Publisher<Trajectory>::SharedPtr m_pub_predicted_traj;
   rclcpp::Publisher<Trajectory>::SharedPtr m_pub_predicted_traj_frenet;
   rclcpp::Publisher<Trajectory>::SharedPtr m_pub_resampled_reference_traj;
   rclcpp::Publisher<PoseStamped>::SharedPtr m_pub_nearest_pose;

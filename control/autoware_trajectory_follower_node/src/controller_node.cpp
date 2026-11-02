@@ -103,6 +103,8 @@ Controller::Controller(const rclcpp::NodeOptions & node_options)
 
   control_cmd_pub_ = create_publisher<autoware_control_msgs::msg::Control>(
     "~/output/control_cmd", rclcpp::QoS{1}.transient_local());
+  predicted_trajectory_pub_ =
+    create_publisher<autoware_planning_msgs::msg::Trajectory>("~/output/predicted_trajectory", 1);
   debug_marker_pub_ =
     create_publisher<visualization_msgs::msg::MarkerArray>("~/output/debug_marker", rclcpp::QoS{1});
 
@@ -282,6 +284,9 @@ void Controller::callbackTimerControl()
   out.lateral = lat_out.control_cmd;
   out.longitudinal = lon_out.control_cmd;
   control_cmd_pub_->publish(out);
+  if (lat_out.predicted_trajectory) {
+    predicted_trajectory_pub_->publish(*lat_out.predicted_trajectory);
+  }
 
   // 6. publish debug
   published_time_publisher_->publish_if_subscribed(control_cmd_pub_, out.stamp);

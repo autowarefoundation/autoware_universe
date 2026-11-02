@@ -328,8 +328,8 @@ PurePursuitLateralControllerResult PurePursuitLateralController::runDetailed(
   result.output.sync_data.is_steer_converged = calcIsSteerConverged(cmd_msg);
 
   // calculate predicted trajectory with iterative calculation
-  result.predicted_trajectory = generatePredictedTrajectory(stamp, result);
-  if (!result.predicted_trajectory) {
+  result.output.predicted_trajectory = generatePredictedTrajectory(stamp, result);
+  if (!result.output.predicted_trajectory) {
     AW_PP_ERROR(writer_, "Failed to generate predicted trajectory.");
   }
 

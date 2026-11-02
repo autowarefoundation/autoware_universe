@@ -95,7 +95,6 @@ struct PurePursuitLateralControllerResult
 {
   LateralOutput output;
   std::optional<autoware_internal_debug_msgs::msg::Float32MultiArrayStamped> lookahead_debug_values;
-  std::optional<Trajectory> predicted_trajectory;
 };
 
 class PurePursuitLateralController : public LateralControllerInterface
