@@ -134,15 +134,22 @@ IPluginV3 * ImplicitGemmPluginCreator::createPlugin(
     try {
       nvinfer1::PluginField const * fields{fc->fields};
       std::int32_t num_fields{fc->nbFields};
-      PLUGIN_ASSERT_MSG(
-        num_fields == 1,
-        "Unsupported serialized plugin format. The plugin I/O contract has changed. "
-        "Please rebuild the TensorRT engine.");
-      PLUGIN_VALIDATE(fields[0].name != nullptr);
-      PLUGIN_VALIDATE(!strcmp(fields[0].name, "parameters"));
-      PLUGIN_VALIDATE(fields[0].type == nvinfer1::PluginFieldType::kUNKNOWN);
-      PLUGIN_VALIDATE(fields[0].length == sizeof(ImplicitGemmParameters));
-      PLUGIN_VALIDATE(fields[0].data != nullptr);
+      // An engine built with another layout of the parameters (an older plugin) must not run:
+      // reading it would reinterpret its fields. PLUGIN_VALIDATE only logs, and TensorRT 10.8
+      // crashes on a null plugin here, so stop with the reason instead.
+      bool const same_layout =
+        num_fields == 1 && fields[0].name != nullptr && strcmp(fields[0].name, "parameters") == 0 &&
+        fields[0].type == nvinfer1::PluginFieldType::kUNKNOWN &&
+        fields[0].length == static_cast<std::int32_t>(sizeof(ImplicitGemmParameters)) &&
+        fields[0].data != nullptr;
+      if (!same_layout) {
+        std::stringstream ss;
+        ss << "ImplicitGemm " << name
+           << ": the engine was serialized by a different ImplicitGemm plugin (parameters of "
+           << (num_fields == 1 ? fields[0].length : -1) << " bytes, this plugin expects "
+           << sizeof(ImplicitGemmParameters) << "). Rebuild the TensorRT engine.";
+        PLUGIN_ASSERT_MSG(same_layout, ss.str().c_str());
+      }
       auto params = *(static_cast<ImplicitGemmParameters const *>(fields[0].data));
       ImplicitGemmPlugin * const plugin{new ImplicitGemmPlugin{std::string(name), params}};
       return plugin;
