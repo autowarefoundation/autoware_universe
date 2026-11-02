@@ -358,6 +358,20 @@ if(BUILD_EXAMPLES)
   target_link_libraries(concatenate_without_ros_node concatenate_core)
 endif()
 
+# Python bindings of the concatenation core, for offline use. Messages cross the boundary as CDR
+# bytes, so only this module links rclcpp (for rclcpp::Serialization); concatenate_core does not.
+find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
+find_package(pybind11 REQUIRED)
+pybind11_add_module(_concatenate_pointclouds_pybind
+  src/concatenate_data/concatenate_pointclouds_pybind.cpp
+)
+target_link_libraries(_concatenate_pointclouds_pybind PRIVATE concatenate_core rclcpp::rclcpp)
+ament_get_python_install_dir(python_install_dir)
+install(TARGETS _concatenate_pointclouds_pybind
+  DESTINATION "${python_install_dir}/${PROJECT_NAME}"
+)
+ament_python_install_package(${PROJECT_NAME} PACKAGE_DIR python/${PROJECT_NAME})
+
 ament_auto_package(INSTALL_TO_SHARE
   launch
   config
@@ -467,5 +481,10 @@ if(BUILD_TESTING)
   target_link_libraries(test_concatenate_node_characterization pointcloud_preprocessor_filter)
   ament_target_dependencies(
     test_concatenate_node_characterization rclcpp_components rosgraph_msgs tf2_ros)
+
+  find_package(ament_cmake_pytest REQUIRED)
+  ament_add_pytest_test(test_concatenate_pointclouds_py
+    test/test_concatenate_pointclouds_py.py
+  )
 
 endif()
