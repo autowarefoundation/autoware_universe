@@ -85,12 +85,13 @@ std::string join(const std::vector<std::string> & words)
 
 }  // namespace
 
-void ConversionConfiguration::add_field(std::string name, float default_value)
+void ConversionConfiguration::add_field(std::string name, double default_value)
 {
   default_fields_.push_back({std::move(name), default_value});
 }
 
-const std::vector<std::pair<std::string, float>> & ConversionConfiguration::defaulted_fields() const
+const std::vector<std::pair<std::string, double>> & ConversionConfiguration::defaulted_fields()
+  const
 {
   return default_fields_;
 }

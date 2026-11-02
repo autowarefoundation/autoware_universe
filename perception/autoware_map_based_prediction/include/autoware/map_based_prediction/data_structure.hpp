@@ -76,6 +76,8 @@ struct PredictedRefPath
   double width;
   PosePath path;
   Maneuver maneuver;
+  /// Current lanelet this reference path was generated from (invalid when unknown).
+  lanelet::Id origin_lanelet_id{lanelet::InvalId};
 };
 
 /**

@@ -135,4 +135,58 @@ struct UnmountDeviceInfo
  */
 typedef std::map<std::string, HddInfo> HddInfoList;
 
+/**
+ * @brief check if the path contains "." or ".." components (e.g. "/dev/mapper/../../opt")
+ * @param [in] path path to check
+ * @return true if the path contains directory traversal
+ * @note "." is not traversal by itself, but is rejected to keep the path in plain form
+ *       so that string-based checks cannot be bypassed (e.g. "/dev/./sda1").
+ */
+inline bool contains_directory_traversal(const std::string & path)
+{
+  std::string::size_type start = 0;
+  while (true) {
+    const std::string::size_type end = path.find('/', start);
+    const std::string component = path.substr(start, end - start);
+    if (component == "." || component == "..") {
+      return true;
+    }
+    if (end == std::string::npos) {
+      return false;
+    }
+    start = end + 1;
+  }
+}
+
+// Keep this helper inline in the public header so the standalone hdd_reader executable and
+// its unit tests share the same validation logic without depending on a library target.
+inline bool validate_unmount_device_name(const std::string & part_device)
+{
+  // cspell:disable
+  // clang-format off
+  if (part_device.empty()) {
+    return false;
+  }
+
+  if (part_device.rfind("/dev/", 0) != 0) {
+    return false;
+  }
+
+  const std::string forbidden_chars = ";|&<>$`\\\n\r\t \"'";
+  if (part_device.find_first_of(forbidden_chars) != std::string::npos) {
+    return false;
+  }
+
+  if (contains_directory_traversal(part_device)) {
+    return false;
+  }
+
+  return part_device.find("/dev/") == 0 &&
+         (part_device.find("/dev/sd") == 0 || part_device.find("/dev/nvme") == 0 ||
+          part_device.find("/dev/mmcblk") == 0 ||
+          part_device.find("/dev/mapper/") == 0 || part_device.find("/dev/dm-") == 0);
+  // cspell:enable
+  // clang-format on
+}
+
 #endif  // SYSTEM_MONITOR__HDD_READER__HDD_READER_HPP_

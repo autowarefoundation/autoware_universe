@@ -84,7 +84,7 @@ MpcLateralController::MpcLateralController(
   m_steer_offset_max_update_th_ = config.steer_offset_max_update_th;
   if (enable_auto_steering_offset_removal_) {
     lpf_steer_offset_ = std::make_shared<Butterworth2dFilter>(
-      config.ctrl_period, config.steer_offset_filter_cutoff_hz, m_steering_offset_);
+      config.ctrl_period, config.steer_offset_filter_cutoff_hz, 0.0);
   }
 
   m_mpc->initializeLowPassFilters(config.steering_lpf_cutoff_hz, config.error_deriv_lpf_cutoff_hz);
@@ -157,7 +157,16 @@ std::shared_ptr<QPSolverInterface> MpcLateralController::createQPSolverInterface
   return nullptr;
 }
 
-MpcLateralControllerResult MpcLateralController::run(
+tl::expected<trajectory_follower::LateralOutput, std::string> MpcLateralController::run(
+  const trajectory_follower::InputData & input_data, const rclcpp::Time & stamp)
+{
+  if (!isReady(input_data)) {
+    return tl::make_unexpected("MPC is not ready to run.");
+  }
+  return runDetailed(input_data, stamp).output;
+}
+
+MpcLateralControllerResult MpcLateralController::runDetailed(
   trajectory_follower::InputData const & input_data, const rclcpp::Time & stamp)
 {
   MpcLateralControllerResult result;
@@ -172,7 +181,8 @@ MpcLateralControllerResult MpcLateralController::run(
     if (!enable_auto_steering_offset_removal_) return 0.0;
     if (abs(m_steering_offset_target_ - m_steering_offset_filtered_) > 1e-4)
       return m_steering_offset_target_;
-    const double delta_offset = m_steering_offset_ - m_steering_offset_target_;
+    const double delta_offset =
+      static_cast<double>(input_data.steering_offset.data) - m_steering_offset_target_;
     const double delta_offset_clamped =
       std::clamp(delta_offset, -m_steer_offset_max_update_th_, m_steer_offset_max_update_th_);
     return m_steering_offset_target_ + delta_offset_clamped;

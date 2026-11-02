@@ -17,13 +17,14 @@
 
 #include "autoware/mpc_lateral_controller/mpc_lateral_controller.hpp"
 #include "autoware/mpc_lateral_controller/ros_log_writer.hpp"
-#include "autoware/trajectory_follower_base/lateral_controller_base.hpp"
+#include "autoware/trajectory_follower_base/lateral_controller_interface.hpp"
 #include "rclcpp/rclcpp.hpp"
 
 #include <diagnostic_updater/diagnostic_updater.hpp>
 
 #include "autoware_internal_debug_msgs/msg/float32_multi_array_stamped.hpp"
 #include "autoware_internal_debug_msgs/msg/float32_stamped.hpp"
+#include "autoware_internal_debug_msgs/msg/float64_stamped.hpp"
 #include "autoware_planning_msgs/msg/trajectory.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
 
@@ -36,12 +37,13 @@ namespace autoware::motion::control::mpc_lateral_controller
 {
 using autoware_internal_debug_msgs::msg::Float32MultiArrayStamped;
 using autoware_internal_debug_msgs::msg::Float32Stamped;
+using autoware_internal_debug_msgs::msg::Float64Stamped;
 using autoware_planning_msgs::msg::Trajectory;
 using geometry_msgs::msg::PoseStamped;
 
 /// The node side of the lateral controller. It declares the parameters, builds the
 /// controller from them, publishes what a cycle produced and writes what it reported.
-class MpcLateralControllerNode : public trajectory_follower::LateralControllerBase
+class MpcLateralControllerNode : public trajectory_follower::LateralControllerInterface
 {
 public:
   /// \param node Reference to the node used only for the component and parameter initialization.
@@ -49,16 +51,12 @@ public:
     rclcpp::Node & node, std::shared_ptr<diagnostic_updater::Updater> diag_updater);
   ~MpcLateralControllerNode() = default;
 
-  void set_steering_offset(double offset) override { m_controller->set_steering_offset(offset); }
-
   /// Read the parameters the controller needs from the node, declaring them on it.
   static MpcLateralControllerConfig createConfig(rclcpp::Node & node);
 
 private:
-  bool isReady(const trajectory_follower::InputData & input_data) override;
-
-  trajectory_follower::LateralOutput run(
-    trajectory_follower::InputData const & input_data) override;
+  tl::expected<trajectory_follower::LateralOutput, std::string> run(
+    const trajectory_follower::InputData & input_data, const rclcpp::Time & stamp) override;
 
   void publish(const MpcLateralControllerResult & result);
 
@@ -87,6 +85,7 @@ private:
   rclcpp::Publisher<Float32MultiArrayStamped>::SharedPtr m_pub_nearest_info;
   rclcpp::Publisher<Float32MultiArrayStamped>::SharedPtr m_pub_debug_values;
   rclcpp::Publisher<Float32Stamped>::SharedPtr m_pub_steer_offset;
+  rclcpp::Publisher<Float64Stamped>::SharedPtr m_pub_processing_time_ms;
 };
 }  // namespace autoware::motion::control::mpc_lateral_controller
 

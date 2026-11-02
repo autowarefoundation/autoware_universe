@@ -19,21 +19,29 @@ autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
 if(BUILD_TESTING)
   find_package(ament_cmake_ros REQUIRED)
 
+  # Unit test of the rclcpp-free logic. It calls RadarObjectsAdapter directly and needs no ROS
+  # context, so it is a plain gtest and runs whether or not agnocast is enabled.
+  ament_add_gtest(test_radar_objects_adapter
+    test/test_radar_objects_adapter.cpp
+  )
+  target_include_directories(test_radar_objects_adapter PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+  target_link_libraries(test_radar_objects_adapter ${PROJECT_NAME})
+
   # ROS-based tests can only run while agnocast is disabled: the node's pub/sub then go through rclcpp.
   if(NOT "$ENV{ENABLE_AGNOCAST}" STREQUAL "1")
-    # Characterization test: drives RadarObjectsAdapterNode over its real topics. Runs in an isolated
-    # ROS domain so that it cannot interfere with other tests.
-    ament_add_ros_isolated_gtest(test_radar_objects_adapter_characterization
-      test/test_radar_objects_adapter_characterization.cpp
-      TIMEOUT 300
+    # Integration test of the node over its real topics; the conversion is covered by the unit
+    # test above. Runs in an isolated ROS domain so that it cannot interfere with other tests.
+    ament_add_ros_isolated_gtest(test_radar_objects_adapter_node
+      test/test_radar_objects_adapter_node.cpp
+      TIMEOUT 120
     )
-    target_include_directories(test_radar_objects_adapter_characterization PRIVATE
+    target_include_directories(test_radar_objects_adapter_node PRIVATE
       ${CMAKE_CURRENT_SOURCE_DIR}/src
     )
-    target_link_libraries(test_radar_objects_adapter_characterization
+    target_link_libraries(test_radar_objects_adapter_node
       ${PROJECT_NAME}
     )
-    ament_target_dependencies(test_radar_objects_adapter_characterization
+    ament_target_dependencies(test_radar_objects_adapter_node
       autoware_agnocast_wrapper
       autoware_perception_msgs
       autoware_sensing_msgs

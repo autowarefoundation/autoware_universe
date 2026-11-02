@@ -41,13 +41,13 @@ RadarObjectsAdapterNode::RadarObjectsAdapterNode(const rclcpp::NodeOptions & opt
 
   RadarObjectsAdapterParams params;
 
-  params.default_position_z = this->declare_parameter<float>("default_position_z");
-  params.default_velocity_z = this->declare_parameter<float>("default_velocity_z");
-  params.default_acceleration_z = this->declare_parameter<float>("default_acceleration_z");
+  params.default_position_z = this->declare_parameter<double>("default_position_z");
+  params.default_velocity_z = this->declare_parameter<double>("default_velocity_z");
+  params.default_acceleration_z = this->declare_parameter<double>("default_acceleration_z");
 
-  params.default_size_x = this->declare_parameter<float>("default_size_x");
-  params.default_size_y = this->declare_parameter<float>("default_size_y");
-  params.default_size_z = this->declare_parameter<float>("default_size_z");
+  params.default_size_x = this->declare_parameter<double>("default_size_x");
+  params.default_size_y = this->declare_parameter<double>("default_size_y");
+  params.default_size_z = this->declare_parameter<double>("default_size_z");
 
   // The tracks of this radar are told from those of another by the hash of the input topic name.
   const std::string topic_name = radar_objects_sub_->get_topic_name();

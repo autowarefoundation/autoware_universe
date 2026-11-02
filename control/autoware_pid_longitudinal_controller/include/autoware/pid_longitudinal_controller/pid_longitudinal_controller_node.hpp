@@ -16,14 +16,18 @@
 #define AUTOWARE__PID_LONGITUDINAL_CONTROLLER__PID_LONGITUDINAL_CONTROLLER_NODE_HPP_
 
 #include "autoware/pid_longitudinal_controller/pid_longitudinal_controller.hpp"
-#include "autoware/trajectory_follower_base/longitudinal_controller_base.hpp"
+#include "autoware/trajectory_follower_base/longitudinal_controller_interface.hpp"
 #include "diagnostic_updater/diagnostic_updater.hpp"
 #include "rclcpp/rclcpp.hpp"
 
+#include <tl_expected/expected.hpp>
+
 #include "autoware_internal_debug_msgs/msg/float32_multi_array_stamped.hpp"
+#include "autoware_internal_debug_msgs/msg/float64_stamped.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
 
 #include <memory>
+#include <string>
 #include <vector>
 
 namespace autoware::motion::control::pid_longitudinal_controller
@@ -35,7 +39,7 @@ namespace trajectory_follower = ::autoware::motion::control::trajectory_follower
 /// \class PidLongitudinalControllerNode
 /// \brief the rclcpp::Node wrapper around PidLongitudinalController: parameter
 /// declaration/reconfiguration, publishers, logging, and diagnostics.
-class PidLongitudinalControllerNode : public trajectory_follower::LongitudinalControllerBase
+class PidLongitudinalControllerNode : public trajectory_follower::LongitudinalControllerInterface
 {
 public:
   /// \param node Reference to the node used only for the component and parameter initialization.
@@ -53,6 +57,8 @@ private:
   rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float32MultiArrayStamped>::SharedPtr
     m_pub_debug;
   rclcpp::Publisher<MarkerArray>::SharedPtr m_pub_virtual_wall_marker;
+  rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float64Stamped>::SharedPtr
+    m_pub_processing_time_ms;
 
   rclcpp::Node::OnSetParametersCallbackHandle::SharedPtr m_set_param_res;
   rcl_interfaces::msg::SetParametersResult paramCallback(
@@ -69,13 +75,12 @@ private:
   void setupDiagnosticUpdater();
   void checkControlState(diagnostic_updater::DiagnosticStatusWrapper & stat);
 
-  bool isReady(const trajectory_follower::InputData & input_data) override;
-
   /**
    * @brief compute control command, and publish periodically
    */
-  trajectory_follower::LongitudinalOutput run(
-    trajectory_follower::InputData const & input_data) override;
+  tl::expected<trajectory_follower::LongitudinalOutput, std::string> run(
+    const trajectory_follower::InputData & input_data, const rclcpp::Time & stamp,
+    const trajectory_follower::LateralSyncData & lateral_sync_data) override;
 
   /**
    * @brief publish debug data and the virtual wall marker created during this cycle, if any

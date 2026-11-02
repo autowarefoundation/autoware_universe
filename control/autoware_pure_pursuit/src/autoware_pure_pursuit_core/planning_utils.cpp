@@ -135,10 +135,11 @@ std::pair<bool, int32_t> findClosestIdxWithDistAngThr(
   return (idx_min >= 0) ? std::make_pair(true, idx_min) : std::make_pair(false, idx_min);
 }
 
-int8_t getLaneDirection(const std::vector<geometry_msgs::msg::Pose> & poses, double th_dist)
+int8_t getLaneDirection(
+  const LogWriter & writer, const std::vector<geometry_msgs::msg::Pose> & poses, double th_dist)
 {
   if (poses.size() < 2) {
-    RCLCPP_ERROR(rclcpp::get_logger(PLANNING_UTILS_LOGGER), "size of waypoints is smaller than 2");
+    AW_PP_ERROR(writer, "size of waypoints is smaller than 2");
     return 2;
   }
 
@@ -160,7 +161,7 @@ int8_t getLaneDirection(const std::vector<geometry_msgs::msg::Pose> & poses, dou
     }
   }
 
-  RCLCPP_ERROR(rclcpp::get_logger(PLANNING_UTILS_LOGGER), "lane is something wrong");
+  AW_PP_ERROR(writer, "lane is something wrong");
   return 2;
 }
 
