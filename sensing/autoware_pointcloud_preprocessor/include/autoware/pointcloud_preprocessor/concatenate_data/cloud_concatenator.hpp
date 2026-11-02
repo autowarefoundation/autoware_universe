@@ -114,8 +114,9 @@ template <typename PointCloudMsgT>
 class CloudConcatenator
 {
 public:
-  /// @throws std::invalid_argument when the advanced strategy is requested without its
-  /// offset/noise-window parameters (size mismatches are rejected by AdvancedMatchingPolicy).
+  /// @throws std::invalid_argument when @p input_topics contains a duplicate, or when the advanced
+  /// strategy is requested without its offset/noise-window parameters (size mismatches are rejected
+  /// by AdvancedMatchingPolicy).
   /// @param max_open_collectors when non-zero, opening a collector beyond this limit first discards
   /// the open collector with the oldest reference (unpublished), mirroring the node's fixed
   /// collector pool; 0 keeps the collector count unbounded (offline default).
@@ -176,6 +177,10 @@ private:
     double noise_window;
     double creation_arrival;  // arrival time of the cloud that opened this collector
   };
+
+  // Pass-through that rejects input topic duplication.
+  static const std::vector<std::string> & validate_input_topics(
+    const std::vector<std::string> & input_topics);
 
   static std::unique_ptr<MatchingPolicy> make_matching_policy(
     const std::vector<std::string> & input_topics, MatchingStrategyType matching_strategy,
