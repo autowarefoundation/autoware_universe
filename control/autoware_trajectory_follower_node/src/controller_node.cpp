@@ -200,16 +200,15 @@ bool Controller::processData(rclcpp::Clock & clock)
 
 bool Controller::isTimeOut(
   const trajectory_follower::LongitudinalOutput & lon_out,
-  const trajectory_follower::LateralOutput & lat_out)
+  const trajectory_follower::LateralOutput & lat_out, const rclcpp::Time & stamp)
 {
-  const auto now = this->now();
-  if ((now - lat_out.control_cmd.stamp).seconds() > timeout_thr_sec_) {
+  if ((stamp - lat_out.control_cmd.stamp).seconds() > timeout_thr_sec_) {
     RCLCPP_ERROR_THROTTLE(
       get_logger(), *get_clock(), 5000 /*ms*/,
       "Lateral control command too old, control_cmd will not be published.");
     return true;
   }
-  if ((now - lon_out.control_cmd.stamp).seconds() > timeout_thr_sec_) {
+  if ((stamp - lon_out.control_cmd.stamp).seconds() > timeout_thr_sec_) {
     RCLCPP_ERROR_THROTTLE(
       get_logger(), *get_clock(), 5000 /*ms*/,
       "Longitudinal control command too old, control_cmd will not be published.");
@@ -275,7 +274,7 @@ void Controller::callbackTimerControl()
   const auto & lon_out = *lon_result;
 
   // TODO(Horibe): Think specification. This comes from the old implementation.
-  if (isTimeOut(lon_out, lat_out)) return;
+  if (isTimeOut(lon_out, lat_out, stamp)) return;
 
   // 4.5. update diagnostics
   diag_updater_->force_update();
@@ -290,12 +289,12 @@ void Controller::callbackTimerControl()
 
   // 6. publish debug
   published_time_publisher_->publish_if_subscribed(control_cmd_pub_, out.stamp);
-  publishDebugMarker(*input_data, lat_out);
+  publishDebugMarker(*input_data, lat_out, stamp);
 
   // 7. publish experimental topic
   if (enable_control_cmd_horizon_pub_) {
     const auto control_horizon =
-      mergeLatLonHorizon(lat_out.control_cmd_horizon, lon_out.control_cmd_horizon, this->now());
+      mergeLatLonHorizon(lat_out.control_cmd_horizon, lon_out.control_cmd_horizon, stamp);
     if (control_horizon.has_value()) {
       control_cmd_horizon_pub_->publish(control_horizon.value());
     }
@@ -304,14 +303,14 @@ void Controller::callbackTimerControl()
 
 void Controller::publishDebugMarker(
   const trajectory_follower::InputData & input_data,
-  const trajectory_follower::LateralOutput & lat_out) const
+  const trajectory_follower::LateralOutput & lat_out, const rclcpp::Time & stamp) const
 {
   visualization_msgs::msg::MarkerArray debug_marker_array{};
 
   // steer converged marker
   {
     auto marker = autoware_utils::create_default_marker(
-      "map", this->now(), "steer_converged", 0, visualization_msgs::msg::Marker::TEXT_VIEW_FACING,
+      "map", stamp, "steer_converged", 0, visualization_msgs::msg::Marker::TEXT_VIEW_FACING,
       autoware_utils::create_marker_scale(0.0, 0.0, 1.0),
       autoware_utils::create_marker_color(1.0, 1.0, 1.0, 0.99));
     marker.pose = input_data.current_odometry.pose.pose;

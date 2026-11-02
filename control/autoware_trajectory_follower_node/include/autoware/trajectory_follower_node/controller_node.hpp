@@ -127,14 +127,15 @@ private:
   boost::optional<trajectory_follower::InputData> createInputData(rclcpp::Clock & clock);
   void callbackTimerControl();
   bool processData(rclcpp::Clock & clock);
-  bool isTimeOut(const LongitudinalOutput & lon_out, const LateralOutput & lat_out);
+  bool isTimeOut(
+    const LongitudinalOutput & lon_out, const LateralOutput & lat_out, const rclcpp::Time & stamp);
   void check_cyclic_message_timeout(diagnostic_updater::DiagnosticStatusWrapper & stat);
   LateralControllerMode getLateralControllerMode(const std::string & algorithm_name) const;
   LongitudinalControllerMode getLongitudinalControllerMode(
     const std::string & algorithm_name) const;
   void publishDebugMarker(
     const trajectory_follower::InputData & input_data,
-    const trajectory_follower::LateralOutput & lat_out) const;
+    const trajectory_follower::LateralOutput & lat_out, const rclcpp::Time & stamp) const;
   /**
    * @brief merge lateral and longitudinal horizons
    * @details If one of the commands has only one control, repeat the control to match the other
