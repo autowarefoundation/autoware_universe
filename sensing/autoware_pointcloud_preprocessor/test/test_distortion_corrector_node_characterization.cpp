@@ -1099,6 +1099,7 @@ TEST_F(
   publish_twist(base_stamp_sec, 10.0, 0.0);
 
   // Act & Assert
+  // This is a bug, and this behavior will be modified after refactoring.
   // Fused because the act is what throws. A base_link cloud has no sensor azimuth, so the
   // core throws, and nothing in the node catches it before it reaches the spinning fixture.
   EXPECT_THROW(
