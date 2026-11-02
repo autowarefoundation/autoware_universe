@@ -79,6 +79,10 @@ constexpr double base_stamp_sec = 100.0;
 constexpr double point_interval_sec = 0.01;
 constexpr size_t num_points = 10;
 
+// Twist and IMU are published reliably, so an acknowledged sample is one the node already
+// holds in its subscription queue.
+constexpr std::chrono::seconds ack_timeout{1};
+
 // Tight where the arithmetic is exact; looser for rotations, which go through the
 // sin_and_cos() lookup table (~2.4e-4 of displacement at this cloud's 10 m radius).
 constexpr float exact_tolerance = 1e-4F;
@@ -312,15 +316,21 @@ protected:
     // The node drops any cloud that arrives before something is subscribed to its output
     // (see the points_sub_count guard), so discovery has to finish before the first publish.
     ASSERT_TRUE(wait_until(
-      [this] { return cloud_publisher_->get_subscription_count() > 0; }, std::chrono::seconds(5)))
-      << "the node never subscribed to " << input_cloud_topic();
+      [this] {
+        return cloud_publisher_->get_subscription_count() > 0 &&
+               twist_publisher_->get_subscription_count() > 0 &&
+               imu_publisher_->get_subscription_count() > 0;
+      },
+      std::chrono::seconds(5)))
+      << "the node did not subscribe to every input topic";
     spin_for(std::chrono::milliseconds(300));
   }
 
   // -- driving ------------------------------------------------------------------------
 
   // Twist and IMU are drained by polling from inside the pointcloud callback, so they must be
-  // published -- and given time to land in the middleware queue -- before the cloud.
+  // in the node's queue before the cloud arrives. Waiting for the acknowledgement makes that
+  // ordering deterministic; a fixed sleep only made it likely.
   void publish_twist(double stamp_sec, double linear_x, double angular_z)
   {
     TwistWithCovarianceStamped msg;
@@ -329,7 +339,7 @@ protected:
     msg.twist.twist.linear.x = linear_x;
     msg.twist.twist.angular.z = angular_z;
     twist_publisher_->publish(msg);
-    spin_for(std::chrono::milliseconds(50));
+    EXPECT_TRUE(twist_publisher_->wait_for_all_acked(ack_timeout)) << "twist was not acked";
   }
 
   void publish_full_twist(
@@ -345,7 +355,7 @@ protected:
     msg.twist.twist.angular.y = angular[1];
     msg.twist.twist.angular.z = angular[2];
     twist_publisher_->publish(msg);
-    spin_for(std::chrono::milliseconds(50));
+    EXPECT_TRUE(twist_publisher_->wait_for_all_acked(ack_timeout)) << "twist was not acked";
   }
 
   void publish_imu(
@@ -358,7 +368,7 @@ protected:
     msg.angular_velocity.y = wy;
     msg.angular_velocity.z = wz;
     imu_publisher_->publish(msg);
-    spin_for(std::chrono::milliseconds(50));
+    EXPECT_TRUE(imu_publisher_->wait_for_all_acked(ack_timeout)) << "IMU was not acked";
   }
 
   PointCloud2 publish_cloud(
