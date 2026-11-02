@@ -172,9 +172,10 @@ std::vector<Point> read_points(const PointCloud2 & cloud)
 
   for (; it_x != it_x.end(); ++it_x, ++it_y, ++it_z, ++it_intensity, ++it_return_type, ++it_channel,
                              ++it_azimuth, ++it_elevation, ++it_distance, ++it_time) {
-    points.push_back(Point{
-      *it_x, *it_y, *it_z, *it_intensity, *it_return_type, *it_channel, *it_azimuth, *it_elevation,
-      *it_distance, *it_time});
+    points.push_back(
+      Point{
+        *it_x, *it_y, *it_z, *it_intensity, *it_return_type, *it_channel, *it_azimuth,
+        *it_elevation, *it_distance, *it_time});
   }
   return points;
 }
