@@ -288,6 +288,32 @@ There is also an option to separate the concatenate_and_time_sync_node into two 
 
 Note that the `concatenate_pointclouds` and `time_synchronizer_nodelet` are using the [old design](https://github.com/autowarefoundation/autoware_universe/blob/9bb228fe5b7fa4c6edb47e4713c73489a02366e1/sensing/autoware_pointcloud_preprocessor/docs/concatenate-data.md) of the concatenate node.
 
+## Offline use from Python
+
+`autoware_pointcloud_preprocessor.concatenate_pointclouds.Concatenator` runs the node's concatenation core (`CloudConcatenator`) without ROS, e.g. to re-concatenate a rosbag:
+
+```python
+from autoware_pointcloud_preprocessor.concatenate_pointclouds import Concatenator
+
+concatenator = Concatenator(input_topics, output_frame="base_link", timeout_sec=0.1)
+for transform in sensor_to_base_link:  # e.g. tf2_ros.Buffer.lookup_transform("base_link", sensor_frame, ...)
+    concatenator.set_transform(transform)
+
+for topic, msg, record_time_sec in bag:
+    if topic == twist_topic:
+        concatenator.process_twist(msg)
+    elif topic in input_topics:
+        for frame in concatenator.process_cloud(topic, msg, arrival_time=record_time_sec):
+            write(frame.result.concatenated_cloud)
+for frame in concatenator.flush():
+    write(frame.result.concatenated_cloud)
+```
+
+- The arrival time takes the place of the node's clock: it drives the collector timeouts and, for the naive strategy, the matching. Replaying the same messages with the same arrival times gives the same frames; changing the arrival times can change them.
+- Each transform must map a sensor frame into the output frame directly; compose a chain of TF frames before passing it in.
+- `Concatenator.build_diagnostics(frame)` returns the `DiagnosticStatus` the node would publish for that frame.
+- Unlike the node, the number of open collectors is not bounded, and a cloud that arrives after its frame was emitted opens a collector of its own.
+
 ## Assumptions / Known Limits
 
 - If `is_motion_compensated` is set to `false`, the `concatenate_and_time_sync_node` will directly concatenate the point clouds without applying for motion compensation. This can save several milliseconds depending on the number of LiDARs being concatenated. Therefore, if the timestamp differences between point clouds are negligible, the user can set `is_motion_compensated` to `false` and omit the need for twist or odometry input for the node.
