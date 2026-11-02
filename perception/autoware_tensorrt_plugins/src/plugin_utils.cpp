@@ -62,6 +62,11 @@ void logWarning(char const * msg)
   getLogger()->log(nvinfer1::ILogger::Severity::kWARNING, msg);
 }
 
+void logError(char const * msg)
+{
+  getLogger()->log(nvinfer1::ILogger::Severity::kERROR, msg);
+}
+
 cudaError_t reportCudaStatus(
   cudaError_t status, char const * msg, char const * file, std::int32_t line)
 {

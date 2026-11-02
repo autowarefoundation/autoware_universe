@@ -14,7 +14,7 @@
 
 #include "autoware/tensorrt_plugins/implicit_gemm_plugin.hpp"
 
-#include "autoware/quantize_ops/quantize_features.hpp"
+#include "autoware/implicit_gemm_ops/epilogue_constants.hpp"
 #include "autoware/tensorrt_plugins/plugin_utils.hpp"
 
 #include <NvInferRuntime.h>
@@ -66,6 +66,45 @@ tv::gemm::Activation activation_from_int(std::int32_t const v) noexcept
     v <= static_cast<std::int32_t>(tv::gemm::Activation::kLeakyReLU));
   return static_cast<tv::gemm::Activation>(v);
 }
+
+char const * type_name(nvinfer1::DataType const type) noexcept
+{
+  switch (type) {
+    case nvinfer1::DataType::kFLOAT:
+      return "FP32";
+    case nvinfer1::DataType::kHALF:
+      return "FP16";
+    case nvinfer1::DataType::kINT8:
+      return "INT8";
+    case nvinfer1::DataType::kINT32:
+      return "INT32";
+    case nvinfer1::DataType::kFP8:
+      return "FP8";
+    case nvinfer1::DataType::kBF16:
+      return "BF16";
+    default:
+      return "an unsupported type";
+  }
+}
+
+/// Log why this layer cannot be built, naming the layer.
+void refuse(std::string const & layer_name, std::string const & reason)
+{
+  std::string const message = "ImplicitGemm " + layer_name + ": " + reason;
+  logError(message.c_str());
+}
+
+/// Length of a 1-D input, or -1 when the input is not 1-D.
+std::int64_t vector_length(nvinfer1::Dims const & dims) noexcept
+{
+  return dims.nbDims == 1 ? dims.d[0] : -1;
+}
+
+bool valid_num_inputs(std::int32_t const num_inputs) noexcept
+{
+  return num_inputs >= 5 && num_inputs <= 7;
+}
+
 }  // namespace
 
 namespace nvinfer1::plugin
@@ -84,7 +123,7 @@ ImplicitGemmPlugin::ImplicitGemmPlugin(
   tuner_fp16_ptr_ =
     std::make_unique<ConvTunerSimple>(ConvMain::get_all_conv_algo_desp());  // cSpell:ignore desp
   tuner_fp32_ptr_ = std::make_unique<ConvTunerSimple>(ConvMain::get_all_conv_algo_desp());
-  if (is_int8()) {
+  if (params_.has_input_scale != 0) {
     tuner_int8_ptr_ = std::make_unique<ConvTunerSimple>(ConvMain::get_all_conv_algo_desp());
   }
 
@@ -95,7 +134,7 @@ ImplicitGemmPlugin::ImplicitGemmPlugin(
 
 ImplicitGemmPlugin::~ImplicitGemmPlugin()
 {
-  releaseConstantCache();
+  releaseEpilogueConstants();
 }
 
 void ImplicitGemmPlugin::initFieldsToSerialize()
@@ -157,6 +196,71 @@ std::int32_t ImplicitGemmPlugin::getNbOutputs() const noexcept
   return 1;
 }
 
+bool ImplicitGemmPlugin::checkContract(
+  DataType const * input_types, std::int32_t num_inputs, bool log) const noexcept
+{
+  auto const fail = [&](std::string const & reason) {
+    if (log) {
+      refuse(layer_name_, reason);
+    }
+    return false;
+  };
+
+  if (!valid_num_inputs(num_inputs)) {
+    return fail(
+      std::to_string(num_inputs) + " inputs; expected 5, 6 (bias) or 7 (weight_scale, bias)");
+  }
+  DataType const features = input_types[INOUT_IN_FEATURES_INDEX];
+  DataType const filters = input_types[INOUT_FILTERS_INDEX];
+
+  if (features == DataType::kINT8) {
+    if (num_inputs != NUM_PLUGIN_INPUTS_SCALE_BIAS) {
+      return fail(
+        "INT8 features need 7 inputs (weight_scale at 5, bias at 6), got " +
+        std::to_string(num_inputs));
+    }
+    if (filters != DataType::kINT8) {
+      return fail(std::string("INT8 features need INT8 filters, got ") + type_name(filters));
+    }
+    if (params_.has_input_scale == 0) {
+      return fail(
+        "INT8 features need the attribute input_scale (the scale of the QuantizeLinear in "
+        "front)");
+    }
+    if (params_.output_type != kIMPLICIT_GEMM_OUTPUT_TYPE_F16) {
+      return fail("INT8 features need the attribute output_type \"f16\"");
+    }
+    return true;
+  }
+
+  if (features != DataType::kFLOAT && features != DataType::kHALF) {
+    return fail(
+      std::string("the features are ") + type_name(features) +
+      "; this plugin runs FP32, FP16 or INT8 features");
+  }
+  if (filters != features) {
+    return fail(
+      std::string("the filters are ") + type_name(filters) + " but the features are " +
+      type_name(features));
+  }
+  if (num_inputs == NUM_PLUGIN_INPUTS_SCALE_BIAS) {
+    return fail(
+      std::string(type_name(features)) +
+      " features take 5 or 6 inputs; 7 (weight_scale, bias) are for INT8 features");
+  }
+  if (params_.has_input_scale != 0) {
+    return fail(
+      std::string("input_scale is set but the features are ") + type_name(features) +
+      ": a quantized node takes INT8 features from a QuantizeLinear");
+  }
+  if (params_.output_type != kIMPLICIT_GEMM_OUTPUT_TYPE_UNSET) {
+    return fail(
+      std::string("output_type is set but the features are ") + type_name(features) +
+      ": only a quantized (INT8) node carries it");
+  }
+  return true;
+}
+
 std::int32_t ImplicitGemmPlugin::configurePlugin(
   DynamicPluginTensorDesc const * in, std::int32_t num_inputs, DynamicPluginTensorDesc const * out,
   std::int32_t num_outputs) noexcept
@@ -165,48 +269,21 @@ std::int32_t ImplicitGemmPlugin::configurePlugin(
   PLUGIN_ASSERT(out != nullptr);
   PLUGIN_ASSERT(num_outputs == 1);
 
-  if (is_int8()) {
-    // INT8 path: 7 inputs (features FP16, filters FP16, 3 INT32 index tensors,
-    // channel_scale FP32, bias_scaled FP32). Output is FP16.
-    PLUGIN_ASSERT(num_inputs == NUM_INPUTS_INT8);
-    num_plugin_inputs_ = num_inputs;
-
-    PLUGIN_ASSERT(in[INOUT_IN_FEATURES_INDEX].desc.dims.nbDims == 2);
-    PLUGIN_ASSERT(in[INOUT_FILTERS_INDEX].desc.dims.nbDims == 5);
-    PLUGIN_ASSERT(in[INOUT_PAIR_FWD_INDEX].desc.dims.nbDims == 2);
-    PLUGIN_ASSERT(in[INOUT_PAIR_MASK_FWD_SPLITS_INDEX].desc.dims.nbDims == 2);
-    PLUGIN_ASSERT(in[INOUT_MASK_ARGSORT_FWD_SPLITS_INDEX].desc.dims.nbDims == 1);
-    PLUGIN_ASSERT(in[INOUT_CHANNEL_SCALE_INDEX].desc.dims.nbDims == 1);
-    PLUGIN_ASSERT(in[INOUT_BIAS_SCALED_INDEX].desc.dims.nbDims == 1);
-    PLUGIN_ASSERT(out[0].desc.dims.nbDims == 2);
-    PLUGIN_ASSERT(
-      in[INOUT_FILTERS_INDEX].desc.dims.d[4] == in[INOUT_IN_FEATURES_INDEX].desc.dims.d[1]);
-    PLUGIN_ASSERT(
-      in[INOUT_CHANNEL_SCALE_INDEX].desc.dims.d[0] == in[INOUT_FILTERS_INDEX].desc.dims.d[0]);
-    PLUGIN_ASSERT(
-      in[INOUT_BIAS_SCALED_INDEX].desc.dims.d[0] == in[INOUT_FILTERS_INDEX].desc.dims.d[0]);
-    PLUGIN_ASSERT(params_.act_type >= 0 && params_.act_type <= 3);
-
-    // Pre-allocate the persistent INT8 weight/scale/bias cache here (constant filter shape is
-    // known from descriptors) so no cudaMalloc happens inside enqueue / CUDA graph capture.
-    return allocateConstantCache(
-      in[INOUT_FILTERS_INDEX].desc.dims.d[0], in[INOUT_FILTERS_INDEX].desc.dims.d[1],
-      in[INOUT_FILTERS_INDEX].desc.dims.d[2], in[INOUT_FILTERS_INDEX].desc.dims.d[3],
-      in[INOUT_IN_FEATURES_INDEX].desc.dims.d[1]);
+  if (!valid_num_inputs(num_inputs)) {
+    refuse(layer_name_, std::to_string(num_inputs) + " inputs; expected 5, 6 or 7");
+    return -1;
   }
-
-  // FP path.
-  // 5 inputs: standard implicit GEMM path without fused bias.
-  // 6 inputs: implicit GEMM path with optional per-channel bias.
-  // TODO(vividf): should use PLUGIN_VALIDATE_AND_RETURN instead of PLUGIN_ASSERT for input
-  // arguments
-  PLUGIN_ASSERT(in != nullptr);
-  PLUGIN_ASSERT(out != nullptr);
-  PLUGIN_ASSERT(num_inputs == NUM_PLUGIN_INPUTS_NO_BIAS || num_inputs == NUM_PLUGIN_INPUTS_BIAS);
-  PLUGIN_ASSERT(num_outputs == 1);
-
+  DataType input_types[NUM_PLUGIN_INPUTS_SCALE_BIAS];
+  for (std::int32_t i = 0; i < num_inputs; ++i) {
+    input_types[i] = in[i].desc.type;
+  }
+  if (!checkContract(input_types, num_inputs, true)) {
+    return -1;
+  }
   num_plugin_inputs_ = num_inputs;
 
+  // TODO(vividf): should use PLUGIN_VALIDATE_AND_RETURN instead of PLUGIN_ASSERT for input
+  // arguments
   PLUGIN_ASSERT(in[INOUT_IN_FEATURES_INDEX].desc.dims.nbDims == 2);
   PLUGIN_ASSERT(in[INOUT_FILTERS_INDEX].desc.dims.nbDims == 5);
   PLUGIN_ASSERT(in[INOUT_PAIR_FWD_INDEX].desc.dims.nbDims == 2);
@@ -221,24 +298,47 @@ std::int32_t ImplicitGemmPlugin::configurePlugin(
   PLUGIN_ASSERT(
     in[INOUT_MASK_ARGSORT_FWD_SPLITS_INDEX].desc.dims.d[0] ==
     in[INOUT_PAIR_FWD_INDEX].desc.dims.d[1]);
-  PLUGIN_ASSERT(in[INOUT_IN_FEATURES_INDEX].desc.type == in[INOUT_FILTERS_INDEX].desc.type);
-  PLUGIN_ASSERT(in[INOUT_IN_FEATURES_INDEX].desc.type == out[0].desc.type);
   PLUGIN_ASSERT(
     in[INOUT_PAIR_FWD_INDEX].desc.type == in[INOUT_PAIR_MASK_FWD_SPLITS_INDEX].desc.type);
   PLUGIN_ASSERT(
     in[INOUT_PAIR_FWD_INDEX].desc.type == in[INOUT_MASK_ARGSORT_FWD_SPLITS_INDEX].desc.type);
-
-  if (num_inputs == NUM_PLUGIN_INPUTS_BIAS) {
-    PLUGIN_ASSERT(in[INOUT_OPTIONAL_BIAS_INDEX].desc.dims.nbDims == 1);
-    PLUGIN_ASSERT(
-      in[INOUT_OPTIONAL_BIAS_INDEX].desc.dims.d[0] == in[INOUT_FILTERS_INDEX].desc.dims.d[0]);
-    DataType const bias_t = in[INOUT_OPTIONAL_BIAS_INDEX].desc.type;
-    PLUGIN_ASSERT(bias_t == in[INOUT_IN_FEATURES_INDEX].desc.type);
-  }
   PLUGIN_ASSERT(
     params_.act_type >= static_cast<std::int32_t>(tv::gemm::Activation::kNone) &&
     params_.act_type <= static_cast<std::int32_t>(tv::gemm::Activation::kLeakyReLU));
 
+  bool const is_int8 = in[INOUT_IN_FEATURES_INDEX].desc.type == DataType::kINT8;
+  DataType const out_type = is_int8 ? DataType::kHALF : in[INOUT_IN_FEATURES_INDEX].desc.type;
+  if (out[0].desc.type != out_type) {
+    refuse(
+      layer_name_, std::string("the output is ") + type_name(out[0].desc.type) + ", expected " +
+                     type_name(out_type));
+    return -1;
+  }
+  std::int64_t const c_out = in[INOUT_FILTERS_INDEX].desc.dims.d[0];
+
+  if (num_inputs == NUM_PLUGIN_INPUTS_BIAS) {
+    PLUGIN_ASSERT(in[INOUT_OPTIONAL_BIAS_INDEX].desc.dims.nbDims == 1);
+    PLUGIN_ASSERT(in[INOUT_OPTIONAL_BIAS_INDEX].desc.dims.d[0] == c_out);
+    PLUGIN_ASSERT(in[INOUT_OPTIONAL_BIAS_INDEX].desc.type == in[INOUT_IN_FEATURES_INDEX].desc.type);
+    return 0;
+  }
+  if (num_inputs == NUM_PLUGIN_INPUTS_SCALE_BIAS) {
+    std::int64_t const scale_length = vector_length(in[INOUT_WEIGHT_SCALE_INDEX].desc.dims);
+    std::int64_t const bias_length = vector_length(in[INOUT_BIAS_INDEX].desc.dims);
+    if (scale_length != c_out) {
+      refuse(
+        layer_name_, "INT8 features need input 5 (weight_scale) as [C_out=" +
+                       std::to_string(c_out) + "], got [" + std::to_string(scale_length) + "]");
+      return -1;
+    }
+    if (bias_length != 0 && bias_length != c_out) {
+      refuse(
+        layer_name_, "input 6 (bias) must be [C_out=" + std::to_string(c_out) + "] or [0], got [" +
+                       std::to_string(bias_length) + "]");
+      return -1;
+    }
+    return allocateEpilogueConstants(c_out);
+  }
   return 0;
 }
 
@@ -248,89 +348,45 @@ bool ImplicitGemmPlugin::supportsFormatCombination(
 {
   PLUGIN_ASSERT(in_out != nullptr);
   PLUGIN_ASSERT(num_outputs == 1);
-
-  if (is_int8()) {
-    PLUGIN_ASSERT(num_inputs == NUM_INPUTS_INT8);
-    std::int32_t const n_slots_int8 = num_inputs + num_outputs;
-    PLUGIN_ASSERT(pos >= 0 && pos < n_slots_int8);
-
-    bool supported_int8 = in_out[pos].desc.format == nvinfer1::TensorFormat::kLINEAR;
-    switch (pos) {
-      // Features: FP16 only (quantized to INT8 inside enqueue).
-      case INOUT_IN_FEATURES_INDEX:
-        supported_int8 &= in_out[pos].desc.type == nvinfer1::DataType::kHALF;
-        break;
-      // Filters and output share the features (FP16) type.
-      case INOUT_FILTERS_INDEX:
-        supported_int8 &= in_out[pos].desc.type == in_out[INOUT_IN_FEATURES_INDEX].desc.type;
-        break;
-      // Index tensors: INT32.
-      case INOUT_PAIR_FWD_INDEX:
-      case INOUT_PAIR_MASK_FWD_SPLITS_INDEX:
-      case INOUT_MASK_ARGSORT_FWD_SPLITS_INDEX:
-        supported_int8 &= in_out[pos].desc.type == nvinfer1::DataType::kINT32;
-        break;
-      // Per-output-channel scale / bias: FP32.
-      case INOUT_CHANNEL_SCALE_INDEX:
-      case INOUT_BIAS_SCALED_INDEX:
-        supported_int8 &= in_out[pos].desc.type == nvinfer1::DataType::kFLOAT;
-        break;
-      default:  // output
-        supported_int8 &= in_out[pos].desc.type == in_out[INOUT_IN_FEATURES_INDEX].desc.type;
-        break;
-    }
-    return supported_int8;
-  }
-
-  PLUGIN_ASSERT(num_inputs == NUM_PLUGIN_INPUTS_NO_BIAS || num_inputs == NUM_PLUGIN_INPUTS_BIAS);
-  PLUGIN_ASSERT(num_outputs == 1);
-  // in_out is the combined [inputs..., outputs...] tensor array; n_slots = num_inputs +
-  // num_outputs.
-
-  std::int32_t const n_slots = num_inputs + num_outputs;
-  PLUGIN_ASSERT(pos >= 0 && pos < n_slots);
+  PLUGIN_ASSERT(pos >= 0 && pos < num_inputs + num_outputs);
 
   // spconv only supports contiguous (LINEAR) layout for all tensors.
-  bool supported = in_out[pos].desc.format == nvinfer1::TensorFormat::kLINEAR;
+  if (!valid_num_inputs(num_inputs) || in_out[pos].desc.format != TensorFormat::kLINEAR) {
+    return false;
+  }
+  DataType const type = in_out[pos].desc.type;
+  DataType const features = in_out[INOUT_IN_FEATURES_INDEX].desc.type;
 
-  // Output features must match the input features dtype.
-  std::int32_t const out_pos = num_inputs;
-  if (pos == out_pos) {
-    supported &= in_out[pos].desc.type == in_out[INOUT_IN_FEATURES_INDEX].desc.type;
-    return supported;
+  // The output is FP16 for INT8 features (the epilogue dequantizes), else the features' type.
+  if (pos == num_inputs) {
+    return type == (features == DataType::kINT8 ? DataType::kHALF : features);
   }
 
   switch (pos) {
-    // Input features: fp32 or fp16 (spconv supports both precisions).
+    // A quantized node (input_scale set) takes INT8 features only: offered FP16 as well, a weakly
+    // typed build may hand it the QuantizeLinear's input instead of its output.
     case INOUT_IN_FEATURES_INDEX:
-      supported &=
-        (in_out[pos].desc.type == nvinfer1::DataType::kFLOAT ||
-         in_out[pos].desc.type == nvinfer1::DataType::kHALF);
-      break;
-    // Filter weights must match input features dtype for mixed-precision-free GEMM.
+      if (params_.has_input_scale != 0) {
+        return type == DataType::kINT8 && num_inputs == NUM_PLUGIN_INPUTS_SCALE_BIAS;
+      }
+      return type == DataType::kFLOAT || type == DataType::kHALF;
+    // Filter weights share the features' type.
     case INOUT_FILTERS_INDEX:
-      supported &= in_out[pos].desc.type == in_out[INOUT_IN_FEATURES_INDEX].desc.type;
-      break;
+      return type == features;
     // Index / mask tensors are always int32 regardless of activation dtype.
     case INOUT_PAIR_FWD_INDEX:
     case INOUT_PAIR_MASK_FWD_SPLITS_INDEX:
     case INOUT_MASK_ARGSORT_FWD_SPLITS_INDEX:
-      supported &= in_out[pos].desc.type == nvinfer1::DataType::kINT32;
-      break;
-    // Optional fused bias must match input features dtype; rejected when there are only 5 inputs.
+      return type == DataType::kINT32;
+    // Six inputs: the bias in the features' type. Seven: FP32 weight_scale and bias, whatever the
+    // features are; letting them follow the features would make TensorRT cast them.
     case INOUT_OPTIONAL_BIAS_INDEX:
-      if (num_inputs == NUM_PLUGIN_INPUTS_BIAS) {
-        supported &= in_out[pos].desc.type == in_out[INOUT_IN_FEATURES_INDEX].desc.type;
-      } else {
-        supported = false;
-      }
-      break;
+      return num_inputs == NUM_PLUGIN_INPUTS_BIAS ? type == features : type == DataType::kFLOAT;
+    case INOUT_BIAS_INDEX:
+      return type == DataType::kFLOAT;
     default:
-      supported = false;
-      break;
+      return false;
   }
-
-  return supported;
 }
 
 std::int32_t ImplicitGemmPlugin::getOutputDataTypes(
@@ -339,13 +395,16 @@ std::int32_t ImplicitGemmPlugin::getOutputDataTypes(
 {
   PLUGIN_ASSERT(output_types != nullptr);
   PLUGIN_ASSERT(input_types != nullptr);
-  PLUGIN_ASSERT(
-    num_inputs == NUM_PLUGIN_INPUTS_NO_BIAS || num_inputs == NUM_PLUGIN_INPUTS_BIAS ||
-    num_inputs == NUM_INPUTS_INT8);
   PLUGIN_ASSERT(num_outputs == 1);
 
-  // FP path: output dtype follows the features. INT8 path: features are FP16, output FP16.
-  output_types[0] = input_types[INOUT_IN_FEATURES_INDEX];
+  // The input types are known here, before TensorRT negotiates formats: refusing now names the
+  // reason instead of ending in TensorRT's generic "no supported formats" error.
+  if (!checkContract(input_types, num_inputs, true)) {
+    return -1;
+  }
+  output_types[0] = input_types[INOUT_IN_FEATURES_INDEX] == DataType::kINT8
+                      ? DataType::kHALF
+                      : input_types[INOUT_IN_FEATURES_INDEX];
 
   return 0;
 }
@@ -358,11 +417,10 @@ std::int32_t ImplicitGemmPlugin::getOutputShapes(
 {
   PLUGIN_ASSERT(inputs != nullptr);
   PLUGIN_ASSERT(outputs != nullptr);
-  PLUGIN_ASSERT(
-    num_inputs == NUM_PLUGIN_INPUTS_NO_BIAS || num_inputs == NUM_PLUGIN_INPUTS_BIAS ||
-    num_inputs == NUM_INPUTS_INT8);
   PLUGIN_ASSERT(num_outputs == 1);
-  PLUGIN_ASSERT(inputs[0].nbDims == 2);
+  if (!valid_num_inputs(num_inputs) || inputs[0].nbDims != 2) {
+    return -1;
+  }
 
   // num_act_out from pair_mask_fwd (index 3, dim 0); C_out from filters (index 1, dim 0).
   outputs[0].nbDims = 2;
@@ -380,16 +438,10 @@ std::int32_t ImplicitGemmPlugin::enqueue(
   using StaticAllocator = spconvlib::spconv::csrc::sparse::alloc::StaticAllocator;
   using ConvGemmOps = spconvlib::spconv::csrc::sparse::convops::spops::ConvGemmOps;
 
-  // Dispatch before the FP input-count check: the INT8 node carries seven inputs, so
-  // asserting the FP counts first aborts every INT8 engine on its first inference.
-  if (is_int8()) {
-    PLUGIN_ASSERT(num_plugin_inputs_ == NUM_INPUTS_INT8);
-    return enqueueInt8(input_desc, inputs, outputs, workspace, stream);
+  PLUGIN_ASSERT(valid_num_inputs(num_plugin_inputs_));
+  if (input_desc[INOUT_IN_FEATURES_INDEX].type == DataType::kINT8) {
+    return enqueueInt8(input_desc, inputs, outputs, stream);
   }
-
-  PLUGIN_ASSERT(
-    num_plugin_inputs_ == NUM_PLUGIN_INPUTS_NO_BIAS ||
-    num_plugin_inputs_ == NUM_PLUGIN_INPUTS_BIAS);
 
   std::int64_t num_act_in = input_desc[INOUT_IN_FEATURES_INDEX].dims.d[0];
   std::int64_t num_in_features = input_desc[INOUT_IN_FEATURES_INDEX].dims.d[1];
@@ -477,22 +529,111 @@ std::int32_t ImplicitGemmPlugin::enqueue(
   return 0;
 }
 
+std::int32_t ImplicitGemmPlugin::enqueueInt8(
+  PluginTensorDesc const * input_desc, void const * const * inputs, void * const * outputs,
+  cudaStream_t stream) noexcept
+{
+  using StaticAllocator = spconvlib::spconv::csrc::sparse::alloc::StaticAllocator;
+  using ConvGemmOps = spconvlib::spconv::csrc::sparse::convops::spops::ConvGemmOps;
+
+  PLUGIN_ASSERT(num_plugin_inputs_ == NUM_PLUGIN_INPUTS_SCALE_BIAS);
+  PLUGIN_ASSERT(input_desc[INOUT_FILTERS_INDEX].type == DataType::kINT8);
+  PLUGIN_ASSERT(tuner_int8_ptr_ != nullptr);
+
+  std::int64_t const num_act_in = input_desc[INOUT_IN_FEATURES_INDEX].dims.d[0];
+  std::int64_t const c_in = input_desc[INOUT_IN_FEATURES_INDEX].dims.d[1];
+  std::int64_t const c_out = input_desc[INOUT_FILTERS_INDEX].dims.d[0];
+  std::int64_t const k1 = input_desc[INOUT_FILTERS_INDEX].dims.d[1];
+  std::int64_t const k2 = input_desc[INOUT_FILTERS_INDEX].dims.d[2];
+  std::int64_t const k3 = input_desc[INOUT_FILTERS_INDEX].dims.d[3];
+  std::int64_t const num_act_out = input_desc[INOUT_PAIR_FWD_INDEX].dims.d[1];
+
+  // The GEMM's per-channel scale, input_scale * weight_scale[n], derived once: the s8s8f16
+  // epilogue multiplies by a per-channel scale only, never by a scalar alpha. Spconv's INT8
+  // kernels also need a bias tensor (without one the tuner finds no algorithm), so a node
+  // without a bias gets zeros.
+  bool const has_bias = vector_length(input_desc[INOUT_BIAS_INDEX].dims) > 0;
+  if (allocateEpilogueConstants(c_out) != 0) {
+    return -1;
+  }
+  float * const gemm_scale = static_cast<float *>(epilogue_constants_ptr_);
+  float * const zero_bias = gemm_scale + c_out;
+  {
+    std::lock_guard<std::mutex> lock(epilogue_constants_mutex_);
+    if (!epilogue_constants_filled_) {
+      launch_scale_per_channel(
+        static_cast<float const *>(inputs[INOUT_WEIGHT_SCALE_INDEX]), params_.input_scale,
+        gemm_scale, c_out, stream);
+      if (PLUGIN_CUDA_CHECK(cudaGetLastError()) != cudaSuccess) {
+        return -1;
+      }
+      if (
+        !has_bias &&
+        PLUGIN_CUDA_CHECK(cudaMemsetAsync(
+          zero_bias, 0, static_cast<std::size_t>(c_out) * sizeof(float), stream)) != cudaSuccess) {
+        return -1;
+      }
+      epilogue_constants_filled_ = true;
+    }
+  }
+
+  // Features (from the graph's QuantizeLinear) and filters are INT8 already.
+  tv::Tensor features_tv = tv::from_blob(
+    const_cast<void *>(inputs[INOUT_IN_FEATURES_INDEX]), {num_act_in, c_in}, tv::int8, 0);
+  tv::Tensor weights_tv = tv::from_blob(
+    const_cast<void *>(inputs[INOUT_FILTERS_INDEX]), {c_out, k1, k2, k3, c_in}, tv::int8, 0);
+  tv::Tensor pair_fwd = tv::from_blob(
+    inputs[INOUT_PAIR_FWD_INDEX],
+    {input_desc[INOUT_PAIR_FWD_INDEX].dims.d[0], input_desc[INOUT_PAIR_FWD_INDEX].dims.d[1]},
+    tv::int32, 0);
+  tv::Tensor pair_mask_fwd = tv::from_blob(
+    inputs[INOUT_PAIR_MASK_FWD_SPLITS_INDEX],
+    {1, input_desc[INOUT_PAIR_MASK_FWD_SPLITS_INDEX].dims.d[0]}, tv::int32, 0);
+  tv::Tensor mask_argsort_fwd = tv::from_blob(
+    inputs[INOUT_MASK_ARGSORT_FWD_SPLITS_INDEX],
+    {1, input_desc[INOUT_MASK_ARGSORT_FWD_SPLITS_INDEX].dims.d[0]}, tv::int32, 0);
+  tv::Tensor out_features = tv::from_blob(outputs[0], {num_act_out, c_out}, tv::float16, 0);
+  tv::Tensor channel_scale_tv = tv::from_blob(gemm_scale, {c_out}, tv::float32, 0);
+  tv::Tensor bias_tv = tv::from_blob(
+    has_bias ? const_cast<void *>(inputs[INOUT_BIAS_INDEX]) : static_cast<void *>(zero_bias),
+    {c_out}, tv::float32, 0);
+
+  std::vector<tv::Tensor> pair_mask_splits{pair_mask_fwd};
+  std::vector<tv::Tensor> mask_argsort_splits{mask_argsort_fwd};
+
+  std::unordered_map<std::string, tv::Tensor> tensor_dict{
+    {SPCONV_ALLOC_FEATURES, features_tv},
+    {SPCONV_ALLOC_FILTERS, weights_tv},
+    {SPCONV_ALLOC_OUT_FEATURES, out_features}};
+  StaticAllocator alloc(tensor_dict);
+
+  ConvGemmOps::implicit_gemm(
+    alloc, *tuner_int8_ptr_, features_tv, weights_tv, pair_fwd, pair_mask_splits,
+    mask_argsort_splits, static_cast<int>(num_act_out), mask_tensor_, arch_,
+    /*is_train=*/false, /*is_subm=*/static_cast<bool>(params_.is_subm),
+    reinterpret_cast<std::uintptr_t>(stream), tv::CUDAKernelTimer(false),
+    /*auto_fp32_accum=*/true, /*fp32_accum=*/false, /*bias=*/bias_tv, params_.act_alpha,
+    params_.act_beta, activation_from_int(params_.act_type), /*use_tf32=*/false,
+    /*output_scale=*/1.0f, /*scale=*/channel_scale_tv, /*output_add=*/tv::Tensor(),
+    /*output_add_scale=*/0.0f, /*output_dtype=*/static_cast<int>(tv::float16));
+
+  return 0;
+}
+
 std::int32_t ImplicitGemmPlugin::onShapeChange(
-  [[maybe_unused]] PluginTensorDesc const * in, std::int32_t num_inputs,
+  PluginTensorDesc const * in, std::int32_t num_inputs,
   [[maybe_unused]] PluginTensorDesc const * out, [[maybe_unused]] std::int32_t num_outputs) noexcept
 {
-  PLUGIN_ASSERT(
-    num_inputs == NUM_PLUGIN_INPUTS_NO_BIAS || num_inputs == NUM_PLUGIN_INPUTS_BIAS ||
-    num_inputs == NUM_INPUTS_INT8);
+  if (!valid_num_inputs(num_inputs)) {
+    refuse(layer_name_, std::to_string(num_inputs) + " inputs; expected 5, 6 or 7");
+    return -1;
+  }
   num_plugin_inputs_ = num_inputs;
 
-  // Runtime path: configurePlugin (build-only) is not called here, so (re)allocate the INT8 cache
-  // now that concrete shapes are known and we are outside any CUDA graph capture.
-  if (is_int8() && in != nullptr && num_inputs == NUM_INPUTS_INT8) {
-    return allocateConstantCache(
-      in[INOUT_FILTERS_INDEX].dims.d[0], in[INOUT_FILTERS_INDEX].dims.d[1],
-      in[INOUT_FILTERS_INDEX].dims.d[2], in[INOUT_FILTERS_INDEX].dims.d[3],
-      in[INOUT_IN_FEATURES_INDEX].dims.d[1]);
+  // Runtime path: configurePlugin (build-only) is not called here, so allocate the epilogue
+  // constants now that the shapes are known and we are outside any CUDA graph capture.
+  if (num_inputs == NUM_PLUGIN_INPUTS_SCALE_BIAS && in != nullptr) {
+    return allocateEpilogueConstants(in[INOUT_FILTERS_INDEX].dims.d[0]);
   }
   return 0;
 }
@@ -513,222 +654,41 @@ std::size_t ImplicitGemmPlugin::getWorkspaceSize(
   [[maybe_unused]] DynamicPluginTensorDesc const * outputs,
   [[maybe_unused]] std::int32_t num_outputs) const noexcept
 {
-  if (is_int8()) {
-    // Scratch for the quantized INT8 features only (weights/scales/bias live in the persistent
-    // cache). Sized to the max number of active input voxels * C_in, aligned to 256 bytes.
-    auto align = [](std::int64_t x) -> std::int64_t { return (x + 255) & ~255LL; };
-    std::int64_t const max_n = inputs[INOUT_IN_FEATURES_INDEX].max.d[0];
-    std::int64_t const c_in = inputs[INOUT_IN_FEATURES_INDEX].max.d[1];
-    return static_cast<std::size_t>(align(max_n * c_in));
-  }
   return 0;
 }
 
-// ─── INT8 path ─────────────────────────────────────────────────────────────────────────────
-
-void ImplicitGemmPlugin::releaseConstantCache() noexcept
+std::int32_t ImplicitGemmPlugin::allocateEpilogueConstants(std::int64_t c_out) noexcept
 {
-  if (cached_weight_int8_ptr_ != nullptr) {
-    cudaFree(cached_weight_int8_ptr_);
-    cached_weight_int8_ptr_ = nullptr;
-  }
-  if (cached_w_scales_ptr_ != nullptr) {
-    cudaFree(cached_w_scales_ptr_);
-    cached_w_scales_ptr_ = nullptr;
-  }
-  if (cached_gemm_bias_ptr_ != nullptr) {
-    cudaFree(cached_gemm_bias_ptr_);
-    cached_gemm_bias_ptr_ = nullptr;
-  }
-  cache_allocated_ = false;
-  cache_filled_ = false;
-  cached_c_out_ = 0;
-  cached_k1_ = 0;
-  cached_k2_ = 0;
-  cached_k3_ = 0;
-  cached_c_in_ = 0;
-}
-
-std::int32_t ImplicitGemmPlugin::allocateConstantCache(
-  std::int64_t c_out, std::int64_t k1, std::int64_t k2, std::int64_t k3, std::int64_t c_in) noexcept
-{
-  std::int64_t const k_vol = k1 * k2 * k3;
-  std::int64_t const weight_bytes =
-    c_out * k_vol * c_in * static_cast<std::int64_t>(sizeof(std::int8_t));
-  std::int64_t const c_out_float_bytes = c_out * static_cast<std::int64_t>(sizeof(float));
-
-  if (weight_bytes <= 0 || c_out_float_bytes <= 0) {
-    std::fprintf(
-      stderr, "[ImplicitGemm INT8] %s: invalid filter shape for cache allocation\n",
-      layer_name_.c_str());
-    return -1;
-  }
-
-  std::lock_guard<std::mutex> lock(cache_mutex_);
-
-  // Re-allocate only if the (constant) filter shape changed.
-  bool const same_shape = cache_allocated_ && cached_c_out_ == c_out && cached_c_in_ == c_in &&
-                          cached_k1_ == k1 && cached_k2_ == k2 && cached_k3_ == k3;
-  if (same_shape) {
+  std::lock_guard<std::mutex> lock(epilogue_constants_mutex_);
+  if (epilogue_constants_ptr_ != nullptr && epilogue_constants_c_out_ == c_out) {
     return 0;
   }
-
-  releaseConstantCache();
-
-  cudaError_t st = cudaMalloc(
-    reinterpret_cast<void **>(&cached_weight_int8_ptr_), static_cast<std::size_t>(weight_bytes));
-  if (st == cudaSuccess) {
-    st = cudaMalloc(
-      reinterpret_cast<void **>(&cached_w_scales_ptr_),
-      static_cast<std::size_t>(c_out_float_bytes));
-  }
-  if (st == cudaSuccess) {
-    st = cudaMalloc(
-      reinterpret_cast<void **>(&cached_gemm_bias_ptr_),
-      static_cast<std::size_t>(c_out_float_bytes));
-  }
-  if (st != cudaSuccess) {
-    std::fprintf(
-      stderr, "[ImplicitGemm INT8] %s: cudaMalloc(weight cache) failed: %s\n", layer_name_.c_str(),
-      cudaGetErrorString(st));
-    releaseConstantCache();
+  if (c_out <= 0) {
+    refuse(layer_name_, "invalid C_out " + std::to_string(c_out) + " for the epilogue constants");
     return -1;
   }
+  releaseEpilogueConstants();
 
-  cache_allocated_ = true;
-  cache_filled_ = false;
-  cached_c_out_ = c_out;
-  cached_k1_ = k1;
-  cached_k2_ = k2;
-  cached_k3_ = k3;
-  cached_c_in_ = c_in;
+  cudaError_t const status =
+    cudaMalloc(&epilogue_constants_ptr_, static_cast<std::size_t>(2 * c_out) * sizeof(float));
+  if (status != cudaSuccess) {
+    refuse(layer_name_, std::string("cudaMalloc failed: ") + cudaGetErrorString(status));
+    epilogue_constants_ptr_ = nullptr;
+    return -1;
+  }
+  epilogue_constants_c_out_ = c_out;
+  epilogue_constants_filled_ = false;
   return 0;
 }
 
-std::int32_t ImplicitGemmPlugin::enqueueInt8(
-  PluginTensorDesc const * input_desc, void const * const * inputs, void * const * outputs,
-  void * workspace, cudaStream_t stream) noexcept
+void ImplicitGemmPlugin::releaseEpilogueConstants() noexcept
 {
-  using StaticAllocator = spconvlib::spconv::csrc::sparse::alloc::StaticAllocator;
-  using ConvGemmOps = spconvlib::spconv::csrc::sparse::convops::spops::ConvGemmOps;
-
-  std::int64_t const num_act_in = input_desc[INOUT_IN_FEATURES_INDEX].dims.d[0];
-  std::int64_t const c_in = input_desc[INOUT_IN_FEATURES_INDEX].dims.d[1];
-  std::int64_t const c_out = input_desc[INOUT_FILTERS_INDEX].dims.d[0];
-  std::int64_t const k1 = input_desc[INOUT_FILTERS_INDEX].dims.d[1];
-  std::int64_t const k2 = input_desc[INOUT_FILTERS_INDEX].dims.d[2];
-  std::int64_t const k3 = input_desc[INOUT_FILTERS_INDEX].dims.d[3];
-  std::int64_t const k_vol = k1 * k2 * k3;
-  std::int64_t const num_act_out = input_desc[INOUT_PAIR_FWD_INDEX].dims.d[1];
-
-  auto * feat_int8_ptr = reinterpret_cast<std::int8_t *>(workspace);
-
-  // 1) Quantize FP16 features → INT8 into the workspace scratch.
-  launch_quantize_features(
-    reinterpret_cast<const __half *>(inputs[INOUT_IN_FEATURES_INDEX]), feat_int8_ptr,
-    params_.input_scale, num_act_in * c_in, stream);
-
-  // 2) Fill the persistent weight/scale/bias cache once (filter device data only available here).
-  {
-    std::lock_guard<std::mutex> lock(cache_mutex_);
-    // Fallback allocation: normally done in configurePlugin/onShapeChange (outside CUDA graph
-    // capture). Only reached if neither ran for this shape.
-    if (!cache_allocated_) {
-      // Allocate inline (rare path). Compute sizes from the current descriptors.
-      std::int64_t const weight_bytes =
-        c_out * k_vol * c_in * static_cast<std::int64_t>(sizeof(std::int8_t));
-      std::int64_t const c_out_float_bytes = c_out * static_cast<std::int64_t>(sizeof(float));
-      cudaError_t st = cudaMalloc(
-        reinterpret_cast<void **>(&cached_weight_int8_ptr_),
-        static_cast<std::size_t>(weight_bytes));
-      if (st == cudaSuccess) {
-        st = cudaMalloc(
-          reinterpret_cast<void **>(&cached_w_scales_ptr_),
-          static_cast<std::size_t>(c_out_float_bytes));
-      }
-      if (st == cudaSuccess) {
-        st = cudaMalloc(
-          reinterpret_cast<void **>(&cached_gemm_bias_ptr_),
-          static_cast<std::size_t>(c_out_float_bytes));
-      }
-      if (st != cudaSuccess) {
-        std::fprintf(
-          stderr, "[ImplicitGemm INT8] %s: inline cudaMalloc(weight cache) failed: %s\n",
-          layer_name_.c_str(), cudaGetErrorString(st));
-        releaseConstantCache();
-        return -1;
-      }
-      cache_allocated_ = true;
-      cache_filled_ = false;
-      cached_c_out_ = c_out;
-      cached_k1_ = k1;
-      cached_k2_ = k2;
-      cached_k3_ = k3;
-      cached_c_in_ = c_in;
-    }
-    if (!cache_filled_) {
-      launch_compute_w_scales(
-        reinterpret_cast<const float *>(inputs[INOUT_CHANNEL_SCALE_INDEX]), cached_w_scales_ptr_,
-        params_.output_scale, params_.input_scale, c_out, stream);
-      launch_quantize_weights_per_channel(
-        reinterpret_cast<const __half *>(inputs[INOUT_FILTERS_INDEX]), cached_weight_int8_ptr_,
-        cached_w_scales_ptr_, c_out, k_vol * c_in, stream);
-      // s8s8f16 epilogue does not multiply alpha: fold output_scale into scale/bias and pass
-      // output_scale = 1 to the GEMM (w_scales buffer is overwritten with gemm_channel_scale).
-      launch_fuse_output_scale_into_gemm_scale_bias(
-        reinterpret_cast<const float *>(inputs[INOUT_CHANNEL_SCALE_INDEX]),
-        reinterpret_cast<const float *>(inputs[INOUT_BIAS_SCALED_INDEX]), params_.output_scale,
-        cached_w_scales_ptr_, cached_gemm_bias_ptr_, c_out, stream);
-      cudaError_t st = cudaGetLastError();
-      if (st != cudaSuccess) {
-        std::fprintf(
-          stderr, "[ImplicitGemm INT8] %s: weight-cache kernel launch failed: %s\n",
-          layer_name_.c_str(), cudaGetErrorString(st));
-        return -1;
-      }
-      cache_filled_ = true;
-    }
+  if (epilogue_constants_ptr_ != nullptr) {
+    cudaFree(epilogue_constants_ptr_);
+    epilogue_constants_ptr_ = nullptr;
   }
-
-  // 3) Build tv::Tensors and run the INT8 implicit GEMM (FP16 output).
-  tv::Tensor features_tv = tv::from_blob(feat_int8_ptr, {num_act_in, c_in}, tv::int8, 0);
-  tv::Tensor weights_tv =
-    tv::from_blob(cached_weight_int8_ptr_, {c_out, k1, k2, k3, c_in}, tv::int8, 0);
-  tv::Tensor pair_fwd = tv::from_blob(
-    inputs[INOUT_PAIR_FWD_INDEX],
-    {input_desc[INOUT_PAIR_FWD_INDEX].dims.d[0], input_desc[INOUT_PAIR_FWD_INDEX].dims.d[1]},
-    tv::int32, 0);
-  tv::Tensor pair_mask_fwd = tv::from_blob(
-    inputs[INOUT_PAIR_MASK_FWD_SPLITS_INDEX],
-    {1, input_desc[INOUT_PAIR_MASK_FWD_SPLITS_INDEX].dims.d[0]}, tv::int32, 0);
-  tv::Tensor mask_argsort_fwd = tv::from_blob(
-    inputs[INOUT_MASK_ARGSORT_FWD_SPLITS_INDEX],
-    {1, input_desc[INOUT_MASK_ARGSORT_FWD_SPLITS_INDEX].dims.d[0]}, tv::int32, 0);
-  tv::Tensor out_features = tv::from_blob(outputs[0], {num_act_out, c_out}, tv::float16, 0);
-
-  tv::Tensor channel_scale_tv = tv::from_blob(cached_w_scales_ptr_, {c_out}, tv::float32, 0);
-  tv::Tensor bias_scaled_tv = tv::from_blob(cached_gemm_bias_ptr_, {c_out}, tv::float32, 0);
-
-  std::vector<tv::Tensor> pair_mask_splits{pair_mask_fwd};
-  std::vector<tv::Tensor> mask_argsort_splits{mask_argsort_fwd};
-
-  std::unordered_map<std::string, tv::Tensor> tensor_dict{
-    {SPCONV_ALLOC_FEATURES, features_tv},
-    {SPCONV_ALLOC_FILTERS, weights_tv},
-    {SPCONV_ALLOC_OUT_FEATURES, out_features}};
-  StaticAllocator alloc(tensor_dict);
-
-  ConvGemmOps::implicit_gemm(
-    alloc, *tuner_int8_ptr_, features_tv, weights_tv, pair_fwd, pair_mask_splits,
-    mask_argsort_splits, static_cast<int>(num_act_out), mask_tensor_, arch_,
-    /*is_train=*/false, /*is_subm=*/static_cast<bool>(params_.is_subm),
-    reinterpret_cast<std::uintptr_t>(stream), tv::CUDAKernelTimer(false),
-    /*auto_fp32_accum=*/true, /*fp32_accum=*/false, /*bias=*/bias_scaled_tv, params_.act_alpha,
-    params_.act_beta, activation_from_int(params_.act_type), /*use_tf32=*/false,
-    /*output_scale=*/1.0f, /*scale=*/channel_scale_tv, /*output_add=*/tv::Tensor(),
-    /*output_add_scale=*/0.0f, /*output_dtype=*/static_cast<int>(tv::float16));
-
-  return 0;
+  epilogue_constants_c_out_ = 0;
+  epilogue_constants_filled_ = false;
 }
 
 }  // namespace nvinfer1::plugin

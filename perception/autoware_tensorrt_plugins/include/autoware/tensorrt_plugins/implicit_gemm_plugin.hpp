@@ -50,18 +50,18 @@ struct ImplicitGemmParameters
   /// kNone=0, kReLU=1, kSigmoid=2, kLeakyReLU=3.
   std::int32_t act_type{static_cast<std::int32_t>(tv::gemm::Activation::kNone)};
 
-  /// Precision mode: 0 = floating point (FP16/FP32), 1 = INT8.
-  /// In INT8 mode the node carries two extra FP32 inputs (channel_scale, bias_scaled),
-  /// FP16 features/weights are quantized to INT8 inside enqueue, and the GEMM is run with
-  /// per-output-channel scales (see sparse_int8_onnx_transform.py / Path B).
-  std::int32_t precision{0};
-  /// INT8 only: input_amax / 127, used to quantize the FP16 features to INT8.
+  /// INT8 nodes only: the scale of the QuantizeLinear that feeds the features.
   float input_scale{1.0F};
+  /// 1 when the node carries ``input_scale``; a default value cannot say it is absent.
+  std::int32_t has_input_scale{0};
+  /// The ``output_type`` attribute, one of kIMPLICIT_GEMM_OUTPUT_TYPE_*.
+  std::int32_t output_type{0};
 };
 
-/// Precision values for ImplicitGemmParameters::precision.
-constexpr std::int32_t kIMPLICIT_GEMM_PRECISION_FP{0};
-constexpr std::int32_t kIMPLICIT_GEMM_PRECISION_INT8{1};
+/// Values of ImplicitGemmParameters::output_type. Only ``"f16"`` is accepted; the other types
+/// of the shared contract (``"bf16"``, ``"s8"``, ``"e4m3"``) are refused when the node is parsed.
+constexpr std::int32_t kIMPLICIT_GEMM_OUTPUT_TYPE_UNSET{0};
+constexpr std::int32_t kIMPLICIT_GEMM_OUTPUT_TYPE_F16{1};
 
 class ImplicitGemmPlugin : public IPluginV3,
                            public IPluginV3OneCore,
@@ -129,38 +129,59 @@ public:
     DynamicPluginTensorDesc const * outputs, std::int32_t num_outputs) const noexcept override;
 
 private:
+  // Inputs: 0 features [N, C_in], 1 filters [C_out, k, k, k, C_in] (same type as the
+  // features), 2-4 rulebook (INT32), then one of
+  //   5 inputs: no bias;
+  //   6 inputs: 5 bias [C_out], same type as the features (FP16/FP32 only);
+  //   7 inputs (INT8 features): 5 weight_scale, 6 bias, each FP32 [C_out] or [0] (a zero-length
+  //     tensor is absent).
+  //
+  // The features' type selects the mode; the inputs and attributes each mode accepts:
+  //
+  //                 FP16 / FP32 features      INT8 features
+  //   inputs        5 or 6                    7
+  //   filters       same type as features     INT8
+  //   weight_scale  -                         [C_out]
+  //   bias          -                         [0] or [C_out]
+  //   input_scale   absent                    required: the scale of the QuantizeLinear in front
+  //   output_type   absent                    required: "f16"
+  //   output_scale  absent or 1.0             absent or 1.0
+  //   output        same type as features     FP16
+  //
+  // INT8 epilogue: out = act(input_scale * weight_scale[n] * acc + bias[n]), INT32 accumulation.
+  // Any other feature type (FP8, BF16, ...) is refused. The same layout is what t4sparse's
+  // plugin of the same name accepts, so a graph written to it builds against either library.
   static constexpr std::int32_t INOUT_IN_FEATURES_INDEX{0};
   static constexpr std::int32_t INOUT_FILTERS_INDEX{1};
   static constexpr std::int32_t INOUT_PAIR_FWD_INDEX{2};
   static constexpr std::int32_t INOUT_PAIR_MASK_FWD_SPLITS_INDEX{3};
   static constexpr std::int32_t INOUT_MASK_ARGSORT_FWD_SPLITS_INDEX{4};
-  /// FP path (precision==0): optional per-channel bias at input index 5 (num_inputs == 6).
+  /// Six inputs: the fused bias, in the features' type.
   static constexpr std::int32_t INOUT_OPTIONAL_BIAS_INDEX{5};
-  /// INT8 path (precision==1): 7 inputs total — FP32 per-output-channel scale and bias.
-  static constexpr std::int32_t INOUT_CHANNEL_SCALE_INDEX{5};
-  static constexpr std::int32_t INOUT_BIAS_SCALED_INDEX{6};
-
-  static constexpr std::int32_t NUM_INPUTS_INT8{7};
+  /// Seven inputs: FP32 per-output-channel weight scale and bias.
+  static constexpr std::int32_t INOUT_WEIGHT_SCALE_INDEX{5};
+  static constexpr std::int32_t INOUT_BIAS_INDEX{6};
 
   static constexpr std::int32_t NUM_PLUGIN_INPUTS_NO_BIAS{5};
   static constexpr std::int32_t NUM_PLUGIN_INPUTS_BIAS{6};
+  static constexpr std::int32_t NUM_PLUGIN_INPUTS_SCALE_BIAS{7};
 
   void initFieldsToSerialize();
 
-  bool is_int8() const noexcept { return params_.precision == kIMPLICIT_GEMM_PRECISION_INT8; }
+  /// Check the input count, the features' and filters' types and the attributes against the
+  /// table above; on a mismatch, log why (naming the layer) and return false.
+  bool checkContract(
+    DataType const * input_types, std::int32_t num_inputs, bool log) const noexcept;
 
-  // INT8 path helpers (no-ops / unused in FP path).
   std::int32_t enqueueInt8(
     PluginTensorDesc const * input_desc, void const * const * inputs, void * const * outputs,
-    void * workspace, cudaStream_t stream) noexcept;
-  /// Allocate the persistent INT8 weight/scale/bias cache for a (constant) filter shape.
-  /// Called from ``configurePlugin`` (build) and ``onShapeChange`` (runtime) so the cudaMalloc
-  /// happens outside CUDA graph capture; the quantization kernels that fill it run on the first
-  /// enqueue (filter device data is only available there). Idempotent for an unchanged shape.
-  std::int32_t allocateConstantCache(
-    std::int64_t c_out, std::int64_t k1, std::int64_t k2, std::int64_t k3,
-    std::int64_t c_in) noexcept;
-  void releaseConstantCache() noexcept;
+    cudaStream_t stream) noexcept;
+  /// Device buffer of the INT8 GEMM's per-channel scale followed by a zero bias, filled on the
+  /// first enqueue (input data is only available there).
+  /// Allocated in ``configurePlugin`` (build) and ``onShapeChange`` (runtime) so no cudaMalloc
+  /// runs inside CUDA graph capture. Idempotent for an unchanged C_out.
+  std::int32_t allocateEpilogueConstants(std::int64_t c_out) noexcept;
+  void releaseEpilogueConstants() noexcept;
 
   std::string layer_name_;
   ImplicitGemmParameters params_;
@@ -177,21 +198,10 @@ private:
   // Pre-allocated CPU mask tensor to avoid heap allocation during CUDA graph capture.
   tv::Tensor mask_tensor_;
 
-  // ── INT8 persistent constant cache (precision==1 only) ──────────────────────────────────
-  // Filters / scales / bias are graph constants, so we quantize them once and reuse the device
-  // buffers across enqueues. Buffers are cudaMalloc'd in configurePlugin and filled lazily on the
-  // first enqueue (filter device data is only available there).
-  std::mutex cache_mutex_{};
-  bool cache_allocated_{false};
-  bool cache_filled_{false};
-  std::int64_t cached_c_out_{0};
-  std::int64_t cached_k1_{0};
-  std::int64_t cached_k2_{0};
-  std::int64_t cached_k3_{0};
-  std::int64_t cached_c_in_{0};
-  std::int8_t * cached_weight_int8_ptr_{nullptr};
-  float * cached_w_scales_ptr_{nullptr};
-  float * cached_gemm_bias_ptr_{nullptr};
+  std::mutex epilogue_constants_mutex_{};
+  void * epilogue_constants_ptr_{nullptr};
+  std::int64_t epilogue_constants_c_out_{0};
+  bool epilogue_constants_filled_{false};
 };
 
 }  // namespace nvinfer1::plugin
