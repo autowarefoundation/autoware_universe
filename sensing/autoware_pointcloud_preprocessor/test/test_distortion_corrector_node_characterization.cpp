@@ -141,7 +141,11 @@ struct Point
   float x{0.0F};
   float y{0.0F};
   float z{0.0F};
+  uint8_t intensity{0};
+  uint8_t return_type{0};
+  uint16_t channel{0};
   float azimuth{0.0F};
+  float elevation{0.0F};
   float distance{0.0F};
   uint32_t time_stamp{0};
 };
@@ -154,14 +158,34 @@ std::vector<Point> read_points(const PointCloud2 & cloud)
   sensor_msgs::PointCloud2ConstIterator<float> it_x(cloud, "x");
   sensor_msgs::PointCloud2ConstIterator<float> it_y(cloud, "y");
   sensor_msgs::PointCloud2ConstIterator<float> it_z(cloud, "z");
+  sensor_msgs::PointCloud2ConstIterator<uint8_t> it_intensity(cloud, "intensity");
+  sensor_msgs::PointCloud2ConstIterator<uint8_t> it_return_type(cloud, "return_type");
+  sensor_msgs::PointCloud2ConstIterator<uint16_t> it_channel(cloud, "channel");
   sensor_msgs::PointCloud2ConstIterator<float> it_azimuth(cloud, "azimuth");
+  sensor_msgs::PointCloud2ConstIterator<float> it_elevation(cloud, "elevation");
   sensor_msgs::PointCloud2ConstIterator<float> it_distance(cloud, "distance");
   sensor_msgs::PointCloud2ConstIterator<uint32_t> it_time(cloud, "time_stamp");
 
-  for (; it_x != it_x.end(); ++it_x, ++it_y, ++it_z, ++it_azimuth, ++it_distance, ++it_time) {
-    points.push_back(Point{*it_x, *it_y, *it_z, *it_azimuth, *it_distance, *it_time});
+  for (; it_x != it_x.end(); ++it_x, ++it_y, ++it_z, ++it_intensity, ++it_return_type, ++it_channel,
+                             ++it_azimuth, ++it_elevation, ++it_distance, ++it_time) {
+    points.push_back(Point{
+      *it_x, *it_y, *it_z, *it_intensity, *it_return_type, *it_channel, *it_azimuth, *it_elevation,
+      *it_distance, *it_time});
   }
   return points;
+}
+
+// "name:offset:datatype:count" per field, so a layout change prints readably.
+std::vector<std::string> field_signature(const PointCloud2 & cloud)
+{
+  std::vector<std::string> signature;
+  signature.reserve(cloud.fields.size());
+  for (const auto & field : cloud.fields) {
+    signature.push_back(
+      field.name + ":" + std::to_string(field.offset) + ":" + std::to_string(field.datatype) + ":" +
+      std::to_string(field.count));
+  }
+  return signature;
 }
 
 // The nanosecond offset the i-th point of a generated cloud carries in its time_stamp field.
@@ -169,6 +193,25 @@ uint32_t point_time_offset_ns(size_t index)
 {
   return static_cast<uint32_t>(std::llround(point_interval_sec * 1e9)) *
          static_cast<uint32_t>(index);
+}
+
+// Markers the corrector must not touch. Distinct per point and across fields, so a dropped,
+// reordered or overwritten field shows up as a mismatch rather than a coincidence.
+uint8_t point_intensity(size_t index)
+{
+  return static_cast<uint8_t>(10 + index);
+}
+uint8_t point_return_type(size_t index)
+{
+  return static_cast<uint8_t>(1 + index);
+}
+uint16_t point_channel(size_t index)
+{
+  return static_cast<uint16_t>(100 + index);
+}
+float point_elevation(size_t index)
+{
+  return 0.25F * static_cast<float>(index);
 }
 
 // ---------------------------------------------------------------------------------------
@@ -378,32 +421,57 @@ protected:
 
   // -- assertions shared by several tests ----------------------------------------------
 
-  // Every field the node is allowed to touch, compared against the cloud as published.
-  static void expect_cloud_unchanged(const PointCloud2 & output, const PointCloud2 & input)
+  // Everything a downstream node sees besides the point values. Shared by the pass-through
+  // and corrected-path checks, so both notice a dropped field, a resize or a restamp.
+  static void expect_cloud_envelope_preserved(const PointCloud2 & output, const PointCloud2 & input)
   {
     EXPECT_EQ(output.width, input.width);
     EXPECT_EQ(output.height, input.height);
     EXPECT_EQ(output.point_step, input.point_step);
+    EXPECT_EQ(output.row_step, input.row_step);
+    EXPECT_EQ(output.is_dense, input.is_dense);
+    EXPECT_EQ(output.is_bigendian, input.is_bigendian);
+    EXPECT_EQ(field_signature(output), field_signature(input));
     EXPECT_EQ(output.header.frame_id, input.header.frame_id);
     EXPECT_EQ(rclcpp::Time(output.header.stamp), rclcpp::Time(input.header.stamp));
+  }
+
+  // Every field the node is allowed to touch, compared against the cloud as published.
+  static void expect_cloud_unchanged(const PointCloud2 & output, const PointCloud2 & input)
+  {
+    expect_cloud_envelope_preserved(output, input);
     ASSERT_EQ(output.data, input.data) << "the node rewrote a cloud it should have passed through";
   }
 
-  // Compares against the source points displaced by `shift`, which the caller computes from
-  // the scenario rather than from the node.
+  // x/y/z displaced by `shifts`, which the caller computes from the scenario rather than from
+  // the node. Everything the corrector does not own must survive untouched -- azimuth and
+  // distance excepted, since update_azimuth_and_distance rewrites those on purpose.
   static void expect_points_shifted_by(
-    const PointCloud2 & output, const std::vector<std::array<float, 3>> & shifts, float tolerance)
+    const PointCloud2 & output, const PointCloud2 & input,
+    const std::vector<std::array<float, 3>> & shifts, float tolerance)
   {
+    expect_cloud_envelope_preserved(output, input);
+
     const auto points = read_points(output);
-    ASSERT_EQ(points.size(), source_points().size());
+    const auto sources = read_points(input);
+    ASSERT_EQ(points.size(), sources.size());
     // Without this, a short `shifts` throws out of at() instead of failing the expectation.
-    ASSERT_EQ(shifts.size(), source_points().size()) << "expected one shift per source point";
+    ASSERT_EQ(shifts.size(), sources.size()) << "expected one shift per point";
+
     for (size_t i = 0; i < points.size(); ++i) {
-      const auto & source = source_points().at(i);
+      const auto & point = points.at(i);
+      const auto & source = sources.at(i);
       const auto & shift = shifts.at(i);
-      EXPECT_NEAR(points.at(i).x, source[0] + shift[0], tolerance) << "point " << i << " x";
-      EXPECT_NEAR(points.at(i).y, source[1] + shift[1], tolerance) << "point " << i << " y";
-      EXPECT_NEAR(points.at(i).z, source[2] + shift[2], tolerance) << "point " << i << " z";
+      EXPECT_NEAR(point.x, source.x + shift[0], tolerance) << "point " << i << " x";
+      EXPECT_NEAR(point.y, source.y + shift[1], tolerance) << "point " << i << " y";
+      EXPECT_NEAR(point.z, source.z + shift[2], tolerance) << "point " << i << " z";
+      EXPECT_EQ(static_cast<int>(point.intensity), static_cast<int>(source.intensity))
+        << "point " << i << " intensity";
+      EXPECT_EQ(static_cast<int>(point.return_type), static_cast<int>(source.return_type))
+        << "point " << i << " return_type";
+      EXPECT_EQ(point.channel, source.channel) << "point " << i << " channel";
+      EXPECT_EQ(point.elevation, source.elevation) << "point " << i << " elevation";
+      EXPECT_EQ(point.time_stamp, source.time_stamp) << "point " << i << " time_stamp";
     }
   }
 
@@ -625,7 +693,11 @@ private:
     sensor_msgs::PointCloud2Iterator<float> it_x(cloud, "x");
     sensor_msgs::PointCloud2Iterator<float> it_y(cloud, "y");
     sensor_msgs::PointCloud2Iterator<float> it_z(cloud, "z");
+    sensor_msgs::PointCloud2Iterator<uint8_t> it_intensity(cloud, "intensity");
+    sensor_msgs::PointCloud2Iterator<uint8_t> it_return_type(cloud, "return_type");
+    sensor_msgs::PointCloud2Iterator<uint16_t> it_channel(cloud, "channel");
     sensor_msgs::PointCloud2Iterator<float> it_azimuth(cloud, "azimuth");
+    sensor_msgs::PointCloud2Iterator<float> it_elevation(cloud, "elevation");
     sensor_msgs::PointCloud2Iterator<float> it_distance(cloud, "distance");
     sensor_msgs::PointCloud2Iterator<uint32_t> it_time(cloud, "time_stamp");
 
@@ -634,13 +706,21 @@ private:
       *it_x = point[0];
       *it_y = point[1];
       *it_z = point[2];
+      *it_intensity = point_intensity(i);
+      *it_return_type = point_return_type(i);
+      *it_channel = point_channel(i);
       *it_azimuth = azimuth_of(point[0], point[1], convention);
+      *it_elevation = point_elevation(i);
       *it_distance = std::sqrt(point[0] * point[0] + point[1] * point[1] + point[2] * point[2]);
       *it_time = point_time_offset_ns(i);
       ++it_x;
       ++it_y;
       ++it_z;
+      ++it_intensity;
+      ++it_return_type;
+      ++it_channel;
       ++it_azimuth;
+      ++it_elevation;
       ++it_distance;
       ++it_time;
     }
@@ -811,12 +891,12 @@ TEST_F(DistortionCorrectorCharacterizationTest, LinearTwistShiftsEachPointByItsO
   publish_twist(base_stamp_sec, speed, 0.0);
 
   // Act
-  publish_cloud(base_frame, base_stamp_sec);
+  const auto input = publish_cloud(base_frame, base_stamp_sec);
   const auto output = await_output_cloud();
 
   // Assert
   // 10 m/s over 10 ms steps: the i-th point moves 0.1 * i metres along x.
-  expect_points_shifted_by(output, linear_shifts(speed), exact_tolerance);
+  expect_points_shifted_by(output, input, linear_shifts(speed), exact_tolerance);
 }
 
 TEST_F(DistortionCorrectorCharacterizationTest, RotationalTwistRotatesEachPointAboutBaseLink)
@@ -827,11 +907,11 @@ TEST_F(DistortionCorrectorCharacterizationTest, RotationalTwistRotatesEachPointA
   publish_twist(base_stamp_sec, 0.0, rate);
 
   // Act
-  publish_cloud(base_frame, base_stamp_sec);
+  const auto input = publish_cloud(base_frame, base_stamp_sec);
   const auto output = await_output_cloud();
 
   // Assert
-  expect_points_shifted_by(output, rotation_shifts(rate), rotation_tolerance);
+  expect_points_shifted_by(output, input, rotation_shifts(rate), rotation_tolerance);
 }
 
 TEST_F(DistortionCorrectorCharacterizationTest, UsesImuAngularVelocityInsteadOfTwistAngularVelocity)
@@ -845,11 +925,11 @@ TEST_F(DistortionCorrectorCharacterizationTest, UsesImuAngularVelocityInsteadOfT
   publish_imu(base_stamp_sec, 0.0, 0.0, imu_rate);
 
   // Act
-  publish_cloud(base_frame, base_stamp_sec);
+  const auto input = publish_cloud(base_frame, base_stamp_sec);
   const auto output = await_output_cloud();
 
   // Assert
-  expect_points_shifted_by(output, rotation_shifts(imu_rate), rotation_tolerance);
+  expect_points_shifted_by(output, input, rotation_shifts(imu_rate), rotation_tolerance);
 }
 
 TEST_F(DistortionCorrectorCharacterizationTest, RotatesImuAngularVelocityIntoBaseFrame)
@@ -862,11 +942,11 @@ TEST_F(DistortionCorrectorCharacterizationTest, RotatesImuAngularVelocityIntoBas
   publish_imu(base_stamp_sec, 0.0, 0.0, imu_rate, imu_flipped_frame);
 
   // Act
-  publish_cloud(base_frame, base_stamp_sec);
+  const auto input = publish_cloud(base_frame, base_stamp_sec);
   const auto output = await_output_cloud();
 
   // Assert
-  expect_points_shifted_by(output, rotation_shifts(-imu_rate), rotation_tolerance);
+  expect_points_shifted_by(output, input, rotation_shifts(-imu_rate), rotation_tolerance);
 }
 
 TEST_F(DistortionCorrectorCharacterizationTest, IgnoresImuWhenImuIsDisabled)
@@ -879,11 +959,11 @@ TEST_F(DistortionCorrectorCharacterizationTest, IgnoresImuWhenImuIsDisabled)
   publish_imu(base_stamp_sec, 0.0, 0.0, -5.0);
 
   // Act
-  publish_cloud(base_frame, base_stamp_sec);
+  const auto input = publish_cloud(base_frame, base_stamp_sec);
   const auto output = await_output_cloud();
 
   // Assert
-  expect_points_shifted_by(output, rotation_shifts(twist_rate), rotation_tolerance);
+  expect_points_shifted_by(output, input, rotation_shifts(twist_rate), rotation_tolerance);
 }
 
 TEST_F(DistortionCorrectorCharacterizationTest, UndistortsCloudGivenInLidarFrame)
@@ -894,7 +974,7 @@ TEST_F(DistortionCorrectorCharacterizationTest, UndistortsCloudGivenInLidarFrame
   publish_twist(base_stamp_sec, speed, 0.0);
 
   // Act
-  publish_cloud(lidar_frame, base_stamp_sec);
+  const auto input = publish_cloud(lidar_frame, base_stamp_sec);
   const auto output = await_output_cloud();
 
   // Assert
@@ -904,7 +984,7 @@ TEST_F(DistortionCorrectorCharacterizationTest, UndistortsCloudGivenInLidarFrame
     const auto travelled = static_cast<float>(speed * point_interval_sec * static_cast<double>(i));
     shifts.push_back({0.0F, -travelled, 0.0F});
   }
-  expect_points_shifted_by(output, shifts, rotation_tolerance);
+  expect_points_shifted_by(output, input, shifts, rotation_tolerance);
 }
 
 // ---------------------------------------------------------------------------------------
@@ -919,11 +999,11 @@ TEST_F(DistortionCorrectorCharacterizationTest, ThreeDimensionalCorrectionShifts
   publish_twist(base_stamp_sec, speed, 0.0);
 
   // Act
-  publish_cloud(base_frame, base_stamp_sec);
+  const auto input = publish_cloud(base_frame, base_stamp_sec);
   const auto output = await_output_cloud();
 
   // Assert
-  expect_points_shifted_by(output, linear_shifts(speed), exact_tolerance);
+  expect_points_shifted_by(output, input, linear_shifts(speed), exact_tolerance);
 }
 
 TEST_F(
@@ -937,7 +1017,7 @@ TEST_F(
   publish_full_twist(base_stamp_sec, {0.0, 4.0, 8.0}, {0.0, 0.0, 0.0});
 
   // Act
-  publish_cloud(base_frame, base_stamp_sec);
+  const auto input = publish_cloud(base_frame, base_stamp_sec);
   const auto output = await_output_cloud();
 
   // Assert
@@ -946,7 +1026,7 @@ TEST_F(
     const auto elapsed = point_interval_sec * static_cast<double>(i);
     shifts.push_back({0.0F, static_cast<float>(4.0 * elapsed), static_cast<float>(8.0 * elapsed)});
   }
-  expect_points_shifted_by(output, shifts, exact_tolerance);
+  expect_points_shifted_by(output, input, shifts, exact_tolerance);
 }
 
 // ---------------------------------------------------------------------------------------
@@ -1125,14 +1205,14 @@ TEST_F(DistortionCorrectorCharacterizationTest, BackwardTimeJumpDiscardsTwistQue
 
   // Act
   publish_twist(base_stamp_sec, rewound_speed, 0.0);
-  publish_cloud(base_frame, base_stamp_sec);
+  const auto input = publish_cloud(base_frame, base_stamp_sec);
   const auto output = await_output_cloud(2);
   const auto status = await_diagnostic(2);
 
   // Assert
   // Only reachable if the pre-jump sample was dropped; had it survived, the search would
   // settle on the 10 s old sample and the cloud would come back untouched.
-  expect_points_shifted_by(output, linear_shifts(rewound_speed), exact_tolerance);
+  expect_points_shifted_by(output, input, linear_shifts(rewound_speed), exact_tolerance);
   ASSERT_NE(get_value_of(status, "Timestamp mismatch count"), nullptr);
   EXPECT_EQ(*get_value_of(status, "Timestamp mismatch count"), "0");
 }
@@ -1170,13 +1250,13 @@ TEST_F(DistortionCorrectorCharacterizationTest, StillPublishesWhenCloudTransform
   publish_twist(base_stamp_sec, speed, 0.0);
 
   // Act
-  publish_cloud(unmapped_frame, base_stamp_sec);
+  const auto input = publish_cloud(unmapped_frame, base_stamp_sec);
   const auto output = await_output_cloud();
 
   // Assert
   // The lookup fails, so the node has no lidar-to-base transform -- but it undistorts the
   // cloud anyway, treating the sensor coordinates as if they were already base_link's.
-  expect_points_shifted_by(output, linear_shifts(speed), exact_tolerance);
+  expect_points_shifted_by(output, input, linear_shifts(speed), exact_tolerance);
 }
 
 TEST_F(
@@ -1235,21 +1315,21 @@ TEST_F(
   constexpr double speed = 10.0;
   start(NodeParams{});
   publish_twist(base_stamp_sec, speed, 0.0);
-  publish_cloud(base_frame, base_stamp_sec);
+  const auto first_input = publish_cloud(base_frame, base_stamp_sec);
   const auto first = await_output_cloud(1);
-  expect_points_shifted_by(first, linear_shifts(speed), exact_tolerance);
+  expect_points_shifted_by(first, first_input, linear_shifts(speed), exact_tolerance);
 
   // Act
   // A cloud from the yawed lidar now arrives.
   publish_twist(base_stamp_sec + 0.1, speed, 0.0);
-  publish_cloud(lidar_frame, base_stamp_sec + 0.1);
+  const auto second_input = publish_cloud(lidar_frame, base_stamp_sec + 0.1);
   const auto second = await_output_cloud(2);
 
   // Assert
   // This is a bug: the lookup is skipped because a transform is already cached, so this cloud
   // is corrected as though it too were in base_link -- the shift stays along x instead of
   // becoming -y. Compare UndistortsCloudGivenInLidarFrame.
-  expect_points_shifted_by(second, linear_shifts(speed), exact_tolerance);
+  expect_points_shifted_by(second, second_input, linear_shifts(speed), exact_tolerance);
 }
 
 int main(int argc, char ** argv)
