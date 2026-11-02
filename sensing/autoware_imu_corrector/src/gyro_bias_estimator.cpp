@@ -84,8 +84,8 @@ GyroBiasEstimator::GyroBiasEstimator(const rclcpp::NodeOptions & options)
   pose_sub_ = create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
     "~/input/pose_ndt", rclcpp::SensorDataQoS(),
     [this](
-      const AUTOWARE_MESSAGE_CONST_SHARED_PTR(geometry_msgs::msg::PoseWithCovarianceStamped) &
-      msg) { callback_pose_msg(msg); });
+      const AUTOWARE_MESSAGE_CONST_SHARED_PTR(
+        geometry_msgs::msg::PoseWithCovarianceStamped) & msg) { callback_pose_msg(msg); });
   gyro_scale_pub_ = create_publisher<geometry_msgs::msg::Vector3Stamped>(
     "~/output/gyro_scale", rclcpp::SensorDataQoS());
   imu_scaled_pub_ = create_publisher<sensor_msgs::msg::Imu>("~/output/imu_scaled", rclcpp::QoS{1});
