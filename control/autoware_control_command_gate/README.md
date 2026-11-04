@@ -22,88 +22,108 @@ The node also applies a nominal filter to the selected commands to correct for o
   - Detect timeouts for each command source.
   - Select builtin stop when selected command source is not available.
 
-<!-- # vehicle_cmd_gate -->
+## Interfaces
 
-## Purpose
+### Command inputs
 
-`vehicle_cmd_gate` is the package to get information from emergency handler, planning module, and external controller, and send a message to the vehicle.
+For each command source listed in the `inputs` parameter, the following topics are subscribed.
+The `<source>` part is the source name given by `inputs_names.<id>` (e.g. `main`, `emergency_stop`).
 
-## Role
+| Name                                | Type                                              | Description                             |
+| ----------------------------------- | ------------------------------------------------- | --------------------------------------- |
+| `~/inputs/<source>/control`         | `autoware_control_msgs/msg/Control`               | control command from the source         |
+| `~/inputs/<source>/gear`            | `autoware_vehicle_msgs/msg/GearCommand`           | gear command from the source            |
+| `~/inputs/<source>/turn_indicators` | `autoware_vehicle_msgs/msg/TurnIndicatorsCommand` | turn indicators command from the source |
+| `~/inputs/<source>/hazard_lights`   | `autoware_vehicle_msgs/msg/HazardLightsCommand`   | hazard lights command from the source   |
 
-Receive multiple control commands and select one to forward to the vehicle.
+### Vehicle status inputs
 
-## Inputs / Outputs
+These topics are used by the command filter.
 
-### Input
+| Name                              | Type                                           | Description                         |
+| --------------------------------- | ---------------------------------------------- | ----------------------------------- |
+| `/localization/kinematic_state`   | `nav_msgs/msg/Odometry`                        | current velocity and stop state     |
+| `/localization/acceleration`      | `geometry_msgs/msg/AccelWithCovarianceStamped` | current acceleration                |
+| `/vehicle/status/steering_status` | `autoware_vehicle_msgs/msg/SteeringReport`     | current steering angle              |
+| `/vehicle/status/control_mode`    | `autoware_vehicle_msgs/msg/ControlModeReport`  | current control mode of the vehicle |
 
-| Name                                        | Type                                                | Description                                                          |
-| ------------------------------------------- | --------------------------------------------------- | -------------------------------------------------------------------- |
-| `~/input/steering`                          | `autoware_vehicle_msgs::msg::SteeringReport`        | steering status                                                      |
-| `~/input/auto/control_cmd`                  | `autoware_control_msgs::msg::Control`               | command for lateral and longitudinal velocity from planning module   |
-| `~/input/auto/turn_indicators_cmd`          | `autoware_vehicle_msgs::msg::TurnIndicatorsCommand` | turn indicators command from planning module                         |
-| `~/input/auto/hazard_lights_cmd`            | `autoware_vehicle_msgs::msg::HazardLightsCommand`   | hazard lights command from planning module                           |
-| `~/input/auto/gear_cmd`                     | `autoware_vehicle_msgs::msg::GearCommand`           | gear command from planning module                                    |
-| `~/input/external/control_cmd`              | `autoware_control_msgs::msg::Control`               | command for lateral and longitudinal velocity from external          |
-| `~/input/external/turn_indicators_cmd`      | `autoware_vehicle_msgs::msg::TurnIndicatorsCommand` | turn indicators command from external                                |
-| `~/input/external/hazard_lights_cmd`        | `autoware_vehicle_msgs::msg::HazardLightsCommand`   | hazard lights command from external                                  |
-| `~/input/external/gear_cmd`                 | `autoware_vehicle_msgs::msg::GearCommand`           | gear command from external                                           |
-| `~/input/external_emergency_stop_heartbeat` | `tier4_external_api_msgs::msg::Heartbeat`           | heartbeat                                                            |
-| `~/input/gate_mode`                         | `tier4_control_msgs::msg::GateMode`                 | gate mode (AUTO or EXTERNAL)                                         |
-| `~/input/emergency/control_cmd`             | `autoware_control_msgs::msg::Control`               | command for lateral and longitudinal velocity from emergency handler |
-| `~/input/emergency/turn_indicators_cmd`     | `autoware_vehicle_msgs::msg::TurnIndicatorsCommand` | turn indicators command from emergency handler                       |
-| `~/input/emergency/hazard_lights_cmd`       | `autoware_vehicle_msgs::msg::HazardLightsCommand`   | hazard lights command from emergency handler                         |
-| `~/input/emergency/gear_cmd`                | `autoware_vehicle_msgs::msg::GearCommand`           | gear command from emergency handler                                  |
-| `~/input/engage`                            | `autoware_vehicle_msgs::msg::Engage`                | engage signal                                                        |
-| `~/input/operation_mode`                    | `autoware_adapi_v1_msgs::msg::OperationModeState`   | operation mode of Autoware                                           |
+### Command outputs
 
-### Output
+| Name                       | Type                                              | Description                           |
+| -------------------------- | ------------------------------------------------- | ------------------------------------- |
+| `~/output/control`         | `autoware_control_msgs/msg/Control`               | selected and filtered control command |
+| `~/output/gear`            | `autoware_vehicle_msgs/msg/GearCommand`           | selected gear command                 |
+| `~/output/turn_indicators` | `autoware_vehicle_msgs/msg/TurnIndicatorsCommand` | selected turn indicators command      |
+| `~/output/hazard_lights`   | `autoware_vehicle_msgs/msg/HazardLightsCommand`   | selected hazard lights command        |
 
-| Name                                   | Type                                                | Description                                              |
-| -------------------------------------- | --------------------------------------------------- | -------------------------------------------------------- |
-| `~/output/vehicle_cmd_emergency`       | `tier4_vehicle_msgs::msg::VehicleEmergencyStamped`  | emergency state which was originally in vehicle command  |
-| `~/output/command/control_cmd`         | `autoware_control_msgs::msg::Control`               | command for lateral and longitudinal velocity to vehicle |
-| `~/output/command/turn_indicators_cmd` | `autoware_vehicle_msgs::msg::TurnIndicatorsCommand` | turn indicators command to vehicle                       |
-| `~/output/command/hazard_lights_cmd`   | `autoware_vehicle_msgs::msg::HazardLightsCommand`   | hazard lights command to vehicle                         |
-| `~/output/command/gear_cmd`            | `autoware_vehicle_msgs::msg::GearCommand`           | gear command to vehicle                                  |
-| `~/output/gate_mode`                   | `tier4_control_msgs::msg::GateMode`                 | gate mode (AUTO or EXTERNAL)                             |
-| `~/output/engage`                      | `autoware_vehicle_msgs::msg::Engage`                | engage signal                                            |
-| `~/output/external_emergency`          | `tier4_external_api_msgs::msg::Emergency`           | external emergency signal                                |
-| `~/output/operation_mode`              | `tier4_system_msgs::msg::OperationMode`             | current operation mode of the vehicle_cmd_gate           |
+### Source and filter management
+
+| Name              | Type                                        | Description                                                    |
+| ----------------- | ------------------------------------------- | -------------------------------------------------------------- |
+| `~/source/status` | `tier4_system_msgs/msg/CommandSourceStatus` | (pub) currently selected command source                        |
+| `~/filter/status` | `tier4_system_msgs/msg/CommandFilterStatus` | (pub) whether the transition filter is enabled                 |
+| `~/source/change` | `tier4_system_msgs/srv/ChangeCommandSource` | (srv) change the command source                                |
+| `~/filter/change` | `tier4_system_msgs/srv/ChangeCommandFilter` | (srv) enable or disable the transition filter                  |
+| `~/source/select` | `tier4_system_msgs/srv/SelectCommandSource` | (srv) change the command source and transition filter together |
+
+### Compatibility interfaces
+
+These interfaces are provided for compatibility with `vehicle_cmd_gate`.
+
+| Name                                           | Type                                       | Description                                                      |
+| ---------------------------------------------- | ------------------------------------------ | ---------------------------------------------------------------- |
+| `/control/vehicle_cmd_gate/set_pause`          | `tier4_control_msgs/srv/SetPause`          | (srv) pause request from AD API                                  |
+| `/control/vehicle_cmd_gate/is_paused`          | `tier4_control_msgs/msg/IsPaused`          | (pub) whether the vehicle is paused                              |
+| `/control/vehicle_cmd_gate/is_start_requested` | `tier4_control_msgs/msg/IsStartRequested`  | (pub) whether the selected command requests the vehicle to start |
+| `/control/vehicle_cmd_gate/set_stop`           | `tier4_control_msgs/srv/SetStop`           | (srv) moderate stop request                                      |
+| `/control/vehicle_cmd_gate/is_stopped`         | `tier4_control_msgs/msg/IsStopped`         | (pub) moderate stop state and its requesting sources             |
+| `/api/autoware/set/emergency`                  | `tier4_external_api_msgs/srv/SetEmergency` | (srv) external emergency request                                 |
+| `/api/autoware/get/emergency`                  | `tier4_external_api_msgs/msg/Emergency`    | (pub) external emergency state                                   |
+
+### Diagnostics
+
+| Name               | Description                                                       |
+| ------------------ | ----------------------------------------------------------------- |
+| `timeout_<source>` | timeout of the control command from each source (incl. `builtin`) |
+| `timeout_output`   | timeout of the output control command                             |
 
 ## Parameters
 
-| Parameter                                             | Type     | Description                                                                                                                                                                                 |
-| ----------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `update_period`                                       | double   | update period                                                                                                                                                                               |
-| `use_emergency_handling`                              | bool     | true when emergency handler is used                                                                                                                                                         |
-| `check_external_emergency_heartbeat`                  | bool     | true when checking heartbeat for emergency stop                                                                                                                                             |
-| `system_emergency_heartbeat_timeout`                  | double   | timeout for system emergency                                                                                                                                                                |
-| `external_emergency_stop_heartbeat_timeout`           | double   | timeout for external emergency                                                                                                                                                              |
-| `filter_activated_count_threshold`                    | int      | threshold for filter activation                                                                                                                                                             |
-| `filter_activated_velocity_threshold`                 | double   | velocity threshold for filter activation                                                                                                                                                    |
-| `stop_hold_acceleration`                              | double   | longitudinal acceleration cmd when vehicle should stop                                                                                                                                      |
-| `emergency_acceleration`                              | double   | longitudinal acceleration cmd when vehicle stop with emergency                                                                                                                              |
-| `moderate_stop_service_acceleration`                  | double   | longitudinal acceleration cmd when vehicle stop with moderate stop service                                                                                                                  |
-| `nominal.vel_lim`                                     | double   | limit of longitudinal velocity (activated in AUTONOMOUS operation mode)                                                                                                                     |
-| `nominal.reference_speed_points`                      | <double> | velocity point used as a reference when calculate control command limit (activated in AUTONOMOUS operation mode). The size of this array must be equivalent to the size of the limit array. |
-| `nominal.lon_acc_lim_for_lon_vel`                     | <double> | array of limits for longitudinal acceleration (activated in AUTONOMOUS operation mode)                                                                                                      |
-| `nominal.lon_jerk_lim_for_lon_acc`                    | <double> | array of limits for longitudinal jerk (activated in AUTONOMOUS operation mode)                                                                                                              |
-| `nominal.lat_acc_lim_for_steer_cmd`                   | <double> | array of limits for lateral acceleration (activated in AUTONOMOUS operation mode)                                                                                                           |
-| `nominal.lat_jerk_lim_for_steer_cmd`                  | <double> | array of limits for lateral jerk (activated in AUTONOMOUS operation mode)                                                                                                                   |
-| `nominal.steer_cmd_lim`                               | <double> | array of limits for steering angle (activated in AUTONOMOUS operation mode)                                                                                                                 |
-| `nominal.steer_rate_lim_for_steer_cmd`                | <double> | array of limits for command steering rate (activated in AUTONOMOUS operation mode)                                                                                                          |
-| `nominal.lat_jerk_lim_for_steer_rate`                 | double   | limit for lateral jerk constraint on steering rate (activated in AUTONOMOUS operation mode)                                                                                                 |
-| `nominal.steer_cmd_diff_lim_from_current_steer`       | <double> | array of limits for difference between current and command steering angle (activated in AUTONOMOUS operation mode)                                                                          |
-| `on_transition.vel_lim`                               | double   | limit of longitudinal velocity (activated in TRANSITION operation mode)                                                                                                                     |
-| `on_transition.reference_speed_points`                | <double> | velocity point used as a reference when calculate control command limit (activated in TRANSITION operation mode). The size of this array must be equivalent to the size of the limit array. |
-| `on_transition.lon_acc_lim_for_lon_vel`               | <double> | array of limits for longitudinal acceleration (activated in TRANSITION operation mode)                                                                                                      |
-| `on_transition.lon_jerk_lim_for_lon_acc`              | <double> | array of limits for longitudinal jerk (activated in TRANSITION operation mode)                                                                                                              |
-| `on_transition.lat_acc_lim_for_steer_cmd`             | <double> | array of limits for lateral acceleration (activated in TRANSITION operation mode)                                                                                                           |
-| `on_transition.lat_jerk_lim_for_steer_cmd`            | <double> | array of limits for lateral jerk (activated in TRANSITION operation mode)                                                                                                                   |
-| `on_transition.steer_cmd_lim`                         | <double> | array of limits for steering angle (activated in TRANSITION operation mode)                                                                                                                 |
-| `on_transition.steer_rate_lim_for_steer_cmd`          | <double> | array of limits for command steering rate (activated in TRANSITION operation mode)                                                                                                          |
-| `on_transition.lat_jerk_lim_for_steer_rate`           | double   | limit for lateral jerk constraint on steering rate (activated in TRANSITION operation mode)                                                                                                 |
-| `on_transition.steer_cmd_diff_lim_from_current_steer` | <double> | array of limits for difference between current and command steering angle (activated in TRANSITION operation mode)                                                                          |
+| Parameter                        | Type      | Description                                                                                                                   |
+| -------------------------------- | --------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `inputs`                         | int array | IDs of the command sources to subscribe. See `autoware_command_mode_types/sources.hpp`. `builtin` and `unknown` are reserved. |
+| `inputs_names.<id>`              | string    | source name for each ID in `inputs`, used as the topic namespace `~/inputs/<source>/`                                         |
+| `rate`                           | double    | update rate [Hz] of the source selection and status publication                                                               |
+| `builtin_emergency_acceleration` | double    | longitudinal acceleration of the builtin stop command                                                                         |
+| `stop_hold_acceleration`         | double    | longitudinal acceleration upper limit while paused by AD API                                                                  |
+| `emergency_acceleration`         | double    | longitudinal acceleration upper limit while external emergency is requested                                                   |
+| `moderate_stop_acceleration`     | double    | longitudinal acceleration upper limit while moderate stop is requested                                                        |
+| `diag_timeout_warn_duration`     | double    | duration [s] without a control command until the timeout diagnostics becomes WARN                                             |
+| `diag_timeout_error_duration`    | double    | duration [s] without a control command until the timeout diagnostics becomes ERROR                                            |
+| `stop_check_duration`            | double    | duration [s] used to determine that the vehicle is stopped                                                                    |
+| `enable_command_limit_filter`    | bool      | enable the command limit filter                                                                                               |
+| `nominal_filter.*`               | -         | filter parameters used when the transition filter is disabled (see below)                                                     |
+| `transition_filter.*`            | -         | filter parameters used when the transition filter is enabled (see below)                                                      |
+
+The vehicle info parameters (`wheel_base`, etc.) are also required for the filter.
+
+### Filter parameters
+
+The following parameters are common to `nominal_filter` and `transition_filter`.
+The array parameters are interpolated by the current velocity using `reference_speed_points`, so they must have the same size as `reference_speed_points`.
+
+| Parameter                               | Type         | Description                                                         |
+| --------------------------------------- | ------------ | ------------------------------------------------------------------- |
+| `vel_lim`                               | double       | limit of longitudinal velocity                                      |
+| `reference_speed_points`                | double array | velocity points used as a reference to interpolate the limit arrays |
+| `lon_acc_lim_for_lon_vel`               | double array | limits for longitudinal acceleration                                |
+| `lon_jerk_lim_for_lon_acc`              | double array | limits for longitudinal jerk                                        |
+| `lat_acc_lim_for_steer_cmd`             | double array | limits for lateral acceleration                                     |
+| `lat_jerk_lim_for_steer_cmd`            | double array | limits for lateral jerk                                             |
+| `steer_cmd_lim`                         | double array | limits for steering angle                                           |
+| `steer_rate_lim_for_steer_cmd`          | double array | limits for steering rate                                            |
+| `lat_jerk_lim_for_steer_rate`           | double       | limit for lateral jerk constraint on steering rate                  |
+| `steer_cmd_diff_lim_from_current_steer` | double array | limits for difference between current and command steering angle    |
 
 ### Parameter Naming Convention
 
