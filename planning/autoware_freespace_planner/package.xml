@@ -4,7 +4,6 @@
   <name>autoware_freespace_planner</name>
   <version>0.53.0</version>
   <description>The autoware_freespace_planner package</description>
-  <maintainer email="kosuke.takeuchi@tier4.jp">Kosuke Takeuchi</maintainer>
   <maintainer email="alqudah.mohammad@tier4.jp">Alqudah Mohammad</maintainer>
   <license>Apache License 2.0</license>
 
