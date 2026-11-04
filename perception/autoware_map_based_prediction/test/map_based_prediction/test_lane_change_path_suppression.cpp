@@ -153,19 +153,25 @@ TEST_F(LaneChangePathSuppressionTest, RemovesUndetectedLaneChangesWithCenterPath
   EXPECT_FLOAT_EQ(result.front().second.probability, 1.0F);
 }
 
-TEST_F(LaneChangePathSuppressionTest, KeepsDetectedLaneChangesIncludingZeroWeightOpposite)
+TEST_F(LaneChangePathSuppressionTest, KeepsDetectedLaneChangeAndDropsZeroWeightOpposite)
 {
   for (const auto detected : {Maneuver::LEFT_LANE_CHANGE, Maneuver::RIGHT_LANE_CHANGE}) {
     auto paths = makePaths();
     paths[0].second.probability = 0.9F;
     paths[1].second.probability = detected == Maneuver::LEFT_LANE_CHANGE ? 1.0F : 0.0F;
     paths[2].second.probability = detected == Maneuver::RIGHT_LANE_CHANGE ? 1.0F : 0.0F;
-    const auto result = suppressUndetectedLaneChangePaths(paths, makeOrigins(detected), true, true);
-    ASSERT_EQ(result.size(), paths.size());
-    for (size_t i = 0; i < paths.size(); ++i) {
-      EXPECT_EQ(result[i].second.maneuver, paths[i].second.maneuver);
-      EXPECT_FLOAT_EQ(result[i].second.probability, paths[i].second.probability);
-    }
+    std::vector<LaneletPathWithPathInfo> suppressed;
+    const auto result =
+      suppressUndetectedLaneChangePaths(paths, makeOrigins(detected), true, true, &suppressed);
+    // Lane follow and the detected side survive; the opposite side (probability 0) is dropped.
+    ASSERT_EQ(result.size(), 2U);
+    EXPECT_EQ(result[0].second.maneuver, Maneuver::LANE_FOLLOW);
+    EXPECT_FLOAT_EQ(result[0].second.probability, 0.9F);
+    EXPECT_EQ(result[1].second.maneuver, detected);
+    EXPECT_FLOAT_EQ(result[1].second.probability, 1.0F);
+    ASSERT_EQ(suppressed.size(), 1U);
+    EXPECT_NE(suppressed[0].second.maneuver, detected);
+    EXPECT_FLOAT_EQ(suppressed[0].second.probability, 0.0F);
   }
 }
 
@@ -344,9 +350,11 @@ TEST_F(LaneChangePathSuppressionTest, HoldsOnlyUndetectedNonTerminalOriginsForRe
     {Maneuver::RIGHT_LANE_CHANGE, false, true}, {Maneuver::LANE_FOLLOW, false, false}};
   std::vector<LaneletPathWithPathInfo> held;
   const auto result = suppressUndetectedLaneChangePaths(paths, origins, true, true, &held);
-  ASSERT_EQ(held.size(), 1U);
-  EXPECT_EQ(held.front().second.maneuver, Maneuver::LEFT_LANE_CHANGE);
-  EXPECT_EQ(result.size(), 5U);
+  // Held: the undetected LEFT (index 1) and the RIGHT opposite to a detected LEFT (index 2).
+  ASSERT_EQ(held.size(), 2U);
+  EXPECT_EQ(held[0].second.maneuver, Maneuver::LEFT_LANE_CHANGE);
+  EXPECT_EQ(held[1].second.maneuver, Maneuver::RIGHT_LANE_CHANGE);
+  EXPECT_EQ(result.size(), 4U);
 }
 
 TEST_F(LaneChangePathSuppressionTest, BranchContinuingBeyondHorizonIsNotLaneEnd)

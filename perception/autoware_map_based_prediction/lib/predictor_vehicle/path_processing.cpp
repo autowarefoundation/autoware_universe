@@ -147,10 +147,17 @@ std::vector<LaneletPathWithPathInfo> suppressUndetectedLaneChangePaths(
   filtered_paths.reserve(paths.size());
   for (size_t i = 0; i < paths.size(); ++i) {
     const auto & origin = origins.at(i);
-    const bool suppress = paths[i].second.maneuver != Maneuver::LANE_FOLLOW &&
-                          origin.center_exists &&
-                          origin.detected_maneuver == Maneuver::LANE_FOLLOW &&
-                          !(keep_when_lane_ends && origin.lane_ends_within_horizon);
+    const auto & maneuver = paths[i].second.maneuver;
+    const bool is_lane_change = maneuver != Maneuver::LANE_FOLLOW;
+    // Undetected LC of a lane-following vehicle (unless its lane ends within the horizon).
+    const bool undetected = origin.center_exists &&
+                            origin.detected_maneuver == Maneuver::LANE_FOLLOW &&
+                            !(keep_when_lane_ends && origin.lane_ends_within_horizon);
+    // The LC opposite to a detected one carries probability 0 and only adds a branch that
+    // confidence-agnostic consumers would still evaluate.
+    const bool opposite_of_detected =
+      origin.detected_maneuver != Maneuver::LANE_FOLLOW && maneuver != origin.detected_maneuver;
+    const bool suppress = is_lane_change && (undetected || opposite_of_detected);
     if (!suppress) {
       filtered_paths.push_back(paths[i]);
     } else if (suppressed_paths) {
@@ -738,8 +745,10 @@ void PathProcessor::logLaneChangeSuppressionDecisions(
     if (lanelet_ref_paths[i].second.maneuver == Maneuver::LANE_FOLLOW) continue;
     const auto & origin = path_origins.at(i);
     const char * decision =
-      !origin.center_exists                               ? "kept_no_center"
-      : origin.detected_maneuver != Maneuver::LANE_FOLLOW ? "kept_detected_lc"
+      !origin.center_exists ? "kept_no_center"
+      : origin.detected_maneuver != Maneuver::LANE_FOLLOW
+        ? (lanelet_ref_paths[i].second.maneuver == origin.detected_maneuver ? "kept_detected_lc"
+                                                                            : "suppressed_opposite")
       : params_.lane_change_path_suppression_keep_when_lane_ends && origin.lane_ends_within_horizon
         ? "kept_lane_end"
         : "suppressed";
