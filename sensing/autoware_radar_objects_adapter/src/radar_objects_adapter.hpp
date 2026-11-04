@@ -28,9 +28,9 @@
 #include <cstddef>
 #include <cstdint>
 #include <map>
+#include <optional>
 #include <stdexcept>
 #include <string>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -115,7 +115,9 @@ struct RadarObjectsAdapterParams
 };
 
 // Converts radar objects into detected objects and into tracked objects. Learns which fields the
-// radar provides from its radar info messages; until a valid one has arrived, nothing is converted.
+// radar provides from its radar info messages: the first message that declares every required
+// field fixes the answer, and later messages are ignored; until then, each message is judged on
+// its own and nothing is converted.
 class RadarObjectsAdapter
 {
 public:
@@ -126,7 +128,8 @@ public:
   // What the adapter decided from a radar info: the configuration it will convert with (the
   // optional fields it will fill from a parameter instead of the object), or why it cannot
   // convert at all. The node logs this; the adapter is where the field -> parameter pairing
-  // lives. Nothing is decided from an invalid radar info.
+  // lives. Nothing is decided from an invalid radar info, and nothing new from a message after
+  // the first valid one: that one comes back with the configuration already fixed.
   tl::expected<ConversionConfiguration, InvalidRadarInfo> update_radar_info(
     const autoware_sensing_msgs::msg::RadarInfo & radar_info_msg);
 
@@ -165,9 +168,9 @@ private:
 
   RadarObjectsAdapterParams params_;
 
-  std::unordered_map<std::string, autoware_sensing_msgs::msg::RadarFieldInfo> field_info_map_;
-
-  bool valid_radar_info_{false};
+  // Set by the first radar info that declares every required field, and kept; converts nothing
+  // before.
+  std::optional<ConversionConfiguration> configuration_;
 
   std::vector<std::string> required_attributes_;
 
