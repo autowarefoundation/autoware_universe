@@ -150,9 +150,8 @@ diagnostic_msgs::msg::DiagnosticStatus build_diagnostic_status(
   return status;
 }
 
-diagnostic_msgs::msg::DiagnosticStatus build_diagnostic_status(
-  const ConcatenatedFrame<sensor_msgs::msg::PointCloud2> & frame,
-  const std::vector<std::string> & input_topics, const ConcatenationDiagnosticsOptions & options)
+ConcatenationDiagnosticsSummary summarize_frame(
+  const ConcatenatedFrame<sensor_msgs::msg::PointCloud2> & frame)
 {
   if (!frame.result.concatenate_cloud_ptr) {
     throw std::invalid_argument("frame carries no concatenated cloud");
@@ -177,8 +176,14 @@ diagnostic_msgs::msg::DiagnosticStatus build_diagnostic_status(
     summary.topics_missing_transform.push_back(source.topic);
     summary.frames_missing_transform.push_back(source.frame_id);
   }
+  return summary;
+}
 
-  return build_diagnostic_status(summary, input_topics, options);
+diagnostic_msgs::msg::DiagnosticStatus build_diagnostic_status(
+  const ConcatenatedFrame<sensor_msgs::msg::PointCloud2> & frame,
+  const std::vector<std::string> & input_topics, const ConcatenationDiagnosticsOptions & options)
+{
+  return build_diagnostic_status(summarize_frame(frame), input_topics, options);
 }
 
 }  // namespace autoware::pointcloud_preprocessor

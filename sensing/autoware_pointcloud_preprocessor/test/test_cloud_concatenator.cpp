@@ -164,7 +164,7 @@ TEST(CloudConcatenatorConstruction, AdvancedRejectsMismatchedSizes)
   };
 
   // Act & Assert
-  EXPECT_THROW(static_cast<void>(construct_with_too_few_offsets()), std::runtime_error);
+  EXPECT_THROW(static_cast<void>(construct_with_too_few_offsets()), std::invalid_argument);
 }
 
 TEST(CloudConcatenator, ProcessCloudRejectsUnknownTopic)
@@ -177,6 +177,41 @@ TEST(CloudConcatenator, ProcessCloudRejectsUnknownTopic)
     static_cast<void>(
       concatenator.process_cloud("not_a_configured_topic", make_cloud(10, 0), 100.0)),
     std::invalid_argument);
+}
+
+TEST(CloudConcatenator, RejectsAnInconsistentCloudLayout)
+{
+  // Each layout below would make the XYZ conversion read past the data buffer.
+  auto mutable_cloud = [] {
+    return std::make_shared<sensor_msgs::msg::PointCloud2>(*make_cloud(10, 0));
+  };
+
+  auto odd_size = mutable_cloud();
+  odd_size->data.resize(13);  // not a multiple of point_step 12
+  auto short_data = mutable_cloud();
+  short_data->width = 1000;  // width * point_step exceeds the data
+  auto field_past_step = mutable_cloud();
+  field_past_step->fields[0].offset = 1000;
+  auto no_z = mutable_cloud();
+  no_z->fields.pop_back();
+  auto double_x = mutable_cloud();
+  double_x->fields[0].datatype = sensor_msgs::msg::PointField::FLOAT64;
+  auto zero_step = mutable_cloud();
+  zero_step->point_step = 0;
+
+  for (const auto & cloud : {odd_size, short_data, field_past_step, no_z, double_x, zero_step}) {
+    CloudConcatenator concatenator = make_naive_concatenator();
+    EXPECT_THROW(
+      static_cast<void>(concatenator.process_cloud(kInputTopics[0], cloud, 100.0)),
+      std::invalid_argument);
+  }
+
+  // A cloud with no data is empty whatever its width says (how the node's tests send a "null"
+  // cloud) and yields an empty frame.
+  auto empty = mutable_cloud();
+  empty->data.clear();
+  CloudConcatenator concatenator = make_naive_concatenator();
+  EXPECT_NO_THROW(static_cast<void>(concatenator.process_cloud(kInputTopics[0], empty, 100.0)));
 }
 
 TEST(CloudConcatenator, NaiveCompletesWhenAllTopicsArrive)

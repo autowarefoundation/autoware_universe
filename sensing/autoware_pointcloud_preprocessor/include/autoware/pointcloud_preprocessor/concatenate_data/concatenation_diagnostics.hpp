@@ -72,8 +72,13 @@ diagnostic_msgs::msg::DiagnosticStatus build_diagnostic_status(
   const ConcatenationDiagnosticsSummary & summary, const std::vector<std::string> & input_topics,
   const ConcatenationDiagnosticsOptions & options = {});
 
-/// Convenience overload building the summary from an emitted frame (the offline path).
+/// The summary of an emitted frame (what the diagnostics are built from); a few scalars and
+/// strings, so it can be kept after the frame's clouds are released.
 /// @throws std::invalid_argument when the frame carries no concatenated cloud.
+ConcatenationDiagnosticsSummary summarize_frame(
+  const ConcatenatedFrame<sensor_msgs::msg::PointCloud2> & frame);
+
+/// Convenience overload: build_diagnostic_status(summarize_frame(frame), input_topics, options).
 diagnostic_msgs::msg::DiagnosticStatus build_diagnostic_status(
   const ConcatenatedFrame<sensor_msgs::msg::PointCloud2> & frame,
   const std::vector<std::string> & input_topics,

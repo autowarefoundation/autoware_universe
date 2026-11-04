@@ -34,6 +34,20 @@ namespace autoware::pointcloud_preprocessor
 using autoware::point_types::PointXYZIRC;
 using point_cloud_msg_wrapper::PointCloud2Modifier;
 
+/// Reject a PointCloud2 whose layout is inconsistent (data size vs width/height/point_step, a field
+/// past point_step, missing or non-FLOAT32 x/y/z): the XYZIRC conversion walks the cloud with
+/// sensor_msgs::PointCloud2ConstIterator, which would read past the buffer. A cloud with no data is
+/// empty whatever its width says and passes. Called by CloudConcatenator::process_cloud() before
+/// any state changes and again by the handler.
+/// @throws std::invalid_argument
+void validate_cloud_layout(const sensor_msgs::msg::PointCloud2 & cloud);
+
+/// Other message types (the CUDA cloud keeps its points on the device) have nothing to check here.
+template <typename PointCloudMsgT>
+void validate_cloud_layout(const PointCloudMsgT &)
+{
+}
+
 /// Combines one collector's clouds into a single cloud in the output frame. Specialized per message
 /// type: PointCloud2 here, cuda_blackboard::CudaPointCloud2 in
 /// autoware_cuda_pointcloud_preprocessor.

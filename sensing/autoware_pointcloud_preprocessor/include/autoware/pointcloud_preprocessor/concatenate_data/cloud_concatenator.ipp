@@ -116,6 +116,10 @@ std::vector<ConcatenatedFrame<PointCloudMsgT>> CloudConcatenator<PointCloudMsgT>
     throw std::invalid_argument(
       "unknown topic '" + topic + "'; expected one of the configured input_topics");
   }
+  if (!cloud) {
+    throw std::invalid_argument("cloud must not be null");
+  }
+  validate_cloud_layout(*cloud);  // before any state changes, so a bad cloud is blamed on this call
 
   // (1) Timeout: close any collector whose timer has expired in arrival time (it can no longer
   // receive more clouds).

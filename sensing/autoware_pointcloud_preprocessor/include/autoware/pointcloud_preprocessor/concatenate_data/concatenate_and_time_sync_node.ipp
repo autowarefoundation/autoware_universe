@@ -19,6 +19,7 @@
 #include <memory>
 #include <optional>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -203,7 +204,17 @@ void PointCloudConcatenateDataSynchronizerComponentTemplated<MsgTraits>::cloud_c
 
   // Matching, collecting, timeout, and combining all happen in the shared core; frames come back
   // for the collectors this cloud resolved (its own on completion, older ones by timing out).
-  auto frames = concatenator_->process_cloud(topic_name, input_ptr, cloud_arrival_time);
+  std::vector<ConcatenatedFrame<PointCloudMessage>> frames;
+  try {
+    frames = concatenator_->process_cloud(topic_name, input_ptr, cloud_arrival_time);
+  } catch (const std::invalid_argument & e) {
+    // An inconsistent cloud layout; the core rejects it rather than reading past its data. Drop
+    // this cloud only: the collectors are untouched and the timer stays armed.
+    RCLCPP_ERROR_STREAM_THROTTLE(
+      this->get_logger(), *this->get_clock(), std::chrono::milliseconds(10000).count(),
+      "Dropped a point cloud from '" << topic_name << "': " << e.what());
+    return;
+  }
   report_concatenator_warnings();
   publish_frames(std::move(frames));
   schedule_timeout_timer();
