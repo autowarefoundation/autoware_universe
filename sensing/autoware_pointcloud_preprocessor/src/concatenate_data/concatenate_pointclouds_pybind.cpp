@@ -32,12 +32,14 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+#include <cstddef>
 #include <cstring>
 #include <memory>
 #include <optional>
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <tuple>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -49,12 +51,17 @@ namespace
 using autoware::pointcloud_preprocessor::build_diagnostic_status;
 using autoware::pointcloud_preprocessor::ConcatenatedFrameStatus;
 using autoware::pointcloud_preprocessor::ConcatenationDiagnosticsOptions;
+using autoware::pointcloud_preprocessor::ConcatenationDiagnosticsSummary;
+using autoware::pointcloud_preprocessor::LateCloudPolicy;
 using autoware::pointcloud_preprocessor::MotionCompensationStatus;
 using autoware::pointcloud_preprocessor::parse_matching_strategy;
+using autoware::pointcloud_preprocessor::ReferenceWindow;
+using autoware::pointcloud_preprocessor::summarize_frame;
 using ConcatenatedFrame =
   autoware::pointcloud_preprocessor::ConcatenatedFrame<sensor_msgs::msg::PointCloud2>;
 using CloudConcatenator =
   autoware::pointcloud_preprocessor::CloudConcatenator<sensor_msgs::msg::PointCloud2>;
+using InputTopics = std::shared_ptr<const std::vector<std::string>>;
 
 template <typename MsgT>
 MsgT deserialize(const py::bytes & data)
@@ -79,13 +86,84 @@ py::bytes serialize(const MsgT & msg)
   return py::bytes(reinterpret_cast<const char *>(rcl_msg.buffer), rcl_msg.buffer_length);
 }
 
-// One emitted frame. It owns the (move-only) C++ frame, so Python can keep it after the
-// concatenator is gone and still build its diagnostics from it.
+// What build_diagnostic_status() needs from a frame: a few scalars and strings plus the input
+// topics, so Python can keep it (instead of the frame and its clouds) to build diagnostics later.
+class FrameDiagnostics
+{
+public:
+  FrameDiagnostics(ConcatenationDiagnosticsSummary summary, InputTopics input_topics)
+  : summary_(std::move(summary)), input_topics_(std::move(input_topics))
+  {
+  }
+
+  [[nodiscard]] py::bytes build(
+    const std::optional<std::string> & node_name,
+    const std::optional<std::string> & diagnostic_name,
+    const std::optional<double> & processing_time_ms, const std::optional<double> & now_sec,
+    bool drop_previous_but_late) const
+  {
+    ConcatenationDiagnosticsOptions options;
+    if (node_name) options.node_name = *node_name;
+    if (diagnostic_name) options.diagnostic_name = *diagnostic_name;
+    options.processing_time_ms = processing_time_ms;
+    options.now_sec = now_sec;
+    options.drop_previous_but_late = drop_previous_but_late;
+    return serialize(build_diagnostic_status(summary_, *input_topics_, options));
+  }
+
+  // Pickle support (so frames can be copied or sent to worker processes).
+  using State = std::tuple<
+    double, bool, std::optional<double>, std::optional<std::pair<double, double>>,
+    std::unordered_map<std::string, double>, std::vector<std::string>, std::vector<std::string>,
+    std::vector<std::string>>;
+
+  [[nodiscard]] State state() const
+  {
+    std::optional<std::pair<double, double>> window;
+    if (summary_.reference_window) {
+      window =
+        std::make_pair(summary_.reference_window->time, summary_.reference_window->noise_window);
+    }
+    return State{
+      summary_.concatenated_cloud_timestamp_sec,
+      summary_.is_concatenated_cloud_empty,
+      summary_.first_arrival_time,
+      window,
+      summary_.topic_to_original_stamp,
+      summary_.topics_missing_transform,
+      summary_.frames_missing_transform,
+      *input_topics_};
+  }
+
+  static FrameDiagnostics from_state(const State & state)
+  {
+    ConcatenationDiagnosticsSummary summary;
+    summary.concatenated_cloud_timestamp_sec = std::get<0>(state);
+    summary.is_concatenated_cloud_empty = std::get<1>(state);
+    summary.first_arrival_time = std::get<2>(state);
+    if (const auto & window = std::get<3>(state)) {
+      summary.reference_window = ReferenceWindow{window->first, window->second};
+    }
+    summary.topic_to_original_stamp = std::get<4>(state);
+    summary.topics_missing_transform = std::get<5>(state);
+    summary.frames_missing_transform = std::get<6>(state);
+    return FrameDiagnostics(
+      std::move(summary), std::make_shared<const std::vector<std::string>>(std::get<7>(state)));
+  }
+
+private:
+  ConcatenationDiagnosticsSummary summary_;
+  InputTopics input_topics_;
+};
+
+// One emitted frame. It owns the (move-only) C++ frame while Python reads its clouds out; Python
+// keeps only `diagnostics` afterwards, so the C++ clouds are freed once the frame is converted.
 class FrameWrapper
 {
 public:
-  explicit FrameWrapper(ConcatenatedFrame && frame)
-  : frame_(std::make_shared<const ConcatenatedFrame>(std::move(frame)))
+  FrameWrapper(ConcatenatedFrame && frame, InputTopics input_topics)
+  : frame_(std::make_shared<const ConcatenatedFrame>(std::move(frame))),
+    diagnostics_(summarize_frame(*frame_), std::move(input_topics))
   {
   }
 
@@ -135,24 +213,12 @@ public:
   [[nodiscard]] double reference_time() const { return frame_->reference_time; }
   [[nodiscard]] double noise_window() const { return frame_->noise_window; }
   [[nodiscard]] double first_arrival_time() const { return frame_->first_arrival_time; }
-
-  [[nodiscard]] py::bytes build_diagnostics(
-    const std::vector<std::string> & input_topics, const std::optional<std::string> & node_name,
-    const std::optional<std::string> & diagnostic_name,
-    const std::optional<double> & processing_time_ms, const std::optional<double> & now_sec,
-    bool drop_previous_but_late) const
-  {
-    ConcatenationDiagnosticsOptions options;
-    if (node_name) options.node_name = *node_name;
-    if (diagnostic_name) options.diagnostic_name = *diagnostic_name;
-    options.processing_time_ms = processing_time_ms;
-    options.now_sec = now_sec;
-    options.drop_previous_but_late = drop_previous_but_late;
-    return serialize(build_diagnostic_status(*frame_, input_topics, options));
-  }
+  // By value: a reference would keep this wrapper, and with it the C++ clouds, alive in Python.
+  [[nodiscard]] FrameDiagnostics diagnostics() const { return diagnostics_; }
 
 private:
   std::shared_ptr<const ConcatenatedFrame> frame_;
+  FrameDiagnostics diagnostics_;
 };
 
 class ConcatenatorWrapper
@@ -163,12 +229,15 @@ public:
     double timeout_sec, bool is_motion_compensated, bool publish_synchronized_pointcloud,
     bool keep_input_frame_in_synchronized_pointcloud, const std::string & matching_strategy,
     const std::optional<std::vector<double>> & lidar_timestamp_offsets,
-    const std::optional<std::vector<double>> & lidar_timestamp_noise_window)
-  : concatenator_(
+    const std::optional<std::vector<double>> & lidar_timestamp_noise_window,
+    std::size_t max_open_collectors, bool reject_late_clouds, double replay_jump_sec)
+  : input_topics_(std::make_shared<const std::vector<std::string>>(input_topics)),
+    concatenator_(
       input_topics, output_frame, timeout_sec, is_motion_compensated,
       publish_synchronized_pointcloud, keep_input_frame_in_synchronized_pointcloud,
       parse_matching_strategy(matching_strategy), lidar_timestamp_offsets,
-      lidar_timestamp_noise_window)
+      lidar_timestamp_noise_window, max_open_collectors,
+      LateCloudPolicy{reject_late_clouds, replay_jump_sec})
   {
   }
 
@@ -212,16 +281,17 @@ public:
   [[nodiscard]] std::vector<FrameWrapper> flush() { return wrap(concatenator_.flush()); }
 
 private:
-  static std::vector<FrameWrapper> wrap(std::vector<ConcatenatedFrame> && frames)
+  std::vector<FrameWrapper> wrap(std::vector<ConcatenatedFrame> && frames) const
   {
     std::vector<FrameWrapper> wrapped;
     wrapped.reserve(frames.size());
     for (auto & frame : frames) {
-      wrapped.emplace_back(std::move(frame));
+      wrapped.emplace_back(std::move(frame), input_topics_);
     }
     return wrapped;
   }
 
+  InputTopics input_topics_;
   CloudConcatenator concatenator_;
 };
 }  // namespace
@@ -241,7 +311,17 @@ PYBIND11_MODULE(_concatenate_pointclouds_pybind, m)
     .value("NO_TWIST_AVAILABLE", MotionCompensationStatus::kNoTwistAvailable)
     .value("TWIST_TIME_GAP_TOO_LARGE", MotionCompensationStatus::kTwistTimeGapTooLarge);
 
-  py::class_<FrameWrapper>(m, "ConcatenatedFrame")
+  py::class_<FrameDiagnostics>(m, "FrameDiagnostics")
+    .def(
+      "build", &FrameDiagnostics::build, py::arg("node_name") = std::nullopt,
+      py::arg("diagnostic_name") = std::nullopt, py::arg("processing_time_ms") = std::nullopt,
+      py::arg("now") = std::nullopt, py::arg("drop_previous_but_late") = false)
+    .def(
+      py::pickle(
+        [](const FrameDiagnostics & self) { return self.state(); },
+        [](const FrameDiagnostics::State & state) { return FrameDiagnostics::from_state(state); }));
+
+  py::class_<FrameWrapper>(m, "CoreFrame")
     .def_property_readonly("status", &FrameWrapper::status)
     .def_property_readonly("concatenated_cloud", &FrameWrapper::concatenated_cloud)
     .def_property_readonly("concatenation_info", &FrameWrapper::concatenation_info)
@@ -253,22 +333,19 @@ PYBIND11_MODULE(_concatenate_pointclouds_pybind, m)
     .def_property_readonly("reference_time", &FrameWrapper::reference_time)
     .def_property_readonly("noise_window", &FrameWrapper::noise_window)
     .def_property_readonly("first_arrival_time", &FrameWrapper::first_arrival_time)
-    .def(
-      "build_diagnostics", &FrameWrapper::build_diagnostics, py::arg("input_topics"),
-      py::arg("node_name") = std::nullopt, py::arg("diagnostic_name") = std::nullopt,
-      py::arg("processing_time_ms") = std::nullopt, py::arg("now") = std::nullopt,
-      py::arg("drop_previous_but_late") = false);
+    .def_property_readonly("diagnostics", &FrameWrapper::diagnostics);
 
   py::class_<ConcatenatorWrapper>(m, "Concatenator")
     .def(
       py::init<
         const std::vector<std::string> &, const std::string &, double, bool, bool, bool,
         const std::string &, const std::optional<std::vector<double>> &,
-        const std::optional<std::vector<double>> &>(),
+        const std::optional<std::vector<double>> &, std::size_t, bool, double>(),
       py::arg("input_topics"), py::arg("output_frame"), py::arg("timeout_sec"),
       py::arg("is_motion_compensated"), py::arg("publish_synchronized_pointcloud"),
       py::arg("keep_input_frame_in_synchronized_pointcloud"), py::arg("matching_strategy"),
-      py::arg("lidar_timestamp_offsets"), py::arg("lidar_timestamp_noise_window"))
+      py::arg("lidar_timestamp_offsets"), py::arg("lidar_timestamp_noise_window"),
+      py::arg("max_open_collectors"), py::arg("reject_late_clouds"), py::arg("replay_jump_sec"))
     .def("set_transform", &ConcatenatorWrapper::set_transform, py::arg("sensor_to_output_frame"))
     .def("process_twist", &ConcatenatorWrapper::process_twist, py::arg("twist"))
     .def("process_odometry", &ConcatenatorWrapper::process_odometry, py::arg("odometry"))

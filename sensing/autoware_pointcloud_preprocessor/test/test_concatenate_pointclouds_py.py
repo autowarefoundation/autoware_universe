@@ -17,6 +17,7 @@
 
 import gc
 import math
+import pickle
 import struct
 
 from autoware_pointcloud_preprocessor.concatenate_pointclouds import Concatenator
@@ -180,7 +181,7 @@ def test_a_cloud_without_a_transform_is_reported_and_left_out():
     result = frames[0].result
     assert result.concatenated_cloud.width == 0
     assert result.dropped_sources_missing_transform == {"lidar_x": "lidar_x_frame"}
-    status = concatenator.build_diagnostics(frames[0])
+    status = frames[0].build_diagnostics()
     values = {kv.key: kv.value for kv in status.values}
     assert status.level == DiagnosticStatus.ERROR
     assert values["Frames without a transform to the output frame"] == "lidar_x_frame"
@@ -291,24 +292,161 @@ def test_advanced_strategy_uses_the_given_offsets_and_noise_window():
     [
         lambda: _make_concatenator(matching_strategy="advanced"),
         lambda: _make_concatenator(matching_strategy="no_such_strategy"),
+        lambda: _make_concatenator(
+            matching_strategy="advanced",
+            lidar_timestamp_offsets=(0.0,),
+            lidar_timestamp_noise_window=(0.01, 0.01, 0.01),
+        ),
+        lambda: _make_concatenator(["lidar_x", "lidar_x"]),
         lambda: _make_concatenator().process_cloud(
             "unknown_topic", _make_cloud(10, 0), arrival_time=100.0
         ),
     ],
-    ids=["advanced_without_offsets", "unknown_strategy", "unknown_topic"],
+    ids=[
+        "advanced_without_offsets",
+        "unknown_strategy",
+        "advanced_offsets_size_mismatch",
+        "duplicate_input_topic",
+        "unknown_topic",
+    ],
 )
 def test_invalid_input_raises_value_error(call):
     with pytest.raises(ValueError):
         call()
 
 
+def _truncated(cloud):
+    cloud.data = cloud.data[:13]  # 13 bytes is not a multiple of point_step 12
+    return cloud
+
+
+def _width_beyond_data(cloud):
+    cloud.width = 1000
+    return cloud
+
+
+def _field_past_point_step(cloud):
+    cloud.fields = [
+        PointField(name=f.name, offset=1000 + f.offset, datatype=f.datatype, count=1)
+        for f in cloud.fields
+    ]
+    return cloud
+
+
+def _x_as_float64(cloud):
+    cloud.fields = [
+        PointField(name=f.name, offset=f.offset, datatype=PointField.FLOAT64, count=1)
+        for f in cloud.fields
+    ]
+    return cloud
+
+
+@pytest.mark.parametrize(
+    "corrupt",
+    [_truncated, _width_beyond_data, _field_past_point_step, _x_as_float64],
+    ids=[
+        "data_not_a_multiple_of_point_step",
+        "width_beyond_data",
+        "field_past_point_step",
+        "xyz_float64",
+    ],
+)
+def test_inconsistent_cloud_layout_raises_value_error(corrupt):
+    # Without the core's layout check these walk off the data buffer (a crash, not an exception).
+    concatenator = _make_concatenator(["lidar_x"])
+
+    with pytest.raises(ValueError, match="invalid point cloud layout"):
+        concatenator.process_cloud("lidar_x", corrupt(_make_cloud(10, 0)), arrival_time=100.0)
+
+
+def test_wrong_message_type_raises_type_error():
+    # CDR bytes carry no type: without the check a twist would be deserialized as a cloud.
+    concatenator = _make_concatenator(["lidar_x"], is_motion_compensated=True)
+
+    with pytest.raises(TypeError, match="expected PointCloud2"):
+        concatenator.process_cloud("lidar_x", _make_twist(10, 0, 1.0), arrival_time=100.0)
+    with pytest.raises(TypeError, match="expected TwistWithCovarianceStamped"):
+        concatenator.process_twist(_make_cloud(10, 0))
+    with pytest.raises(TypeError, match="expected Odometry"):
+        concatenator.process_odometry(_make_twist(10, 0, 1.0))
+    with pytest.raises(TypeError, match="expected TransformStamped"):
+        concatenator.set_transform(_make_odometry(10, 0, 1.0))
+
+
+def _with_no_data(cloud):
+    cloud.data = b""  # width left as is: a cloud with no data is empty whatever width says
+    return cloud
+
+
+@pytest.mark.parametrize(
+    "make_empty",
+    [lambda: _make_cloud(10, 0, []), lambda: _with_no_data(_make_cloud(10, 0))],
+    ids=["width_0", "width_3_no_data"],
+)
+def test_an_empty_cloud_gives_an_empty_frame_with_error_diagnostics(make_empty):
+    concatenator = _make_concatenator(["lidar_x"])
+
+    frames = concatenator.process_cloud("lidar_x", make_empty(), arrival_time=100.0)
+
+    assert frames[0].status is FrameStatus.COMPLETE
+    assert frames[0].result.concatenated_cloud.width == 0
+    status = frames[0].build_diagnostics()
+    assert status.level == DiagnosticStatus.ERROR
+    assert status.message == "Concatenated pointcloud is empty"
+
+
+def test_one_call_can_resolve_several_frames():
+    concatenator = _make_concatenator(timeout_sec=0.1)
+    # Two collectors (the second lidar_top cloud cannot join the first), then a cloud that arrives
+    # after both timed out and completes nothing: both come back from that one call, oldest first.
+    concatenator.process_cloud("lidar_top", _make_cloud(10, 0), arrival_time=100.0)
+    concatenator.process_cloud("lidar_top", _make_cloud(10, 100_000_000), arrival_time=100.05)
+
+    frames = concatenator.process_cloud("lidar_left", _make_cloud(11, 0), arrival_time=100.3)
+
+    assert [frame.status for frame in frames] == [FrameStatus.TIMEOUT, FrameStatus.TIMEOUT]
+    assert [frame.first_arrival_time for frame in frames] == [100.0, 100.05]
+
+
+def test_synchronized_clouds_default_to_the_output_frame():
+    concatenator = _make_concatenator(["lidar_x"], publish_synchronized_pointcloud=True)
+    concatenator.set_transform(_make_transform("lidar_x"))
+
+    frames = concatenator.process_cloud(
+        "lidar_x", _make_cloud(10, 0, _UNIT_POINTS, "lidar_x"), arrival_time=100.0
+    )
+
+    synchronized = frames[0].result.transformed_clouds["lidar_x"]
+    assert synchronized.header.frame_id == _OUTPUT_FRAME
+    _assert_points(_read_xyz(synchronized), _UNIT_POINTS_IN_OUTPUT_FRAME)
+
+
+def test_node_parity_options_reject_late_clouds_and_cap_collectors():
+    concatenator = _make_concatenator(
+        ["lidar_a", "lidar_b"], timeout_sec=0.1, max_open_collectors=1, reject_late_clouds=True
+    )
+    concatenator.process_cloud("lidar_a", _make_cloud(10, 0), arrival_time=100.0)
+    complete = concatenator.process_cloud("lidar_b", _make_cloud(10, 0), arrival_time=100.01)
+    # A straggler for a frame that was already emitted comes back at once, alone, as LATE.
+    late = concatenator.process_cloud("lidar_a", _make_cloud(9, 900_000_000), arrival_time=100.02)
+    # With one collector slot, a second collector evicts the first unpublished.
+    concatenator.process_cloud("lidar_a", _make_cloud(11, 0), arrival_time=100.03)
+    concatenator.process_cloud("lidar_a", _make_cloud(12, 0), arrival_time=100.04)
+    remaining = concatenator.flush()
+
+    assert [frame.status for frame in complete] == [FrameStatus.COMPLETE]
+    assert [frame.status for frame in late] == [FrameStatus.LATE]
+    assert late[0].result.topic_to_original_stamp == {"lidar_a": 9.9}
+    assert late[0].build_diagnostics(drop_previous_but_late=True).level == DiagnosticStatus.ERROR
+    assert [frame.result.topic_to_original_stamp for frame in remaining] == [{"lidar_a": 12.0}]
+
+
 def test_build_diagnostics_forwards_its_options():
     concatenator = _make_concatenator()
     frames = _feed_one_frame(concatenator, {topic: _make_cloud(10, 0) for topic in _INPUT_TOPICS})
 
-    default = concatenator.build_diagnostics(frames[0])
-    custom = concatenator.build_diagnostics(
-        frames[0],
+    default = frames[0].build_diagnostics()
+    custom = frames[0].build_diagnostics(
         node_name="offline",
         diagnostic_name="concat",
         processing_time_ms=2.5,
@@ -334,10 +472,21 @@ def test_frames_outlive_the_concatenator():
     )
     gc.collect()
 
-    status = _make_concatenator().build_diagnostics(frames[0])
+    status = frames[0].build_diagnostics()
 
     assert frames[0].result.concatenated_cloud.width == len(_INPUT_TOPICS) * len(_POINTS)
     assert status.level == DiagnosticStatus.OK
+
+
+def test_frames_are_plain_data_that_pickle():
+    frames = _feed_one_frame(
+        _make_concatenator(), {topic: _make_cloud(10, 0) for topic in _INPUT_TOPICS}
+    )
+
+    copied = pickle.loads(pickle.dumps(frames[0]))
+
+    assert copied == frames[0]
+    assert copied.build_diagnostics() == frames[0].build_diagnostics()
 
 
 def test_replaying_the_same_input_gives_identical_frames():

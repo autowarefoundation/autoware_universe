@@ -79,17 +79,45 @@ class ConcatenatedFrame:
     reference_time: float
     noise_window: float
     first_arrival_time: float
-    # The C++ frame, kept for Concatenator.build_diagnostics().
-    _core: _ext.ConcatenatedFrame = field(repr=False, compare=False)
+    # What build_diagnostics() needs (a few scalars and the input topics), not the C++ clouds.
+    _diagnostics: _ext.FrameDiagnostics = field(repr=False, compare=False)
+
+    def build_diagnostics(
+        self,
+        *,
+        node_name: Optional[str] = None,
+        diagnostic_name: Optional[str] = None,
+        processing_time_ms: Optional[float] = None,
+        now: Optional[float] = None,
+        drop_previous_but_late: bool = False,
+    ) -> DiagnosticStatus:
+        """Build the :class:`DiagnosticStatus` the node publishes for this frame.
+
+        ``node_name`` defaults to the node's. ``"Processing time (ms)"`` is added only when
+        ``processing_time_ms`` is given, and the latency entries only when ``now`` (seconds) is
+        given, since neither has an offline meaning otherwise. ``drop_previous_but_late`` reports
+        the frame as dropped for being older than the last published one, as the node does when
+        ``publish_previous_but_late_pointcloud`` is off (that check is the caller's offline).
+        """
+        status = self._diagnostics.build(
+            node_name, diagnostic_name, processing_time_ms, now, drop_previous_but_late
+        )
+        return deserialize_message(status, DiagnosticStatus)
 
 
 def _registered(member):
     # pybind11 returns a new enum object for every value; hand out the registered member instead,
     # so that `frame.status is FrameStatus.COMPLETE` holds as it does for a Python enum.
-    return type(member).__members__[member.name]
+    return getattr(type(member), member.name)
 
 
-def _wrap_frame(core: _ext.ConcatenatedFrame) -> ConcatenatedFrame:
+def _check_type(message, expected):
+    # The CDR bytes carry no type, so a wrong message type would be silently reinterpreted.
+    if not isinstance(message, expected):
+        raise TypeError(f"expected {expected.__name__}, got {type(message).__name__}")
+
+
+def _wrap_frame(core: _ext.CoreFrame) -> ConcatenatedFrame:
     transformed_clouds = core.transformed_clouds
     result = ConcatenationResult(
         concatenated_cloud=deserialize_message(core.concatenated_cloud, PointCloud2),
@@ -112,7 +140,7 @@ def _wrap_frame(core: _ext.ConcatenatedFrame) -> ConcatenatedFrame:
         reference_time=core.reference_time,
         noise_window=core.noise_window,
         first_arrival_time=core.first_arrival_time,
-        _core=core,
+        _diagnostics=core.diagnostics,
     )
 
 
@@ -120,16 +148,21 @@ class Concatenator:
     """Concatenates point clouds offline, with the node's matching, timeout and combine logic.
 
     Feed clouds with :meth:`process_cloud` in arrival order. A frame is emitted when every input
-    topic has contributed to a collector (``COMPLETE``), or when the arrival clock passes the
-    collector's creation by ``timeout_sec`` (``TIMEOUT``); call :meth:`flush` at the end of the
+    topic has contributed to a collector (``COMPLETE``), or once the arrival clock reaches the
+    collector's creation plus ``timeout_sec`` (``TIMEOUT``); call :meth:`flush` at the end of the
     stream for the collectors still open.
 
     For the ``advanced`` strategy, give ``lidar_timestamp_offsets`` and
     ``lidar_timestamp_noise_window`` (seconds, one per input topic, in ``input_topics`` order),
     the same values the node reads from its parameters.
 
-    Unlike the node, the number of open collectors is not bounded and a cloud arriving after its
-    frame was emitted opens a collector of its own (the core's offline defaults).
+    The defaults keep every collector open until it completes or times out, as the core does
+    offline. To reproduce the node exactly, also pass its ``max_open_collectors`` and, for
+    ``publish_previous_but_late_pointcloud: false``, ``reject_late_clouds=True``: a cloud arriving
+    after its frame was emitted is then returned at once as a one-cloud ``LATE`` frame (which the
+    node drops) instead of opening a collector of its own. A cloud more than ``replay_jump_sec``
+    (the node's ``rosbag_length``, default 10 s) behind the last emitted frame is a replay restart,
+    not a late cloud.
     """
 
     def __init__(
@@ -143,10 +176,12 @@ class Concatenator:
         matching_strategy: str = "naive",
         lidar_timestamp_offsets: Optional[Sequence[float]] = None,
         lidar_timestamp_noise_window: Optional[Sequence[float]] = None,
+        max_open_collectors: int = 0,
+        reject_late_clouds: bool = False,
+        replay_jump_sec: float = 10.0,
     ) -> None:
-        self._input_topics = list(input_topics)
         self._impl = _ext.Concatenator(
-            self._input_topics,
+            list(input_topics),
             output_frame,
             timeout_sec,
             is_motion_compensated,
@@ -155,6 +190,9 @@ class Concatenator:
             matching_strategy,
             lidar_timestamp_offsets,
             lidar_timestamp_noise_window,
+            max_open_collectors,
+            reject_late_clouds,
+            replay_jump_sec,
         )
 
     def set_transform(self, sensor_to_output_frame: TransformStamped) -> None:
@@ -167,12 +205,15 @@ class Concatenator:
 
         :raises ValueError: if the transform does not have that form.
         """
+        _check_type(sensor_to_output_frame, TransformStamped)
         self._impl.set_transform(serialize_message(sensor_to_output_frame))
 
     def process_twist(self, twist: TwistWithCovarianceStamped) -> None:
+        _check_type(twist, TwistWithCovarianceStamped)
         self._impl.process_twist(serialize_message(twist))
 
     def process_odometry(self, odometry: Odometry) -> None:
+        _check_type(odometry, Odometry)
         self._impl.process_odometry(serialize_message(odometry))
 
     def process_cloud(
@@ -183,8 +224,11 @@ class Concatenator:
         Returns the frames this resolves: usually none or one, but several collectors can resolve
         at once.
 
-        :raises ValueError: if ``topic`` is not one of the input topics.
+        :raises ValueError: if ``topic`` is not one of the input topics, or if the cloud's layout is
+            inconsistent (``data`` size vs ``width``/``height``/``point_step``, field offsets,
+            missing or non-FLOAT32 ``x``/``y``/``z``).
         """
+        _check_type(cloud, PointCloud2)
         frames = self._impl.process_cloud(topic, serialize_message(cloud), arrival_time)
         return [_wrap_frame(frame) for frame in frames]
 
@@ -195,30 +239,3 @@ class Concatenator:
     def flush(self) -> List[ConcatenatedFrame]:
         """Return every collector still open, as timed out (call at the end of the stream)."""
         return [_wrap_frame(frame) for frame in self._impl.flush()]
-
-    def build_diagnostics(
-        self,
-        frame: ConcatenatedFrame,
-        *,
-        node_name: Optional[str] = None,
-        diagnostic_name: Optional[str] = None,
-        processing_time_ms: Optional[float] = None,
-        now: Optional[float] = None,
-        drop_previous_but_late: bool = False,
-    ) -> DiagnosticStatus:
-        """Build the :class:`DiagnosticStatus` the node publishes for ``frame``.
-
-        ``node_name`` defaults to the node's. ``"Processing time (ms)"`` is added only when
-        ``processing_time_ms`` is given, and the latency entries only when ``now`` (seconds) is
-        given, since neither has an offline meaning otherwise. ``drop_previous_but_late`` reports
-        the frame as dropped for being older than the last published one, as the node does.
-        """
-        status = frame._core.build_diagnostics(
-            self._input_topics,
-            node_name,
-            diagnostic_name,
-            processing_time_ms,
-            now,
-            drop_previous_but_late,
-        )
-        return deserialize_message(status, DiagnosticStatus)
