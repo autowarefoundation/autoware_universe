@@ -43,7 +43,7 @@ namespace autoware::lidar_marker_localizer
 {
 
 LidarMarkerLocalizer::LidarMarkerLocalizer(const rclcpp::NodeOptions & node_options)
-: Node("lidar_marker_localizer", node_options), is_activated_(false)
+: autoware::agnocast_wrapper::Node("lidar_marker_localizer", node_options), is_activated_(false)
 {
   using std::placeholders::_1;
   using std::placeholders::_2;
@@ -99,7 +99,7 @@ LidarMarkerLocalizer::LidarMarkerLocalizer(const rclcpp::NodeOptions & node_opti
 
   rclcpp::CallbackGroup::SharedPtr points_callback_group;
   points_callback_group = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
-  auto points_sub_opt = rclcpp::SubscriptionOptions();
+  auto points_sub_opt = AUTOWARE_SUBSCRIPTION_OPTIONS();
   points_sub_opt.callback_group = points_callback_group;
   sub_points_ = this->create_subscription<PointCloud2>(
     "~/input/pointcloud", rclcpp::QoS(1).best_effort(),
@@ -108,7 +108,7 @@ LidarMarkerLocalizer::LidarMarkerLocalizer(const rclcpp::NodeOptions & node_opti
   rclcpp::CallbackGroup::SharedPtr self_pose_callback_group;
   self_pose_callback_group =
     this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
-  auto self_pose_sub_opt = rclcpp::SubscriptionOptions();
+  auto self_pose_sub_opt = AUTOWARE_SUBSCRIPTION_OPTIONS();
   self_pose_sub_opt.callback_group = self_pose_callback_group;
   sub_self_pose_ = this->create_subscription<PoseWithCovarianceStamped>(
     "~/input/ekf_pose", rclcpp::QoS(1),
@@ -143,14 +143,18 @@ LidarMarkerLocalizer::LidarMarkerLocalizer(const rclcpp::NodeOptions & node_opti
 
   service_trigger_node_ = this->create_service<SetBool>(
     "~/service/trigger_node_srv",
-    std::bind(&LidarMarkerLocalizer::service_trigger_node, this, _1, _2),
-    AUTOWARE_DEFAULT_SERVICES_QOS_PROFILE(), points_callback_group);
+    [this](AUTOWARE_SERVICE_REQUEST_PTR(SetBool) req, AUTOWARE_SERVICE_RESPONSE_PTR(SetBool) res) {
+      service_trigger_node(std::move(req), std::move(res));
+    },
+    rclcpp::ServicesQoS(), points_callback_group);
 
-  tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
-  tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_, this, false);
+  tf_buffer_ = std::make_shared<autoware::agnocast_wrapper::Buffer>(this->get_clock());
+  tf_listener_ =
+    std::make_shared<autoware::agnocast_wrapper::TransformListener>(*tf_buffer_, *this, false);
 
   diagnostics_interface_.reset(
-    new autoware_utils::DiagnosticsInterface(this, "marker_detection_status"));
+    new autoware_utils::BasicDiagnosticsInterface<autoware::agnocast_wrapper::Node>(
+      this, "marker_detection_status"));
 }
 
 void LidarMarkerLocalizer::initialize_diagnostics()
@@ -169,25 +173,28 @@ void LidarMarkerLocalizer::initialize_diagnostics()
     param_.limit_distance_from_self_pose_to_marker);
 }
 
-void LidarMarkerLocalizer::map_bin_callback(const HADMapBin::ConstSharedPtr & map_bin_msg_ptr)
+void LidarMarkerLocalizer::map_bin_callback(
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(HADMapBin) & map_bin_msg_ptr)
 {
+  const auto map_bin_shared = std::make_shared<HADMapBin>(*map_bin_msg_ptr);
   if (param_.enable_read_all_target_ids) {
-    landmark_manager_.parse_landmarks(map_bin_msg_ptr, param_.marker_name);
+    landmark_manager_.parse_landmarks(map_bin_shared, param_.marker_name);
   } else {
-    landmark_manager_.parse_landmarks(map_bin_msg_ptr, param_.marker_name, param_.target_ids);
+    landmark_manager_.parse_landmarks(map_bin_shared, param_.marker_name, param_.target_ids);
   }
-  const MarkerArray marker_msg = landmark_manager_.get_landmarks_as_marker_array_msg();
-  pub_marker_mapped_->publish(marker_msg);
+  auto marker_msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_marker_mapped_);
+  *marker_msg = landmark_manager_.get_landmarks_as_marker_array_msg();
+  pub_marker_mapped_->publish(std::move(marker_msg));
 }
 
 void LidarMarkerLocalizer::self_pose_callback(
-  const PoseWithCovarianceStamped::ConstSharedPtr & self_pose_msg_ptr)
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(PoseWithCovarianceStamped) & self_pose_msg_ptr)
 {
   // TODO(YamatoAndo)
   // if (!is_activated_) return;
 
   if (self_pose_msg_ptr->header.frame_id == "map") {
-    ekf_pose_buffer_->push_back(self_pose_msg_ptr);
+    ekf_pose_buffer_->push_back(std::make_shared<PoseWithCovarianceStamped>(*self_pose_msg_ptr));
   } else {
     RCLCPP_ERROR_STREAM_THROTTLE(
       get_logger(), *this->get_clock(), 1000,
@@ -197,13 +204,14 @@ void LidarMarkerLocalizer::self_pose_callback(
   }
 }
 
-void LidarMarkerLocalizer::points_callback(const PointCloud2::ConstSharedPtr & points_msg_ptr)
+void LidarMarkerLocalizer::points_callback(
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(PointCloud2) & points_msg_ptr)
 {
   const auto sensor_ros_time = points_msg_ptr->header.stamp;
 
   initialize_diagnostics();
 
-  main_process(points_msg_ptr);
+  main_process(std::make_shared<PointCloud2>(*points_msg_ptr));
 
   diagnostics_interface_->publish(sensor_ros_time);
 }
@@ -312,14 +320,14 @@ void LidarMarkerLocalizer::main_process(const PointCloud2::ConstSharedPtr & poin
 
   // for debug
   if (pub_marker_detected_->get_subscription_count() > 0) {
-    PoseArray pose_array_msg;
-    pose_array_msg.header.stamp = sensor_ros_time;
-    pose_array_msg.header.frame_id = "map";
+    auto pose_array_msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_marker_detected_);
+    pose_array_msg->header.stamp = sensor_ros_time;
+    pose_array_msg->header.frame_id = "map";
     for (const landmark_manager::Landmark & landmark : detected_landmarks) {
       const Pose detected_marker_on_map = autoware_utils::transform_pose(landmark.pose, self_pose);
-      pose_array_msg.poses.push_back(detected_marker_on_map);
+      pose_array_msg->poses.push_back(detected_marker_on_map);
     }
-    pub_marker_detected_->publish(pose_array_msg);
+    pub_marker_detected_->publish(std::move(pose_array_msg));
   }
 
   // (4) calculate diff pose
@@ -373,13 +381,19 @@ void LidarMarkerLocalizer::main_process(const PointCloud2::ConstSharedPtr & poin
     map_to_base_link_quat.normalized().toRotationMatrix();
   result.pose.covariance = rotate_covariance(param_.base_covariance, map_to_base_link_rotation);
 
-  pub_base_link_pose_with_covariance_on_map_->publish(result);
-  pub_debug_pose_with_covariance_->publish(result);
+  auto result_pub = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_base_link_pose_with_covariance_on_map_);
+  *result_pub = result;
+  pub_base_link_pose_with_covariance_on_map_->publish(std::move(result_pub));
+  auto result_debug = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_debug_pose_with_covariance_);
+  *result_debug = result;
+  pub_debug_pose_with_covariance_->publish(std::move(result_debug));
 
   // for debug
   const auto marker_pointcloud_msg_ptr =
     extract_marker_pointcloud(points_msg_ptr, nearest_detected_landmark.pose);
-  pub_marker_pointcloud_->publish(*marker_pointcloud_msg_ptr);
+  auto marker_pointcloud_pub = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_marker_pointcloud_);
+  *marker_pointcloud_pub = *marker_pointcloud_msg_ptr;
+  pub_marker_pointcloud_->publish(std::move(marker_pointcloud_pub));
 
   // save log
   if (param_.enable_save_log) {
@@ -388,7 +402,7 @@ void LidarMarkerLocalizer::main_process(const PointCloud2::ConstSharedPtr & poin
 }
 
 void LidarMarkerLocalizer::service_trigger_node(
-  const SetBool::Request::SharedPtr req, SetBool::Response::SharedPtr res)
+  AUTOWARE_SERVICE_REQUEST_PTR(SetBool) req, AUTOWARE_SERVICE_RESPONSE_PTR(SetBool) res)
 {
   is_activated_ = req->data;
   if (is_activated_) {
@@ -622,11 +636,31 @@ std::vector<landmark_manager::Landmark> LidarMarkerLocalizer::detect_landmarks(
     vote_grid_msg.data[bin_position] = vote[i] * (max_vote_percentage / vote_max);
   }
 
-  pub_center_intensity_grid->publish(center_intensity_grid_msg);
-  pub_positive_grid->publish(positive_grid_msg);
-  pub_negative_grid->publish(negative_grid_msg);
-  pub_matched_grid->publish(matched_grid_msg);
-  pub_vote_grid->publish(vote_grid_msg);
+  {
+    auto m = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_center_intensity_grid);
+    *m = center_intensity_grid_msg;
+    pub_center_intensity_grid->publish(std::move(m));
+  }
+  {
+    auto m = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_positive_grid);
+    *m = positive_grid_msg;
+    pub_positive_grid->publish(std::move(m));
+  }
+  {
+    auto m = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_negative_grid);
+    *m = negative_grid_msg;
+    pub_negative_grid->publish(std::move(m));
+  }
+  {
+    auto m = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_matched_grid);
+    *m = matched_grid_msg;
+    pub_matched_grid->publish(std::move(m));
+  }
+  {
+    auto m = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_vote_grid);
+    *m = vote_grid_msg;
+    pub_vote_grid->publish(std::move(m));
+  }
 
   return detected_landmarks;
 }
@@ -809,12 +843,12 @@ void LidarMarkerLocalizer::save_intensity(
   marker_points_sensor_frame_ptr->height = 1;
   marker_points_sensor_frame_ptr->is_dense = false;
 
-  PointCloud2 viz_pointcloud_msg;
-  pcl::toROSMsg(*marker_points_sensor_frame_ptr, viz_pointcloud_msg);
-  viz_pointcloud_msg.header = points_msg_ptr->header;
-  viz_pointcloud_msg.header.frame_id = param_.save_frame_id;
+  auto viz_pointcloud_msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_marker_pointcloud_);
+  pcl::toROSMsg(*marker_points_sensor_frame_ptr, *viz_pointcloud_msg);
+  viz_pointcloud_msg->header = points_msg_ptr->header;
+  viz_pointcloud_msg->header.frame_id = param_.save_frame_id;
 
-  pub_marker_pointcloud_->publish(viz_pointcloud_msg);
+  pub_marker_pointcloud_->publish(std::move(viz_pointcloud_msg));
 
   if (!param_.enable_save_log) {
     return;
