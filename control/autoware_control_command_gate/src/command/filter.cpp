@@ -88,6 +88,7 @@ Control CommandFilter::filter_command(const Control & msg)
   // driving. However, this means that the output command from Gate will always be close to the
   // driving state during manual driving. Here, let autoware publish the stop command when the ego
   // is stopped to intend the autoware is trying to keep stopping.
+
   nominal_filter_.setPrevCmd(prev_command);
   transition_filter_.setPrevCmd(prev_command);
 

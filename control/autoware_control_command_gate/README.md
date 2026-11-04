@@ -4,8 +4,8 @@
 
 This package subscribes to multiple commands, selects one and publish it.
 Here, unless otherwise specified, command refers to a set of four commands: control, gear, turn_indicators, and hazard_lights.
-Each command input is identified as a command source, an arbitrary string.
-The node also applies a nominal filter to the selected commands to correct for obvious abnormal values.
+Each command input is identified as a command source, which has a numeric ID and a name (see the `inputs` and `inputs_names` parameters).
+The node also applies a filter (nominal or transition) to the selected commands to correct for obvious abnormal values.
 
 ![dataflow](./doc/dataflow.drawio.svg)
 
@@ -160,13 +160,20 @@ The parameters follow specific naming patterns to clearly distinguish between di
 
 ### Sub-Functionality
 
-- Check heartbeat signals to verify connectivity for each input (e.g., emergency external heartbeat).
-- Publish status indicating whether the final guard is active. Active guard in autonomous mode implies an unexpected constraint in command generation and requires attention.
-- Leverage guard status during mode transitions to notify operators/drivers that a strong constraint is active (focus on "transition in progress" rather than simple filter activation).
+- Detect timeouts of the control command for each command source and for the output, and report them as diagnostics.
+- Publish `~/is_filter_activated` indicating whether the final guard is active. Active guard in autonomous mode implies an unexpected constraint in command generation and requires attention.
+- Publish `~/filter/status` indicating whether the transition filter is enabled, so that other nodes can tell that a mode transition is in progress.
+- Override the selected command to stop when requested by the compatibility interfaces (AD API pause, moderate stop, and external emergency).
 
 ### Filter function
 
 This module incorporates a limitation filter to the control command right before its published. Primarily for safety, this filter restricts the output range of all control commands published through Autoware.
+
+The filter has two parameter sets: `nominal_filter` and `transition_filter`.
+The `transition_filter` is used while the transition flag is set by `~/filter/change` or `~/source/select`, and the `nominal_filter` is used otherwise.
+The whole filter can be disabled by `enable_command_limit_filter`.
+
+While the vehicle is not in autonomous control mode, the filter uses the actual vehicle state (steering, velocity and acceleration) as the previous command, to prevent sudden changes when control is switched to Autoware.
 
 The limitation values are calculated based on the 1D interpolation of the limitation array parameters. Here is an example for the longitudinal jerk limit.
 
@@ -193,11 +200,10 @@ A request to select a command source that is in timeout is rejected.
 
 ### Commands on Source Changes
 
-When the command source is changed, the last `gear`, `turn_indicators` and `hazard_lights` commands received from the new source are published immediately.
+When the command source is changed, the last `gear`, `turn_indic- This node depends on the Operation Mode Transition Manager for Engage state transitions at the design level.ators` and `hazard_lights` commands received from the new source are published immediately.
 If the new source has not received them yet, the previous output is kept until the new source receives them.
 When the builtin source is selected, the gear is kept (`NONE`), the turn indicators are disabled, and the hazard lights are enabled.
 
 ## Caution
 
-- This node depends on the Operation Mode Transition Manager for Engage state transitions at the design level.
 - Tests are essential and must be retained.
