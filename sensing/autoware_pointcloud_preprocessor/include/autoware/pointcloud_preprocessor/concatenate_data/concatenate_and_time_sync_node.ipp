@@ -118,8 +118,7 @@ PointCloudConcatenateDataSynchronizerComponentTemplated<MsgTraits>::
     params_.input_topics, params_.output_frame, params_.output_point_format, params_.timeout_sec,
     params_.is_motion_compensated, params_.publish_synchronized_pointcloud,
     params_.keep_input_frame_in_synchronized_pointcloud, params_.matching_strategy,
-    lidar_timestamp_offsets, lidar_timestamp_noise_window,
-    max_open_collectors,
+    lidar_timestamp_offsets, lidar_timestamp_noise_window, max_open_collectors,
     LateCloudPolicy{!params_.publish_previous_but_late_pointcloud, params_.rosbag_length});
 
   // Diagnostic Updater

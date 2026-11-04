@@ -70,8 +70,8 @@ template <typename PointCloudMsgT>
 CloudConcatenator<PointCloudMsgT>::CloudConcatenator(
   const std::vector<std::string> & input_topics, const std::string & output_frame,
   OutputPointFormat output_point_format, double timeout_sec, bool is_motion_compensated,
-  bool publish_synchronized_pointcloud,
-  bool keep_input_frame_in_synchronized_pointcloud, MatchingStrategyType matching_strategy,
+  bool publish_synchronized_pointcloud, bool keep_input_frame_in_synchronized_pointcloud,
+  MatchingStrategyType matching_strategy,
   const std::optional<std::vector<double>> & lidar_timestamp_offsets,
   const std::optional<std::vector<double>> & lidar_timestamp_noise_window,
   std::size_t max_open_collectors, LateCloudPolicy late_cloud_policy)
@@ -84,8 +84,7 @@ CloudConcatenator<PointCloudMsgT>::CloudConcatenator(
     input_topics, matching_strategy, lidar_timestamp_offsets, lidar_timestamp_noise_window)),
   handler_(
     input_topics, output_frame, output_point_format, is_motion_compensated,
-    publish_synchronized_pointcloud, keep_input_frame_in_synchronized_pointcloud,
-    matching_strategy)
+    publish_synchronized_pointcloud, keep_input_frame_in_synchronized_pointcloud, matching_strategy)
 {
 }
 
