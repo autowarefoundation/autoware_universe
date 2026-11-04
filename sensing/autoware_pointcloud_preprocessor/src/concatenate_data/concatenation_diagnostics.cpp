@@ -14,11 +14,14 @@
 
 #include "autoware/pointcloud_preprocessor/concatenate_data/concatenation_diagnostics.hpp"
 
+#include "autoware/pointcloud_preprocessor/concatenate_data/time_utils.hpp"
 #include "autoware/pointcloud_preprocessor/diagnostics/format_utils.hpp"
 
+#include <autoware_sensing_msgs/msg/concatenated_point_cloud_info.hpp>
 #include <diagnostic_msgs/msg/key_value.hpp>
 
 #include <algorithm>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -37,6 +40,16 @@ std::string format_bool(bool value)
 }
 
 }  // namespace
+
+std::unordered_map<std::string, double> latency_ms_per_topic(
+  const std::unordered_map<std::string, double> & topic_to_original_stamp, double now_sec)
+{
+  std::unordered_map<std::string, double> latencies;
+  for (const auto & [topic, stamp] : topic_to_original_stamp) {
+    latencies[topic] = (now_sec - stamp) * 1000.0;
+  }
+  return latencies;
+}
 
 diagnostic_msgs::msg::DiagnosticStatus build_diagnostic_status(
   const ConcatenationDiagnosticsSummary & summary, const std::vector<std::string> & input_topics,
@@ -67,10 +80,9 @@ diagnostic_msgs::msg::DiagnosticStatus build_diagnostic_status(
 
   std::unordered_map<std::string, double> topic_to_latency;
   if (options.now_sec.has_value()) {
+    topic_to_latency = latency_ms_per_topic(summary.topic_to_original_stamp, *options.now_sec);
     double max_latency = 0.0;
-    for (const auto & [topic, stamp] : summary.topic_to_original_stamp) {
-      const double latency_ms = (*options.now_sec - stamp) * 1000.0;
-      topic_to_latency[topic] = latency_ms;
+    for (const auto & [topic, latency_ms] : topic_to_latency) {
       max_latency = std::max(max_latency, latency_ms);
     }
     add("Pipeline latency (ms)", std::to_string(max_latency));
@@ -136,6 +148,37 @@ diagnostic_msgs::msg::DiagnosticStatus build_diagnostic_status(
   status.message = message;
   status.values = std::move(values);
   return status;
+}
+
+diagnostic_msgs::msg::DiagnosticStatus build_diagnostic_status(
+  const ConcatenatedFrame<sensor_msgs::msg::PointCloud2> & frame,
+  const std::vector<std::string> & input_topics, const ConcatenationDiagnosticsOptions & options)
+{
+  if (!frame.result.concatenate_cloud_ptr) {
+    throw std::invalid_argument("frame carries no concatenated cloud");
+  }
+  const auto & cloud = *frame.result.concatenate_cloud_ptr;
+  const auto & info_ptr = frame.result.concatenation_info_ptr;
+
+  const bool is_advanced =
+    info_ptr && info_ptr->matching_strategy ==
+                  autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo::STRATEGY_ADVANCED;
+
+  ConcatenationDiagnosticsSummary summary;
+  summary.concatenated_cloud_timestamp_sec = to_seconds(cloud.header.stamp);
+  summary.is_concatenated_cloud_empty = cloud.width * cloud.height == 0;
+  if (is_advanced) {
+    summary.reference_window = ReferenceWindow{frame.reference_time, frame.noise_window};
+  } else {
+    summary.first_arrival_time = frame.first_arrival_time;
+  }
+  summary.topic_to_original_stamp = frame.result.topic_to_original_stamp_map;
+  for (const auto & source : frame.result.dropped_sources_missing_transform) {
+    summary.topics_missing_transform.push_back(source.topic);
+    summary.frames_missing_transform.push_back(source.frame_id);
+  }
+
+  return build_diagnostic_status(summary, input_topics, options);
 }
 
 }  // namespace autoware::pointcloud_preprocessor
