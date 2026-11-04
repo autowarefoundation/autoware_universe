@@ -97,36 +97,43 @@ bool laneEndsWithinHorizon(
     lengths.emplace(lane.id(), value);
     return value;
   };
+  // The lane "ends" only if every branch reachable from the current lanelet runs out of
+  // following lanelets within the horizon. A single branch that continues past the horizon
+  // (e.g. the straight lane at an intersection whose turn lanelets leave the mapped area)
+  // means the object can keep following its lane, so no lane change is forced.
   // Distances are measured at lanelet exits. Cache each length once per query.
   std::unordered_map<lanelet::Id, double> shortest;
   std::queue<std::pair<lanelet::ConstLanelet, double>> pending;
   const double initial_distance = length(current_lanelet) - object_arc_length;
+  if (std::max(0.0, initial_distance) > travel_distance) return false;
   shortest.emplace(current_lanelet.id(), initial_distance);
   pending.emplace(current_lanelet, initial_distance);
+  double farthest_dead_end = -1.0;
   // A non-branching chain of depth D takes O(D) expected time and O(D) memory.
   // Equal/longer revisits are discarded, so nonnegative-length cycles terminate.
   while (!pending.empty()) {
     const auto [lane, distance] = pending.front();
     pending.pop();
-    if (distance > shortest.at(lane.id()) || std::max(0.0, distance) > travel_distance) {
-      continue;
-    }
+    if (distance > shortest.at(lane.id())) continue;
     if (expanded_lanelets) ++*expanded_lanelets;
     const auto following = graph.following(lane);
     if (following.empty()) {
-      if (lane_end_distance) *lane_end_distance = std::max(0.0, distance);
-      return true;
+      farthest_dead_end = std::max(farthest_dead_end, std::max(0.0, distance));
+      continue;
     }
     for (const auto & next : following) {
       const double next_distance = distance + length(next);
-      if (std::max(0.0, next_distance) > travel_distance) continue;
+      // This branch continues beyond the horizon: the lane does not end.
+      if (std::max(0.0, next_distance) > travel_distance) return false;
       const auto found = shortest.find(next.id());
       if (found != shortest.end() && next_distance >= found->second) continue;
       shortest[next.id()] = next_distance;
       pending.emplace(next, next_distance);
     }
   }
-  return false;
+  if (farthest_dead_end < 0.0) return false;
+  if (lane_end_distance) *lane_end_distance = farthest_dead_end;
+  return true;
 }
 
 std::vector<LaneletPathWithPathInfo> suppressUndetectedLaneChangePaths(

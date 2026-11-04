@@ -349,6 +349,38 @@ TEST_F(LaneChangePathSuppressionTest, HoldsOnlyUndetectedNonTerminalOriginsForRe
   EXPECT_EQ(result.size(), 5U);
 }
 
+TEST_F(LaneChangePathSuppressionTest, BranchContinuingBeyondHorizonIsNotLaneEnd)
+{
+  // first_ forks at x=20 into last_ (dead end at x=30) and a long lanelet (x=20..220).
+  // The object at x=15 can keep following its lane, so no lane change is forced
+  // even though the short branch ends within the horizon.
+  const lanelet::Point3d l1 = first_.leftBound().back();
+  const lanelet::Point3d r1 = first_.rightBound().back();
+  const lanelet::Point3d l3(13, 220.0, 1.0, 0.0);
+  const lanelet::Point3d r3(14, 220.0, -1.0, 0.0);
+  lanelet::Lanelet long_branch(
+    15, lanelet::LineString3d(16, {l1, l3}), lanelet::LineString3d(17, {r1, r3}));
+  auto map = std::make_shared<lanelet::LaneletMap>();
+  for (auto * lanelet : {&first_, &last_, &long_branch}) {
+    lanelet->attributes()[lanelet::AttributeName::Subtype] = "road";
+    lanelet->attributes()[lanelet::AttributeName::Location] = "urban";
+    map->add(*lanelet);
+  }
+  const auto rules = lanelet::traffic_rules::TrafficRulesFactory::create(
+    lanelet::Locations::Germany, lanelet::Participants::Vehicle);
+  const auto graph = lanelet::routing::RoutingGraph::build(*map, *rules);
+  ASSERT_EQ(graph->following(first_).size(), 2U);
+
+  double lane_end_distance = -1.0;
+  EXPECT_FALSE(laneEndsWithinHorizon(first_, position_, 15.0, *graph, nullptr, &lane_end_distance));
+  EXPECT_LT(lane_end_distance, 0.0);
+  EXPECT_FALSE(
+    laneEndsWithinHorizon(first_, position_, 100.0, *graph, nullptr, &lane_end_distance));
+  // Once every branch ends within the horizon the lane really ends; report the farthest exit.
+  EXPECT_TRUE(laneEndsWithinHorizon(first_, position_, 205.0, *graph, nullptr, &lane_end_distance));
+  EXPECT_NEAR(lane_end_distance, 205.0, 1e-6);
+}
+
 TEST_F(LaneChangePathSuppressionTest, FallsBackIfAllCandidatesWouldBeRemoved)
 {
   auto paths = makePaths();
