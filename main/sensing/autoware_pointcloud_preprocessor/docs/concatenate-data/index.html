@@ -23843,7 +23843,7 @@
 <tr>
 <td>publish_<wbr>previous_<wbr>but_<wbr>late_<wbr>pointcloud</wbr></wbr></wbr></wbr></td>
 <td>boolean</td>
-<td>Flag to indicate if a concatenated point cloud should be published if its timestamp is earlier than the previous published concatenated point cloud.</td>
+<td>Flag to indicate if a concatenated point cloud should be published if its timestamp is earlier than the previous published concatenated point cloud. When false, an input cloud that arrives after its frame was already published is reported and dropped on arrival instead of waiting out a new collector.</td>
 <td>false</td>
 <td>N/A</td>
 </tr>
