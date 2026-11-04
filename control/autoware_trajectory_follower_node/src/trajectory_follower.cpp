@@ -14,6 +14,7 @@
 
 #include "autoware/trajectory_follower_node/trajectory_follower.hpp"
 
+#include "autoware/trajectory_follower_base/control_horizon.hpp"
 #include "autoware_utils/ros/marker_helper.hpp"
 
 #include <cmath>
@@ -63,7 +64,6 @@ std::optional<TrajectoryFollowerError> checkTimeOut(
   }
   return std::nullopt;
 }
-}  // namespace
 
 std::optional<autoware_control_msgs::msg::ControlHorizon> mergeLatLonHorizon(
   const trajectory_follower::LateralHorizon & lateral_horizon,
@@ -161,6 +161,7 @@ visualization_msgs::msg::MarkerArray createDebugMarker(
 
   return debug_marker_array;
 }
+}  // namespace
 
 TrajectoryFollower::TrajectoryFollower(
   const TrajectoryFollowerConfig & config,
