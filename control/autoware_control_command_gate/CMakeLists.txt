@@ -36,6 +36,7 @@ rosidl_generate_interfaces(
   ${PROJECT_NAME}_msgs
   "msg/IsFilterActivated.msg"
   DEPENDENCIES builtin_interfaces
+  LIBRARY_NAME ${PROJECT_NAME}
 )
 rosidl_get_typesupport_target(cpp_typesupport_target ${PROJECT_NAME}_msgs "rosidl_typesupport_cpp")
 target_link_libraries(${PROJECT_NAME} "${cpp_typesupport_target}")

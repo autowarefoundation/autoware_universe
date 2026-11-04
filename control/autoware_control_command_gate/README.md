@@ -56,6 +56,12 @@ These topics are used by the command filter.
 | `~/output/turn_indicators` | `autoware_vehicle_msgs/msg/TurnIndicatorsCommand` | selected turn indicators command      |
 | `~/output/hazard_lights`   | `autoware_vehicle_msgs/msg/HazardLightsCommand`   | selected hazard lights command        |
 
+### Filter status
+
+| Name                    | Type                                                  | Description                                                                                                              |
+| ----------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `~/is_filter_activated` | `autoware_control_command_gate/msg/IsFilterActivated` | whether the filter is activated and which limits are applied (published only when `enable_command_limit_filter` is true) |
+
 ### Source and filter management
 
 | Name              | Type                                        | Description                                                    |
@@ -166,7 +172,7 @@ The limitation values are calculated based on the 1D interpolation of the limita
 
 ![filter-example](./image/filter.png)
 
-Notation: this filter is not designed to enhance ride comfort. Its main purpose is to detect and remove abnormal values in the control outputs during the final stages of Autoware. If this filter is frequently active, it implies the control module may need tuning. If you're aiming to smoothen the signal via a low-pass filter or similar techniques, that should be handled in the control module. When the filter is activated, the topic `~/is_filter_activated` is published.
+Notation: this filter is not designed to enhance ride comfort. Its main purpose is to detect and remove abnormal values in the control outputs during the final stages of Autoware. If this filter is frequently active, it implies the control module may need tuning. If you're aiming to smoothen the signal via a low-pass filter or similar techniques, that should be handled in the control module. When the filter is enabled by `enable_command_limit_filter`, the filter activation status is published to `~/is_filter_activated` for each control command.
 
 Notation 2: If you use vehicles in which the driving force is controlled by the accelerator/brake pedal, the jerk limit, denoting the pedal rate limit, must be sufficiently relaxed at low speeds.
 Otherwise, quick pedal changes at start/stop will not be possible, resulting in slow starts and creep down on hills.
@@ -174,16 +180,22 @@ This functionality for starting/stopping was embedded in the source code but was
 
 ## Assumptions / Known limits
 
-### External Emergency Heartbeat
+### External Emergency
 
-The parameter `check_external_emergency_heartbeat` (true by default) enables an emergency stop request from external modules.
-This feature requires a `~/input/external_emergency_stop_heartbeat` topic for health monitoring of the external module, and the vehicle_cmd_gate module will not start without the topic.
-The `check_external_emergency_heartbeat` parameter must be false when the "external emergency stop" function is not used.
+An external emergency can be requested via the `/api/autoware/set/emergency` service and is kept until it is released by the same service.
+Unlike `vehicle_cmd_gate`, heartbeat monitoring of the external module is not performed.
+While the emergency is requested, the selected control command is overridden to stop with `emergency_acceleration`.
 
-### Commands on Mode changes
+### Command Source Timeout
 
-Output commands' topics: `turn_indicators_cmd`, `hazard_light` and `gear_cmd` are selected based on `gate_mode`.
-However, to ensure the continuity of commands, these commands will not change until the topics of new input commands arrive, even if a mode change occurs.
+If the selected command source does not receive the control command for `diag_timeout_error_duration`, the builtin stop command is selected automatically.
+A request to select a command source that is in timeout is rejected.
+
+### Commands on Source Changes
+
+When the command source is changed, the last `gear`, `turn_indicators` and `hazard_lights` commands received from the new source are published immediately.
+If the new source has not received them yet, the previous output is kept until the new source receives them.
+When the builtin source is selected, the gear is kept (`NONE`), the turn indicators are disabled, and the hazard lights are enabled.
 
 ## Caution
 
