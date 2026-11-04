@@ -5,7 +5,8 @@
 This package subscribes to multiple commands, selects one and publish it.
 Here, unless otherwise specified, command refers to a set of four commands: control, gear, turn_indicators, and hazard_lights.
 Each command input is identified as a command source, which has a numeric ID and a name (see the `inputs` and `inputs_names` parameters).
-The node also applies a filter (nominal or transition) to the selected commands to correct for obvious abnormal values.
+The node also applies a filter to the selected commands: the nominal filter corrects obvious abnormal values,
+and the transition filter connects the commands smoothly when the command source is switched.
 
 ![dataflow](./doc/dataflow.drawio.svg)
 
@@ -108,8 +109,8 @@ These interfaces are provided for compatibility with `vehicle_cmd_gate`.
 | `diag_timeout_error_duration`    | double    | duration [s] without a control command until the timeout diagnostics becomes ERROR                                            |
 | `stop_check_duration`            | double    | duration [s] used to determine that the vehicle is stopped                                                                    |
 | `enable_command_limit_filter`    | bool      | enable the command limit filter                                                                                               |
-| `nominal_filter.*`               | -         | filter parameters used when the transition filter is disabled (see below)                                                     |
-| `transition_filter.*`            | -         | filter parameters used when the transition filter is enabled (see below)                                                      |
+| `nominal_filter.*`               | -         | filter parameters for correcting abnormal values, used when the transition flag is not set (see below)                        |
+| `transition_filter.*`            | -         | filter parameters for smooth source switching, used when the transition flag is set (see below)                               |
 
 The vehicle info parameters (`wheel_base`, etc.) are also required for the filter.
 
@@ -167,10 +168,12 @@ The parameters follow specific naming patterns to clearly distinguish between di
 
 ### Filter function
 
-This module incorporates a limitation filter to the control command right before its published. Primarily for safety, this filter restricts the output range of all control commands published through Autoware.
+This module incorporates a limitation filter to the control command right before its published.
+The filter has two parameter sets for different purposes, and one of them is used depending on the transition flag set by `~/filter/change` or `~/source/select`.
 
-The filter has two parameter sets: `nominal_filter` and `transition_filter`.
-The `transition_filter` is used while the transition flag is set by `~/filter/change` or `~/source/select`, and the `nominal_filter` is used otherwise.
+- `nominal_filter` (transition flag is not set): Primarily for safety, this filter restricts the output range of all control commands published through Autoware and corrects obvious abnormal values.
+- `transition_filter` (transition flag is set): This filter connects the commands smoothly when the command source is switched (e.g. manual or remote to autonomous), by applying stricter limits than the nominal filter so that the command does not change suddenly from the previous one.
+
 The whole filter can be disabled by `enable_command_limit_filter`.
 
 While the vehicle is not in autonomous control mode, the filter uses the actual vehicle state (steering, velocity and acceleration) as the previous command, to prevent sudden changes when control is switched to Autoware.
@@ -179,7 +182,7 @@ The limitation values are calculated based on the 1D interpolation of the limita
 
 ![filter-example](./image/filter.png)
 
-Notation: this filter is not designed to enhance ride comfort. Its main purpose is to detect and remove abnormal values in the control outputs during the final stages of Autoware. If this filter is frequently active, it implies the control module may need tuning. If you're aiming to smoothen the signal via a low-pass filter or similar techniques, that should be handled in the control module. When the filter is enabled by `enable_command_limit_filter`, the filter activation status is published to `~/is_filter_activated` for each control command.
+Notation: the nominal filter is not designed to enhance ride comfort. Its main purpose is to detect and remove abnormal values in the control outputs during the final stages of Autoware. If this filter is frequently active, it implies the control module may need tuning. If you're aiming to smoothen the signal via a low-pass filter or similar techniques, that should be handled in the control module. When the filter is enabled by `enable_command_limit_filter`, the filter activation status is published to `~/is_filter_activated` for each control command.
 
 Notation 2: If you use vehicles in which the driving force is controlled by the accelerator/brake pedal, the jerk limit, denoting the pedal rate limit, must be sufficiently relaxed at low speeds.
 Otherwise, quick pedal changes at start/stop will not be possible, resulting in slow starts and creep down on hills.
