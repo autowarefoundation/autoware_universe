@@ -303,8 +303,8 @@ TEST_F(RingOutlierFilterTest, InvalidVisibilityParametersAreRejectedAtStartup)
   }
 
   // Assert
-  // The exception message is the same as the one returned by validate_visibility_parameters().
-  EXPECT_EQ(error, "vertical_bins and horizontal_bins must be positive");
+  // The exception message is the same as the one returned by validate_visibility_param().
+  EXPECT_EQ(error, "horizontal_bins must be at least 1");
 }
 
 TEST_F(RingOutlierFilterTest, ZeroHorizontalBinsUpdateIsRejected)

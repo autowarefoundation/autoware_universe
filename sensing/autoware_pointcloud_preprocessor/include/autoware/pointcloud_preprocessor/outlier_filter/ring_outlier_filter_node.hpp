@@ -72,11 +72,13 @@ private:
 
   // for visibility score
   int noise_threshold_;
-  int vertical_bins_;
-  int horizontal_bins_;
-
-  float min_azimuth_deg_;
-  float max_azimuth_deg_;
+  struct VisibilityParam
+  {
+    int vertical_bins;
+    int horizontal_bins;
+    float min_azimuth_deg;
+    float max_azimuth_deg;
+  } visibility_param_;
   float max_distance_;
 
   /** \brief Parameter service callback result : needed to be hold */
@@ -84,6 +86,9 @@ private:
 
   /** \brief Parameter service callback */
   rcl_interfaces::msg::SetParametersResult param_callback(const std::vector<rclcpp::Parameter> & p);
+
+  // Parameter validation helper (static, private)
+  static bool validate_visibility_param(const VisibilityParam & param, std::string & reason);
 
   bool is_cluster(const PointCloud2ConstPtr & input, std::pair<int, int> data_idx_both_ends) const
   {

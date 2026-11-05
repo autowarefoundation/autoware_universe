@@ -76,26 +76,11 @@ std::vector<pcl::PointCloud<PointXYZIRCAEDT>> split_points_by_ring(
 }
 
 // Float rounding can give num_bins for an azimuth just below max_azimuth.
-// num_bins > 0 is guaranteed by validate_visibility_parameters().
+// num_bins > 0 is guaranteed by validate_visibility_param().
 uint32_t to_bin_index(
   const float azimuth, const float min_azimuth, const float resolution, const uint32_t num_bins)
 {
   return std::min(static_cast<uint32_t>((azimuth - min_azimuth) / resolution), num_bins - 1);
-}
-
-bool validate_visibility_parameters(
-  const int vertical_bins, const int horizontal_bins, const float min_azimuth_deg,
-  const float max_azimuth_deg, std::string & reason)
-{
-  if (vertical_bins <= 0 || horizontal_bins <= 0) {
-    reason = "vertical_bins and horizontal_bins must be positive";
-    return false;
-  }
-  if (!(min_azimuth_deg < max_azimuth_deg)) {
-    reason = "min_azimuth_deg must be less than max_azimuth_deg";
-    return false;
-  }
-  return true;
 }
 }  // namespace
 
@@ -130,17 +115,16 @@ RingOutlierFilterComponent::RingOutlierFilterComponent(const rclcpp::NodeOptions
 
     publish_outlier_pointcloud_ = declare_parameter<bool>("publish_outlier_pointcloud");
 
-    min_azimuth_deg_ = declare_parameter<float>("min_azimuth_deg");
-    max_azimuth_deg_ = declare_parameter<float>("max_azimuth_deg");
+    visibility_param_.min_azimuth_deg = declare_parameter<float>("min_azimuth_deg");
+    visibility_param_.max_azimuth_deg = declare_parameter<float>("max_azimuth_deg");
     max_distance_ = declare_parameter<float>("max_distance");
-    vertical_bins_ = declare_parameter<int>("vertical_bins");
-    horizontal_bins_ = declare_parameter<int>("horizontal_bins");
+    visibility_param_.vertical_bins = declare_parameter<int>("vertical_bins");
+    visibility_param_.horizontal_bins = declare_parameter<int>("horizontal_bins");
     noise_threshold_ = declare_parameter<int>("noise_threshold");
     processing_time_threshold_sec_ = declare_parameter<float>("processing_time_threshold_sec");
 
     std::string reason;
-    if (!validate_visibility_parameters(
-          vertical_bins_, horizontal_bins_, min_azimuth_deg_, max_azimuth_deg_, reason)) {
+    if (!validate_visibility_param(visibility_param_, reason)) {
       throw std::invalid_argument(reason);
     }
   }
@@ -407,6 +391,24 @@ void RingOutlierFilterComponent::filter(
   (void)output;
 }
 
+bool RingOutlierFilterComponent::validate_visibility_param(
+  const VisibilityParam & param, std::string & reason)
+{
+  if (param.vertical_bins < 1) {
+    reason = "vertical_bins must be at least 1";
+    return false;
+  }
+  if (param.horizontal_bins < 1) {
+    reason = "horizontal_bins must be at least 1";
+    return false;
+  }
+  if (!(param.min_azimuth_deg < param.max_azimuth_deg)) {
+    reason = "min_azimuth_deg must be less than max_azimuth_deg";
+    return false;
+  }
+  return true;
+}
+
 rcl_interfaces::msg::SetParametersResult RingOutlierFilterComponent::param_callback(
   const std::vector<rclcpp::Parameter> & p)
 {
@@ -415,17 +417,13 @@ rcl_interfaces::msg::SetParametersResult RingOutlierFilterComponent::param_callb
   rcl_interfaces::msg::SetParametersResult result;
 
   // Check the new values together before applying any of them
-  int vertical_bins = vertical_bins_;
-  int horizontal_bins = horizontal_bins_;
-  float min_azimuth_deg = min_azimuth_deg_;
-  float max_azimuth_deg = max_azimuth_deg_;
-  get_param(p, "vertical_bins", vertical_bins);
-  get_param(p, "horizontal_bins", horizontal_bins);
-  get_param(p, "min_azimuth_deg", min_azimuth_deg);
-  get_param(p, "max_azimuth_deg", max_azimuth_deg);
+  VisibilityParam new_visibility_param = visibility_param_;
+  get_param(p, "vertical_bins", new_visibility_param.vertical_bins);
+  get_param(p, "horizontal_bins", new_visibility_param.horizontal_bins);
+  get_param(p, "min_azimuth_deg", new_visibility_param.min_azimuth_deg);
+  get_param(p, "max_azimuth_deg", new_visibility_param.max_azimuth_deg);
   std::string reason;
-  if (!validate_visibility_parameters(
-        vertical_bins, horizontal_bins, min_azimuth_deg, max_azimuth_deg, reason)) {
+  if (!validate_visibility_param(new_visibility_param, reason)) {
     result.successful = false;
     result.reason = reason;
     return result;
@@ -442,20 +440,24 @@ rcl_interfaces::msg::SetParametersResult RingOutlierFilterComponent::param_callb
     RCLCPP_DEBUG(
       get_logger(), "Setting new publish_outlier_pointcloud to: %d.", publish_outlier_pointcloud_);
   }
-  if (get_param(p, "vertical_bins", vertical_bins_)) {
-    RCLCPP_DEBUG(get_logger(), "Setting new vertical_bins to: %d.", vertical_bins_);
+  if (get_param(p, "vertical_bins", visibility_param_.vertical_bins)) {
+    RCLCPP_DEBUG(
+      get_logger(), "Setting new vertical_bins to: %d.", visibility_param_.vertical_bins);
   }
-  if (get_param(p, "horizontal_bins", horizontal_bins_)) {
-    RCLCPP_DEBUG(get_logger(), "Setting new horizontal_bins to: %d.", horizontal_bins_);
+  if (get_param(p, "horizontal_bins", visibility_param_.horizontal_bins)) {
+    RCLCPP_DEBUG(
+      get_logger(), "Setting new horizontal_bins to: %d.", visibility_param_.horizontal_bins);
   }
   if (get_param(p, "noise_threshold", noise_threshold_)) {
     RCLCPP_DEBUG(get_logger(), "Setting new noise_threshold to: %d.", noise_threshold_);
   }
-  if (get_param(p, "max_azimuth_deg", max_azimuth_deg_)) {
-    RCLCPP_DEBUG(get_logger(), "Setting new max_azimuth_deg to: %f.", max_azimuth_deg_);
+  if (get_param(p, "max_azimuth_deg", visibility_param_.max_azimuth_deg)) {
+    RCLCPP_DEBUG(
+      get_logger(), "Setting new max_azimuth_deg to: %f.", visibility_param_.max_azimuth_deg);
   }
-  if (get_param(p, "min_azimuth_deg", min_azimuth_deg_)) {
-    RCLCPP_DEBUG(get_logger(), "Setting new min_azimuth_deg to: %f.", min_azimuth_deg_);
+  if (get_param(p, "min_azimuth_deg", visibility_param_.min_azimuth_deg)) {
+    RCLCPP_DEBUG(
+      get_logger(), "Setting new min_azimuth_deg to: %f.", visibility_param_.min_azimuth_deg);
   }
   if (get_param(p, "max_distance", max_distance_)) {
     RCLCPP_DEBUG(get_logger(), "Setting new max_distance to: %f.", max_distance_);
@@ -495,10 +497,10 @@ float RingOutlierFilterComponent::calculate_visibility_score(
   pcl::PointCloud<InputPointType>::Ptr input_cloud(new pcl::PointCloud<InputPointType>);
   pcl::fromROSMsg(input, *input_cloud);
 
-  const uint32_t vertical_bins = vertical_bins_;
-  const uint32_t horizontal_bins = horizontal_bins_;
-  const float max_azimuth = max_azimuth_deg_ * (M_PI / 180.f);
-  const float min_azimuth = min_azimuth_deg_ * (M_PI / 180.f);
+  const uint32_t vertical_bins = visibility_param_.vertical_bins;
+  const uint32_t horizontal_bins = visibility_param_.horizontal_bins;
+  const float max_azimuth = visibility_param_.max_azimuth_deg * (M_PI / 180.f);
+  const float min_azimuth = visibility_param_.min_azimuth_deg * (M_PI / 180.f);
 
   const float horizontal_resolution =
     (max_azimuth - min_azimuth) / static_cast<float>(horizontal_bins);
