@@ -172,14 +172,14 @@ void PointCloudConcatenateDataSynchronizerComponentTemplated<MsgTraits>::cloud_c
   double cloud_arrival_time = this->get_clock()->now().seconds();
 
   if (!concatenator_->combine_cloud_handler().is_input_layout_supported(*input_ptr)) {
-    RCLCPP_ERROR(
+    RCLCPP_ERROR_ONCE(
       get_logger(),
       "The pointcloud layout of '%s' is not supported for output_point_type %s. Dropping.",
       topic_name.c_str(),
       params_.output_point_format == PointFormat::XYZIRCT ? "XYZIRCT" : "XYZIRC");
 
     if (utils::is_data_layout_compatible_with_point_xyzi(*input_ptr)) {
-      RCLCPP_ERROR(
+      RCLCPP_ERROR_ONCE(
         get_logger(),
         "The pointcloud layout is compatible with PointXYZI. You may be using legacy code/data");
     }
