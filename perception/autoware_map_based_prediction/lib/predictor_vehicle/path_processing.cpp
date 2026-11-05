@@ -173,7 +173,9 @@ std::vector<LaneletPathWithPathInfo> suppressUndetectedLaneChangePaths(
     const bool suppress = is_lane_change && (undetected || opposite_of_detected);
     if (!suppress) {
       filtered_paths.push_back(paths[i]);
-    } else if (suppressed_paths) {
+    } else if (suppressed_paths && undetected) {
+      // Only undetected LCs are held for restoration. The opposite side of a detected LC
+      // carries probability 0 and must never come back.
       suppressed_paths->push_back(paths[i]);
     }
   }

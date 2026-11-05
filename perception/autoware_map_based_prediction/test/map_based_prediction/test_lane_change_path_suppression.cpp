@@ -292,9 +292,8 @@ TEST_F(LaneChangePathSuppressionTest, KeepsDetectedLaneChangeAndDropsZeroWeightO
     EXPECT_FLOAT_EQ(result[0].second.probability, 0.9F);
     EXPECT_EQ(result[1].second.maneuver, detected);
     EXPECT_FLOAT_EQ(result[1].second.probability, 1.0F);
-    ASSERT_EQ(suppressed.size(), 1U);
-    EXPECT_NE(suppressed[0].second.maneuver, detected);
-    EXPECT_FLOAT_EQ(suppressed[0].second.probability, 0.0F);
+    // The opposite side is dropped outright, not held for restoration.
+    EXPECT_TRUE(suppressed.empty());
   }
 }
 
@@ -473,10 +472,10 @@ TEST_F(LaneChangePathSuppressionTest, HoldsOnlyUndetectedNonTerminalOriginsForRe
     {Maneuver::RIGHT_LANE_CHANGE, false, true}, {Maneuver::LANE_FOLLOW, false, false}};
   std::vector<LaneletPathWithPathInfo> held;
   const auto result = suppressUndetectedLaneChangePaths(paths, origins, true, true, &held);
-  // Held: the undetected LEFT (index 1) and the RIGHT opposite to a detected LEFT (index 2).
-  ASSERT_EQ(held.size(), 2U);
+  // Held: only the undetected LEFT (index 1). The RIGHT opposite to a detected LEFT (index 2)
+  // is dropped without being held, so it can never be restored with probability 0.
+  ASSERT_EQ(held.size(), 1U);
   EXPECT_EQ(held[0].second.maneuver, Maneuver::LEFT_LANE_CHANGE);
-  EXPECT_EQ(held[1].second.maneuver, Maneuver::RIGHT_LANE_CHANGE);
   EXPECT_EQ(result.size(), 4U);
 }
 
