@@ -46,8 +46,12 @@ bool laneEndsWithinHorizon(
   double travel_distance, const lanelet::routing::RoutingGraph & graph,
   size_t * expanded_lanelets = nullptr, double * lane_end_distance = nullptr);
 
-/// Suppress lane-change candidates whose origin lanelet has a lane-follow candidate, was judged
-/// lane-follow, and (when keep_when_lane_ends) does not end within the rescue horizon.
+/// Whether the maneuver judgement is an explicit lane change (UNINITIALIZED is not).
+bool isDetectedLaneChange(Maneuver maneuver);
+
+/// Suppress lane-change candidates whose origin lanelet has a lane-follow candidate, was not
+/// judged lane-change, and (when keep_when_lane_ends) does not end within the rescue horizon.
+/// The lane change opposite to a detected one is suppressed as well.
 std::vector<LaneletPathWithPathInfo> suppressUndetectedLaneChangePaths(
   const std::vector<LaneletPathWithPathInfo> & paths,
   const std::vector<LaneChangePathSuppressionInfo> & origins, bool enable, bool keep_when_lane_ends,
