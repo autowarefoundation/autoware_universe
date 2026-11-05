@@ -72,6 +72,16 @@ constexpr unsigned long long kClockEventReasonHwThermalSlowdown =  // NOLINT(run
 constexpr unsigned long long kClockEventReasonHwPowerBrakeSlowdown =  // NOLINT(runtime/int)
   nvmlClocksThrottleReasonHwPowerBrakeSlowdown;
 
+// Added by NVML 615; guard on each macro to keep building against older SDKs.
+#ifdef nvmlClocksEventReasonBoardLimit
+constexpr unsigned long long kClockEventReasonBoardLimit =  // NOLINT(runtime/int)
+  nvmlClocksEventReasonBoardLimit;
+#endif
+#ifdef nvmlClocksEventReasonReliability
+constexpr unsigned long long kClockEventReasonReliability =  // NOLINT(runtime/int)
+  nvmlClocksEventReasonReliability;
+#endif
+
 struct ClockEventReasonName
 {
   unsigned long long reason;  // NOLINT
@@ -87,7 +97,14 @@ constexpr ClockEventReasonName kClockEventReasonNames[] = {
   {kClockEventReasonSwThermalSlowdown, "SwThermalSlowdown"},
   {kClockEventReasonHwThermalSlowdown, "HwThermalSlowdown"},
   {kClockEventReasonHwPowerBrakeSlowdown, "HwPowerBrakeSlowdown"},
-  {kClockEventReasonDisplayClockSetting, "DisplayClockSetting"}};
+  {kClockEventReasonDisplayClockSetting, "DisplayClockSetting"},
+#ifdef nvmlClocksEventReasonBoardLimit
+  {kClockEventReasonBoardLimit, "BoardLimit"},
+#endif
+#ifdef nvmlClocksEventReasonReliability
+  {kClockEventReasonReliability, "Reliability"},
+#endif
+};
 
 const char * clockEventReasonToString(unsigned long long reason)  // NOLINT
 {
@@ -105,6 +122,12 @@ bool isIgnoredClockEventReason(unsigned long long reason)  // NOLINT
     case kClockEventReasonGpuIdle:
     case kClockEventReasonApplicationsClocksSetting:
     case kClockEventReasonSwPowerCap:
+#ifdef nvmlClocksEventReasonBoardLimit
+    case kClockEventReasonBoardLimit:
+#endif
+#ifdef nvmlClocksEventReasonReliability
+    case kClockEventReasonReliability:
+#endif
       return true;
     default:
       return false;
