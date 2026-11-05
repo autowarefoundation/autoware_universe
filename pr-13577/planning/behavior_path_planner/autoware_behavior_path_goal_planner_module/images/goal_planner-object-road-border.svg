@@ -1,0 +1,120 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 700">
+  <rect fill="#f8f9fa" height="700" width="900"/>
+
+  <text fill="#2c3e50" font-weight="bold" font-size="20" font-family="Arial, sans-serif" text-anchor="middle" y="30" x="450">Road Border Filtering Algorithm</text>
+
+  <rect stroke-width="2" stroke="#bbb" fill="#e8e8e8" height="450" width="800" y="80" x="50"/>
+
+  <line stroke-width="6" stroke="#d32f2f" y2="520" x2="450" y1="100" x1="450"/>
+  <text font-weight="bold" fill="#d32f2f" font-size="12" font-family="Arial, sans-serif" y="320" x="460">Road Border</text>
+
+  <rect rx="3" fill="#2196f3" height="25" width="35" y="300" x="200"/>
+  <text font-weight="bold" fill="#2196f3" font-size="10" font-family="Arial, sans-serif" text-anchor="middle" y="295" x="217">Ego</text>
+  <circle fill="#2196f3" r="2" cy="312" cx="217"/>
+  <text fill="#2196f3" font-size="8" font-family="Arial, sans-serif" y="330" x="210">Center</text>
+
+  <!-- Object 1: Partially crossing border (KEPT) -->
+  <polygon fill="#4caf50" fill-opacity="0.7" stroke="#4caf50" stroke-width="2" points="320,180 360,180 360,220 320,220"/>
+  <circle fill="#4caf50" r="2" cy="200" cx="340"/>
+  <text font-weight="bold" fill="#4caf50" font-size="10" font-family="Arial, sans-serif" text-anchor="middle" y="175" x="340">Obj1</text>
+  <text fill="#4caf50" font-size="8" font-family="Arial, sans-serif" text-anchor="middle" y="235" x="340">Partial Cross</text>
+
+  <!-- Object 2: Entirely on other side (FILTERED) -->
+  <polygon fill="#ff5722" fill-opacity="0.7" stroke="#ff5722" stroke-width="2" points="580,250 620,250 620,290 580,290"/>
+  <circle fill="#ff5722" r="2" cy="270" cx="600"/>
+  <text font-weight="bold" fill="#ff5722" font-size="10" font-family="Arial, sans-serif" text-anchor="middle" y="245" x="600">Obj2</text>
+  <text fill="#ff5722" font-size="8" font-family="Arial, sans-serif" text-anchor="middle" y="305" x="600">Entire Other Side</text>
+
+  <!-- Object 3: Same side as ego (KEPT) -->
+  <polygon fill="#4caf50" fill-opacity="0.7" stroke="#4caf50" stroke-width="2" points="120,380 160,380 160,420 120,420"/>
+  <circle fill="#4caf50" r="2" cy="400" cx="140"/>
+  <text font-weight="bold" fill="#4caf50" font-size="10" font-family="Arial, sans-serif" text-anchor="middle" y="375" x="140">Obj3</text>
+  <text fill="#4caf50" font-size="8" font-family="Arial, sans-serif" text-anchor="middle" y="435" x="140">Same Side</text>
+
+  <!-- Object 4: Touching border (KEPT) -->
+  <polygon fill="#4caf50" fill-opacity="0.7" stroke="#4caf50" stroke-width="2" points="430,160 470,160 470,200 430,200"/>
+  <circle fill="#4caf50" r="2" cy="180" cx="450"/>
+  <text font-weight="bold" fill="#4caf50" font-size="10" font-family="Arial, sans-serif" text-anchor="middle" y="155" x="450">Obj4</text>
+  <text fill="#4caf50" font-size="8" font-family="Arial, sans-serif" text-anchor="middle" y="215" x="450">Touching Border</text>
+
+  <!-- Rays from ego center to object footprint corners -->
+  <!-- Object 1 rays (green - kept) -->
+  <line stroke-dasharray="3,3" stroke-width="1.5" stroke="#4caf50" y2="180" x2="320" y1="312" x1="217"/>
+  <line stroke-dasharray="3,3" stroke-width="1.5" stroke="#4caf50" y2="180" x2="360" y1="312" x1="217"/>
+  <line stroke-dasharray="3,3" stroke-width="1.5" stroke="#4caf50" y2="220" x2="320" y1="312" x1="217"/>
+  <line stroke-dasharray="3,3" stroke-width="1.5" stroke="#4caf50" y2="220" x2="360" y1="312" x1="217"/>
+
+  <!-- Object 2 rays (red - filtered) -->
+  <line stroke-dasharray="3,3" stroke-width="1.5" stroke="#ff5722" y2="250" x2="580" y1="312" x1="217"/>
+  <line stroke-dasharray="3,3" stroke-width="1.5" stroke="#ff5722" y2="250" x2="620" y1="312" x1="217"/>
+  <line stroke-dasharray="3,3" stroke-width="1.5" stroke="#ff5722" y2="290" x2="580" y1="312" x1="217"/>
+  <line stroke-dasharray="3,3" stroke-width="1.5" stroke="#ff5722" y2="290" x2="620" y1="312" x1="217"/>
+
+  <!-- Object 3 rays (green - kept) -->
+  <line stroke-dasharray="3,3" stroke-width="1.5" stroke="#4caf50" y2="380" x2="120" y1="312" x1="217"/>
+  <line stroke-dasharray="3,3" stroke-width="1.5" stroke="#4caf50" y2="380" x2="160" y1="312" x1="217"/>
+  <line stroke-dasharray="3,3" stroke-width="1.5" stroke="#4caf50" y2="420" x2="120" y1="312" x1="217"/>
+  <line stroke-dasharray="3,3" stroke-width="1.5" stroke="#4caf50" y2="420" x2="160" y1="312" x1="217"/>
+
+  <!-- Object 4 rays (green - kept, touching border) -->
+  <line stroke-dasharray="3,3" stroke-width="1.5" stroke="#4caf50" y2="160" x2="430" y1="312" x1="217"/>
+  <line stroke-dasharray="3,3" stroke-width="1.5" stroke="#4caf50" y2="160" x2="470" y1="312" x1="217"/>
+  <line stroke-dasharray="3,3" stroke-width="1.5" stroke="#4caf50" y2="200" x2="430" y1="312" x1="217"/>
+  <line stroke-dasharray="3,3" stroke-width="1.5" stroke="#4caf50" y2="200" x2="470" y1="312" x1="217"/>
+
+  <!-- Intersection points on road border -->
+  <circle fill="#ffc107" r="3" cy="246" cx="450"/>
+  <circle fill="#ffc107" r="3" cy="278" cx="450"/>
+  <circle fill="#ffc107" r="3" cy="310" cx="450"/>
+  <circle fill="#ffc107" r="3" cy="342" cx="450"/>
+  <text font-weight="bold" fill="#ffc107" font-size="9" font-family="Arial, sans-serif" y="240" x="470">Intersections</text>
+
+  <!-- Enhanced Legend -->
+  <g transform="translate(50, 550)">
+    <text fill="#2c3e50" font-weight="bold" font-size="14" font-family="Arial, sans-serif" y="0" x="0">Legend:</text>
+
+    <rect fill="#4caf50" fill-opacity="0.7" stroke="#4caf50" height="12" width="12" y="15" x="15"/>
+    <text fill="#2c3e50" font-size="11" font-family="Arial, sans-serif" y="25" x="35">Objects kept (same side / partial cross / touching)</text>
+
+    <rect fill="#ff5722" fill-opacity="0.7" stroke="#ff5722" height="12" width="12" y="35" x="15"/>
+    <text fill="#2c3e50" font-size="11" font-family="Arial, sans-serif" y="45" x="35">Objects filtered (entire footprint on other side)</text>
+
+    <line stroke-width="3" stroke="#d32f2f" y2="55" x2="35" y1="55" x1="15"/>
+    <text fill="#2c3e50" font-size="11" font-family="Arial, sans-serif" y="60" x="45">Road border</text>
+
+    <line stroke-dasharray="3,3" stroke-width="1.5" stroke="#4caf50" y2="70" x2="35" y1="70" x1="15"/>
+    <text fill="#2c3e50" font-size="11" font-family="Arial, sans-serif" y="75" x="45">Rays to footprint corners (kept)</text>
+
+    <line stroke-dasharray="3,3" stroke-width="1.5" stroke="#ff5722" y2="85" x2="35" y1="85" x1="15"/>
+    <text fill="#2c3e50" font-size="11" font-family="Arial, sans-serif" y="90" x="45">Rays to footprint corners (filtered)</text>
+
+    <circle fill="#ffc107" r="3" cy="100" cx="21"/>
+    <text fill="#2c3e50" font-size="11" font-family="Arial, sans-serif" y="105" x="35">Border intersection points</text>
+
+    <circle fill="#2196f3" r="2" cy="115" cx="21"/>
+    <text fill="#2c3e50" font-size="11" font-family="Arial, sans-serif" y="120" x="35">Vehicle/object centers</text>
+  </g>
+
+  <!-- Enhanced Algorithm Steps -->
+  <g transform="translate(450, 550)">
+    <text fill="#2c3e50" font-weight="bold" font-size="14" font-family="Arial, sans-serif" y="0" x="0">Enhanced Algorithm Steps:</text>
+    <text fill="#2c3e50" font-size="11" font-family="Arial, sans-serif" y="20" x="0">1. Extract road border segments (linestring2d)</text>
+    <text fill="#2c3e50" font-size="11" font-family="Arial, sans-serif" y="35" x="0">2. For each object, get footprint polygon corners</text>
+    <text fill="#2c3e50" font-size="11" font-family="Arial, sans-serif" y="50" x="0">3. Cast rays from ego center to all footprint corners</text>
+    <text fill="#2c3e50" font-size="11" font-family="Arial, sans-serif" y="65" x="0">4. Check ray-border intersections for each corner</text>
+    <text fill="#2c3e50" font-size="11" font-family="Arial, sans-serif" y="80" x="0">5. Filter only if ALL corners are on other side</text>
+    <text fill="#2c3e50" font-size="11" font-family="Arial, sans-serif" y="95" x="0">6. Keep objects with any corner on same side</text>
+  </g>
+
+  <!-- Decision Logic Box -->
+  <g transform="translate(650, 120)">
+    <rect stroke-width="2" stroke="#34495e" fill="#ecf0f1" height="120" width="180" y="0" x="0"/>
+    <text fill="#2c3e50" font-weight="bold" font-size="12" font-family="Arial, sans-serif" text-anchor="middle" y="20" x="90">Decision Logic</text>
+
+    <text fill="#2c3e50" font-size="10" font-family="Arial, sans-serif" y="40" x="10">For each object:</text>
+    <text fill="#2c3e50" font-size="9" font-family="Arial, sans-serif" y="55" x="10">• Cast rays to all corners</text>
+    <text fill="#2c3e50" font-size="9" font-family="Arial, sans-serif" y="70" x="10">• Count border intersections</text>
+    <text fill="#4caf50" font-size="9" font-family="Arial, sans-serif" y="85" x="10">• KEEP if any corner same side</text>
+    <text fill="#ff5722" font-size="9" font-family="Arial, sans-serif" y="100" x="10">• FILTER if all corners other side</text>
+  </g>
+</svg>
