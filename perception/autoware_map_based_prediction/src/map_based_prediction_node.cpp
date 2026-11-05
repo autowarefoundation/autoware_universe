@@ -201,7 +201,6 @@ MapBasedPredictionNode::MapBasedPredictionNode(const rclcpp::NodeOptions & node_
 
   // --- Node params ---
   state_.params.object_buffer_time_length = declare_parameter<double>("object_buffer_time_length");
-  state_.params.drop_zero_confidence_paths = declare_parameter<bool>("drop_zero_confidence_paths");
   state_.params.remember_lost_crosswalk_users =
     declare_parameter<bool>("use_crosswalk_user_history.remember_lost_users");
   state_.params.prediction_time_horizon_unknown = time_horizon.unknown;

@@ -193,7 +193,7 @@ void ObjectsCallback::objectsCallback(
       output.objects.end(), retrieved_objects.objects.begin(), retrieved_objects.objects.end());
   }
 
-  if (state_.params.drop_zero_confidence_paths) utils::dropZeroConfidencePaths(output);
+  utils::dropZeroConfidencePaths(output);
 
   const auto output_stamp = output.header.stamp;
   publish(std::move(output_msg), debug_markers);

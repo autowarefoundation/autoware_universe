@@ -29,7 +29,6 @@ struct NodeParams
 {
   double object_buffer_time_length{2.0};
   bool remember_lost_crosswalk_users{false};
-  bool drop_zero_confidence_paths{true};
   double prediction_time_horizon_unknown{10.0};
 };
 
