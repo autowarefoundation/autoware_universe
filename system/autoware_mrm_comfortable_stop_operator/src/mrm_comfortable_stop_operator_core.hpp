@@ -17,6 +17,8 @@
 
 // Core
 #include <memory>
+#include <optional>
+#include <string>
 #include <vector>
 
 // Autoware
@@ -37,6 +39,7 @@
 namespace autoware::mrm_comfortable_stop_operator
 {
 
+using autoware_internal_planning_msgs::msg::VelocityLimit;
 using tier4_system_msgs::msg::DrivingModeFlag;
 using tier4_system_msgs::msg::DrivingModeInfo;
 using tier4_system_msgs::msg::DrivingModeMrmState;
@@ -80,6 +83,10 @@ private:
   void publishVelocityLimit() const;
   void publishVelocityLimitClearCommand() const;
 
+  // Subscriber
+  AUTOWARE_SUBSCRIPTION_PTR(VelocityLimit) sub_current_velocity_limit_;
+  void onCurrentVelocityLimit(const VelocityLimit & msg);
+
   // Timer
   AUTOWARE_TIMER_PTR timer_;
 
@@ -87,6 +94,8 @@ private:
 
   // States
   tier4_system_msgs::msg::MrmBehaviorStatus status_;
+  std::string current_velocity_limit_sender_;
+  static inline const std::string sender_name_ = "mrm_comfortable_stop_operator";
 
   // Parameter callback
   rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr set_param_res_;
