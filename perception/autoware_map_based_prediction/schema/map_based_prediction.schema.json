@@ -82,6 +82,11 @@
           "default": 2.0,
           "description": "Time span of object history to store the information"
         },
+        "drop_zero_confidence_paths": {
+          "type": "boolean",
+          "default": true,
+          "description": "Do not publish predicted paths whose confidence is 0; at least one path per object is always kept"
+        },
         "history_time_length": {
           "type": "number",
           "default": 1.0,
@@ -383,6 +388,7 @@
         "sigma_lateral_offset",
         "sigma_yaw_angle_deg",
         "object_buffer_time_length",
+        "drop_zero_confidence_paths",
         "history_time_length",
         "check_lateral_acceleration_constraints",
         "max_lateral_accel",

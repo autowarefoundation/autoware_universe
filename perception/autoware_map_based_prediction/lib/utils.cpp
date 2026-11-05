@@ -231,6 +231,22 @@ PredictedObjectKinematics convertToPredictedKinematics(
   return output;
 }
 
+void dropZeroConfidencePaths(PredictedObjects & objects)
+{
+  for (auto & object : objects.objects) {
+    auto & paths = object.kinematics.predicted_paths;
+    const bool any_positive = std::any_of(
+      paths.begin(), paths.end(),
+      [](const PredictedPath & path) { return path.confidence > 0.0f; });
+    if (!any_positive) continue;
+    paths.erase(
+      std::remove_if(
+        paths.begin(), paths.end(),
+        [](const PredictedPath & path) { return !(path.confidence > 0.0f); }),
+      paths.end());
+  }
+}
+
 PredictedObject convertToPredictedObject(const TrackedObject & tracked_object)
 {
   PredictedObject predicted_object;

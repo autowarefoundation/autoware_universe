@@ -77,6 +77,7 @@ Lane change logics is illustrated in the figure below.An example of how to tune 
 - Routable lateral adjacency is not required: merge boundary/connectivity representations may lack a lane-change relation; requiring it would lose the rescue in those cases.
 - DEBUG logs report each LC candidate decision (`suppressed`, `kept_detected_lc`, `kept_lane_end`, `kept_no_center`), object ID, current lanelet, and terminal distance in meters (`-1` means no terminal found within the rescue bound, or rescue disabled). These are suppression-stage decisions; a later center-path rejection can still restore held LC paths.
 - Suppressed LC candidates are held until pose conversion, starting-position search, prediction generation and lateral-acceleration checks finish. Held LC candidates are restored only for the current lanelets whose lane-follow prediction (from a reference path with two or more points) was not accepted; a one-point lane-follow reference still yields the straight path of the path generator as before. When every lanelet's center survives, no second processing pass occurs.
+- `drop_zero_confidence_paths` (bool, default `true`): predicted paths whose confidence is 0 are removed from every object right before publishing (vehicles, VRUs and unknown objects alike). The only producer of such paths is the lane change opposite to a detected one (`calculateManeuverProbability`), which confidence-agnostic consumers would otherwise evaluate. An object always keeps at least one path: when all of its paths have confidence 0 they are published unchanged.
 
 ### Tuning lane change detection logic
 
@@ -269,6 +270,7 @@ In the case where the target object is inside the road, the additional path(s) t
 | `sigma_lateral_offset`                                           | [m]   | double | Standard deviation for lateral position of objects                                                                                    |
 | `sigma_yaw_angle_deg`                                            | [deg] | double | Standard deviation yaw angle of objects                                                                                               |
 | `object_buffer_time_length`                                      | [s]   | double | Time span of object history to store the information                                                                                  |
+| `drop_zero_confidence_paths` | [-] | bool | Do not publish predicted paths whose confidence is 0 (e.g. the lane change opposite to a detected one); at least one path per object is always kept |
 | `history_time_length`                                            | [s]   | double | Time span of object information used for prediction                                                                                   |
 | `prediction_time_horizon_rate_for_validate_shoulder_lane_length` | [-]   | double | prediction path will disabled when the estimated path length exceeds lanelet length. This parameter control the estimated path length |
 
