@@ -23575,7 +23575,7 @@
 <li>Routable lateral adjacency is not required: merge boundary/connectivity representations may lack a lane-change relation; requiring it would lose the rescue in those cases.</li>
 <li>DEBUG logs report each LC candidate decision (<code>suppressed</code>, <code>kept_detected_lc</code>, <code>kept_lane_end</code>, <code>kept_no_center</code>), object ID, current lanelet, and terminal distance in meters (<code>-1</code> means no terminal found within the rescue bound, or rescue disabled). These are suppression-stage decisions; a later center-path rejection can still restore held LC paths.</li>
 <li>Suppressed LC candidates are held until pose conversion, starting-position search, prediction generation and lateral-acceleration checks finish. Held LC candidates are restored only for the current lanelets whose lane-follow prediction (from a reference path with two or more points) was not accepted; a one-point lane-follow reference still yields the straight path of the path generator as before. When every lanelet's center survives, no second processing pass occurs.</li>
-<li><code>drop_zero_confidence_paths</code> (bool, default <code>true</code>): predicted paths whose confidence is 0 are removed from every object right before publishing (vehicles, VRUs and unknown objects alike). The only producer of such paths is the lane change opposite to a detected one (<code>calculateManeuverProbability</code>), which confidence-agnostic consumers would otherwise evaluate. An object always keeps at least one path: when all of its paths have confidence 0 they are published unchanged.</li>
+<li>Predicted paths whose confidence is 0 are removed from every object right before publishing (vehicles, VRUs and unknown objects alike). The only producer of such paths is the lane change opposite to a detected one (<code>calculateManeuverProbability</code>), which confidence-agnostic consumers would otherwise evaluate. An object always keeps at least one path: when all of its paths have confidence 0 they are published unchanged.</li>
 </ul>
 <h3 id="tuning-lane-change-detection-logic">Tuning lane change detection logic<a class="headerlink" href="#tuning-lane-change-detection-logic" title="Permanent link">#</a></h3>
 <p>Currently we provide three parameters to tune lane change detection:</p>
@@ -23924,12 +23924,6 @@ This prediction comes from the assumption that the object should move if the tra
 <td>[s]</td>
 <td>double</td>
 <td>Time span of object history to store the information</td>
-</tr>
-<tr>
-<td><code>drop_zero_confidence_paths</code></td>
-<td>[-]</td>
-<td>bool</td>
-<td>Do not publish predicted paths whose confidence is 0 (e.g. the lane change opposite to a detected one); at least one path per object is always kept</td>
 </tr>
 <tr>
 <td><code>history_time_length</code></td>
