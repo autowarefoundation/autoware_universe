@@ -26,6 +26,8 @@
 #include <cstdint>
 #include <limits>
 #include <memory>
+#include <stdexcept>
+#include <string>
 #include <vector>
 
 using autoware::point_types::PointXYZIRC;
@@ -124,18 +126,22 @@ class RingOutlierFilterTest : public ::testing::Test
 
 TEST_F(RingOutlierFilterTest, PointsWithRingOutOfRangeAreSkipped)
 {
+  // Arrange
+  // max_rings_num is 4, so only the arc on ring 1 has a valid ring index; the arcs on rings 4 and
+  // 65535 must be skipped.
   RingOutlierFilterComponentPublic node(
     make_node_options().append_parameter_override("max_rings_num", 4));
-
   pcl::PointCloud<PointXYZIRCAEDT> cloud;
   append_arc(cloud, 1, 10.0F, 20);
   append_arc(cloud, 4, 10.0F, 20);      // == max_rings_num
   append_arc(cloud, 65535, 10.0F, 20);  // far beyond max_rings_num
-
   sensor_msgs::msg::PointCloud2 output;
+
+  // Act
   node.faster_filter(to_msg(cloud), nullptr, output, TransformInfo{});
 
-  // Only the arc on ring 1 can be in the output
+  // Assert
+  // Only the points on ring 1 are kept in the output; the other two arcs are skipped.
   const auto points = extract_points(output);
   ASSERT_FALSE(points.empty());
   for (const auto & p : points) {
@@ -145,18 +151,22 @@ TEST_F(RingOutlierFilterTest, PointsWithRingOutOfRangeAreSkipped)
 
 TEST_F(RingOutlierFilterTest, TruncatedLastPointIsNotRead)
 {
+  // Arrange
+  // The data ends with a partial point that stops before its channel field, so reading that
+  // channel would go past the end of the buffer.
   RingOutlierFilterComponentPublic node(make_node_options());
-
   pcl::PointCloud<PointXYZIRCAEDT> cloud;
   append_arc(cloud, 1, 10.0F, 20);
   auto msg = to_msg(cloud);
-  // A trailing partial point that ends before its channel field
   msg->data.resize(msg->data.size() + 10, 0U);
   msg->data.shrink_to_fit();
-
   sensor_msgs::msg::PointCloud2 output;
+
+  // Act
   node.faster_filter(msg, nullptr, output, TransformInfo{});
 
+  // Assert
+  // The partial point is not read; the 20 points on ring 1 are kept.
   const auto points = extract_points(output);
   ASSERT_FALSE(points.empty());
   for (const auto & p : points) {
@@ -164,17 +174,42 @@ TEST_F(RingOutlierFilterTest, TruncatedLastPointIsNotRead)
   }
 }
 
+TEST_F(RingOutlierFilterTest, ZeroPointStepGivesEmptyOutput)
+{
+  // Arrange
+  // Making the input invalid by setting point_step to 0
+  // On normal callback FilterBase::is_valid() rejects this as an invalid PointCloud2
+  // Call faster_filter() directly to test local guard behaviour
+  RingOutlierFilterComponentPublic node(make_node_options());
+  pcl::PointCloud<PointXYZIRCAEDT> cloud;
+  append_arc(cloud, 1, 10.0F, 20);
+  auto msg = to_msg(cloud);
+  msg->point_step = 0;
+  sensor_msgs::msg::PointCloud2 output;
+
+  // Act
+  node.faster_filter(msg, nullptr, output, TransformInfo{});
+
+  // Assert
+  // No points are produced
+  EXPECT_TRUE(extract_points(output).empty());
+}
+
 TEST_F(RingOutlierFilterTest, ChannelAbove255IsKeptInOutput)
 {
+  // Arrange
+  // Channel 300 does not fit in uint8_t; copying only the low byte would give 44.
   RingOutlierFilterComponentPublic node(
     make_node_options().append_parameter_override("max_rings_num", 512));
-
   pcl::PointCloud<PointXYZIRCAEDT> cloud;
   append_arc(cloud, 300, 10.0F, 20);
-
   sensor_msgs::msg::PointCloud2 output;
+
+  // Act
   node.faster_filter(to_msg(cloud), nullptr, output, TransformInfo{});
 
+  // Assert
+  // The output points have the same channel as the input points.
   const auto points = extract_points(output);
   ASSERT_FALSE(points.empty());
   for (const auto & p : points) {
@@ -184,9 +219,10 @@ TEST_F(RingOutlierFilterTest, ChannelAbove255IsKeptInOutput)
 
 TEST_F(RingOutlierFilterTest, VisibilityScoreUsesEveryHorizontalBin)
 {
+  // Arrange
+  // For each horizontal bin in ring 0, insert 3 points at the bin center.
+  // Since noise_threshold = 2, each bin is marked as occupied, so exactly 36 pixels are filled.
   RingOutlierFilterComponentPublic node(make_node_options());
-
-  // Three points (more than noise_threshold) at the center of each of the 36 bins of ring 0
   pcl::PointCloud<PointXYZIRCAEDT> cloud;
   const float bin_width_deg = 360.0F / static_cast<float>(default_horizontal_bins);
   for (int bin = 0; bin < default_horizontal_bins; ++bin) {
@@ -196,19 +232,23 @@ TEST_F(RingOutlierFilterTest, VisibilityScoreUsesEveryHorizontalBin)
     }
   }
 
-  EXPECT_FLOAT_EQ(
-    node.calculate_visibility_score(*to_msg(cloud)), expected_score(default_horizontal_bins));
+  // Act
+  const float score = node.calculate_visibility_score(*to_msg(cloud));
+
+  // Assert
+  // The expected score is 1 - (36 / (128 * 36)) = 127 / 128.
+  EXPECT_FLOAT_EQ(score, expected_score(default_horizontal_bins));
 }
 
 TEST_F(RingOutlierFilterTest, VisibilityScoreAzimuthJustBelowMaxStaysInLastBin)
 {
+  // Arrange
   // With 35 bins over 360 deg, (max_azimuth - epsilon) / horizontal_resolution rounds to exactly
-  // 35.0 in float, i.e. one past the last bin of the ring.
+  // 35.0 in float, one past the last bin. The expected 3 pixels are the first and last bin of
+  // ring 0 and the first bin of ring 1.
   constexpr int horizontal_bins = 35;
   RingOutlierFilterComponentPublic node(
     make_node_options().append_parameter_override("horizontal_bins", horizontal_bins));
-
-  // Computed the same way as in the node
   const float max_azimuth = 360.0F * (M_PI / 180.f);
   pcl::PointCloud<PointXYZIRCAEDT> cloud;
   for (int i = 0; i < 3; ++i) {
@@ -217,14 +257,21 @@ TEST_F(RingOutlierFilterTest, VisibilityScoreAzimuthJustBelowMaxStaysInLastBin)
     cloud.push_back(make_point(1, 0.0F, 5.0F));                               // ring 1, first bin
   }
 
-  EXPECT_FLOAT_EQ(
-    node.calculate_visibility_score(*to_msg(cloud)), expected_score(3, horizontal_bins));
+  // Act
+  const float score = node.calculate_visibility_score(*to_msg(cloud));
+
+  // Assert
+  // Bins 0 and 34 of ring 0 and bin 0 of ring 1 are filled, so the expected score is
+  // 1 - (3 / (128 * 35)) = 1 - 3 / 4480 = 4477 / 4480 = 0.9993303571
+  EXPECT_FLOAT_EQ(score, expected_score(3, horizontal_bins));
 }
 
 TEST_F(RingOutlierFilterTest, VisibilityScoreIgnoresChannelOutOfRange)
 {
+  // Arrange
+  // Channel 128 equals vertical_bins, so it has no row in the 128 x 36 image. 3 points (more than
+  // noise_threshold) are put on ring 0 and on channel 128 at the same azimuth.
   RingOutlierFilterComponentPublic node(make_node_options());
-
   pcl::PointCloud<PointXYZIRCAEDT> cloud;
   for (int i = 0; i < 3; ++i) {
     cloud.push_back(make_point(0, 5.0F * deg_to_rad, 5.0F));
@@ -232,86 +279,172 @@ TEST_F(RingOutlierFilterTest, VisibilityScoreIgnoresChannelOutOfRange)
       make_point(default_vertical_bins, 5.0F * deg_to_rad, 5.0F));  // == vertical_bins
   }
 
-  float score = 0.0F;
-  EXPECT_NO_THROW(score = node.calculate_visibility_score(*to_msg(cloud)));
+  // Act
+  const float score = node.calculate_visibility_score(*to_msg(cloud));
+
+  // Assert
+  // Only the point on ring 0 is counted.
   EXPECT_FLOAT_EQ(score, expected_score(1));
 }
 
-TEST_F(RingOutlierFilterTest, ContinuityBreaksAtExactOneDegree)
+TEST_F(RingOutlierFilterTest, InvalidVisibilityParametersAreRejectedAtStartup)
 {
-  RingOutlierFilterComponentPublic node(make_node_options());
+  // Arrange
+  // With 0 horizontal bins, the bin width would be infinite and the last-bin clamp would wrap
+  // around.
+  const auto options = make_node_options().append_parameter_override("horizontal_bins", 0);
 
-  // The filter splits a walk unless azimuth_diff < 1 degree, comparing a float azimuth_diff with a
-  // double threshold. float(pi / 180) is slightly below that threshold, so "exactly 1 degree" in
-  // float would count as continuous. Use the float neighbors on each side of the threshold.
-  const float one_deg_f = static_cast<float>(M_PI / 180.0);
-  const float just_below_one_deg = std::nextafter(one_deg_f, 0.0F);
-  const float just_above_one_deg =
-    std::nextafter(one_deg_f, std::numeric_limits<float>::infinity());
+  // Act
+  std::string error;
+  try {
+    RingOutlierFilterComponentPublic node(options);
+  } catch (const std::invalid_argument & e) {
+    error = e.what();
+  }
 
-  pcl::PointCloud<PointXYZIRCAEDT> continuous_cloud;
-  continuous_cloud.push_back(make_point(0, 0.0F * deg_to_rad, 5.0F));
-  continuous_cloud.push_back(make_point(0, just_below_one_deg, 5.0F));
-  continuous_cloud.push_back(make_point(0, 2.0F * just_below_one_deg, 5.0F));
-
-  sensor_msgs::msg::PointCloud2 continuous_output;
-  node.faster_filter(to_msg(continuous_cloud), nullptr, continuous_output, TransformInfo{});
-  EXPECT_FALSE(extract_points(continuous_output).empty());
-
-  pcl::PointCloud<PointXYZIRCAEDT> boundary_cloud;
-  boundary_cloud.push_back(make_point(0, 0.0F, 5.0F));
-  boundary_cloud.push_back(make_point(0, just_above_one_deg, 5.0F));
-  boundary_cloud.push_back(make_point(0, 2.0F * just_above_one_deg, 5.0F));
-
-  sensor_msgs::msg::PointCloud2 boundary_output;
-  node.faster_filter(to_msg(boundary_cloud), nullptr, boundary_output, TransformInfo{});
-  EXPECT_TRUE(extract_points(boundary_output).empty());
+  // Assert
+  // The exception message is the same as the one returned by validate_visibility_parameters().
+  EXPECT_EQ(error, "vertical_bins and horizontal_bins must be positive");
 }
 
-TEST_F(RingOutlierFilterTest, ContinuityBreaksAtExactDistanceRatio)
+TEST_F(RingOutlierFilterTest, ZeroHorizontalBinsUpdateIsRejected)
 {
+  // Arrange
+  // The same invalid value set at runtime: the update must be refused and the previous value kept.
   RingOutlierFilterComponentPublic node(make_node_options());
 
-  pcl::PointCloud<PointXYZIRCAEDT> continuous_cloud;
-  continuous_cloud.push_back(make_point(0, 0.0F * deg_to_rad, 10.0F));
-  continuous_cloud.push_back(make_point(0, 0.1F * deg_to_rad, 10.29F));
-  continuous_cloud.push_back(make_point(0, 0.2F * deg_to_rad, 10.58F));
+  // Act
+  const auto result = node.set_parameter(rclcpp::Parameter("horizontal_bins", 0));
 
-  sensor_msgs::msg::PointCloud2 continuous_output;
-  node.faster_filter(to_msg(continuous_cloud), nullptr, continuous_output, TransformInfo{});
-  EXPECT_FALSE(extract_points(continuous_output).empty());
+  // Assert
+  // The update is rejected and the previous value is kept.
+  EXPECT_FALSE(result.successful);
+  EXPECT_EQ(node.get_parameter("horizontal_bins").as_int(), default_horizontal_bins);
+}
 
-  pcl::PointCloud<PointXYZIRCAEDT> boundary_cloud;
-  boundary_cloud.push_back(make_point(0, 0.0F * deg_to_rad, 10.0F));
-  boundary_cloud.push_back(make_point(0, 0.1F * deg_to_rad, 10.3F));
-  boundary_cloud.push_back(make_point(0, 0.2F * deg_to_rad, 10.6F));
+TEST_F(RingOutlierFilterTest, MinAzimuthNotBelowMaxAzimuthUpdateIsRejected)
+{
+  // Arrange
+  // min_azimuth_deg equal to max_azimuth_deg would make the bin width 0.
+  RingOutlierFilterComponentPublic node(make_node_options());
 
-  sensor_msgs::msg::PointCloud2 boundary_output;
-  node.faster_filter(to_msg(boundary_cloud), nullptr, boundary_output, TransformInfo{});
-  EXPECT_TRUE(extract_points(boundary_output).empty());
+  // Act
+  const auto result = node.set_parameter(rclcpp::Parameter("min_azimuth_deg", 360.0));
+
+  // Assert
+  // The update is rejected and the previous value is kept.
+  EXPECT_FALSE(result.successful);
+  EXPECT_DOUBLE_EQ(node.get_parameter("min_azimuth_deg").as_double(), 0.0);
+}
+
+TEST_F(RingOutlierFilterTest, AzimuthStepJustBelowOneDegreeKeepsWalkContinuous)
+{
+  // Arrange
+  // A walk continues while the azimuth step is below 1 degree. float(pi / 180) is slightly below
+  // the filter's double threshold, so the float just below it is used. The three points form one
+  // walk of about 0.17 m, longer than object_length_threshold, so it is kept.
+  RingOutlierFilterComponentPublic node(make_node_options());
+  const float step = std::nextafter(static_cast<float>(M_PI / 180.0), 0.0F);
+  pcl::PointCloud<PointXYZIRCAEDT> cloud;
+  cloud.push_back(make_point(0, 0.0F, 5.0F));
+  cloud.push_back(make_point(0, step, 5.0F));
+  cloud.push_back(make_point(0, 2.0F * step, 5.0F));
+  sensor_msgs::msg::PointCloud2 output;
+
+  // Act
+  node.faster_filter(to_msg(cloud), nullptr, output, TransformInfo{});
+
+  // Assert
+  // The three points are kept in the output.
+  EXPECT_FALSE(extract_points(output).empty());
+}
+
+TEST_F(RingOutlierFilterTest, AzimuthStepJustAboveOneDegreeBreaksWalk)
+{
+  // Arrange
+  // The float just above 1 degree breaks the walk at every point, so each walk is a single point
+  // of length 0 and is removed.
+  RingOutlierFilterComponentPublic node(make_node_options());
+  const float step =
+    std::nextafter(static_cast<float>(M_PI / 180.0), std::numeric_limits<float>::infinity());
+  pcl::PointCloud<PointXYZIRCAEDT> cloud;
+  cloud.push_back(make_point(0, 0.0F, 5.0F));
+  cloud.push_back(make_point(0, step, 5.0F));
+  cloud.push_back(make_point(0, 2.0F * step, 5.0F));
+  sensor_msgs::msg::PointCloud2 output;
+
+  // Act
+  node.faster_filter(to_msg(cloud), nullptr, output, TransformInfo{});
+
+  // Assert
+  // The three points are removed from the output.
+  EXPECT_TRUE(extract_points(output).empty());
+}
+
+TEST_F(RingOutlierFilterTest, DistanceRatioBelowThresholdKeepsWalkContinuous)
+{
+  // Arrange
+  // Each distance step is below distance_ratio (1.03), so the three points form one walk of about
+  // 0.58 m and are kept.
+  RingOutlierFilterComponentPublic node(make_node_options());
+  pcl::PointCloud<PointXYZIRCAEDT> cloud;
+  cloud.push_back(make_point(0, 0.0F * deg_to_rad, 10.0F));
+  cloud.push_back(make_point(0, 0.1F * deg_to_rad, 10.29F));
+  cloud.push_back(make_point(0, 0.2F * deg_to_rad, 10.58F));
+  sensor_msgs::msg::PointCloud2 output;
+
+  // Act
+  node.faster_filter(to_msg(cloud), nullptr, output, TransformInfo{});
+
+  // Assert
+  // The three points are kept in the output.
+  EXPECT_FALSE(extract_points(output).empty());
+}
+
+TEST_F(RingOutlierFilterTest, DistanceRatioAtThresholdBreaksWalk)
+{
+  // Arrange
+  // Each distance step is exactly distance_ratio, which is not below it, so each point is its own
+  // walk of length 0 and is removed.
+  RingOutlierFilterComponentPublic node(make_node_options());
+  pcl::PointCloud<PointXYZIRCAEDT> cloud;
+  cloud.push_back(make_point(0, 0.0F * deg_to_rad, 10.0F));
+  cloud.push_back(make_point(0, 0.1F * deg_to_rad, 10.3F));
+  cloud.push_back(make_point(0, 0.2F * deg_to_rad, 10.6F));
+  sensor_msgs::msg::PointCloud2 output;
+
+  // Act
+  node.faster_filter(to_msg(cloud), nullptr, output, TransformInfo{});
+
+  // Assert
+  // The three points are removed from the output.
+  EXPECT_TRUE(extract_points(output).empty());
 }
 
 TEST_F(RingOutlierFilterTest, TransformPathAppliesTranslation)
 {
+  // Arrange
+  // The transform is a pure translation, so every output point is its input point shifted by
+  // (1.5, -2.0, 0.25).
   RingOutlierFilterComponentPublic node(make_node_options());
-
   pcl::PointCloud<PointXYZIRCAEDT> cloud;
   append_arc(cloud, 2, 30.0F, 20);
   const auto input_msg = to_msg(cloud);
-
   TransformInfo tf;
   tf.need_transform = true;
   tf.eigen_transform = Eigen::Matrix4f::Identity();
   tf.eigen_transform(0, 3) = 1.5F;
   tf.eigen_transform(1, 3) = -2.0F;
   tf.eigen_transform(2, 3) = 0.25F;
-
   sensor_msgs::msg::PointCloud2 output;
+
+  // Act
   node.faster_filter(input_msg, nullptr, output, tf);
 
+  // Assert
+  // The output points are the input points translated by (1.5, -2.0, 0.25).
   const auto points = extract_points(output);
   ASSERT_FALSE(points.empty());
-
   const auto & in = cloud.points.front();
   const auto & out = points.front();
   EXPECT_NEAR(out.x, in.x + 1.5F, 1e-4F);
