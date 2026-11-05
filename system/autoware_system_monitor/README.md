@@ -152,6 +152,7 @@ As with the CPU monitor, this package provides an approach to minimize security 
 - Provide a small program named 'hdd_reader' which accesses S.M.A.R.T. information and sends some items of it to HDD monitor by using socket programming.
 - Run 'hdd_reader' as a specific user.
 - HDD monitor is able to know some items of S.M.A.R.T. information as an unprivileged user since those are sent by socket communication.
+  - The executors of Autoware (hdd_monitor) and 'hdd_reader' must belong to the same group so that the applications can communicate via a UNIX socket with a permission (mode) of 0660 .
 
 ### Instructions before starting
 

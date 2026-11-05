@@ -101,8 +101,9 @@ DetectionByTracker::DetectionByTracker(const rclcpp::NodeOptions & node_options)
     rclcpp::QoS{1},
     [this](
       const AUTOWARE_MESSAGE_CONST_SHARED_PTR(
-        tier4_perception_msgs::msg::DetectedObjectsWithFeature) &
-      input_msg) { onObjects(input_msg); },
+        tier4_perception_msgs::msg::DetectedObjectsWithFeature) & input_msg) {
+      onObjects(input_msg);
+    },
     options);
   objects_pub_ =
     create_publisher<autoware_perception_msgs::msg::DetectedObjects>("~/output", rclcpp::QoS{1});

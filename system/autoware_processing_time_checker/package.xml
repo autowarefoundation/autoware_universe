@@ -5,7 +5,6 @@
   <version>0.53.0</version>
   <description>A package to find out nodes with common names</description>
   <maintainer email="takayuki.murooka@tier4.jp">Takayuki Murooka</maintainer>
-  <maintainer email="kosuke.takeuchi@tier4.jp">Kosuke Takeuchi</maintainer>
 
   <license>Apache 2.0</license>
 
