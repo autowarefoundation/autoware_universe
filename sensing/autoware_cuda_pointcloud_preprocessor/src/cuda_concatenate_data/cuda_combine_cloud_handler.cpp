@@ -33,11 +33,35 @@
 namespace autoware::pointcloud_preprocessor
 {
 
+namespace
+{
+
+/// Dispatches transform_launch on the output point format; `input` and `output` are raw point
+/// buffers of that format.
+void launch_transform(
+  PointFormat point_format, const std::uint8_t * input, int num_points,
+  const TransformStruct & transform, std::uint32_t time_offset_ns, std::uint8_t * output,
+  cudaStream_t & stream)
+{
+  using autoware::point_types::PointXYZIRC;
+  using autoware::point_types::PointXYZIRCT;
+  if (point_format == PointFormat::XYZIRCT) {
+    transform_launch(
+      reinterpret_cast<const PointXYZIRCT *>(input), num_points, transform, time_offset_ns,
+      reinterpret_cast<PointXYZIRCT *>(output), stream);
+  } else {
+    transform_launch(
+      reinterpret_cast<const PointXYZIRC *>(input), num_points, transform, time_offset_ns,
+      reinterpret_cast<PointXYZIRC *>(output), stream);
+  }
+}
+
+}  // namespace
+
 CombineCloudHandler<cuda_blackboard::CudaPointCloud2>::CombineCloudHandler(
   const std::vector<std::string> & input_topics, std::string output_frame,
-  OutputPointFormat output_point_format, bool is_motion_compensated,
-  bool publish_synchronized_pointcloud, bool keep_input_frame_in_synchronized_pointcloud,
-  MatchingStrategyType matching_strategy)
+  PointFormat output_point_format, bool is_motion_compensated, bool publish_synchronized_pointcloud,
+  bool keep_input_frame_in_synchronized_pointcloud, MatchingStrategyType matching_strategy)
 : CombineCloudHandlerBase(
     input_topics, output_frame, output_point_format, is_motion_compensated,
     publish_synchronized_pointcloud, keep_input_frame_in_synchronized_pointcloud, matching_strategy)
@@ -73,24 +97,9 @@ bool CombineCloudHandler<cuda_blackboard::CudaPointCloud2>::is_input_layout_supp
   if (cloud.point_step != output_point_step_) {
     return false;
   }
-  return output_point_format_ == OutputPointFormat::XYZIRCT
+  return output_point_format_ == PointFormat::XYZIRCT
            ? autoware::point_types::is_data_layout_compatible_with_point_xyzirct(cloud.fields)
            : autoware::point_types::is_data_layout_compatible_with_point_xyzirc(cloud.fields);
-}
-
-void CombineCloudHandler<cuda_blackboard::CudaPointCloud2>::launch_transform(
-  const std::uint8_t * input, int num_points, const TransformStruct & transform,
-  std::uint32_t time_offset_ns, std::uint8_t * output, cudaStream_t & stream) const
-{
-  if (output_point_format_ == OutputPointFormat::XYZIRCT) {
-    transform_launch(
-      reinterpret_cast<const PointXYZIRCT *>(input), num_points, transform, time_offset_ns,
-      reinterpret_cast<PointXYZIRCT *>(output), stream);
-  } else {
-    transform_launch(
-      reinterpret_cast<const PointXYZIRC *>(input), num_points, transform,
-      reinterpret_cast<PointXYZIRC *>(output), stream);
-  }
 }
 
 ConcatenatedCloudResult<cuda_blackboard::CudaPointCloud2>
@@ -190,7 +199,7 @@ CombineCloudHandler<cuda_blackboard::CudaPointCloud2>::combine_pointclouds(
       static_cast<std::uint32_t>((current_cloud_stamp - oldest_stamp).nanoseconds());
     auto & stream = cuda_concat_struct_map_[topic].stream;
     launch_transform(
-      cloud->data.get(), num_points, transform_struct, time_offset_ns,
+      output_point_format_, cloud->data.get(), num_points, transform_struct, time_offset_ns,
       output_points + concatenated_start_index * output_point_step_, stream);
     concatenated_start_index += num_points;
     concatenation_info_manager_.update_source_from_point_cloud(
@@ -266,8 +275,8 @@ CombineCloudHandler<cuda_blackboard::CudaPointCloud2>::combine_pointclouds(
 
         // Point times were already rebased in the first round.
         launch_transform(
-          output_points + concatenated_start_index * output_point_step_, num_points,
-          transform_struct, 0U, output_cloud->data.get(), stream);
+          output_point_format_, output_points + concatenated_start_index * output_point_step_,
+          num_points, transform_struct, 0U, output_cloud->data.get(), stream);
         output_cloud->header.frame_id = cloud->header.frame_id;
       } else {
         CHECK_CUDA_ERROR(cudaMemcpyAsync(

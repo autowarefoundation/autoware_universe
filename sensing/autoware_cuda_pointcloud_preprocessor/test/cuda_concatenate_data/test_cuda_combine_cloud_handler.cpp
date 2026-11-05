@@ -137,7 +137,7 @@ protected:
     // Motion compensation off (no twist needed); clouds are already in the output frame.
     handler_.emplace(
       std::vector<std::string>{"lidar_left", "lidar_right"}, kOutputFrame,
-      autoware::pointcloud_preprocessor::OutputPointFormat::XYZIRC,
+      autoware::pointcloud_preprocessor::PointFormat::XYZIRC,
       /*is_motion_compensated=*/false,
       /*publish_synchronized_pointcloud=*/false,
       /*keep_input_frame_in_synchronized_pointcloud=*/false,

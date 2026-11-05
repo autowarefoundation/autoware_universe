@@ -14,11 +14,9 @@
 
 #pragma once
 
-#include "autoware/cuda_pointcloud_preprocessor/cuda_concatenate_data/cuda_combine_cloud_handler_kernel.hpp"
 #include "autoware/cuda_pointcloud_preprocessor/cuda_concatenate_data/cuda_traits.hpp"
 #include "autoware/pointcloud_preprocessor/concatenate_data/combine_cloud_handler.hpp"
 
-#include <cstdint>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -43,15 +41,10 @@ protected:
   std::size_t max_concat_pointcloud_size_{0};
   std::mutex mutex_;
 
-  /// Dispatches transform_launch on the configured output point format.
-  void launch_transform(
-    const std::uint8_t * input, int num_points, const TransformStruct & transform,
-    std::uint32_t time_offset_ns, std::uint8_t * output, cudaStream_t & stream) const;
-
 public:
   CombineCloudHandler(
     const std::vector<std::string> & input_topics, std::string output_frame,
-    OutputPointFormat output_point_format, bool is_motion_compensated,
+    PointFormat output_point_format, bool is_motion_compensated,
     bool publish_synchronized_pointcloud, bool keep_input_frame_in_synchronized_pointcloud,
     MatchingStrategyType matching_strategy);
 

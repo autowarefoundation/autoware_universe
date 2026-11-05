@@ -69,7 +69,7 @@ std::unique_ptr<MatchingPolicy> CloudConcatenator<PointCloudMsgT>::make_matching
 template <typename PointCloudMsgT>
 CloudConcatenator<PointCloudMsgT>::CloudConcatenator(
   const std::vector<std::string> & input_topics, const std::string & output_frame,
-  OutputPointFormat output_point_format, double timeout_sec, bool is_motion_compensated,
+  PointFormat output_point_format, double timeout_sec, bool is_motion_compensated,
   bool publish_synchronized_pointcloud, bool keep_input_frame_in_synchronized_pointcloud,
   MatchingStrategyType matching_strategy,
   const std::optional<std::vector<double>> & lidar_timestamp_offsets,

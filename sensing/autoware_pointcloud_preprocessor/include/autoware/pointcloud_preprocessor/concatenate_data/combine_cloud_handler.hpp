@@ -32,7 +32,6 @@
 namespace autoware::pointcloud_preprocessor
 {
 using autoware::point_types::PointXYZIRC;
-using autoware::point_types::PointXYZIRCT;
 using point_cloud_msg_wrapper::PointCloud2Modifier;
 
 /// Combines one collector's clouds into a single cloud in the output frame. Specialized per message
@@ -52,7 +51,7 @@ class CombineCloudHandler<sensor_msgs::msg::PointCloud2> : public CombineCloudHa
 public:
   CombineCloudHandler(
     const std::vector<std::string> & input_topics, std::string output_frame,
-    OutputPointFormat output_point_format, bool is_motion_compensated,
+    PointFormat output_point_format, bool is_motion_compensated,
     bool publish_synchronized_pointcloud, bool keep_input_frame_in_synchronized_pointcloud,
     MatchingStrategyType matching_strategy)
   : CombineCloudHandlerBase(
@@ -89,11 +88,6 @@ protected:
   void convert_to_output_cloud(
     const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input_cloud,
     sensor_msgs::msg::PointCloud2::UniquePtr & output_cloud, std::uint32_t time_offset_ns) const;
-
-  template <typename PointT, typename GeneratorT>
-  static void convert_cloud(
-    const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input_cloud,
-    sensor_msgs::msg::PointCloud2::UniquePtr & output_cloud, std::uint32_t time_offset_ns);
 
   /// @brief Transform `in` into `out` with a 4x4 matrix (replaces pcl_ros::transformPointCloud).
   /// Points with a non-finite coordinate are left unchanged, matching pcl_ros.

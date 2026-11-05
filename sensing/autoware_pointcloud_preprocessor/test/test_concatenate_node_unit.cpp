@@ -43,8 +43,8 @@
 using autoware::pointcloud_preprocessor::CombineCloudHandler;
 using autoware::pointcloud_preprocessor::ConcatenatedFrameStatus;
 using autoware::pointcloud_preprocessor::MatchingStrategyType;
-using autoware::pointcloud_preprocessor::OutputPointFormat;
 using autoware::pointcloud_preprocessor::PointCloudConcatenateDataSynchronizerComponent;
+using autoware::pointcloud_preprocessor::PointFormat;
 using CloudConcatenator =
   autoware::pointcloud_preprocessor::CloudConcatenator<sensor_msgs::msg::PointCloud2>;
 
@@ -78,15 +78,15 @@ protected:
     concatenate_node_ =
       std::make_shared<PointCloudConcatenateDataSynchronizerComponent>(node_options);
     combine_cloud_handler_ = std::make_shared<CombineCloudHandler<sensor_msgs::msg::PointCloud2>>(
-      input_topics, "base_link", OutputPointFormat::XYZIRC, true, true, true,
+      input_topics, "base_link", PointFormat::XYZIRC, true, true, true,
       MatchingStrategyType::advanced);
     combine_cloud_handler_xyzirct_ =
       std::make_shared<CombineCloudHandler<sensor_msgs::msg::PointCloud2>>(
-        input_topics, "base_link", OutputPointFormat::XYZIRCT, true, true, true,
+        input_topics, "base_link", PointFormat::XYZIRCT, true, true, true,
         MatchingStrategyType::advanced);
 
     concatenator_ = std::make_unique<CloudConcatenator>(
-      input_topics, "base_link", OutputPointFormat::XYZIRC, timeout_sec, true, true, true,
+      input_topics, "base_link", PointFormat::XYZIRC, timeout_sec, true, true, true,
       MatchingStrategyType::advanced, std::vector<double>{0.0, 0.04, 0.08},
       std::vector<double>{0.01, 0.01, 0.01});
 
