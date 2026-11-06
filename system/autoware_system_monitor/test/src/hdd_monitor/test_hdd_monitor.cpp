@@ -20,7 +20,7 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/filesystem.hpp>
-#include <boost/process.hpp>
+#include "system_monitor/boost_process.hpp"
 
 #include <fmt/format.h>
 #include <gtest/gtest.h>

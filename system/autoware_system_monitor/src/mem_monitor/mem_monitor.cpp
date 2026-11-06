@@ -21,7 +21,7 @@
 
 #include "system_monitor/system_monitor_utility.hpp"
 
-#include <boost/process.hpp>
+#include "system_monitor/boost_process.hpp"
 
 #include <fmt/format.h>
 

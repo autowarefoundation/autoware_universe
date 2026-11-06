@@ -24,7 +24,7 @@
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
-#include <boost/process.hpp>
+#include "system_monitor/boost_process.hpp"
 #include <boost/serialization/vector.hpp>
 
 #include <fcntl.h>
