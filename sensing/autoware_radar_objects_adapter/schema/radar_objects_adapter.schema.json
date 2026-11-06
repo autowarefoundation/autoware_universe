@@ -44,63 +44,63 @@
           "properties": {
             "UNKNOWN": {
               "type": "string",
-              "description": "Radar class to map to UNKNOWN label.",
+              "description": "Perception label that the radar label UNKNOWN becomes.",
               "default": "UNKNOWN"
             },
             "CAR": {
               "type": "string",
-              "description": "Radar class to map to CAR label.",
+              "description": "Perception label that the radar label CAR becomes.",
               "default": "CAR"
             },
             "TRUCK": {
               "type": "string",
-              "description": "Radar class to map to TRUCK label.",
+              "description": "Perception label that the radar label TRUCK becomes.",
               "default": "TRUCK"
             },
             "BUS": {
               "type": "string",
-              "default": "CAR",
-              "description": "A radar that reports BUS tends to confuse it with CAR; default=CAR"
+              "description": "Perception label that the radar label BUS becomes.",
+              "default": "CAR"
             },
             "TRAILER": {
               "type": "string",
-              "default": "CAR",
-              "description": "A radar that reports TRAILER tends to confuse it with CAR; default=CAR"
+              "description": "Perception label that the radar label TRAILER becomes.",
+              "default": "CAR"
             },
             "MOTORCYCLE": {
               "type": "string",
-              "default": "CAR",
-              "description": "Radar tends to misclassify far cars as MOTORCYCLE; default=CAR"
+              "description": "Perception label that the radar label MOTORCYCLE becomes.",
+              "default": "CAR"
             },
             "BICYCLE": {
               "type": "string",
-              "default": "CAR",
-              "description": "Radar tends to misclassify far cars as BICYCLE; default=CAR"
+              "description": "Perception label that the radar label BICYCLE becomes.",
+              "default": "CAR"
             },
             "PEDESTRIAN": {
               "type": "string",
-              "description": "Radar class to map to PEDESTRIAN label.",
+              "description": "Perception label that the radar label PEDESTRIAN becomes.",
               "default": "PEDESTRIAN"
             },
             "ANIMAL": {
               "type": "string",
-              "description": "Radar class to map to ANIMAL label.",
+              "description": "Perception label that the radar label ANIMAL becomes.",
               "default": "ANIMAL"
             },
             "HAZARD": {
               "type": "string",
-              "default": "UNKNOWN",
-              "description": "HAZARD is not a valid Perception label; fallback=UNKNOWN"
+              "description": "Perception label that the radar label HAZARD becomes.",
+              "default": "UNKNOWN"
             },
             "OVER_DRIVABLE": {
               "type": "string",
-              "default": "UNKNOWN",
-              "description": "OVER_DRIVABLE is a radar-specific label; fallback=UNKNOWN"
+              "description": "Perception label that the radar label OVER_DRIVABLE becomes.",
+              "default": "UNKNOWN"
             },
             "UNDER_DRIVABLE": {
               "type": "string",
-              "default": "UNKNOWN",
-              "description": "UNDER_DRIVABLE is a radar-specific label; fallback=UNKNOWN"
+              "description": "Perception label that the radar label UNDER_DRIVABLE becomes.",
+              "default": "UNKNOWN"
             }
           },
           "required": [
