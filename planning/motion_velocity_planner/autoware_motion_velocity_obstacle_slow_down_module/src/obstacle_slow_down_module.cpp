@@ -237,11 +237,6 @@ ObstacleSlowDownModule::convert_point_cloud_to_slow_down_points(
   const PointCloud::Ptr filtered_points_ptr = pointcloud.get_filtered_pointcloud_ptr();
   const std::vector<pcl::PointIndices> clusters = pointcloud.get_cluster_indices();
 
-  // Cheap pre-filtering. The lateral offset calculation below scans all the trajectory points for
-  // every point, so its cost is (the number of points) x (the number of trajectory points). A point
-  // outside the bounding boxes of all the decimated trajectory polygons is outside all the
-  // polygons, and the precise filtering below always rejects it. Skipping such a point before the
-  // lateral offset calculation does not change the result.
   using BoxWithIndex = std::pair<autoware_utils_geometry::Box2d, size_t>;
   std::vector<BoxWithIndex> traj_poly_boxes;
   traj_poly_boxes.reserve(decimated_traj_polys_with_lat_margin.size());
@@ -270,7 +265,8 @@ ObstacleSlowDownModule::convert_point_cloud_to_slow_down_points(
     for (const auto & index : cluster_indices.indices) {
       const auto obstacle_point = autoware::motion_velocity_planner::utils::to_geometry_point(
         filtered_points_ptr->points[index]);
-      // 0. cheap pre-filtering - filters out point-cloud points outside all the trajectory polygons
+      // 0. cheap pre-filtering - skips points outside the bounding boxes of all the trajectory
+      // polygons. They are outside all the polygons, so the precise filtering below rejects them.
       if (
         traj_poly_rtree.qbegin(
           boost::geometry::index::intersects(
