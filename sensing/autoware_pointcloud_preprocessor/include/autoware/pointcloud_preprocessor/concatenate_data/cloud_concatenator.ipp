@@ -117,6 +117,13 @@ std::vector<ConcatenatedFrame<PointCloudMsgT>> CloudConcatenator<PointCloudMsgT>
     throw std::invalid_argument(
       "unknown topic '" + topic + "'; expected one of the configured input_topics");
   }
+  // The node drops unsupported clouds before reaching here; the offline API (example, bindings)
+  // has no such gate, so refuse the cloud before any collector state changes.
+  if (!handler_.is_input_layout_supported(*cloud)) {
+    throw std::invalid_argument(
+      "the point cloud layout of topic '" + topic +
+      "' cannot be converted to the configured output point type");
+  }
 
   // (1) Timeout: close any collector whose timer has expired in arrival time (it can no longer
   // receive more clouds).
