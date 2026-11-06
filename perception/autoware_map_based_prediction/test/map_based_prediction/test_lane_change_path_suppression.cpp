@@ -17,6 +17,7 @@
 
 #include <gtest/gtest.h>
 #include <lanelet2_core/LaneletMap.h>
+#include <lanelet2_core/geometry/Lanelet.h>
 #include <lanelet2_core/primitives/Lanelet.h>
 #include <lanelet2_core/primitives/LineString.h>
 #include <lanelet2_core/primitives/Point.h>
@@ -141,8 +142,130 @@ TEST_F(LaneChangePathSuppressionTest, CycleTerminatesWithoutTerminal)
   geometry_msgs::msg::Point position;
   position.x = 10.0;
   size_t expanded = 0;
+  // Each lap lengthens the route until it leaves the horizon: the lane does not end.
   EXPECT_FALSE(laneEndsWithinHorizon(lanes.front(), position, 1000.0, *graph_, &expanded));
-  EXPECT_EQ(expanded, lanes.size());
+  EXPECT_GT(expanded, lanes.size());
+  EXPECT_LE(expanded, 4096U);
+}
+
+TEST_F(LaneChangePathSuppressionTest, CycleWithDeadEndWithinHorizonIsNotLaneEnd)
+{
+  // A ring of four lanelets plus a dead-end branch leaving the first one. One lap fits in the
+  // horizon, so a shortest-distance search would discard the revisit and report the dead end
+  // as the only exit; the vehicle can keep circulating, so the lane does not end.
+  auto map = std::make_shared<lanelet::LaneletMap>();
+  std::vector<lanelet::Point3d> left, right;
+  lanelet::Id id = 2000;
+  for (size_t i = 0; i < 4; ++i) {
+    const double angle = M_PI_2 * i;
+    left.emplace_back(id++, 9.0 * std::cos(angle), 9.0 * std::sin(angle), 0.0);
+    right.emplace_back(id++, 11.0 * std::cos(angle), 11.0 * std::sin(angle), 0.0);
+  }
+  std::vector<lanelet::Lanelet> lanes;
+  for (size_t i = 0; i < 4; ++i) {
+    const size_t j = (i + 1) % 4;
+    const lanelet::LineString3d lb(id++, {left[i], left[j]});
+    const lanelet::LineString3d rb(id++, {right[i], right[j]});
+    lanes.emplace_back(id++, lb, rb);
+  }
+  const lanelet::Point3d dl(id++, 9.0, 15.0, 0.0);
+  const lanelet::Point3d dr(id++, 11.0, 15.0, 0.0);
+  const lanelet::LineString3d dead_end_left(id++, {left[1], dl});
+  const lanelet::LineString3d dead_end_right(id++, {right[1], dr});
+  lanes.emplace_back(id++, dead_end_left, dead_end_right);
+  for (auto & lane : lanes) {
+    lane.attributes()[lanelet::AttributeName::Subtype] = "road";
+    lane.attributes()[lanelet::AttributeName::Location] = "urban";
+    map->add(lane);
+  }
+  const auto rules = lanelet::traffic_rules::TrafficRulesFactory::create(
+    lanelet::Locations::Germany, lanelet::Participants::Vehicle);
+  const auto graph = lanelet::routing::RoutingGraph::build(*map, *rules);
+  ASSERT_EQ(graph->following(lanes[0]).size(), 2U);
+  ASSERT_TRUE(graph->following(lanes[4]).empty());
+
+  geometry_msgs::msg::Point position;
+  position.x = 10.0;
+  double lap = 0.0;
+  for (size_t i = 0; i < 4; ++i) lap += lanelet::geometry::length2d(lanes[i]);
+  const double dead_end =
+    lanelet::geometry::length2d(lanes[0]) + lanelet::geometry::length2d(lanes[4]);
+  double lane_end_distance = -1.0;
+  EXPECT_FALSE(
+    laneEndsWithinHorizon(lanes[0], position, lap + dead_end, *graph, nullptr, &lane_end_distance));
+  EXPECT_FALSE(
+    laneEndsWithinHorizon(lanes[0], position, 10.0 * lap, *graph, nullptr, &lane_end_distance));
+  EXPECT_LT(lane_end_distance, 0.0);
+}
+
+TEST_F(LaneChangePathSuppressionTest, LongerRouteToMergedBranchDecidesLaneEnd)
+{
+  // first_ (x=0..20) forks into a short branch (x=20..30) and a long detour that merges back at
+  // x=30; the merged lanelet (x=30..40) leads to a dead end (x=40..50). Via the short branch the
+  // dead end is 35 m ahead of the object at x=15; via the detour it is farther, and that longer
+  // route must decide whether every branch ends within the horizon.
+  const lanelet::Point3d l1 = first_.leftBound().back();
+  const lanelet::Point3d r1 = first_.rightBound().back();
+  const lanelet::Point3d l2 = last_.leftBound().back();
+  const lanelet::Point3d r2 = last_.rightBound().back();
+  const lanelet::Point3d lm(21, 25.0, 11.0, 0.0);
+  const lanelet::Point3d rm(22, 25.0, 9.0, 0.0);
+  const lanelet::Point3d l3(23, 40.0, 1.0, 0.0);
+  const lanelet::Point3d r3(24, 40.0, -1.0, 0.0);
+  const lanelet::Point3d l4(25, 50.0, 1.0, 0.0);
+  const lanelet::Point3d r4(26, 50.0, -1.0, 0.0);
+  lanelet::Lanelet detour(
+    27, lanelet::LineString3d(28, {l1, lm, l2}), lanelet::LineString3d(29, {r1, rm, r2}));
+  lanelet::Lanelet merged(
+    30, lanelet::LineString3d(31, {l2, l3}), lanelet::LineString3d(32, {r2, r3}));
+  lanelet::Lanelet dead_end(
+    33, lanelet::LineString3d(34, {l3, l4}), lanelet::LineString3d(35, {r3, r4}));
+  auto map = std::make_shared<lanelet::LaneletMap>();
+  for (auto * lanelet : {&first_, &last_, &detour, &merged, &dead_end}) {
+    lanelet->attributes()[lanelet::AttributeName::Subtype] = "road";
+    lanelet->attributes()[lanelet::AttributeName::Location] = "urban";
+    map->add(*lanelet);
+  }
+  const auto rules = lanelet::traffic_rules::TrafficRulesFactory::create(
+    lanelet::Locations::Germany, lanelet::Participants::Vehicle);
+  const auto graph = lanelet::routing::RoutingGraph::build(*map, *rules);
+  ASSERT_EQ(graph->following(first_).size(), 2U);
+  ASSERT_EQ(graph->following(detour).size(), 1U);
+  ASSERT_TRUE(graph->following(dead_end).empty());
+
+  const double via_short = 5.0 + 10.0 + 10.0 + 10.0;
+  const double via_detour = 5.0 + lanelet::geometry::length2d(detour) + 10.0 + 10.0;
+  ASSERT_GT(via_detour, via_short + 1.0);
+  double lane_end_distance = -1.0;
+  // Only the short route ends within the horizon: the detour continues past it.
+  EXPECT_FALSE(laneEndsWithinHorizon(
+    first_, position_, 0.5 * (via_short + via_detour), *graph, nullptr, &lane_end_distance));
+  EXPECT_LT(lane_end_distance, 0.0);
+  // Both routes end within the horizon: report the longer one.
+  EXPECT_TRUE(laneEndsWithinHorizon(
+    first_, position_, via_detour + 1.0, *graph, nullptr, &lane_end_distance));
+  EXPECT_NEAR(lane_end_distance, via_detour, 1e-6);
+}
+
+TEST_F(LaneChangePathSuppressionTest, UninitializedJudgementIsTreatedAsUndetected)
+{
+  // The first frames after the maneuver history restarts (e.g. after low-speed frames that only
+  // updated the history) return UNINITIALIZED. It carries no evidence of lateral motion, so both
+  // LC candidates are suppressed like lane-follow, and the lane-end rescue still applies.
+  std::vector<LaneletPathWithPathInfo> suppressed;
+  const auto result = suppressUndetectedLaneChangePaths(
+    makePaths(), makeOrigins(Maneuver::UNINITIALIZED), true, true, &suppressed);
+  ASSERT_EQ(result.size(), 1U);
+  EXPECT_EQ(result.front().second.maneuver, Maneuver::LANE_FOLLOW);
+  EXPECT_EQ(suppressed.size(), 2U);
+  EXPECT_EQ(
+    suppressUndetectedLaneChangePaths(
+      makePaths(), makeOrigins(Maneuver::UNINITIALIZED, true), true, true)
+      .size(),
+    3U);
+  EXPECT_FALSE(isDetectedLaneChange(Maneuver::UNINITIALIZED));
+  EXPECT_FALSE(isDetectedLaneChange(Maneuver::LANE_FOLLOW));
+  EXPECT_TRUE(isDetectedLaneChange(Maneuver::LEFT_LANE_CHANGE));
 }
 
 TEST_F(LaneChangePathSuppressionTest, RemovesUndetectedLaneChangesWithCenterPath)
@@ -153,19 +276,24 @@ TEST_F(LaneChangePathSuppressionTest, RemovesUndetectedLaneChangesWithCenterPath
   EXPECT_FLOAT_EQ(result.front().second.probability, 1.0F);
 }
 
-TEST_F(LaneChangePathSuppressionTest, KeepsDetectedLaneChangesIncludingZeroWeightOpposite)
+TEST_F(LaneChangePathSuppressionTest, KeepsDetectedLaneChangeAndDropsZeroWeightOpposite)
 {
   for (const auto detected : {Maneuver::LEFT_LANE_CHANGE, Maneuver::RIGHT_LANE_CHANGE}) {
     auto paths = makePaths();
     paths[0].second.probability = 0.9F;
     paths[1].second.probability = detected == Maneuver::LEFT_LANE_CHANGE ? 1.0F : 0.0F;
     paths[2].second.probability = detected == Maneuver::RIGHT_LANE_CHANGE ? 1.0F : 0.0F;
-    const auto result = suppressUndetectedLaneChangePaths(paths, makeOrigins(detected), true, true);
-    ASSERT_EQ(result.size(), paths.size());
-    for (size_t i = 0; i < paths.size(); ++i) {
-      EXPECT_EQ(result[i].second.maneuver, paths[i].second.maneuver);
-      EXPECT_FLOAT_EQ(result[i].second.probability, paths[i].second.probability);
-    }
+    std::vector<LaneletPathWithPathInfo> suppressed;
+    const auto result =
+      suppressUndetectedLaneChangePaths(paths, makeOrigins(detected), true, true, &suppressed);
+    // Lane follow and the detected side survive; the opposite side (probability 0) is dropped.
+    ASSERT_EQ(result.size(), 2U);
+    EXPECT_EQ(result[0].second.maneuver, Maneuver::LANE_FOLLOW);
+    EXPECT_FLOAT_EQ(result[0].second.probability, 0.9F);
+    EXPECT_EQ(result[1].second.maneuver, detected);
+    EXPECT_FLOAT_EQ(result[1].second.probability, 1.0F);
+    // The opposite side is dropped outright, not held for restoration.
+    EXPECT_TRUE(suppressed.empty());
   }
 }
 
@@ -344,9 +472,43 @@ TEST_F(LaneChangePathSuppressionTest, HoldsOnlyUndetectedNonTerminalOriginsForRe
     {Maneuver::RIGHT_LANE_CHANGE, false, true}, {Maneuver::LANE_FOLLOW, false, false}};
   std::vector<LaneletPathWithPathInfo> held;
   const auto result = suppressUndetectedLaneChangePaths(paths, origins, true, true, &held);
+  // Held: only the undetected LEFT (index 1). The RIGHT opposite to a detected LEFT (index 2)
+  // is dropped without being held, so it can never be restored with probability 0.
   ASSERT_EQ(held.size(), 1U);
-  EXPECT_EQ(held.front().second.maneuver, Maneuver::LEFT_LANE_CHANGE);
-  EXPECT_EQ(result.size(), 5U);
+  EXPECT_EQ(held[0].second.maneuver, Maneuver::LEFT_LANE_CHANGE);
+  EXPECT_EQ(result.size(), 4U);
+}
+
+TEST_F(LaneChangePathSuppressionTest, BranchContinuingBeyondHorizonIsNotLaneEnd)
+{
+  // first_ forks at x=20 into last_ (dead end at x=30) and a long lanelet (x=20..220).
+  // The object at x=15 can keep following its lane, so no lane change is forced
+  // even though the short branch ends within the horizon.
+  const lanelet::Point3d l1 = first_.leftBound().back();
+  const lanelet::Point3d r1 = first_.rightBound().back();
+  const lanelet::Point3d l3(13, 220.0, 1.0, 0.0);
+  const lanelet::Point3d r3(14, 220.0, -1.0, 0.0);
+  lanelet::Lanelet long_branch(
+    15, lanelet::LineString3d(16, {l1, l3}), lanelet::LineString3d(17, {r1, r3}));
+  auto map = std::make_shared<lanelet::LaneletMap>();
+  for (auto * lanelet : {&first_, &last_, &long_branch}) {
+    lanelet->attributes()[lanelet::AttributeName::Subtype] = "road";
+    lanelet->attributes()[lanelet::AttributeName::Location] = "urban";
+    map->add(*lanelet);
+  }
+  const auto rules = lanelet::traffic_rules::TrafficRulesFactory::create(
+    lanelet::Locations::Germany, lanelet::Participants::Vehicle);
+  const auto graph = lanelet::routing::RoutingGraph::build(*map, *rules);
+  ASSERT_EQ(graph->following(first_).size(), 2U);
+
+  double lane_end_distance = -1.0;
+  EXPECT_FALSE(laneEndsWithinHorizon(first_, position_, 15.0, *graph, nullptr, &lane_end_distance));
+  EXPECT_LT(lane_end_distance, 0.0);
+  EXPECT_FALSE(
+    laneEndsWithinHorizon(first_, position_, 100.0, *graph, nullptr, &lane_end_distance));
+  // Once every branch ends within the horizon the lane really ends; report the farthest exit.
+  EXPECT_TRUE(laneEndsWithinHorizon(first_, position_, 205.0, *graph, nullptr, &lane_end_distance));
+  EXPECT_NEAR(lane_end_distance, 205.0, 1e-6);
 }
 
 TEST_F(LaneChangePathSuppressionTest, FallsBackIfAllCandidatesWouldBeRemoved)
