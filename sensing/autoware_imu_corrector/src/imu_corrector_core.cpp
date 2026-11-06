@@ -156,7 +156,7 @@ void ImuCorrector::callback_imu(
     accel_stddev_imu_link_ * accel_stddev_imu_link_;
 
   geometry_msgs::msg::TransformStamped::ConstSharedPtr tf_imu2base_ptr =
-    transform_listener_->get_latest_transform(imu_msg.header.frame_id, output_frame_);
+    transform_listener_->get_latest_transform(output_frame_, imu_msg.header.frame_id);
   if (!tf_imu2base_ptr) {
     RCLCPP_ERROR(
       this->get_logger(), "Please publish TF %s to %s", output_frame_.c_str(),

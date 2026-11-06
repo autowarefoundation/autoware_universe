@@ -45,6 +45,16 @@ if(BUILD_TESTING)
   add_testcase(test/test_gyro_bias_estimation_module.cpp)
 
   if(NOT "$ENV{ENABLE_AGNOCAST}" STREQUAL "1")
+    ament_add_ros_isolated_gtest(test_imu_corrector_transform
+      test/test_main.cpp
+      test/test_imu_corrector_transform.cpp
+    )
+    target_link_libraries(test_imu_corrector_transform imu_corrector)
+    ament_target_dependencies(test_imu_corrector_transform
+      ${${PROJECT_NAME}_FOUND_BUILD_DEPENDS}
+    )
+    target_include_directories(test_imu_corrector_transform PUBLIC include)
+
     ament_add_ros_isolated_gtest(test_gyro_bias_scale_estimation_module
       test/test_main.cpp
       test/test_gyro_bias_scale_estimation_module.cpp
