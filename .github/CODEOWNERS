@@ -29,19 +29,19 @@ control/autoware_pid_longitudinal_controller/** arjun.ram@tier4.jp kyoichi.sugah
 control/autoware_predicted_path_checker/** berkay@leodrive.ai junya.sasaki@tier4.jp
 control/autoware_pure_pursuit/** takamasa.horibe@tier4.jp takayuki.murooka@tier4.jp takumi.odashima@tier4.jp
 control/autoware_shift_decider/** takamasa.horibe@tier4.jp takayuki.murooka@tier4.jp
-control/autoware_smart_mpc_trajectory_follower/** kosuke.takeuchi@tier4.jp masayuki.aino@proxima-ai-tech.com takamasa.horibe@tier4.jp takayuki.murooka@tier4.jp
+control/autoware_smart_mpc_trajectory_follower/** masayuki.aino@proxima-ai-tech.com takamasa.horibe@tier4.jp takayuki.murooka@tier4.jp
 control/autoware_spheric_collision_detector/** simon.ranjith@lx.it.pt
 control/autoware_stop_mode_operator/** isamu.takagi@tier4.jp
 control/autoware_trajectory_follower_base/** alqudah.mohammad@tier4.jp maxime.clement@tier4.jp takumi.odashima@tier4.jp zulfaqar.azmi@tier4.jp
 control/autoware_trajectory_follower_node/** alqudah.mohammad@tier4.jp maxime.clement@tier4.jp takumi.odashima@tier4.jp zulfaqar.azmi@tier4.jp
 control/autoware_vehicle_cmd_gate/** arjun.ram@tier4.jp takayuki.murooka@tier4.jp yukinari.hisaki.2@tier4.jp
 e2e/autoware_tensorrt_vad/** aquashin0202@gmail.com vborisw@gmail.com yukihiro.saito@tier4.jp
-evaluator/autoware_control_evaluator/** daniel.sanchez@tier4.jp kosuke.takeuchi@tier4.jp takayuki.murooka@tier4.jp temkei.kem@tier4.jp
+evaluator/autoware_control_evaluator/** daniel.sanchez@tier4.jp takayuki.murooka@tier4.jp temkei.kem@tier4.jp
 evaluator/autoware_evaluation_adapter/** isamu.takagi@tier4.jp
 evaluator/autoware_kinematic_evaluator/** dominik.jargot@robotec.ai fumiya.watanabe@tier4.jp junya.sasaki@tier4.jp shumpei.wakabayashi@tier4.jp takamasa.horibe@tier4.jp takayuki.murooka@tier4.jp tomoya.kimura@tier4.jp
 evaluator/autoware_localization_evaluator/** anh.nguyen.2@tier4.jp dominik.jargot@robotec.ai junya.sasaki@tier4.jp masahiro.sakamoto@tier4.jp taiki.yamada@tier4.jp yamato.ando@tier4.jp
-evaluator/autoware_perception_online_evaluator/** fumiya.watanabe@tier4.jp junya.sasaki@tier4.jp kosuke.takeuchi@tier4.jp kotaro.uetake@tier4.jp kyoichi.sugahara@tier4.jp yoshi.ri@tier4.jp
-evaluator/autoware_planning_evaluator/** kosuke.takeuchi@tier4.jp kyoichi.sugahara@tier4.jp maxime.clement@tier4.jp temkei.kem@tier4.jp
+evaluator/autoware_perception_online_evaluator/** fumiya.watanabe@tier4.jp junya.sasaki@tier4.jp kotaro.uetake@tier4.jp kyoichi.sugahara@tier4.jp yoshi.ri@tier4.jp
+evaluator/autoware_planning_evaluator/** kyoichi.sugahara@tier4.jp maxime.clement@tier4.jp temkei.kem@tier4.jp
 evaluator/autoware_scenario_simulator_v2_adapter/** junya.sasaki@tier4.jp kyoichi.sugahara@tier4.jp maxime.clement@tier4.jp takamasa.horibe@tier4.jp temkei.kem@tier4.jp
 examples/autoware_diagnostic_graph_test_examples/** isamu.takagi@tier4.jp
 localization/autoware_geo_pose_projector/** anh.nguyen.2@tier4.jp masahiro.sakamoto@tier4.jp taiki.yamada@tier4.jp yamato.ando@tier4.jp
@@ -68,7 +68,7 @@ perception/autoware_crosswalk_traffic_light_estimator/** masaki.baba.2@tier4.jp 
 perception/autoware_detected_object_feature_remover/** kotaro.uetake@tier4.jp taekjin.lee@tier4.jp tomoya.kimura@tier4.jp yoshi.ri@tier4.jp
 perception/autoware_detected_object_validation/** dai.nguyen@tier4.jp masaki.baba.2@tier4.jp shintaro.tomie@tier4.jp taekjin.lee@tier4.jp yoshi.ri@tier4.jp yukihiro.saito@tier4.jp
 perception/autoware_detection_by_tracker/** lei.gu@tier4.jp taekjin.lee@tier4.jp yoshi.ri@tier4.jp yukihiro.saito@tier4.jp
-perception/autoware_elevation_map_loader/** akihisa.nagata@tier4.jp kosuke.takeuchi@tier4.jp shintaro.tomie@tier4.jp taichi.higashide@tier4.jp
+perception/autoware_elevation_map_loader/** akihisa.nagata@tier4.jp shintaro.tomie@tier4.jp taichi.higashide@tier4.jp
 perception/autoware_euclidean_cluster/** dai.nguyen@tier4.jp lei.gu@tier4.jp taekjin.lee@tier4.jp yukihiro.saito@tier4.jp
 perception/autoware_ground_segmentation/** abrahammonrroy@yahoo.com dai.nguyen@tier4.jp taekjin.lee@tier4.jp yoshi.ri@tier4.jp yukihiro.saito@tier4.jp
 perception/autoware_ground_segmentation_cuda/** anh.nguyen.2@tier4.jp dai.nguyen@tier4.jp manato.hirabayashi@tier4.jp
@@ -110,17 +110,17 @@ perception/autoware_traffic_light_pipeline/** masaki.baba.2@tier4.jp takahisa.is
 perception/autoware_traffic_light_selector/** dai.nguyen@tier4.jp masaki.baba.2@tier4.jp masato.saeki@tier4.jp taekjin.lee@tier4.jp yoshi.ri@tier4.jp yukihiro.saito@tier4.jp
 perception/autoware_traffic_light_visualization/** masaki.baba.2@tier4.jp masato.saeki@tier4.jp taekjin.lee@tier4.jp tao.zhong@tier4.jp yukihiro.saito@tier4.jp
 perception/perception_utils/** lei.gu@tier4.jp taekjin.lee@tier4.jp yoshi.ri@tier4.jp
-planning/autoware_costmap_generator/** kosuke.takeuchi@tier4.jp takamasa.horibe@tier4.jp takayuki.murooka@tier4.jp
+planning/autoware_costmap_generator/** takamasa.horibe@tier4.jp takayuki.murooka@tier4.jp
 planning/autoware_diffusion_planner/** daniel.sanchez@tier4.jp go.sakayori@tier4.jp shintaro.sakoda@tier4.jp yukihiro.saito@tier4.jp yukinari.hisaki.2@tier4.jp
 planning/autoware_external_velocity_limit_selector/** shumpei.wakabayashi@tier4.jp tomohito.ando@tier4.jp tomoya.kimura@tier4.jp
-planning/autoware_freespace_planner/** alqudah.mohammad@tier4.jp kosuke.takeuchi@tier4.jp
-planning/autoware_freespace_planning_algorithms/** alqudah.mohammad@tier4.jp kosuke.takeuchi@tier4.jp
+planning/autoware_freespace_planner/** alqudah.mohammad@tier4.jp
+planning/autoware_freespace_planning_algorithms/** alqudah.mohammad@tier4.jp
 planning/autoware_hazard_lights_selector/** makoto.kurihara@tier4.jp mamoru.sobue@tier4.jp
 planning/autoware_in_lane_mrm_planner/** takumi.odashima@tier4.jp
 planning/autoware_manual_lane_change_handler/** arjun.ram@tier4.jp taiki.yamada@tier4.jp
 planning/autoware_minimum_rule_based_planner/** alqudah.mohammad@tier4.jp hayate.sugahara@tier4.jp takayuki.murooka@tier4.jp takumi.odashima@tier4.jp yuki.takagi@tier4.jp
-planning/autoware_mission_planner_universe/** isamu.takagi@tier4.jp kosuke.takeuchi@tier4.jp mamoru.sobue@tier4.jp ryohsuke.mitsudome@tier4.jp taiki.yamada@tier4.jp takamasa.horibe@tier4.jp takayuki.murooka@tier4.jp
-planning/autoware_path_optimizer/** kosuke.takeuchi@tier4.jp takamasa.horibe@tier4.jp takayuki.murooka@tier4.jp
+planning/autoware_mission_planner_universe/** isamu.takagi@tier4.jp mamoru.sobue@tier4.jp ryohsuke.mitsudome@tier4.jp taiki.yamada@tier4.jp takamasa.horibe@tier4.jp takayuki.murooka@tier4.jp
+planning/autoware_path_optimizer/** takamasa.horibe@tier4.jp takayuki.murooka@tier4.jp
 planning/autoware_path_smoother/** arjun.ram@tier4.jp maxime.clement@tier4.jp takayuki.murooka@tier4.jp
 planning/autoware_remaining_distance_time_calculator/** ahmed.ebrahim@leodrive.ai
 planning/autoware_rtc_interface/** kyoichi.sugahara@tier4.jp yukinari.hisaki.2@tier4.jp
@@ -137,11 +137,11 @@ planning/behavior_path_planner/autoware_behavior_path_avoidance_by_lane_change_m
 planning/behavior_path_planner/autoware_behavior_path_bidirectional_traffic_module/** mamoru.sobue@tier4.jp takayuki.murooka@tier4.jp yukinari.hisaki.2@tier4.jp
 planning/behavior_path_planner/autoware_behavior_path_direction_change_module/** shin.sato@tier4.jp takeshi.miura@tier4.jp teja.emmey@tier4.jp
 planning/behavior_path_planner/autoware_behavior_path_dynamic_obstacle_avoidance_module/** yuki.takagi@tier4.jp yukinari.hisaki.2@tier4.jp
-planning/behavior_path_planner/autoware_behavior_path_external_request_lane_change_module/** alqudah.mohammad@tier4.jp fumiya.watanabe@tier4.jp kosuke.takeuchi@tier4.jp maxime.clement@tier4.jp shumpei.wakabayashi@tier4.jp tomohito.ando@tier4.jp tomoya.kimura@tier4.jp zulfaqar.azmi@tier4.jp
-planning/behavior_path_planner/autoware_behavior_path_goal_planner_module/** kosuke.takeuchi@tier4.jp mamoru.sobue@tier4.jp takumi.odashima@tier4.jp
+planning/behavior_path_planner/autoware_behavior_path_external_request_lane_change_module/** alqudah.mohammad@tier4.jp fumiya.watanabe@tier4.jp maxime.clement@tier4.jp shumpei.wakabayashi@tier4.jp tomohito.ando@tier4.jp tomoya.kimura@tier4.jp zulfaqar.azmi@tier4.jp
+planning/behavior_path_planner/autoware_behavior_path_goal_planner_module/** mamoru.sobue@tier4.jp takumi.odashima@tier4.jp
 planning/behavior_path_planner/autoware_behavior_path_lane_change_module/** alqudah.mohammad@tier4.jp maxime.clement@tier4.jp zulfaqar.azmi@tier4.jp
-planning/behavior_path_planner/autoware_behavior_path_planner/** alqudah.mohammad@tier4.jp kosuke.takeuchi@tier4.jp kyoichi.sugahara@tier4.jp mamoru.sobue@tier4.jp yukinari.hisaki.2@tier4.jp zulfaqar.azmi@tier4.jp
-planning/behavior_path_planner/autoware_behavior_path_planner_common/** alqudah.mohammad@tier4.jp kosuke.takeuchi@tier4.jp mamoru.sobue@tier4.jp maxime.clement@tier4.jp takumi.odashima@tier4.jp yukinari.hisaki.2@tier4.jp zulfaqar.azmi@tier4.jp
+planning/behavior_path_planner/autoware_behavior_path_planner/** alqudah.mohammad@tier4.jp kyoichi.sugahara@tier4.jp mamoru.sobue@tier4.jp yukinari.hisaki.2@tier4.jp zulfaqar.azmi@tier4.jp
+planning/behavior_path_planner/autoware_behavior_path_planner_common/** alqudah.mohammad@tier4.jp mamoru.sobue@tier4.jp maxime.clement@tier4.jp takumi.odashima@tier4.jp yukinari.hisaki.2@tier4.jp zulfaqar.azmi@tier4.jp
 planning/behavior_path_planner/autoware_behavior_path_sampling_planner_module/** daniel.sanchez@tier4.jp maxime.clement@tier4.jp
 planning/behavior_path_planner/autoware_behavior_path_side_shift_module/** kyoichi.sugahara@tier4.jp taiki.yamada@tier4.jp
 planning/behavior_path_planner/autoware_behavior_path_start_planner_module/** kyoichi.sugahara@tier4.jp mamoru.sobue@tier4.jp zulfaqar.azmi@tier4.jp
@@ -151,7 +151,7 @@ planning/behavior_velocity_planner/autoware_behavior_velocity_crosswalk_module/*
 planning/behavior_velocity_planner/autoware_behavior_velocity_detection_area_module/** takumi.odashima@tier4.jp yukinari.hisaki.2@tier4.jp
 planning/behavior_velocity_planner/autoware_behavior_velocity_intersection_module/** mamoru.sobue@tier4.jp takumi.odashima@tier4.jp yukinari.hisaki.2@tier4.jp
 planning/behavior_velocity_planner/autoware_behavior_velocity_no_drivable_lane_module/** ahmed.ebrahim@leodrive.ai fumiya.watanabe@tier4.jp shumpei.wakabayashi@tier4.jp takamasa.horibe@tier4.jp takayuki.murooka@tier4.jp tomoya.kimura@tier4.jp
-planning/behavior_velocity_planner/autoware_behavior_velocity_no_stopping_area_module/** kosuke.takeuchi@tier4.jp maxime.clement@tier4.jp shumpei.wakabayashi@tier4.jp tomoya.kimura@tier4.jp
+planning/behavior_velocity_planner/autoware_behavior_velocity_no_stopping_area_module/** maxime.clement@tier4.jp shumpei.wakabayashi@tier4.jp tomoya.kimura@tier4.jp
 planning/behavior_velocity_planner/autoware_behavior_velocity_occlusion_spot_module/** shumpei.wakabayashi@tier4.jp taiki.tanaka@tier4.jp tomoya.kimura@tier4.jp
 planning/behavior_velocity_planner/autoware_behavior_velocity_roundabout_module/** mamoru.sobue@tier4.jp sho.iwasawa.2@tier4.jp yukinari.hisaki.2@tier4.jp
 planning/behavior_velocity_planner/autoware_behavior_velocity_rtc_interface/** fumiya.watanabe@tier4.jp isamu.takagi@tier4.jp mamoru.sobue@tier4.jp shumpei.wakabayashi@tier4.jp takayuki.murooka@tier4.jp tomoya.kimura@tier4.jp
@@ -168,7 +168,7 @@ planning/motion_velocity_planner/autoware_motion_velocity_obstacle_velocity_limi
 planning/motion_velocity_planner/autoware_motion_velocity_out_of_lane_module/** alqudah.mohammad@tier4.jp mamoru.sobue@tier4.jp maxime.clement@tier4.jp shumpei.wakabayashi@tier4.jp takayuki.murooka@tier4.jp tomoya.kimura@tier4.jp zulfaqar.azmi@tier4.jp
 planning/motion_velocity_planner/autoware_motion_velocity_road_user_stop_module/** takumi.odashima@tier4.jp yuki.takagi@tier4.jp
 planning/motion_velocity_planner/autoware_motion_velocity_run_out_module/** alqudah.mohammad@tier4.jp kyoichi.sugahara@tier4.jp maxime.clement@tier4.jp zulfaqar.azmi@tier4.jp
-planning/planning_validator/autoware_planning_validator/** alqudah.mohammad@tier4.jp kosuke.takeuchi@tier4.jp kyoichi.sugahara@tier4.jp takamasa.horibe@tier4.jp
+planning/planning_validator/autoware_planning_validator/** alqudah.mohammad@tier4.jp kyoichi.sugahara@tier4.jp takamasa.horibe@tier4.jp
 planning/planning_validator/autoware_planning_validator_intersection_collision_checker/** alqudah.mohammad@tier4.jp kyoichi.sugahara@tier4.jp maxime.clement@tier4.jp
 planning/planning_validator/autoware_planning_validator_latency_checker/** alqudah.mohammad@tier4.jp kyoichi.sugahara@tier4.jp
 planning/planning_validator/autoware_planning_validator_rear_collision_checker/** alqudah.mohammad@tier4.jp kyoichi.sugahara@tier4.jp maxime.clement@tier4.jp
@@ -191,7 +191,7 @@ sensing/autoware_radar_threshold_filter/** taekjin.lee@tier4.jp yoshi.ri@tier4.j
 sensing/autoware_radar_tracks_noise_filter/** taekjin.lee@tier4.jp yoshi.ri@tier4.jp
 simulator/autoware_carla_interface/** bin.wang@tier4.jp masaya.kataoka@tier4.jp maxime.clement@tier4.jp mradityagio@gmail.com ujin@tukorea.ac.kr
 simulator/autoware_dummy_diag_publisher/** fumihito.ito@tier4.jp tetsuhiro.kawaguchi@tier4.jp
-simulator/autoware_dummy_infrastructure/** akihisa.nagata@tier4.jp junya.sasaki@tier4.jp kosuke.takeuchi@tier4.jp ryohsuke.mitsudome@tier4.jp takeshi.miura@tier4.jp
+simulator/autoware_dummy_infrastructure/** akihisa.nagata@tier4.jp junya.sasaki@tier4.jp ryohsuke.mitsudome@tier4.jp takeshi.miura@tier4.jp
 simulator/autoware_dummy_traffic_light_publisher/** junya.sasaki@tier4.jp takayuki.akamine@tier4.jp
 simulator/autoware_fault_injection/** junya.sasaki@tier4.jp keisuke.shima@tier4.jp
 simulator/autoware_redundancy_command_selector/** makoto.kurihara@tier4.jp tetsuhiro.kawaguchi@tier4.jp
@@ -219,7 +219,7 @@ system/autoware_mrm_in_lane_stop_operator/** makoto.kurihara@tier4.jp tetsuhiro.
 system/autoware_mrm_reset_manager/** makoto.kurihara@tier4.jp tetsuhiro.kawaguchi@tier4.jp
 system/autoware_mrm_steering_hold_stop_operator/** makoto.kurihara@tier4.jp
 system/autoware_pipeline_latency_monitor/** kyoichi.sugahara@tier4.jp maxime.clement@tier4.jp taekjin.lee@tier4.jp takeshi.iwanari@tier4.jp yoshi.ri@tier4.jp
-system/autoware_processing_time_checker/** kosuke.takeuchi@tier4.jp takayuki.murooka@tier4.jp
+system/autoware_processing_time_checker/** takayuki.murooka@tier4.jp
 system/autoware_redundancy_adapi_switcher/** makoto.kurihara@tier4.jp tetsuhiro.kawaguchi@tier4.jp
 system/autoware_redundancy_switcher_interface/** makoto.kurihara@tier4.jp tetsuhiro.kawaguchi@tier4.jp
 system/autoware_redundancy_switcher_interface_plugins/** makoto.kurihara@tier4.jp tetsuhiro.kawaguchi@tier4.jp
@@ -229,12 +229,12 @@ system/autoware_topic_state_monitor/** junya.sasaki@tier4.jp ryohsuke.mitsudome@
 system/autoware_velodyne_monitor/** fumihito.ito@tier4.jp junya.sasaki@tier4.jp
 vehicle/autoware_accel_brake_map_calibrator/** eiki.nagata.2@tier4.jp taiki.tanaka@tier4.jp takeshi.miura@tier4.jp tomoya.kimura@tier4.jp
 vehicle/autoware_external_cmd_converter/** eiki.nagata.2@tier4.jp takamasa.horibe@tier4.jp
-vehicle/autoware_raw_vehicle_cmd_converter/** kosuke.takeuchi@tier4.jp kyoichi.sugahara@tier4.jp makoto.kurihara@tier4.jp sho.iwasawa.2@tier4.jp taiki.tanaka@tier4.jp takamasa.horibe@tier4.jp takayuki.murooka@tier4.jp
+vehicle/autoware_raw_vehicle_cmd_converter/** kyoichi.sugahara@tier4.jp makoto.kurihara@tier4.jp sho.iwasawa.2@tier4.jp taiki.tanaka@tier4.jp takamasa.horibe@tier4.jp takayuki.murooka@tier4.jp
 vehicle/autoware_steer_offset_estimator/** alqudah.mohammad@tier4.jp taiki.tanaka@tier4.jp taiki.yamada@tier4.jp takayuki.murooka@tier4.jp yukinari.hisaki.2@tier4.jp
 visualization/autoware_bag_time_manager_rviz_plugin/** junya.sasaki@tier4.jp taiki.tanaka@tier4.jp
 visualization/autoware_traffic_light_rviz_plugin/** takumi.odashima@tier4.jp yukinari.hisaki.2@tier4.jp
 visualization/tier4_active_generator_rviz_plugin/** hayate.sugahara@tier4.jp takumi.odashima@tier4.jp
-visualization/tier4_adapi_rviz_plugin/** hiroki.ota@tier4.jp isamu.takagi@tier4.jp kosuke.takeuchi@tier4.jp
+visualization/tier4_adapi_rviz_plugin/** hiroki.ota@tier4.jp isamu.takagi@tier4.jp
 visualization/tier4_camera_view_rviz_plugin/** makoto.yabuta@tier4.jp uken.ryu@tier4.jp
 visualization/tier4_control_mode_rviz_plugin/** kyoichi.sugahara@tier4.jp naoto.hiramatsu@tier4.jp shohei.sakai@tier4.jp yukinari.hisaki.2@tier4.jp
 visualization/tier4_manual_lane_change_rviz_plugin/** arjun.ram@tier4.jp

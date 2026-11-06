@@ -18,13 +18,13 @@ on:
 
 jobs:
   lint:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
 
       - name: Lint system design format files
-        uses: autowarefoundation/autoware_system_designer@v0.4.2
+        uses: autowarefoundation/autoware_system_designer@v0.5.1
         with:
           design_files_path: .

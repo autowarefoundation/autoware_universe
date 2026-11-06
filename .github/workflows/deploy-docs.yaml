@@ -14,11 +14,13 @@ on:
       - "**/*.svg"
       - "**/*.png"
       - "**/*.jpg"
-  pull_request_target:
-    types:
-      - opened
-      - synchronize
-      - labeled
+  pull_request:
+    paths:
+      - mkdocs.yaml
+      - "**/*.md"
+      - "**/*.svg"
+      - "**/*.png"
+      - "**/*.jpg"
   workflow_dispatch:
 
 concurrency:
@@ -26,28 +28,107 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  make-sure-label-is-present:
-    uses: autowarefoundation/autoware-github-actions/.github/workflows/make-sure-label-is-present.yaml@v1
-    with:
-      label: run:deploy-docs
-
-  deploy-docs:
-    needs: make-sure-label-is-present
-    if: ${{ github.event_name != 'pull_request_target' || needs.make-sure-label-is-present.outputs.result == 'true' }}
+  # A pull request from a branch of this repository gets a write token, so it publishes a preview to gh-pages.
+  # A pull request from a fork or from Dependabot gets a read-only token, so it only builds the site and uploads it as an artifact.
+  # The comment-docs-artifact workflow comments the download link of the artifact.
+  deploy-docs-pr:
+    if: ${{ github.event_name == 'pull_request' }}
     runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
+      - name: Choose between deploy and build
+        id: mode
+        env:
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+        run: |
+          if [ "$HEAD_REPO" = "$GITHUB_REPOSITORY" ] && [ "$AUTHOR" != "dependabot[bot]" ]; then
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "deploy=false" >> "$GITHUB_OUTPUT"
+          fi
+        shell: bash
+
       - name: Check out repository
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha }}
-          # This job builds fork code with the secrets of the base repository.
-          # It runs only after a maintainer adds the run:deploy-docs label.
-          # Before you add the label, review the full diff.
-          allow-unsafe-pr-checkout: true
+          persist-credentials: false
+
+      - name: Deploy docs
+        if: ${{ steps.mode.outputs.deploy == 'true' }}
+        uses: autowarefoundation/autoware-github-actions/deploy-docs@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          latest: false
+
+      - name: Set up Python
+        if: ${{ steps.mode.outputs.deploy == 'false' }}
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.10"
+
+      # Use the same requirements as the deploy-docs action.
+      - name: Install MkDocs
+        if: ${{ steps.mode.outputs.deploy == 'false' }}
+        run: |
+          pip3 install -U wheel
+          pip3 install -r https://raw.githubusercontent.com/autowarefoundation/autoware-github-actions/v1/deploy-docs/mkdocs-requirements.txt
+        shell: bash
+
+      - name: Build docs
+        if: ${{ steps.mode.outputs.deploy == 'false' }}
+        run: |
+          mkdocs build --site-dir "$RUNNER_TEMP/site"
+        shell: bash
+
+      - name: Upload site
+        id: upload-site
+        if: ${{ steps.mode.outputs.deploy == 'false' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: docs-pr-${{ github.event.pull_request.number }}
+          path: ${{ runner.temp }}/site
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Explain how to view the site
+        if: ${{ steps.mode.outputs.deploy == 'false' }}
+        env:
+          ARTIFACT_URL: ${{ steps.upload-site.outputs.artifact-url }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          echo "::notice::The site is not published for a pull request from a fork or from Dependabot. Download it from the run summary: $ARTIFACT_URL"
+          {
+            echo "## Documentation preview"
+            echo
+            echo "This pull request comes from a fork or from Dependabot, so the site is built but not published."
+            echo
+            echo "1. Download the site: [docs-pr-$PR_NUMBER]($ARTIFACT_URL). You must be signed in to GitHub."
+            echo "2. Unzip it to a new folder."
+            echo "3. In that folder, run \`python3 -m http.server 8000\`."
+            echo "4. Open <http://localhost:8000/>."
+            echo
+            echo "The site is kept for 90 days."
+          } >> "$GITHUB_STEP_SUMMARY"
+        shell: bash
+
+  deploy-docs:
+    if: ${{ github.event_name != 'pull_request' }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - name: Deploy docs
         uses: autowarefoundation/autoware-github-actions/deploy-docs@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          latest: ${{ github.event_name != 'pull_request_target' && github.ref_name == github.event.repository.default_branch }}
+          latest: ${{ github.ref_name == github.event.repository.default_branch }}

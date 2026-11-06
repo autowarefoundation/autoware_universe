@@ -101,7 +101,7 @@ concatenated cloud
   points     : 120000
   point_step : 16
   sources    : 3
-  collectors : 1
+  frames     : 1
 
 concatenation time over 200 runs
   average : 78.601 ms

@@ -17,6 +17,7 @@
 
 #include "autoware/localization_util/smart_pose_buffer.hpp"
 #include "autoware/qos_utils/qos_compatibility.hpp"
+#include "marker_detector.hpp"
 
 #include <autoware/landmark_manager/landmark_manager.hpp>
 #include <autoware_utils/ros/diagnostics_interface.hpp>
@@ -68,15 +69,8 @@ class LidarMarkerLocalizer : public rclcpp::Node
 
     std::string marker_name;
 
-    double resolution;
-    std::vector<int64_t> intensity_pattern;
-    int64_t match_intensity_difference_threshold;
-    int64_t positive_match_num_threshold;
-    int64_t negative_match_num_threshold;
-    int64_t vote_threshold_for_detect_marker;
-    double marker_to_vehicle_offset_y;
-    double marker_height_from_ground;
-    int64_t reference_ring_number;
+    // for marker detection algorithm
+    DetectionParam detection;
 
     double self_pose_timeout_sec;
     double self_pose_distance_tolerance_m;
@@ -87,9 +81,6 @@ class LidarMarkerLocalizer : public rclcpp::Node
     std::array<double, 36> base_covariance;
 
     double marker_width;
-    // Parameters for initial lower/upper ring id
-    int64_t lower_ring_id_init;
-    int64_t upper_ring_id_init;
 
     bool enable_save_log;
     std::string save_file_directory_path;

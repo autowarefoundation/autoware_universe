@@ -12,6 +12,10 @@ repositories:
     type: git
     url: https://github.com/autowarefoundation/cuda_blackboard.git
     version: 0.5.0
+  core/cuda/negotiated:
+    type: git
+    url: https://github.com/osrf/negotiated.git
+    version: eac198b55dcd052af5988f0f174902913c5f20e7
   # universe
   universe/external/tier4_autoware_msgs:
     type: git
@@ -30,10 +34,6 @@ repositories:
     type: git
     url: https://github.com/tier4/glog.git
     version: ea36766fdc2ac8e8c8e3ac988ae69acd6d09bb30
-  universe/external/negotiated:
-    type: git
-    url: https://github.com/osrf/negotiated.git
-    version: eac198b55dcd052af5988f0f174902913c5f20e7
   universe/external/managed_transform_buffer:
     type: git
     url: https://github.com/autowarefoundation/managed_transform_buffer.git
