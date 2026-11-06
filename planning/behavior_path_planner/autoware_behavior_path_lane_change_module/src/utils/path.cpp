@@ -22,6 +22,7 @@
 
 #include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/motion_utils/trajectory/path_shift.hpp>
+#include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_frenet_planner/frenet_planner.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
 #include <range/v3/action/insert.hpp>
@@ -49,6 +50,7 @@ using autoware::behavior_path_planner::lane_change::LCParamPtr;
 using autoware::behavior_path_planner::LaneChangePhaseMetrics;
 using autoware::behavior_path_planner::ShiftLine;
 using autoware::behavior_path_planner::lane_change::TrajectoryGroup;
+using autoware::behavior_path_planner::utils::lane_change::get_logger;
 using autoware::frenet_planner::FrenetState;
 using autoware::frenet_planner::SamplingParameters;
 using autoware::route_handler::Direction;
@@ -102,15 +104,28 @@ PathWithLaneId get_reference_path_from_target_lane(
   });
 
   constexpr double epsilon = 1e-4;
-  if (s_end - s_start + epsilon < lane_changing_length) {
+  if (lane_changing_length <= 0.0 || s_end - s_start + epsilon < lane_changing_length) {
     return PathWithLaneId();
   }
 
   const auto lane_changing_reference_path =
     route_handler.getCenterLinePath(target_lanes, s_start, s_end);
 
-  return autoware::behavior_path_planner::utils::resamplePathWithSpline(
-    lane_changing_reference_path, resample_interval, true, {0.0, lane_changing_length});
+  // the resampling below needs lane_changing_length within the arc length of the centerline path
+  if (
+    lane_changing_reference_path.points.size() < 2 ||
+    autoware::motion_utils::calcArcLength(lane_changing_reference_path.points) + epsilon <
+      lane_changing_length) {
+    return PathWithLaneId();
+  }
+
+  try {
+    return autoware::behavior_path_planner::utils::resamplePathWithSpline(
+      lane_changing_reference_path, resample_interval, true, {0.0, lane_changing_length});
+  } catch (const std::exception & e) {
+    RCLCPP_WARN(get_logger(), "failed to resample the target lane reference path: %s", e.what());
+    return PathWithLaneId();
+  }
 }
 
 ShiftLine get_lane_changing_shift_line(
