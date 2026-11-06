@@ -43,6 +43,11 @@ if(BUILD_TESTING)
   target_link_libraries(
     ${TRAJECTORY_FOLLOWER_NODES_TEST} ${CONTROLLER_NODE})
 
+  ament_add_gtest(test_trajectory_follower
+    test/test_trajectory_follower.cpp
+  )
+  target_link_libraries(test_trajectory_follower ${CONTROLLER_NODE})
+
   # Temporary disabled, tracked by:
   # https://github.com/autowarefoundation/autoware_universe/issues/7733
 #  find_package(autoware_testing REQUIRED)
