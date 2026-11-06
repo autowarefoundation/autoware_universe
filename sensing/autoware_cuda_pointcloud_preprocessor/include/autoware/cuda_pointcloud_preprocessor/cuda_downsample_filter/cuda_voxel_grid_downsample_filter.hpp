@@ -31,11 +31,11 @@
 namespace autoware::cuda_pointcloud_preprocessor
 {
 
-using autoware::point_types::PointXYZIRC;
-
 class CudaVoxelGridDownsampleFilter
 {
 public:
+  using PointXYZIRC = autoware::point_types::PointXYZIRC;
+
   template <typename T>
   struct ThreeDim
   {

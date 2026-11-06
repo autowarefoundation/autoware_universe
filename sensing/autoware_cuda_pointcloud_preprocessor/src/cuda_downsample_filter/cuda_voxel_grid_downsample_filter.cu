@@ -35,6 +35,8 @@ namespace autoware::cuda_pointcloud_preprocessor
 {
 namespace
 {
+using PointXYZIRC = CudaVoxelGridDownsampleFilter::PointXYZIRC;
+
 template <typename T>
 __device__ T * getElementPointer(
   uint8_t * data, const size_t point_index, const size_t point_step, const size_t offset)
