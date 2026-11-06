@@ -23524,24 +23524,8 @@ filtering.</p>
 <li>steer angle convergence</li>
 </ul>
 </li>
+<li><code>autoware_planning_msgs/Trajectory</code>: predicted trajectory calculated by MPC. The trajectory size will be empty when the controller is in an emergency such as too large deviation from the planning trajectory. The controller node publishes it on <code>~/output/predicted_trajectory</code>.</li>
 </ul>
-<p>Publish the following messages.</p>
-<table>
-<thead>
-<tr>
-<th>Name</th>
-<th>Type</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>~/output/predicted_trajectory</code></td>
-<td>autoware_planning_msgs::Trajectory</td>
-<td>Predicted trajectory calculated by MPC. The trajectory size will be empty when the controller is in an emergency such as too large deviation from the planning trajectory.</td>
-</tr>
-</tbody>
-</table>
 <h3 id="mpc-class">MPC class<a class="headerlink" href="#mpc-class" title="Permanent link">#</a></h3>
 <p>The <code>MPC</code> class (defined in <code>mpc.hpp</code>) provides the interface with the MPC algorithm.
 Once a vehicle model, a QP solver, and the reference trajectory to follow have been set
