@@ -93,8 +93,9 @@ bool CombineCloudHandler<cuda_blackboard::CudaPointCloud2>::is_input_layout_supp
   const sensor_msgs::msg::PointCloud2 & cloud) const
 {
   // The kernels stride the buffer by the output point size, so the input must have exactly the
-  // output layout.
-  if (cloud.point_step != output_point_step_) {
+  // output layout. The output is sized from height * row_step while the kernels write
+  // num_points * point_step, so the rows must be unpadded for the two to agree.
+  if (cloud.point_step != output_point_step_ || cloud.row_step != cloud.width * cloud.point_step) {
     return false;
   }
   return output_point_format_ == PointFormat::XYZIRCT
