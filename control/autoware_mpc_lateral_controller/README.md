@@ -90,12 +90,7 @@ Return LateralOutput which contains the following to the controller node
 - `autoware_control_msgs/Lateral`
 - LateralSyncData
   - steer angle convergence
-
-Publish the following messages.
-
-| Name                            | Type                               | Description                                                                                                                                                                |
-| ------------------------------- | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `~/output/predicted_trajectory` | autoware_planning_msgs::Trajectory | Predicted trajectory calculated by MPC. The trajectory size will be empty when the controller is in an emergency such as too large deviation from the planning trajectory. |
+- `autoware_planning_msgs/Trajectory`: predicted trajectory calculated by MPC. The trajectory size will be empty when the controller is in an emergency such as too large deviation from the planning trajectory. The controller node publishes it on `~/output/predicted_trajectory`.
 
 ### MPC class
 
