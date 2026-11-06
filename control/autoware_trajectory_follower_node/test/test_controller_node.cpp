@@ -18,7 +18,6 @@
 #include "gtest/gtest.h"
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp/time.hpp"
-#include "trajectory_follower_test_utils.hpp"
 
 #include "autoware_adapi_v1_msgs/msg/operation_mode_state.hpp"
 #include "autoware_control_msgs/msg/control.hpp"
@@ -27,11 +26,12 @@
 #include "geometry_msgs/msg/accel_with_covariance_stamped.hpp"
 #include "geometry_msgs/msg/pose.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
-#include "geometry_msgs/msg/transform_stamped.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 
+#include <chrono>
 #include <iostream>
 #include <memory>
+#include <thread>
 #include <vector>
 
 using Controller = autoware::motion::control::trajectory_follower_node::Controller;
@@ -148,16 +148,20 @@ public:
     operation_mode_pub->publish(msg);
   };
 
-  void send_default_transform()
+  /// Spins the controller and the fake node until a control command arrives or max_wait_time
+  /// passes. Returns whether a control command arrived.
+  bool wait_for_control_command(const std::chrono::milliseconds max_wait_time)
   {
-    // Dummy transform: ego is at (0.0, 0.0) in map frame
-    geometry_msgs::msg::TransformStamped transform = test_utils::getDummyTransform();
-    transform.header.stamp = node->now();
-    br->sendTransform(transform);
-
-    // Spin for transform to be published
-    test_utils::spinWhile(node);
-  };
+    const std::chrono::milliseconds spin_interval{100};
+    std::chrono::milliseconds waited_time{0};
+    while (!received_control_command && waited_time <= max_wait_time) {
+      rclcpp::spin_some(node);
+      rclcpp::spin_some(fnf->get_fake_node());
+      std::this_thread::sleep_for(spin_interval);
+      waited_time += spin_interval;
+    }
+    return received_control_command;
+  }
 
   rclcpp::Publisher<Trajectory>::SharedPtr traj_pub =
     fnf->create_publisher<Trajectory>("controller/input/reference_trajectory");
@@ -181,9 +185,6 @@ public:
       cmd_msg = msg;
       received_control_command = true;
     });
-
-  std::shared_ptr<tf2_ros::StaticTransformBroadcaster> br =
-    std::make_shared<tf2_ros::StaticTransformBroadcaster>(fnf->get_fake_node());
 };
 
 TrajectoryPoint make_traj_point(const double px, const double py, const float vx)
@@ -201,9 +202,7 @@ TEST_F(FakeNodeFixture, no_input)
   ControllerTester tester(this, node_options);
 
   // No published data: expect a stopped command
-  test_utils::waitForMessage(
-    tester.node, this, tester.received_control_command, std::chrono::seconds{1LL}, false);
-  ASSERT_FALSE(tester.received_control_command);
+  EXPECT_FALSE(tester.wait_for_control_command(std::chrono::seconds{1}));
 }
 
 // The control behaviors are tested in test_trajectory_follower.cpp. This test
@@ -213,7 +212,6 @@ TEST_F(FakeNodeFixture, straight_trajectory)
   const auto node_options = makeNodeOptions();
   ControllerTester tester(this, node_options);
 
-  tester.send_default_transform();
   tester.publish_odom_vx(1.0);
   tester.publish_autonomous_operation_mode();
   tester.publish_default_steer();
@@ -228,8 +226,7 @@ TEST_F(FakeNodeFixture, straight_trajectory)
   traj_msg.points.push_back(make_traj_point(2.0, 0.0, 1.0f));
   tester.traj_pub->publish(traj_msg);
 
-  test_utils::waitForMessage(tester.node, this, tester.received_control_command);
-  ASSERT_TRUE(tester.received_control_command);
+  ASSERT_TRUE(tester.wait_for_control_command(std::chrono::seconds{10}));
   // following conditions will pass even if the MPC solution does not converge
   EXPECT_EQ(tester.cmd_msg->lateral.steering_tire_angle, 0.0f);
   EXPECT_EQ(tester.cmd_msg->lateral.steering_tire_rotation_rate, 0.0f);
@@ -246,7 +243,6 @@ TEST_F(FakeNodeFixture, longitudinal_check_steer_converged)
   const auto node_options = makeNodeOptions(true);
   ControllerTester tester(this, node_options);
 
-  tester.send_default_transform();
   tester.publish_default_odom();
   tester.publish_autonomous_operation_mode();
   tester.publish_default_acc();
@@ -264,9 +260,8 @@ TEST_F(FakeNodeFixture, longitudinal_check_steer_converged)
   traj.points.push_back(make_traj_point(100.0, 0.0, 1.0f));
   tester.traj_pub->publish(traj);
 
-  test_utils::waitForMessage(tester.node, this, tester.received_control_command);
+  ASSERT_TRUE(tester.wait_for_control_command(std::chrono::seconds{10}));
 
-  ASSERT_TRUE(tester.received_control_command);
   // Keep stopped state when the lateral control is not converged.
   EXPECT_DOUBLE_EQ(tester.cmd_msg->longitudinal.velocity, 0.0f);
 }

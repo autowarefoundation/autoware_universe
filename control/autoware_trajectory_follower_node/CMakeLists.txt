@@ -36,7 +36,6 @@ autoware_agnocast_wrapper_register_node(${SIMPLE_TRAJECTORY_FOLLOWER_NODE}
 if(BUILD_TESTING)
   set(TRAJECTORY_FOLLOWER_NODES_TEST test_trajectory_follower_node)
   ament_add_ros_isolated_gtest(${TRAJECTORY_FOLLOWER_NODES_TEST}
-    test/trajectory_follower_test_utils.hpp
     test/test_controller_node.cpp
   )
   ament_target_dependencies(${TRAJECTORY_FOLLOWER_NODES_TEST} autoware_fake_test_node ament_index_cpp)
