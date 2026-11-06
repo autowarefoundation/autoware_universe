@@ -1,4 +1,5 @@
 ### Automatically generated from package.xml ###
+api/autoware_default_adapi_universe/** isamu.takagi@tier4.jp junya.sasaki@tier4.jp ryohsuke.mitsudome@tier4.jp yukihiro.saito@tier4.jp
 common/autoware_boundary_departure_checker/** alqudah.mohammad@tier4.jp maxime.clement@tier4.jp zulfaqar.azmi@tier4.jp
 common/autoware_component_interface_specs_universe/** isamu.takagi@tier4.jp yukihiro.saito@tier4.jp
 common/autoware_deprecated_boundary_departure_checker/** Kotakkucu@gmail.com alqudah.mohammad@tier4.jp kyoichi.sugahara@tier4.jp maxime.clement@tier4.jp zulfaqar.azmi@tier4.jp
@@ -203,8 +204,6 @@ system/autoware_command_mode_switcher/** isamu.takagi@tier4.jp
 system/autoware_command_mode_switcher_plugins/** isamu.takagi@tier4.jp
 system/autoware_command_mode_types/** isamu.takagi@tier4.jp
 system/autoware_component_state_monitor/** isamu.takagi@tier4.jp junya.sasaki@tier4.jp
-system/autoware_default_adapi_helpers/autoware_adapi_visualizers/** isamu.takagi@tier4.jp junya.sasaki@tier4.jp ryohsuke.mitsudome@tier4.jp yukihiro.saito@tier4.jp
-system/autoware_default_adapi_universe/** isamu.takagi@tier4.jp junya.sasaki@tier4.jp ryohsuke.mitsudome@tier4.jp yukihiro.saito@tier4.jp
 system/autoware_diagnostic_graph_aggregator/** isamu.takagi@tier4.jp junya.sasaki@tier4.jp
 system/autoware_diagnostic_graph_merger/** isamu.takagi@tier4.jp tetsuhiro.kawaguchi@tier4.jp
 system/autoware_diagnostic_graph_utils/** isamu.takagi@tier4.jp junya.sasaki@tier4.jp
@@ -231,6 +230,7 @@ vehicle/autoware_accel_brake_map_calibrator/** eiki.nagata.2@tier4.jp taiki.tana
 vehicle/autoware_external_cmd_converter/** eiki.nagata.2@tier4.jp takamasa.horibe@tier4.jp
 vehicle/autoware_raw_vehicle_cmd_converter/** kyoichi.sugahara@tier4.jp makoto.kurihara@tier4.jp sho.iwasawa.2@tier4.jp taiki.tanaka@tier4.jp takamasa.horibe@tier4.jp takayuki.murooka@tier4.jp
 vehicle/autoware_steer_offset_estimator/** alqudah.mohammad@tier4.jp taiki.tanaka@tier4.jp taiki.yamada@tier4.jp takayuki.murooka@tier4.jp yukinari.hisaki.2@tier4.jp
+visualization/autoware_adapi_visualizers/** isamu.takagi@tier4.jp junya.sasaki@tier4.jp ryohsuke.mitsudome@tier4.jp yukihiro.saito@tier4.jp
 visualization/autoware_bag_time_manager_rviz_plugin/** junya.sasaki@tier4.jp taiki.tanaka@tier4.jp
 visualization/autoware_traffic_light_rviz_plugin/** takumi.odashima@tier4.jp yukinari.hisaki.2@tier4.jp
 visualization/tier4_active_generator_rviz_plugin/** hayate.sugahara@tier4.jp takumi.odashima@tier4.jp
