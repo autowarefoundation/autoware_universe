@@ -56,6 +56,8 @@ rclcpp::NodeOptions makeNodeOptions(const bool enable_keep_stopped_until_steer_c
     ament_index_cpp::get_package_share_directory("autoware_pid_longitudinal_controller");
   const auto lateral_share_dir =
     ament_index_cpp::get_package_share_directory("autoware_mpc_lateral_controller");
+  const auto test_utils_share_dir =
+    ament_index_cpp::get_package_share_directory("autoware_test_utils");
   rclcpp::NodeOptions node_options;
   node_options.append_parameter_override("lateral_controller_mode", "mpc");
   node_options.append_parameter_override("longitudinal_controller_mode", "pid");
@@ -68,9 +70,9 @@ rclcpp::NodeOptions makeNodeOptions(const bool enable_keep_stopped_until_steer_c
      lateral_share_dir + "/param/lateral_controller_defaults.param.yaml", "--params-file",
      lateral_share_dir + "/param/steer_offset.param.yaml", "--params-file",
      longitudinal_share_dir + "/config/autoware_pid_longitudinal_controller.param.yaml",
-     "--params-file", share_dir + "/test/test_vehicle_info.param.yaml", "--params-file",
-     share_dir + "/test/test_nearest_search.param.yaml", "--params-file",
-     share_dir + "/param/trajectory_follower_node.param.yaml"});
+     "--params-file", test_utils_share_dir + "/config/test_vehicle_info.param.yaml",
+     "--params-file", test_utils_share_dir + "/config/test_nearest_search.param.yaml",
+     "--params-file", share_dir + "/param/trajectory_follower_node.param.yaml"});
 
   return node_options;
 }

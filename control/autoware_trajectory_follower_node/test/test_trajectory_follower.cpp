@@ -44,12 +44,12 @@ using autoware_planning_msgs::msg::TrajectoryPoint;
 
 constexpr double control_period = 0.03;
 
-/// The values of test_vehicle_info.param.yaml.
-constexpr double wheel_base = 2.74;
+/// The values of config/test_vehicle_info.param.yaml in autoware_test_utils.
+constexpr double wheel_base = 2.79;
 constexpr double front_overhang = 1.0;
 constexpr double max_steer_angle = 0.70;
 
-/// The values of test_nearest_search.param.yaml.
+/// The values of config/test_nearest_search.param.yaml in autoware_test_utils.
 constexpr double ego_nearest_dist_threshold = 3.0;
 constexpr double ego_nearest_yaw_threshold = 1.046;
 
