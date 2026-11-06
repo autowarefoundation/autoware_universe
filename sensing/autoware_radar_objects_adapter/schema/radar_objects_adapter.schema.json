@@ -57,6 +57,16 @@
               "description": "Radar class to map to TRUCK label.",
               "default": "TRUCK"
             },
+            "BUS": {
+              "type": "string",
+              "default": "CAR",
+              "description": "A radar that reports BUS tends to confuse it with CAR; default=CAR"
+            },
+            "TRAILER": {
+              "type": "string",
+              "default": "CAR",
+              "description": "A radar that reports TRAILER tends to confuse it with CAR; default=CAR"
+            },
             "MOTORCYCLE": {
               "type": "string",
               "default": "CAR",
@@ -81,17 +91,31 @@
               "type": "string",
               "default": "UNKNOWN",
               "description": "HAZARD is not a valid Perception label; fallback=UNKNOWN"
+            },
+            "OVER_DRIVABLE": {
+              "type": "string",
+              "default": "UNKNOWN",
+              "description": "OVER_DRIVABLE is a radar-specific label; fallback=UNKNOWN"
+            },
+            "UNDER_DRIVABLE": {
+              "type": "string",
+              "default": "UNKNOWN",
+              "description": "UNDER_DRIVABLE is a radar-specific label; fallback=UNKNOWN"
             }
           },
           "required": [
             "UNKNOWN",
             "CAR",
             "TRUCK",
+            "BUS",
+            "TRAILER",
             "MOTORCYCLE",
             "BICYCLE",
             "PEDESTRIAN",
             "ANIMAL",
-            "HAZARD"
+            "HAZARD",
+            "OVER_DRIVABLE",
+            "UNDER_DRIVABLE"
           ],
           "additionalProperties": false
         }

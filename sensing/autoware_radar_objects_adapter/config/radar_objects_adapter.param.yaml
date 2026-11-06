@@ -14,9 +14,15 @@
       UNKNOWN: UNKNOWN
       CAR: CAR
       TRUCK: TRUCK
+      # vehicle labels; the tracker treats the vehicle classes alike
+      BUS: CAR
+      TRAILER: CAR
       # temporary remap: radar tends to misclassify far cars
       MOTORCYCLE: CAR
       BICYCLE: CAR
       PEDESTRIAN: PEDESTRIAN
       ANIMAL: ANIMAL
+      # become UNKNOWN unless a perception label is named here
       HAZARD: UNKNOWN
+      OVER_DRIVABLE: UNKNOWN
+      UNDER_DRIVABLE: UNKNOWN
