@@ -24,15 +24,12 @@
 #include "autoware_planning_msgs/msg/trajectory.hpp"
 #include "autoware_vehicle_msgs/msg/steering_report.hpp"
 #include "geometry_msgs/msg/accel_with_covariance_stamped.hpp"
-#include "geometry_msgs/msg/pose.hpp"
-#include "geometry_msgs/msg/pose_stamped.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 
 #include <chrono>
 #include <iostream>
 #include <memory>
 #include <thread>
-#include <vector>
 
 using Controller = autoware::motion::control::trajectory_follower_node::Controller;
 using Control = autoware_control_msgs::msg::Control;
@@ -44,8 +41,6 @@ using autoware_adapi_v1_msgs::msg::OperationModeState;
 using geometry_msgs::msg::AccelWithCovarianceStamped;
 
 using FakeNodeFixture = autoware::fake_test_node::FakeTestNode;
-
-const rclcpp::Duration one_second(1, 0);
 
 rclcpp::NodeOptions makeNodeOptions(const bool enable_keep_stopped_until_steer_convergence = false)
 {
