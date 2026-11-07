@@ -68,7 +68,7 @@
         max_time_s: 3.0 # [s] maximum time ahead of ego along the trajectory to use for calculation
 
     obstacle: # parameters for obstacle metrics calculation
-      worst_only: true # if true, only the worst obstacle metric value is published
+      worst_only: false # if true, only the worst obstacle metric value is published
       use_ego_traj_vel: false # if true, the planned trajectory velocity is used
       collision_thr_m: 0.0 # [m] distance threshold to consider a collision occurs between object footprints and ego trajectory footprints
       stop_velocity_mps: 0.2777 # [m/s] velocity threshold to consider the object or ego is static, used for speed up the calculation
