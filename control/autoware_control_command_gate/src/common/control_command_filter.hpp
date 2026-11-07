@@ -15,7 +15,7 @@
 #ifndef COMMON__CONTROL_COMMAND_FILTER_HPP_
 #define COMMON__CONTROL_COMMAND_FILTER_HPP_
 
-#include <autoware_vehicle_cmd_gate/msg/is_filter_activated.hpp>
+#include <autoware_control_command_gate/msg/is_filter_activated.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_control_msgs/msg/control.hpp>
@@ -25,8 +25,8 @@
 
 namespace autoware::control_command_gate
 {
+using autoware_control_command_gate::msg::IsFilterActivated;
 using autoware_control_msgs::msg::Control;
-using autoware_vehicle_cmd_gate::msg::IsFilterActivated;
 using LimitArray = std::vector<double>;
 
 struct VehicleCmdFilterParam
