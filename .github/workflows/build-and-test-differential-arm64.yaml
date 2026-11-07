@@ -1,0 +1,22 @@
+name: build-and-test-differential-arm64
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - labeled
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test-differential-arm64:
+    uses: ./.github/workflows/build-and-test-differential.yaml
+    with:
+      container: ghcr.io/autowarefoundation/autoware:universe-dependencies-humble
+      runner: "['ubuntu-22.04-arm']"
+    secrets:
+      codecov-token: ${{ secrets.CODECOV_TOKEN }}
