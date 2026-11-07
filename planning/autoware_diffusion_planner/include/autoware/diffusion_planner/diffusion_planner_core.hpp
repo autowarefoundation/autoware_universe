@@ -117,10 +117,14 @@ struct FrameContext
 /**
  * @brief Parameters for snapping the ego pose onto the previous planning trajectory.
  *
- * The ego pose fed to the model is replaced by the foot of the perpendicular to the closest
- * segment of the previous planning trajectory, so that consecutive frames stay on a single
- * consistent trajectory instead of re-planning from a slightly drifted localization pose. The
- * error limits reject the snap when the previous trajectory no longer reflects reality.
+ * The ego pose fed to the model is replaced by a virtual pose derived from the previous planning
+ * trajectory, so that consecutive frames continue one trajectory instead of re-planning from a
+ * slightly drifted localization pose. The snapped position is the closest point on a cubic spline
+ * through the previous trajectory's vertices (preceded by recent ego poses so the spline extends
+ * behind the vehicle); the snapped heading is the spline tangent averaged over a window of arc
+ * length. The distance and heading limits are applied by
+ * blending the snapped pose toward the localized pose and bounding the result, so the pose handed
+ * to the model is continuous at the limits.
  */
 struct EgoSnapParams
 {
@@ -133,10 +137,47 @@ struct EgoSnapParams
   // Maximum allowed heading difference [deg] between the actual ego pose and the snapped pose.
   double max_yaw_error_deg;
 
+  // How far from the raw pose toward the snapped pose the virtual pose is placed, in [0, 1].
+  // 0 is the raw pose, so the feature has no effect; 1 is the snapped pose, fully on the previous
+  // plan; values in between sit on the segment between the two.
+  // At 1 the virtual pose carries none of the localized pose, which is the behaviour of the
+  // implementation this replaces while it is inside its limits. Below 1 the remaining share of the
+  // localized pose also pulls the reference back onto the vehicle: at 0.9 a standing gap closes
+  // with a time constant of about ten planning cycles, at 1 it does not close at all and rests on
+  // the controller removing a standing lateral offset.
+  double snap_strength;
+
   // Number of leading segments of the previous trajectory searched for the closest one. The
   // planning cycle only advances the ego by ~1 segment, so a small window is enough and it keeps
   // a far-away part of the trajectory (e.g. the return leg of a U-turn) from being selected.
   int64_t max_search_segment_count;
+
+  // The heading of the snapped pose is the tangent of the spline through the previous
+  // trajectory's xy positions, averaged over +-yaw_fit_half_window_m of arc length around the
+  // snapped point (see utils::snap_point_to_trajectory). It falls back to the raw localization
+  // heading when that window is shorter than yaw_fit_min_length_m.
+  double yaw_fit_half_window_m;
+  double yaw_fit_min_length_m;
+
+  // Number of earlier ego poses (from the ego history, i.e. the virtual poses of the previous
+  // frames) prepended to the previous trajectory before snapping. They extend the spline behind the
+  // snapped point so the tangent window stays symmetric and long even though the ego is always
+  // within the first metre of the previous trajectory.
+  int64_t history_prefix_count;
+};
+
+// Checks every EgoSnapParams field for a value the snap can run with: finite numbers, the
+// documented ranges. Returns an empty string when valid, otherwise a
+// message naming the parameter and the accepted values. Used at startup and on every runtime
+// update.
+std::string validate_ego_snap_params(const EgoSnapParams & params);
+
+// What snap_ego_to_previous_trajectory produces: the virtual ego pose handed to the model (map
+// frame) and how far along the previous trajectory it sits, as an interpolation time.
+struct SnappedEgo
+{
+  Eigen::Matrix4d pose;
+  double interpolation_time_s;
 };
 
 struct DiffusionPlannerParams
@@ -385,6 +426,20 @@ private:
   std::map<lanelet::Id, TrafficSignalStamped> traffic_light_id_map_;
   std::vector<std::vector<std::vector<Eigen::Matrix4d>>> last_agent_poses_map_;
   std::optional<Eigen::Matrix4d> last_ego_to_map_transform_;
+
+  // Recent distinct ego poses, oldest first, to prepend to the previous trajectory so the snap
+  // spline has geometry behind the vehicle. The newest history entry is the previous planning start
+  // itself and is skipped; poses closer than a few centimetres to their successor are dropped.
+  std::vector<Eigen::Matrix4d> ego_history_prefix_for_snap(int64_t max_count) const;
+
+  /**
+   * @brief Snapped ego pose (map frame, model frame convention) and interpolation time [s] of the
+   *        snapped point along the previous planning trajectory, according to
+   *        params_.ego_snap_to_prev_trajectory. std::nullopt when the snap is disabled or not yet
+   *        possible (no previous trajectory).
+   */
+  std::optional<SnappedEgo> snap_ego_to_previous_trajectory(
+    const nav_msgs::msg::Odometry & kinematic_state) const;
 
   // Lanelet map
   LaneletRoute::ConstSharedPtr route_ptr_;
