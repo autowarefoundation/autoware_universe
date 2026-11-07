@@ -315,6 +315,7 @@ private:
     InterpolatedPathInfo interpolated_path_info;
     RoundaboutStopLines roundabout_stoplines;
     PathLanelets path_lanelets;
+    RoundaboutLanelets roundabout_lanelets;
   };
 
   /**
