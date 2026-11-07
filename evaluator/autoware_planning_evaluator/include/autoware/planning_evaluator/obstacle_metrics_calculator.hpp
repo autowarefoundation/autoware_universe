@@ -87,7 +87,7 @@ struct EgoTrajectoryPoint
     this->pose = pose;
   }
 
-  void setPolygon(const VehicleInfo & ego_vehicle_info)
+  const Polygon2d & getPolygon(const VehicleInfo & ego_vehicle_info)
   {
     if (!polygon.has_value()) {
       const autoware_utils::LinearRing2d ego_footprint =
@@ -97,6 +97,12 @@ struct EgoTrajectoryPoint
       bg::correct(ego_polygon);
       polygon = std::make_optional(ego_polygon);
     }
+    return *polygon;
+  }
+
+  void setPolygon(const VehicleInfo & ego_vehicle_info)
+  {
+    static_cast<void>(getPolygon(ego_vehicle_info));
   }
 };
 
@@ -163,12 +169,15 @@ struct ObstacleTrajectoryPoint
     this->pose.position.y += distance_from_reference_m * std::sin(yaw);
   }
 
-  void setPolygon(const Shape & obstacle_shape)
+  const Polygon2d & getPolygon(const Shape & obstacle_shape)
   {
     if (!polygon.has_value()) {
       polygon = std::make_optional(autoware_utils::to_polygon2d(pose, obstacle_shape));
     }
+    return *polygon;
   }
+
+  void setPolygon(const Shape & obstacle_shape) { static_cast<void>(getPolygon(obstacle_shape)); }
 };
 
 /**
@@ -311,6 +320,38 @@ private:
    * obstacle_metrics_.
    */
   void ProcessObstaclesTrajectory();
+
+  const PredictedObjects & getPredictedObjects() const
+  {
+    if (!predicted_objects_) {
+      throw std::bad_optional_access();
+    }
+    return *predicted_objects_;
+  }
+
+  const nav_msgs::msg::Odometry & getEgoOdometry() const
+  {
+    if (!ego_odometry_) {
+      throw std::bad_optional_access();
+    }
+    return *ego_odometry_;
+  }
+
+  const VehicleInfo & getVehicleInfo() const
+  {
+    if (!vehicle_info_) {
+      throw std::bad_optional_access();
+    }
+    return *vehicle_info_;
+  }
+
+  const Trajectory & getTrajectory() const
+  {
+    if (!trajectory_) {
+      throw std::bad_optional_access();
+    }
+    return *trajectory_;
+  }
 
   // input data
   std::optional<PredictedObjects> predicted_objects_;
