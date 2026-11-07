@@ -65,8 +65,8 @@ public:
     const std::vector<geometry_msgs::msg::Pose> & goal_candidates) override;
   bool hasObstacleOnTrajectory(const geometry_msgs::msg::PoseArray & trajectory) const override;
 
-  // Each makePlan call draws the seed of its sampler from this generator.
-  // A test sets a fixed seed to repeat the same sequence of plans.
+  // Seed the generator that gives the sampler seed of each makePlan call.
+  // By default, std::random_device seeds it.
   void setSeed(const std::mt19937::result_type seed) { seed_gen_.seed(seed); }
 
 private:
