@@ -80,7 +80,9 @@ void TrafficReaderService::run()
 
     // Accept a new connection
     boost::system::error_code error_code;
-    acceptor_->accept(*socket_, error_code);
+    // The error code set to the argument "error_code" is also returned as the return value.
+    // The return value is deprecated in Boost.Asio and will become void in the future.
+    acceptor_->accept(*socket_, error_code);  // NOLINT(bugprone-unused-return-value)
 
     if (error_code) {
       syslog(LOG_ERR, "Failed to accept new connection. %s\n", error_code.message().c_str());
