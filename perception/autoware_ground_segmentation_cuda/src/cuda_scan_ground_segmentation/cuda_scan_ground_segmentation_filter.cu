@@ -707,15 +707,16 @@ void CudaScanGroundSegmentationFilter::extractPoints(
   // Reserve the output
   int output_size = writing_loc[point_num];
 
+  cuda::copyPointCloud2Metadata(output, input);
+  output.height = 1;
+  output.width = output_size > 0 ? static_cast<uint32_t>(output_size) : 0;
+  output.row_step = output.width * output.point_step;
+
   if (output_size <= 0) {
     return;
   }
 
-  cuda::copyPointCloud2Metadata(output, input);
-
   output.data = cuda_blackboard::make_unique<uint8_t[]>(output_size * output.point_step);
-  output.height = 1;
-  output.width = output_size;
 
   // Get the points
   CHECK_CUDA_ERROR(
@@ -786,6 +787,11 @@ void CudaScanGroundSegmentationFilter::removeOutliers(
   float max_radius = filter_parameters_.max_radius;
   int point_num = input.width * input.height;
 
+  cuda::copyPointCloud2Metadata(*dev_input_points_, input);
+  dev_input_points_->height = 1;
+  dev_input_points_->width = 0;
+  dev_input_points_->row_step = 0;
+
   if (point_num <= 0) {
     return;
   }
@@ -802,10 +808,13 @@ void CudaScanGroundSegmentationFilter::removeOutliers(
 
   int remain_size = mark[point_num];
 
-  cuda::copyPointCloud2Metadata(*dev_input_points_, input);
+  dev_input_points_->width = remain_size > 0 ? static_cast<uint32_t>(remain_size) : 0;
+  dev_input_points_->row_step = dev_input_points_->width * dev_input_points_->point_step;
 
-  dev_input_points_->height = 1;
-  dev_input_points_->width = remain_size;
+  if (remain_size <= 0) {
+    return;
+  }
+
   dev_input_points_->data =
     cuda_blackboard::make_unique<uint8_t[]>(remain_size * dev_input_points_->point_step);
 
