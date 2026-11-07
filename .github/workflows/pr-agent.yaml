@@ -4,15 +4,21 @@ on:
   pull_request:
     types: [opened, labeled, unlabeled, synchronize]
   issue_comment:
+    types: [created]
 
 jobs:
-  prevent-no-label-execution-pr-agent:
-    uses: autowarefoundation/autoware-github-actions/.github/workflows/prevent-no-label-execution.yaml@v1
-    with:
-      label: tag:pr-agent
   pr_agent_job:
-    needs: prevent-no-label-execution-pr-agent
-    if: ${{ needs.prevent-no-label-execution-pr-agent.outputs.run == 'true' }}
+    # Run only on pull requests with the tag:pr-agent label, also for comments.
+    # A labeled event runs only when tag:pr-agent itself is added.
+    if: >-
+      ${{
+        (github.event_name == 'pull_request' &&
+          contains(github.event.pull_request.labels.*.name, 'tag:pr-agent') &&
+          (github.event.action != 'labeled' || github.event.label.name == 'tag:pr-agent')) ||
+        (github.event_name == 'issue_comment' &&
+          github.event.issue.pull_request &&
+          contains(github.event.issue.labels.*.name, 'tag:pr-agent'))
+      }}
     runs-on: ubuntu-24.04
     permissions:
       issues: write
