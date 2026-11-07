@@ -48,8 +48,8 @@
         time_threshold_for_lane_change_detection: 5.0 #[s]
         cutoff_freq_of_velocity_for_lane_change_detection: 0.1 #[Hz]
       lat_diff_distance:
-        dist_ratio_threshold_to_left_bound: -0.5 #[ratio]
-        dist_ratio_threshold_to_right_bound: 0.5 #[ratio
+        dist_ratio_threshold_to_left_bound: -0.25 #[ratio]
+        dist_ratio_threshold_to_right_bound: 0.25 #[ratio
         diff_dist_threshold_to_left_bound: 0.29 #[m]
         diff_dist_threshold_to_right_bound: -0.29 #[m]
       num_continuous_state_transition: 3
