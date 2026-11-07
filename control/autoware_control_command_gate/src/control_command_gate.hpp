@@ -20,7 +20,6 @@
 #include "command/interface.hpp"
 #include "command/selector.hpp"
 
-#include <autoware_command_mode_types/sources.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -42,8 +41,6 @@ public:
   explicit ControlCmdGate(const rclcpp::NodeOptions & options);
 
 private:
-  static constexpr uint16_t unknown = autoware::command_mode_types::sources::unknown;
-  static constexpr uint16_t builtin = autoware::command_mode_types::sources::builtin;
   using CommandSourceStatus = tier4_system_msgs::msg::CommandSourceStatus;
   using CommandFilterStatus = tier4_system_msgs::msg::CommandFilterStatus;
   using ChangeCommandSource = tier4_system_msgs::srv::ChangeCommandSource;
