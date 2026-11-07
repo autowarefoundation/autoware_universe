@@ -57,8 +57,10 @@ class CudaPointcloudPreprocessor
 {
 public:
   enum class UndistortionType { Invalid, Undistortion2D, Undistortion3D };
+  enum class OutputPointFormat { XYZIRC, XYZIRCT };
 
-  explicit CudaPointcloudPreprocessor(const PreprocessorCapacity & capacity);
+  CudaPointcloudPreprocessor(
+    const PreprocessorCapacity & capacity, OutputPointFormat output_point_format);
 
   void setCropBoxParameters(const std::vector<CropBoxParameters> & crop_box_parameters);
   void setRingOutlierFilterParameters(const RingOutlierFilterParameters & ring_outlier_parameters);
@@ -92,6 +94,8 @@ private:
   // buffer holds the capacity; every kernel and library call covers exactly this many.
   std::size_t num_raw_points_{};
 
+  OutputPointFormat output_point_format_;
+  std::size_t output_point_step_{};
   std::vector<sensor_msgs::msg::PointField> point_fields_;
   std::unique_ptr<cuda_blackboard::CudaPointCloud2> output_pointcloud_ptr_;
 
@@ -115,7 +119,6 @@ private:
 
   // Pointcloud preprocessing buffers
   thrust::device_vector<InputPointType> device_transformed_points_;
-  thrust::device_vector<OutputPointType> device_output_points_;
   thrust::device_vector<std::uint32_t> device_crop_mask_;
   thrust::device_vector<std::uint8_t> device_nan_mask_;
   thrust::device_vector<std::uint8_t> device_mismatch_mask_;

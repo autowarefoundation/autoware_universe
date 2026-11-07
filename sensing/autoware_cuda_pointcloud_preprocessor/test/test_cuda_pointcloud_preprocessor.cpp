@@ -39,6 +39,10 @@ namespace autoware::cuda_pointcloud_preprocessor
 namespace
 {
 
+using autoware::point_types::PointXYZIRC;
+
+constexpr auto kOutputFormat = CudaPointcloudPreprocessor::OutputPointFormat::XYZIRC;
+
 PreprocessorCapacity make_capacity(
   const std::size_t max_input_point_count = 2, const std::size_t max_twist_struct_count = 1)
 {
@@ -208,25 +212,25 @@ class CudaPointcloudPreprocessorDeviceTest : public autoware::cuda_utils::CudaTe
 
 TEST_F(CudaPointcloudPreprocessorDeviceTest, AcceptsValidCapacities)
 {
-  EXPECT_NO_THROW(CudaPointcloudPreprocessor{make_capacity()});
+  EXPECT_NO_THROW((CudaPointcloudPreprocessor{make_capacity(), kOutputFormat}));
 }
 
 TEST(CudaPointcloudPreprocessor, RejectsInvalidCapacities)
 {
   auto capacity = make_capacity();
   capacity.max_input_point_count = 0;
-  EXPECT_THROW(CudaPointcloudPreprocessor{capacity}, std::runtime_error);
+  EXPECT_THROW((CudaPointcloudPreprocessor{capacity, kOutputFormat}), std::runtime_error);
 
   capacity = make_capacity();
   capacity.max_twist_struct_count = 0;
-  EXPECT_THROW(CudaPointcloudPreprocessor{capacity}, std::runtime_error);
+  EXPECT_THROW((CudaPointcloudPreprocessor{capacity, kOutputFormat}), std::runtime_error);
 }
 
 // Rings have no capacity of their own: any ring index and any number of points per ring are
 // processed, only `max_input_point_count` bounds a frame.
 TEST_F(CudaPointcloudPreprocessorDeviceTest, KeepsEveryPointOfEveryRing)
 {
-  CudaPointcloudPreprocessor preprocessor{make_capacity(4)};
+  CudaPointcloudPreprocessor preprocessor{make_capacity(4), kOutputFormat};
   preprocessor.setRingOutlierFilterActive(false);
   preprocessor.setUndistortionType(CudaPointcloudPreprocessor::UndistortionType::Undistortion2D);
 
@@ -244,7 +248,7 @@ TEST_F(CudaPointcloudPreprocessorDeviceTest, KeepsEveryPointOfEveryRing)
 // are interleaved in on input (which is how a spinning lidar emits them).
 TEST_F(CudaPointcloudPreprocessorDeviceTest, OrdersOutputByRingThenInputOrder)
 {
-  CudaPointcloudPreprocessor preprocessor{make_capacity(6)};
+  CudaPointcloudPreprocessor preprocessor{make_capacity(6), kOutputFormat};
   preprocessor.setRingOutlierFilterActive(false);
   preprocessor.setUndistortionType(CudaPointcloudPreprocessor::UndistortionType::Undistortion2D);
 
@@ -255,7 +259,7 @@ TEST_F(CudaPointcloudPreprocessorDeviceTest, OrdersOutputByRingThenInputOrder)
   const auto output = process_cloud(preprocessor, input_cloud);
 
   ASSERT_EQ(output.width, 6U);
-  std::vector<OutputPointType> points(6);
+  std::vector<PointXYZIRC> points(6);
   std::memcpy(points.data(), output.data.data(), output.data.size());
   const std::vector<std::pair<std::uint16_t, float>> expected = {{0, 2.0F}, {0, 5.0F}, {1, 4.0F},
                                                                  {2, 1.0F}, {2, 3.0F}, {2, 6.0F}};
@@ -395,14 +399,14 @@ TEST_F(CudaPointcloudPreprocessorDeviceTest, OutputDoesNotDependOnEarlierLargerF
   const std::deque<geometry_msgs::msg::Vector3Stamped> angular_velocity_queue{
     make_angular_velocity(30'000'000U, 1), make_angular_velocity(50'000'000U, 1)};
 
-  CudaPointcloudPreprocessor sequenced{capacity};
+  CudaPointcloudPreprocessor sequenced{capacity, kOutputFormat};
   configure(sequenced);
   for (std::size_t i = 0; i < frames.size(); ++i) {
     const auto input_cloud = make_input_cloud(frames.at(i));
     const auto from_sequence =
       process_cloud(sequenced, input_cloud, twist_queue, angular_velocity_queue);
 
-    CudaPointcloudPreprocessor fresh{capacity};
+    CudaPointcloudPreprocessor fresh{capacity, kOutputFormat};
     configure(fresh);
     const auto from_fresh = process_cloud(fresh, input_cloud, twist_queue, angular_velocity_queue);
 
@@ -421,7 +425,7 @@ TEST_F(CudaPointcloudPreprocessorDeviceTest, OutputDoesNotDependOnEarlierLargerF
 
 TEST_F(CudaPointcloudPreprocessorDeviceTest, TruncatesInputCloudToConfiguredMaximum)
 {
-  CudaPointcloudPreprocessor preprocessor{make_capacity()};
+  CudaPointcloudPreprocessor preprocessor{make_capacity(), kOutputFormat};
   preprocessor.setRingOutlierFilterActive(false);
   preprocessor.setUndistortionType(CudaPointcloudPreprocessor::UndistortionType::Undistortion2D);
 
@@ -436,7 +440,7 @@ TEST_F(CudaPointcloudPreprocessorDeviceTest, TruncatesInputCloudToConfiguredMaxi
   ASSERT_NE(output_cloud, nullptr);
   EXPECT_EQ(output_cloud->height, 1U);
   EXPECT_EQ(output_cloud->width, 2U);
-  EXPECT_EQ(output_cloud->row_step, 2U * sizeof(OutputPointType));
+  EXPECT_EQ(output_cloud->row_step, 2U * sizeof(PointXYZIRC));
 }
 
 }  // namespace
