@@ -56,11 +56,11 @@ AdvancedMatchingPolicy::AdvancedMatchingPolicy(
   const std::vector<double> & lidar_timestamp_noise_window)
 {
   if (lidar_timestamp_offsets.size() != input_topics.size()) {
-    throw std::runtime_error(
+    throw std::invalid_argument(
       "The number of topics does not match the number of timestamp offsets.");
   }
   if (lidar_timestamp_noise_window.size() != input_topics.size()) {
-    throw std::runtime_error(
+    throw std::invalid_argument(
       "The number of topics does not match the number of timestamp noise window.");
   }
 

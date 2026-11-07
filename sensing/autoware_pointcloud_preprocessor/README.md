@@ -62,9 +62,55 @@ Detail description of each filter's algorithm is in the following links.
 `autoware::pointcloud_preprocessor::Filter` is implemented based on pcl_perception [1] because
 of [this issue](https://github.com/ros-perception/perception_pcl/issues/9).
 
+## Python binding for point cloud concatenation
+
+The concatenation core (`CloudConcatenator`, which the `concatenate_data` node runs) can be used
+from Python through `autoware_pointcloud_preprocessor.concatenate_pointclouds`. It is built and
+installed with the package, so no extra build option is needed. It takes and returns rclpy messages
+and needs no ROS node: no `rclpy.init()`, no executor and no TF listener. This makes it useful for
+offline work such as re-concatenating a rosbag.
+
+```python
+from autoware_pointcloud_preprocessor.concatenate_pointclouds import Concatenator, FrameStatus
+
+concatenator = Concatenator(
+    ["/sensing/lidar/top/pointcloud", "/sensing/lidar/left/pointcloud"],
+    output_frame="base_link",
+    timeout_sec=0.1,
+)
+concatenator.set_transform(top_to_base_link)  # a TransformStamped per sensor frame
+concatenator.set_transform(left_to_base_link)
+concatenator.process_twist(twist)  # TwistWithCovarianceStamped; or process_odometry(odometry)
+
+# Feed the clouds in arrival order. The arrival time (seconds) replaces the node's clock.
+for frame in concatenator.process_cloud("/sensing/lidar/top/pointcloud", cloud, arrival_time=t):
+    if frame.status is FrameStatus.COMPLETE:
+        merged = frame.result.concatenated_cloud  # sensor_msgs.msg.PointCloud2
+
+# At the end of the stream, close the collectors that are still open (as TIMEOUT frames).
+remaining = concatenator.flush()
+```
+
+Each frame carries `status` (`COMPLETE`, `TIMEOUT` or `LATE`), `result.concatenated_cloud`,
+`result.concatenation_info`, `result.motion_compensation_status` and
+`result.dropped_sources_missing_transform`. `frame.build_diagnostics()` returns the
+`DiagnosticStatus` the node would publish for it.
+
+- `set_transform()` takes the transform from the sensor frame into the output frame
+  (`header.frame_id` = output frame, `child_frame_id` = sensor frame). Any other form raises
+  `ValueError`.
+- An unknown topic, a malformed `PointCloud2` or an invalid option raises `ValueError`. A message of
+  the wrong type raises `TypeError`.
+- For the `advanced` matching strategy, pass `matching_strategy="advanced"` together with
+  `lidar_timestamp_offsets` and `lidar_timestamp_noise_window`, as in the node's parameters.
+
+A runnable example is [`examples/concatenate_without_ros_node.py`](#concatenate_without_ros_nodepy).
+For reading a rosbag and for reproducing the node exactly (`max_open_collectors`,
+`reject_late_clouds`), see [Offline use from Python](docs/concatenate-data.md#offline-use-from-python).
+
 ## Examples
 
-Examples are not built by default, so release builds do not pay for them. Enable them with
+The C++ examples are not built by default, so release builds do not pay for them. Enable them with
 `-DBUILD_EXAMPLES=ON`:
 
 ```bash
@@ -117,6 +163,39 @@ The absolute figures depend on the machine; use them to compare runs, not as a s
 
 Build with `-DCMAKE_BUILD_TYPE=Release` before reading anything into the timings. Without it the
 package compiles unoptimized and the same run is roughly 80x slower.
+
+### concatenate_without_ros_node.py
+
+The Python counterpart of `concatenate_without_ros_node`, using the
+[Python binding](#python-binding-for-point-cloud-concatenation). It concatenates the same three clouds
+and makes the same checks, but does not measure timings. It needs no build option. From the
+workspace root:
+
+```bash
+colcon build --packages-select autoware_pointcloud_preprocessor --cmake-args -DCMAKE_BUILD_TYPE=Release
+source install/setup.bash
+python3 src/universe/autoware_universe/sensing/autoware_pointcloud_preprocessor/examples/concatenate_without_ros_node.py [points_per_cloud]
+```
+
+| Argument           | Default | Description                               |
+| ------------------ | ------- | ----------------------------------------- |
+| `points_per_cloud` | 40000   | points in each of the three source clouds |
+
+```text
+concatenated cloud
+  frame_id   : base_link
+  stamp      : 1000
+  points     : 120000
+  point_step : 16
+  sources    : 3
+  frames     : 1
+
+  ok   cloud is in the output frame
+  ok   every source contributed its points
+  ...
+
+PASS: concatenation ran without a ROS node
+```
 
 ## Measuring the performance
 

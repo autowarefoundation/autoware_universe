@@ -27,6 +27,7 @@
 #include <functional>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -35,15 +36,90 @@
 namespace autoware::pointcloud_preprocessor
 {
 
+namespace
+{
+
+std::size_t field_byte_size(uint8_t datatype)
+{
+  using sensor_msgs::msg::PointField;
+  switch (datatype) {
+    case PointField::INT8:
+    case PointField::UINT8:
+      return 1;
+    case PointField::INT16:
+    case PointField::UINT16:
+      return 2;
+    case PointField::INT32:
+    case PointField::UINT32:
+    case PointField::FLOAT32:
+      return 4;
+    case PointField::FLOAT64:
+      return 8;
+    default:
+      return 0;
+  }
+}
+
+}  // namespace
+
+// The XYZIRC conversion walks the cloud with sensor_msgs::PointCloud2ConstIterator, whose end is
+// data.size() past the field offset in steps of point_step: a layout where those do not line up
+// never reaches the end and reads past the buffer. Reject such a cloud before building any
+// iterator, with std::invalid_argument so the caller (node, example, Python) sees a bad input.
+void validate_cloud_layout(const sensor_msgs::msg::PointCloud2 & cloud)
+{
+  // No data means an empty cloud whatever width/height say (drivers and the node's tests send a
+  // "null" cloud that way): nothing is read from it, so there is nothing to check.
+  if (cloud.data.empty()) return;
+  if (cloud.point_step == 0) {
+    throw std::invalid_argument("invalid point cloud layout: point_step must be positive");
+  }
+  const std::size_t points = static_cast<std::size_t>(cloud.width) * cloud.height;
+  if (cloud.data.size() < points * cloud.point_step) {
+    throw std::invalid_argument(
+      "invalid point cloud layout: data holds " + std::to_string(cloud.data.size()) +
+      " bytes but width * height * point_step is " + std::to_string(points * cloud.point_step));
+  }
+  if (cloud.data.size() % cloud.point_step != 0) {
+    throw std::invalid_argument(
+      "invalid point cloud layout: data size " + std::to_string(cloud.data.size()) +
+      " is not a multiple of point_step " + std::to_string(cloud.point_step));
+  }
+  for (const auto & field : cloud.fields) {
+    const std::size_t size = field_byte_size(field.datatype);
+    if (size == 0) {
+      throw std::invalid_argument(
+        "invalid point cloud layout: field '" + field.name + "' has unknown datatype " +
+        std::to_string(field.datatype));
+    }
+    if (static_cast<std::size_t>(field.offset) + size * field.count > cloud.point_step) {
+      throw std::invalid_argument(
+        "invalid point cloud layout: field '" + field.name + "' extends past point_step " +
+        std::to_string(cloud.point_step));
+    }
+  }
+  for (const char * name : {"x", "y", "z"}) {
+    const auto it = std::find_if(
+      cloud.fields.begin(), cloud.fields.end(), [name](const auto & f) { return f.name == name; });
+    if (it == cloud.fields.end() || it->datatype != sensor_msgs::msg::PointField::FLOAT32) {
+      throw std::invalid_argument(
+        std::string("invalid point cloud layout: field '") + name +
+        "' is missing or is not FLOAT32");
+    }
+  }
+}
+
 void CombineCloudHandler<sensor_msgs::msg::PointCloud2>::convert_to_xyzirc_cloud(
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input_cloud,
   sensor_msgs::msg::PointCloud2::UniquePtr & xyzirc_cloud)
 {
+  validate_cloud_layout(*input_cloud);
   xyzirc_cloud->header = input_cloud->header;
 
   PointCloud2Modifier<PointXYZIRC, autoware::point_types::PointXYZIRCGenerator> output_modifier{
     *xyzirc_cloud, input_cloud->header.frame_id};
   output_modifier.reserve(input_cloud->width);
+  if (input_cloud->data.empty()) return;  // nothing to read; the iterators below need data
 
   bool has_valid_intensity =
     std::any_of(input_cloud->fields.begin(), input_cloud->fields.end(), [](const auto & field) {

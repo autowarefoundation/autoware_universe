@@ -288,6 +288,48 @@ There is also an option to separate the concatenate_and_time_sync_node into two 
 
 Note that the `concatenate_pointclouds` and `time_synchronizer_nodelet` are using the [old design](https://github.com/autowarefoundation/autoware_universe/blob/9bb228fe5b7fa4c6edb47e4713c73489a02366e1/sensing/autoware_pointcloud_preprocessor/docs/concatenate-data.md) of the concatenate node.
 
+## Offline use from Python
+
+`autoware_pointcloud_preprocessor.concatenate_pointclouds.Concatenator` runs the node's concatenation core (`CloudConcatenator`) without ROS, e.g. to re-concatenate a rosbag. The caller supplies each cloud's arrival time (here the record time), which takes the place of the node's clock:
+
+```python
+from autoware_pointcloud_preprocessor.concatenate_pointclouds import Concatenator, FrameStatus
+from geometry_msgs.msg import TwistWithCovarianceStamped
+from rclpy.serialization import deserialize_message
+from rosbag2_py import ConverterOptions, SequentialReader, StorageOptions
+from sensor_msgs.msg import PointCloud2
+
+input_topics = ["/sensing/lidar/top/pointcloud", "/sensing/lidar/left/pointcloud"]
+twist_topic = "/sensing/vehicle_velocity_converter/twist_with_covariance"
+
+concatenator = Concatenator(input_topics, output_frame="base_link", timeout_sec=0.1)
+for transform in sensor_to_base_link:  # one TransformStamped per sensor frame, see below
+    concatenator.set_transform(transform)
+
+reader = SequentialReader()
+reader.open(StorageOptions(uri="my_bag", storage_id="mcap"), ConverterOptions("", ""))
+while reader.has_next():
+    topic, data, record_time_ns = reader.read_next()
+    if topic == twist_topic:
+        concatenator.process_twist(deserialize_message(data, TwistWithCovarianceStamped))
+    elif topic in input_topics:
+        cloud = deserialize_message(data, PointCloud2)
+        for frame in concatenator.process_cloud(topic, cloud, arrival_time=record_time_ns * 1e-9):
+            handle(frame)
+for frame in concatenator.flush():
+    handle(frame)
+```
+
+where `handle(frame)` reads `frame.status` (`COMPLETE`, `TIMEOUT`, or `LATE` with the options below), `frame.result.concatenated_cloud`, `frame.result.concatenation_info`, and, if needed, `frame.build_diagnostics()`.
+
+- The arrival time drives the collector timeouts and, for the naive strategy, the matching. Replaying the same messages with the same arrival times gives the same frames; changing the arrival times can change them.
+- Each transform must map a sensor frame into the output frame directly (`header.frame_id` = output frame, `child_frame_id` = sensor frame, as `tf2_ros.Buffer.lookup_transform("base_link", sensor_frame, ...)` returns); compose a chain of TF frames before passing it in. A transform of any other form raises `ValueError`; a cloud whose frame has no transform is left out and reported in `frame.result.dropped_sources_missing_transform`.
+- `process_odometry` takes the place of `process_twist` for an `input_twist_topic_type: odom` setup.
+- `frame.build_diagnostics()` returns the `DiagnosticStatus` the node would publish for that frame. The node also drops a frame whose timestamp is older than the last published one (unless `publish_previous_but_late_pointcloud` is set); offline that comparison is the caller's, reported with `build_diagnostics(drop_previous_but_late=True)`.
+- By default the number of open collectors is not bounded and a cloud that arrives after its frame was emitted opens a collector of its own (the core's offline defaults). Pass the node's `max_open_collectors` and `reject_late_clouds=True` to reproduce the node: a late cloud then comes back at once as a one-cloud `LATE` frame. `replay_jump_sec` (default 10 s, the node's `rosbag_length`) separates a late cloud from a looped-bag restart.
+- An inconsistent `PointCloud2` layout (`data` size vs `width`/`height`/`point_step`, a field past `point_step`, missing or non-FLOAT32 `x`/`y`/`z`) raises `ValueError`; a cloud with no `data` is empty whatever its `width` says. A message of the wrong type raises `TypeError`.
+- Keep `cloud.data` as the `array('B')` that `deserialize_message` returns: assigning `bytes` makes rclpy validate every element (about 0.2 s per 300 k-point cloud).
+
 ## Assumptions / Known Limits
 
 - If `is_motion_compensated` is set to `false`, the `concatenate_and_time_sync_node` will directly concatenate the point clouds without applying for motion compensation. This can save several milliseconds depending on the number of LiDARs being concatenated. Therefore, if the timestamp differences between point clouds are negligible, the user can set `is_motion_compensated` to `false` and omit the need for twist or odometry input for the node.
