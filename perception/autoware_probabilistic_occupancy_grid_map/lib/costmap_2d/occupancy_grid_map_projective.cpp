@@ -53,6 +53,8 @@ OccupancyGridMapProjectiveBlindSpot::OccupancyGridMapProjectiveBlindSpot(
       autoware::cuda_utils::make_unique<std::uint64_t[]>(7 * angle_bin_size * range_bin_size);
     obstacle_points_tensor_ =
       autoware::cuda_utils::make_unique<std::uint64_t[]>(7 * angle_bin_size * range_bin_size);
+    device_free_space_mask_ =
+      autoware::cuda_utils::make_unique<std::uint8_t[]>(num_cells_x * num_cells_y);
     device_translation_scan_origin_ = autoware::cuda_utils::make_unique<Eigen::Vector3f>();
   }
 }
@@ -151,7 +153,7 @@ void OccupancyGridMapProjectiveBlindSpot::updateWithPointCloud(
     angle_bin_size, range_bin_size, range_resolution_inv, scan_origin.position.x,
     scan_origin.position.y, scan_origin.position.z, origin_x_, origin_y_, robot_pose.position.z,
     num_cells_x, num_cells_y, cost_value::FREE_SPACE, cost_value::NO_INFORMATION,
-    device_costmap_.get(), stream_);
+    device_free_space_mask_.get(), device_costmap_.get(), stream_);
 
   map_projective::fillObstaclesLaunch(
     obstacle_points_tensor_.get(), obstacle_separation_threshold_, angle_bin_size, range_bin_size,
