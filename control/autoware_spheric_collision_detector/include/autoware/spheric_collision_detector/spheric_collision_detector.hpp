@@ -25,12 +25,8 @@
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <geometry_msgs/msg/twist.hpp>
-#include <sensor_msgs/msg/point_cloud2.hpp>
 
 #include <boost/optional.hpp>
-
-#include <pcl/point_cloud.h>
-#include <pcl/point_types.h>
 
 #include <chrono>
 #include <fstream>
