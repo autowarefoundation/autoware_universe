@@ -110,13 +110,13 @@ void OccupancyGridBasedCollisionDetector::compute_collision_indexes(
   int theta_index, std::vector<IndexXY> & indexes_2d)
 {
   IndexXYT base_index{0, 0, theta_index};
-  const VehicleShape & vehicle_shape = param_.vehicle_shape;
+  const autoware::vehicle_info_utils::VehicleInfo & vehicle_info = param_.vehicle_info;
 
   // Define the robot as rectangle
-  const double back = -1.0 * vehicle_shape.base2back;
-  const double front = vehicle_shape.length - vehicle_shape.base2back;
-  const double right = -1.0 * vehicle_shape.width / 2.0;
-  const double left = vehicle_shape.width / 2.0;
+  const double back = -1.0 * vehicle_info.rear_overhang_m;
+  const double front = vehicle_info.vehicle_length_m - vehicle_info.rear_overhang_m;
+  const double right = -1.0 * vehicle_info.vehicle_width_m / 2.0;
+  const double left = vehicle_info.vehicle_width_m / 2.0;
 
   const auto base_pose = index2pose(costmap_, base_index, param_.theta_size);
   const auto base_theta = tf2::getYaw(base_pose.orientation);
