@@ -1,5 +1,7 @@
 <?xml version="1.0"?>
 <launch>
+  <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
+
   <arg name="input/pointcloud" default="/sensing/lidar/concatenated/pointcloud"/>
   <arg name="output/objects" default="objects"/>
   <arg name="data_path" default="$(env HOME)/autoware_data/ml_models" description="packages data and artifacts directory path"/>
@@ -66,6 +68,7 @@
   <group unless="$(var use_pointcloud_container)">
     <!-- Crash when using image_transport and topic name is longer than remapping topic, https://github.com/ros-perception/image_transport_plugins/issues/155 -->
     <node pkg="autoware_bevfusion" exec="autoware_bevfusion_node" name="bevfusion" output="screen" args="--ros-args --log-level $(var log_level)" namespace="/perception/detection">
+      <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
       <remap from="~/input/pointcloud" to="$(var input/pointcloud)"/>
       <remap from="~/input/pointcloud/cuda" to="$(var input/pointcloud)/cuda"/>
       <remap from="~/output/objects" to="$(var output/objects)"/>
