@@ -241,7 +241,7 @@ bool readStat(const std::string & proc_path, StatInfo & info)
     std::istringstream line_stream(line);
     line_stream.exceptions(std::ios::failbit | std::ios::badbit);
     line_stream >> info_temp.pid;
-    line_stream.exceptions();  // Reset to default state
+    line_stream.exceptions(std::ios::goodbit);  // Reset to default state
   } catch (...) {
     return false;
   }
@@ -271,7 +271,7 @@ bool readStat(const std::string & proc_path, StatInfo & info)
         info_temp.c_stime_tick >> info_temp.priority >> info_temp.nice >> info_temp.num_threads >>
         info_temp.it_real_value >> info_temp.starttime_tick >> info_temp.vsize_byte >>
         info_temp.rss_page;
-      after_command_stream.exceptions();  // Reset to default state
+      after_command_stream.exceptions(std::ios::goodbit);  // Reset to default state
     } catch (...) {
       return false;  // Failed to read all values
     }
@@ -295,9 +295,9 @@ bool readStatMemory(const std::string & proc_path, StatMemoryInfo & info)
   try {
     stat_memory_file.exceptions(std::ios::failbit | std::ios::badbit);
     stat_memory_file >> info_temp.size_page >> info_temp.resident_page >> info_temp.share_page;
-    stat_memory_file.exceptions();  // Reset to default state
+    stat_memory_file.exceptions(std::ios::goodbit);  // Reset to default state
   } catch (...) {
-    stat_memory_file.exceptions();  // Reset even if exception occurs
+    stat_memory_file.exceptions(std::ios::goodbit);  // Reset even if exception occurs
     return false;                   // Failed to read all values
   }
   info = info_temp;
@@ -343,7 +343,7 @@ bool readStatus(const std::string & proc_path, StatusInfo & info)
           // Delimiters (tabs and spaces) are skipped.
           uid_line >> info_temp.real_uid >> info_temp.effective_uid >> info_temp.saved_set_uid >>
             info_temp.filesystem_uid;
-          uid_line.exceptions();  // Reset to default state
+          uid_line.exceptions(std::ios::goodbit);  // Reset to default state
         } catch (...) {
           continue;  // Skip malformed lines
         }
@@ -779,9 +779,9 @@ bool ProcessMonitor::readMemInfo()
         try {
           parameters.exceptions(std::ios::failbit | std::ios::badbit);
           parameters >> mem_total;  // Ignore optional unit "kB".
-          parameters.exceptions();  // Reset to default state
+          parameters.exceptions(std::ios::goodbit);  // Reset to default state
         } catch (...) {
-          parameters.exceptions();  // Reset even if exception occurs
+          parameters.exceptions(std::ios::goodbit);  // Reset even if exception occurs
           continue;                 // Skip malformed lines
         }
         mem_total_kb_ = mem_total;
