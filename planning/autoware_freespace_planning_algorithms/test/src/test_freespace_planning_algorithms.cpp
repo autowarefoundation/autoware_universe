@@ -258,6 +258,9 @@ std::unique_ptr<fpa::AbstractPlanningAlgorithm> configure_rrtstar(bool informed,
   auto clock_ptr = std::make_shared<rclcpp::Clock>(RCL_ROS_TIME);
   auto algo =
     std::make_unique<fpa::RRTStar>(planner_common_param, vehicle_shape, rrtstar_param, clock_ptr);
+  // A random seed makes the plan time a random variable with a long tail. A rare plan then
+  // passes time_limit on a loaded CI runner. A fixed seed runs the same plans every time.
+  algo->setSeed(0);
   return algo;
 }
 

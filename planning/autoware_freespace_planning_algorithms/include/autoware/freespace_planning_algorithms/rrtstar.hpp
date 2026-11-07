@@ -20,6 +20,7 @@
 
 #include <rclcpp/rclcpp.hpp>
 
+#include <random>
 #include <vector>
 
 namespace autoware::freespace_planning_algorithms
@@ -64,11 +65,17 @@ public:
     const std::vector<geometry_msgs::msg::Pose> & goal_candidates) override;
   bool hasObstacleOnTrajectory(const geometry_msgs::msg::PoseArray & trajectory) const override;
 
+  // Each makePlan call draws the seed of its sampler from this generator.
+  // A test sets a fixed seed to repeat the same sequence of plans.
+  void setSeed(const std::mt19937::result_type seed) { seed_gen_.seed(seed); }
+
 private:
   void setRRTPath(const std::vector<rrtstar_core::Pose> & waypoints);
 
   // algorithm specific param
   const RRTStarParam rrtstar_param_;
+
+  std::mt19937 seed_gen_{std::random_device{}()};
 };
 
 }  // namespace autoware::freespace_planning_algorithms

@@ -71,7 +71,8 @@ bool RRTStar::makePlan(
     M_PI};
   const double radius = kinematic_bicycle_model::getTurningRadius(
     collision_vehicle_shape_.base_length, collision_vehicle_shape_.max_steering);
-  const auto cspace = rrtstar_core::CSpace(lo, hi, radius, is_obstacle_free);
+  auto cspace = rrtstar_core::CSpace(lo, hi, radius, is_obstacle_free);
+  cspace.setSeed(seed_gen_());
   const auto x_start = poseMsgToPose(start_pose_);
   const auto x_goal = poseMsgToPose(goal_pose_);
 
