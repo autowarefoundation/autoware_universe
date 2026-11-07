@@ -21,8 +21,11 @@
 
 #include <gtest/gtest.h>
 
+#include <chrono>
+#include <fstream>
 #include <memory>
 #include <string>
+#include <thread>
 
 static constexpr const char * TEST_FILE = "test";
 
@@ -52,6 +55,12 @@ public:
 
   void addFreqName(const std::string & path) { freqs_.emplace_back(path, path); }
   void clearFreqNames() { freqs_.clear(); }
+
+  void changeGPUUsageError(float gpu_usage_error) { gpu_usage_error_ = gpu_usage_error; }
+  void changeGPUUsageErrorDuration(int gpu_usage_error_duration)
+  {
+    gpu_usage_error_duration_ = gpu_usage_error_duration;
+  }
 
   void update() { updater_.force_update(); }
 
@@ -387,6 +396,61 @@ TEST_F(GPUMonitorTestSuite, usageErrorTest)
     rclcpp::spin_some(monitor_->get_node_base_interface());
 
     // Verify
+    DiagStatus status;
+    ASSERT_TRUE(monitor_->findDiagStatus("GPU Usage", status));
+    ASSERT_EQ(status.level, DiagStatus::OK);
+  }
+}
+
+TEST_F(GPUMonitorTestSuite, usageErrorDurationTest)
+{
+  monitor_->addLoadName(TEST_FILE);
+
+  // Verify high usage does not immediately trigger error when duration is set
+  {
+    monitor_->changeGPUUsageErrorDuration(2);
+    monitor_->changeGPUUsageError(0.0);
+
+    std::ofstream ofs(TEST_FILE);
+    ofs << 1000 << std::endl;
+
+    monitor_->update();
+
+    rclcpp::WallRate(2).sleep();
+    rclcpp::spin_some(monitor_->get_node_base_interface());
+
+    DiagStatus status;
+    ASSERT_TRUE(monitor_->findDiagStatus("GPU Usage", status));
+    ASSERT_EQ(status.level, DiagStatus::WARN);
+  }
+
+  // Verify error after duration elapses
+  {
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+
+    monitor_->update();
+
+    rclcpp::WallRate(2).sleep();
+    rclcpp::spin_some(monitor_->get_node_base_interface());
+
+    DiagStatus status;
+    ASSERT_TRUE(monitor_->findDiagStatus("GPU Usage", status));
+    ASSERT_EQ(status.level, DiagStatus::ERROR);
+  }
+
+  // Verify normal behavior after reset
+  {
+    monitor_->changeGPUUsageError(1.00);
+    monitor_->changeGPUUsageErrorDuration(0);
+
+    std::ofstream ofs(TEST_FILE);
+    ofs << 890 << std::endl;
+
+    monitor_->update();
+
+    rclcpp::WallRate(2).sleep();
+    rclcpp::spin_some(monitor_->get_node_base_interface());
+
     DiagStatus status;
     ASSERT_TRUE(monitor_->findDiagStatus("GPU Usage", status));
     ASSERT_EQ(status.level, DiagStatus::OK);
