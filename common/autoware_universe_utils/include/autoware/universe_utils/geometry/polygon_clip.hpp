@@ -20,6 +20,7 @@
 #include <cmath>
 #include <cstdint>
 #include <optional>
+#include <stdexcept>
 #include <vector>
 
 namespace autoware::universe_utils
@@ -30,8 +31,8 @@ struct LinkedVertex
 {
   double x;
   double y;
-  std::optional<std::size_t> next;
-  std::optional<std::size_t> prev;
+  std::optional<std::size_t> next_index;
+  std::optional<std::size_t> prev_index;
   std::optional<std::size_t> corresponding;
   double distance;
   bool is_entry;
@@ -41,8 +42,8 @@ struct LinkedVertex
   LinkedVertex()
   : x(0.0),
     y(0.0),
-    next(std::nullopt),
-    prev(std::nullopt),
+    next_index(std::nullopt),
+    prev_index(std::nullopt),
     corresponding(std::nullopt),
     distance(0.0),
     is_entry(false),
@@ -52,14 +53,14 @@ struct LinkedVertex
   }
 
   LinkedVertex(
-    double x_coord, double y_coord, std::optional<std::size_t> next_index = std::nullopt,
-    std::optional<std::size_t> prev_index = std::nullopt,
+    double x_coord, double y_coord, std::optional<std::size_t> next_idx = std::nullopt,
+    std::optional<std::size_t> prev_idx = std::nullopt,
     std::optional<std::size_t> corresponding_index = std::nullopt, double dist = 0.0,
     bool entry = false, bool intersection = false, bool visited_state = false)
   : x(x_coord),
     y(y_coord),
-    next(next_index),
-    prev(prev_index),
+    next_index(next_idx),
+    prev_index(prev_idx),
     corresponding(corresponding_index),
     distance(dist),
     is_entry(entry),
@@ -67,6 +68,31 @@ struct LinkedVertex
     visited(visited_state)
   {
   }
+
+  // Accessors for the doubly-linked structure. Once a vertex has been linked
+  // via create_extended_polygon()/add_vertex()/insert_vertex(), next_index and
+  // prev_index are always set and are never cleared. next()/prev() therefore
+  // throw on invariant violation rather than silently returning a default,
+  // which would propagate subtly wrong clipping geometry downstream. Use
+  // has_next()/has_prev() at the few sites that must legitimately check.
+  // The `corresponding` field remains genuinely optional and is accessed
+  // directly as before.
+  [[nodiscard]] std::size_t next() const
+  {
+    if (!next_index.has_value()) {
+      throw std::logic_error("LinkedVertex::next() called on unlinked vertex");
+    }
+    return next_index.value();
+  }
+  [[nodiscard]] std::size_t prev() const
+  {
+    if (!prev_index.has_value()) {
+      throw std::logic_error("LinkedVertex::prev() called on unlinked vertex");
+    }
+    return prev_index.value();
+  }
+  [[nodiscard]] bool has_next() const { return next_index.has_value(); }
+  [[nodiscard]] bool has_prev() const { return prev_index.has_value(); }
 };
 
 struct Intersection
