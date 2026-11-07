@@ -26,6 +26,24 @@ This ros package enables communication between Autoware and CARLA for autonomous
 
 3. **Download CARLA Lanelet2 Maps**: Get the y-axis inverted maps from [CARLA Autoware Contents](https://bitbucket.org/carla-simulator/autoware-contents/src/master/maps/)
 
+#### Using typesafe_carla (optional)
+
+<!-- cspell:ignore rosdep -->
+
+The bridge can use [typesafe_carla](https://github.com/hakuturu583/typesafe_carla) instead of the official `carla` Python package.
+typesafe_carla is installed by rosdep (`python3-typesafe-carla-pip`) on Humble and provides the CARLA Python API's names through `import typesafe_carla.carla`.
+On Jazzy (Ubuntu 24.04), rosdep cannot install pip packages globally because of PEP 668, so install it with `pip install typesafe-carla` (for example in a virtual environment).
+It is built against CARLA UE5 (0.10.0 / ue5-dev), so it is disabled by default to keep the current behavior.
+
+Enable it with the `AUTOWARE_CARLA_USE_TYPESAFE_CARLA` environment variable (`1`, `true`, `yes` or `on`):
+
+```bash
+export AUTOWARE_CARLA_USE_TYPESAFE_CARLA=1
+ros2 launch autoware_carla_interface autoware_carla_interface.launch.xml
+```
+
+When the variable is unset (or any other value), `import carla` is used as before.
+
 #### Map Setup
 
 1. Download the maps (y-axis inverted version) to an arbitrary location

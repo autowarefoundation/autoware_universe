@@ -20,8 +20,7 @@ import random
 import signal
 import time
 
-import carla
-
+from .carla_backend import carla
 from .carla_ros import carla_ros2_interface
 from .modules.carla_data_provider import CarlaDataProvider
 from .modules.carla_data_provider import GameTime

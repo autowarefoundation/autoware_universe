@@ -19,10 +19,10 @@ from __future__ import print_function
 import logging
 from queue import Queue
 
-import carla
 import numpy as np
 
 from .carla_data_provider import CarlaDataProvider
+from ..carla_backend import carla
 
 
 # Sensor Wrapper for Agent
