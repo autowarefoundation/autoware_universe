@@ -178,6 +178,24 @@ TEST(CloudConcatenator, ProcessCloudRejectsUnknownTopic)
     std::invalid_argument);
 }
 
+TEST(CloudConcatenator, UnsupportedInputLayoutIsRejected)
+{
+  // Arrange
+  // The node drops such clouds before calling process_cloud; the offline API has no gate in front,
+  // so the concatenator itself must refuse the cloud before it touches any collector.
+  CloudConcatenator concatenator(
+    kInputTopics, kOutputFrame, PointFormat::XYZIRCT, 0.2,
+    /*is_motion_compensated=*/false,
+    /*publish_synchronized_pointcloud=*/false,
+    /*keep_input_frame_in_synchronized_pointcloud=*/false, MatchingStrategyType::naive);
+
+  // Act & Assert: an XYZIRC cloud carries no time_stamp, so it cannot be rewritten into XYZIRCT.
+  EXPECT_THROW(
+    static_cast<void>(concatenator.process_cloud("lidar_top", make_cloud(10, 0), 100.0)),
+    std::invalid_argument);
+  EXPECT_FALSE(concatenator.next_deadline().has_value());
+}
+
 TEST(CloudConcatenator, NaiveCompletesWhenAllTopicsArrive)
 {
   // Arrange
