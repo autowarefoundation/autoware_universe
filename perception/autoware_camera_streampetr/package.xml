@@ -33,6 +33,7 @@
   <depend>yaml-cpp</depend>
 
   <test_depend>ament_clang_format</test_depend>
+  <test_depend>ament_cmake_gtest</test_depend>
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>autoware_lint_common</test_depend>
 
