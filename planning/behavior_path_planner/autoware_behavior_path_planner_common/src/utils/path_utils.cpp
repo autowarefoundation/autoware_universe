@@ -21,12 +21,14 @@
 #include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/motion_utils/resample/resample.hpp>
 #include <autoware/motion_utils/trajectory/interpolation.hpp>
+#include <autoware/motion_utils/trajectory/path_with_lane_id.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <tf2/utils.hpp>
 
 #include <algorithm>
 #include <memory>
 #include <optional>
+#include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -93,21 +95,34 @@ PathWithLaneId resamplePathWithSpline(
     return indices;
   };
 
-  // Get lane ids that are not duplicated
+  // Keep a sample at the first occurrence of each unique lane id.
+  // A coarse 0.2 m merge is used only for extra keep_input_points samples; applying it to a
+  // new lane id would drop short intermediate lanes (e.g. stop-line lanelets).
   std::vector<double> s_in;
   std::unordered_set<int64_t> unique_lane_ids;
   const auto s_vec = autoware::motion_utils::calcSignedArcLengthPartialSum(
     transformed_path, 0, transformed_path.size());
+  const auto is_close_to_existing =
+    [](const std::vector<double> & vec, const double x, const double epsilon) {
+      return std::any_of(
+        vec.begin(), vec.end(), [&](const double v) { return std::abs(v - x) < epsilon; });
+    };
   for (size_t i = 0; i < path.points.size(); ++i) {
     const double s = s_vec.at(i);
 
     for (const auto & lane_id : path.points.at(i).lane_ids) {
-      if (!keep_input_points && (unique_lane_ids.find(lane_id) != unique_lane_ids.end())) {
-        continue;
-      }
+      const bool is_new_lane_id = unique_lane_ids.find(lane_id) == unique_lane_ids.end();
       unique_lane_ids.insert(lane_id);
 
-      if (!find_almost_same_values(s_in, s)) {
+      if (!is_new_lane_id && !keep_input_points) {
+        continue;
+      }
+
+      constexpr double unique_lane_id_s_epsilon = 1.0e-3;
+      constexpr double keep_input_points_s_epsilon = 0.2;
+      const double epsilon =
+        is_new_lane_id ? unique_lane_id_s_epsilon : keep_input_points_s_epsilon;
+      if (!is_close_to_existing(s_in, s, epsilon)) {
         s_in.push_back(s);
       }
     }
@@ -153,6 +168,77 @@ PathWithLaneId resamplePathWithSpline(
   std::sort(s_out.begin(), s_out.end());
 
   return autoware::motion_utils::resamplePath(path, s_out);
+}
+
+void restoreMissingLaneIds(PathWithLaneId & target, const PathWithLaneId & source)
+{
+  if (target.points.empty() || source.points.empty()) {
+    return;
+  }
+
+  const auto target_arclength = calcPathArcLengthArray(target);
+  const auto source_arclength = calcPathArcLengthArray(source);
+
+  // Align arc-length coordinates by projecting the target start onto the source path.
+  const auto & target_start_pos = target.points.front().point.pose.position;
+  const auto source_start_idx =
+    autoware::motion_utils::findNearestIndex(source.points, target_start_pos);
+  const double arclength_offset = source_arclength.at(source_start_idx) - target_arclength.front();
+
+  std::unordered_set<int64_t> target_lane_ids;
+  for (const auto & point : target.points) {
+    for (const auto id : point.lane_ids) {
+      target_lane_ids.insert(id);
+    }
+  }
+
+  std::unordered_map<int64_t, std::vector<size_t>> missing_id_source_indices;
+  for (size_t i = 0; i < source.points.size(); ++i) {
+    for (const auto id : source.points.at(i).lane_ids) {
+      if (target_lane_ids.count(id) == 0) {
+        missing_id_source_indices[id].push_back(i);
+      }
+    }
+  }
+
+  if (missing_id_source_indices.empty()) {
+    return;
+  }
+
+  constexpr double max_assign_arclength_diff = 15.0;
+  const auto find_target_idx_by_source_arclength =
+    [&](const size_t source_idx) -> std::optional<size_t> {
+    const double mapped_arclength = source_arclength.at(source_idx) - arclength_offset;
+
+    size_t nearest_idx = 0;
+    double min_diff = std::numeric_limits<double>::max();
+    for (size_t j = 0; j < target_arclength.size(); ++j) {
+      const double diff = std::abs(target_arclength.at(j) - mapped_arclength);
+      if (diff < min_diff) {
+        min_diff = diff;
+        nearest_idx = j;
+      }
+    }
+
+    if (min_diff > max_assign_arclength_diff) {
+      return std::nullopt;
+    }
+    return nearest_idx;
+  };
+
+  for (auto & [id, src_indices] : missing_id_source_indices) {
+    for (const auto src_idx : src_indices) {
+      const auto tgt_idx_opt = find_target_idx_by_source_arclength(src_idx);
+      if (!tgt_idx_opt) {
+        continue;
+      }
+      auto & ids = target.points.at(*tgt_idx_opt).lane_ids;
+      if (std::find(ids.begin(), ids.end(), id) == ids.end()) {
+        ids.push_back(id);
+      }
+    }
+    target_lane_ids.insert(id);
+  }
 }
 
 size_t getIdxByArclength(
