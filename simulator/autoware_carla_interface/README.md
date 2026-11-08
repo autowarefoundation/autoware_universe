@@ -28,14 +28,28 @@ This ros package enables communication between Autoware and CARLA for autonomous
 
 #### Using typesafe_carla (optional)
 
-<!-- cspell:ignore rosdep -->
+<!-- cspell:ignore rosdep rosdistro venv colcon DCMAKE -->
 
 The bridge can use [typesafe_carla](https://github.com/hakuturu583/typesafe_carla) instead of the official `carla` Python package.
-typesafe_carla is installed by rosdep (`python3-typesafe-carla-pip`) on Humble and provides the CARLA Python API's names through `import typesafe_carla.carla`.
-On Jazzy (Ubuntu 24.04), rosdep cannot install pip packages globally because of PEP 668, so install it with `pip install typesafe-carla` (for example in a virtual environment).
+typesafe_carla is installed by rosdep (`python3-typesafe-carla-pip`) and provides the CARLA Python API's names through `import typesafe_carla.carla`.
 It is built against CARLA UE5 (0.10.0 / ue5-dev), so it is disabled by default to keep the current behavior.
 
-Enable it with the `AUTOWARE_CARLA_USE_TYPESAFE_CARLA` environment variable (`1`, `true`, `yes` or `on`):
+On Jazzy (Ubuntu 24.04), the system Python is externally managed (PEP 668), so rosdep installs pip packages into the workspace's Python virtual environment.
+The Autoware Docker images already have one at `/opt/autoware-venv`.
+For a host setup, create `<workspace>/.venv` with the `python_venv` Ansible role of the [autoware](https://github.com/autowarefoundation/autoware) repository, then run rosdep and colcon from it:
+
+```bash
+cd ~/autoware
+ansible-playbook autoware.dev_env.install_dev_env --tags python_venv --ask-become-pass
+source .venv/bin/activate
+source /opt/ros/"$ROS_DISTRO"/setup.bash
+rosdep install -y --from-paths src --ignore-src --rosdistro "$ROS_DISTRO" --as-root pip:false
+colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
+```
+
+Activate the same virtual environment before launching the bridge.
+
+Enable typesafe_carla with the `AUTOWARE_CARLA_USE_TYPESAFE_CARLA` environment variable (`1`, `true`, `yes` or `on`):
 
 ```bash
 export AUTOWARE_CARLA_USE_TYPESAFE_CARLA=1
