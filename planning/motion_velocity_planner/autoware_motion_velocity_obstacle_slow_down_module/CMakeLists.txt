@@ -13,6 +13,7 @@ if(BUILD_TESTING)
   # Add test executable
   ament_add_ros_isolated_gtest(test_${PROJECT_NAME}
     test/test_planning_factor.cpp
+    test/test_trajectory_polygon_box_filter.cpp
   )
 
   # Set test dependencies
