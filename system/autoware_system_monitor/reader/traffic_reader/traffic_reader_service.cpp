@@ -19,8 +19,9 @@
 
 #include "system_monitor/traffic_reader/traffic_reader_service.hpp"
 
-#include <boost/archive/text_oarchive.hpp>
 #include "system_monitor/boost_process.hpp"
+
+#include <boost/archive/text_oarchive.hpp>
 
 #include <fmt/format.h>
 #include <signal.h>

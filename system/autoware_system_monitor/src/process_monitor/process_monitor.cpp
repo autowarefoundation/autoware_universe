@@ -298,7 +298,7 @@ bool readStatMemory(const std::string & proc_path, StatMemoryInfo & info)
     stat_memory_file.exceptions(std::ios::goodbit);  // Reset to default state
   } catch (...) {
     stat_memory_file.exceptions(std::ios::goodbit);  // Reset even if exception occurs
-    return false;                   // Failed to read all values
+    return false;                                    // Failed to read all values
   }
   info = info_temp;
   return true;
@@ -778,11 +778,11 @@ bool ProcessMonitor::readMemInfo()
         // Assuming that the unit is "kB".
         try {
           parameters.exceptions(std::ios::failbit | std::ios::badbit);
-          parameters >> mem_total;  // Ignore optional unit "kB".
+          parameters >> mem_total;                   // Ignore optional unit "kB".
           parameters.exceptions(std::ios::goodbit);  // Reset to default state
         } catch (...) {
           parameters.exceptions(std::ios::goodbit);  // Reset even if exception occurs
-          continue;                 // Skip malformed lines
+          continue;                                  // Skip malformed lines
         }
         mem_total_kb_ = mem_total;
         found_entries |= FOUND_MEM_TOTAL;

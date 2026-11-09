@@ -19,13 +19,13 @@
 
 #include "system_monitor/hdd_monitor/hdd_monitor.hpp"
 
+#include "system_monitor/boost_process.hpp"
 #include "system_monitor/hdd_reader/hdd_reader.hpp"
 #include "system_monitor/system_monitor_utility.hpp"
 
 #include <boost/algorithm/string.hpp>
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
-#include "system_monitor/boost_process.hpp"
 #include <boost/serialization/vector.hpp>
 
 #include <fmt/format.h>

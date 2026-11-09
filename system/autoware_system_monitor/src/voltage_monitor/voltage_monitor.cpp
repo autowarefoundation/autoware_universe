@@ -19,13 +19,13 @@
 
 #include "system_monitor/voltage_monitor/voltage_monitor.hpp"
 
+#include "system_monitor/boost_process.hpp"
 #include "system_monitor/msr_reader/msr_reader.hpp"
 #include "system_monitor/system_monitor_utility.hpp"
 
 #include <boost/algorithm/string.hpp>
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/filesystem.hpp>
-#include "system_monitor/boost_process.hpp"
 
 #include <fmt/format.h>
 #include <netinet/in.h>

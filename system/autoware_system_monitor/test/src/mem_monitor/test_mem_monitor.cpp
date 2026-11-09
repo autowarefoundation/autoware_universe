@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "system_monitor/boost_process.hpp"
 #include "system_monitor/mem_monitor/mem_monitor.hpp"
 
 #include <rclcpp/rclcpp.hpp>
@@ -19,7 +20,6 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/format.hpp>
-#include "system_monitor/boost_process.hpp"
 
 #include <fmt/format.h>
 #include <gtest/gtest.h>
