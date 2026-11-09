@@ -127,7 +127,15 @@ void DistortionCorrectorComponent::pointcloud_callback(PointCloud2::UniquePtr po
     }
   }
 
-  distortion_corrector_->undistort_pointcloud(use_imu_, angle_conversion_opt_, *pointcloud_msg);
+  if (distortion_corrector_->pointcloud_transform_exists()) {
+    distortion_corrector_->undistort_pointcloud(use_imu_, angle_conversion_opt_, *pointcloud_msg);
+  } else {
+    RCLCPP_WARN_STREAM_THROTTLE(
+      this->get_logger(), *this->get_clock(), 10000 /* ms */,
+      "Failed to get the transform from " << pointcloud_msg->header.frame_id << " to "
+                                          << base_frame_
+                                          << ". This pointcloud will not be undistorted.");
+  }
 
   const rclcpp::Time stamp(pointcloud_msg->header.stamp);
 

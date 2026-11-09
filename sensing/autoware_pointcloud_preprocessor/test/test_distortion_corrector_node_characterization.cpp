@@ -1254,7 +1254,7 @@ TEST_F(DistortionCorrectorCharacterizationTest, TwistOlderThanOneSecondIsDropped
 // Missing transforms
 // ---------------------------------------------------------------------------------------
 
-TEST_F(DistortionCorrectorCharacterizationTest, StillPublishesWhenCloudTransformIsMissing)
+TEST_F(DistortionCorrectorCharacterizationTest, PassesCloudThroughWhenItsTransformIsMissing)
 {
   // Arrange
   constexpr double speed = 10.0;
@@ -1266,21 +1266,19 @@ TEST_F(DistortionCorrectorCharacterizationTest, StillPublishesWhenCloudTransform
   const auto output = await_output_cloud();
 
   // Assert
-  // The lookup fails, so the node has no lidar-to-base transform -- but it undistorts the
-  // cloud anyway, treating the sensor coordinates as if they were already base_link's.
-  expect_points_shifted_by(output, input, linear_shifts(speed), exact_tolerance);
+  // Without the lidar-to-base transform the node cannot know where the sensor sits, so it
+  // publishes the cloud untouched rather than correcting it in the wrong frame.
+  expect_cloud_unchanged(output, input);
 }
 
-TEST_F(
-  DistortionCorrectorCharacterizationTest,
-  DiagnosticsDescribeCloudJustProcessedWhenItsTransformIsMissing)
+TEST_F(DistortionCorrectorCharacterizationTest, DiagnosticsDescribeCloudJustProcessed)
 {
   // Arrange
   // A first cloud with a matching twist. Asserted as a precondition: if this half is already
   // wrong, the second half proves nothing.
   start(NodeParams{});
   publish_twist(base_stamp_sec, 10.0, 0.0);
-  publish_cloud(unmapped_frame, base_stamp_sec);
+  publish_cloud(base_frame, base_stamp_sec);
   await_output_cloud(1);
   const auto first = await_diagnostic(1);
   ASSERT_NE(get_value_of(first, "Timestamp mismatch count"), nullptr);
@@ -1288,7 +1286,7 @@ TEST_F(
 
   // Act
   // A second cloud half a second later with no new twist, so every point mismatches.
-  publish_cloud(unmapped_frame, base_stamp_sec + 0.5);
+  publish_cloud(base_frame, base_stamp_sec + 0.5);
   await_output_cloud(2);
   const auto second = await_diagnostic(2);
 
@@ -1299,31 +1297,32 @@ TEST_F(
   EXPECT_EQ(*get_value_of(second, "Timestamp mismatch count"), std::to_string(num_points));
 }
 
-TEST_F(DistortionCorrectorCharacterizationTest, StillPublishesWhenImuTransformIsMissing)
+TEST_F(DistortionCorrectorCharacterizationTest, IgnoresImuSamplesWhoseTransformIsMissing)
 {
   // Arrange
+  constexpr double twist_rate = 1.0;
   start(NodeParams{}.with_imu());
-  publish_twist(base_stamp_sec, 10.0, 0.0);
-  // char_unmapped_lidar is not in the TF tree, so the IMU-to-base lookup fails.
-  publish_imu(base_stamp_sec, 0.0, 0.0, 1.0, unmapped_frame);
+  publish_twist(base_stamp_sec, 0.0, twist_rate);
+  // char_unmapped_lidar is not in the TF tree, so the IMU-to-base lookup fails. The IMU's yaw
+  // rate is the opposite sign and five times the twist's, so the output can only match the
+  // twist if the IMU sample was dropped.
+  publish_imu(base_stamp_sec, 0.0, 0.0, -5.0 * twist_rate, unmapped_frame);
 
   // Act
-  publish_cloud(base_frame, base_stamp_sec);
+  const auto input = publish_cloud(base_frame, base_stamp_sec);
   const auto output = await_output_cloud();
 
   // Assert
-  // Only the absence of a crash. The core rotates by an uninitialized matrix when the lookup
-  // fails, so the positions are indeterminate -- fix that rather than pinning them.
-  EXPECT_EQ(output.width, static_cast<uint32_t>(num_points));
-  EXPECT_EQ(output.header.frame_id, base_frame);
+  // An IMU sample that cannot be rotated into base_link is not queued, so the corrector falls
+  // back to the twist's angular velocity.
+  expect_points_shifted_by(output, input, rotation_shifts(twist_rate), rotation_tolerance);
 }
 
-TEST_F(
-  DistortionCorrectorCharacterizationTest, FirstResolvedCloudTransformIsReusedForEveryLaterFrame)
+TEST_F(DistortionCorrectorCharacterizationTest, ResolvesCloudTransformForEveryFrame)
 {
   // Arrange
-  // A base_link cloud resolves an identity transform and latches it. Asserted as a
-  // precondition: the latch only means something if this cloud was corrected normally.
+  // A base_link cloud resolves an identity transform first. Asserted as a precondition: the
+  // second half only means something if this cloud was corrected normally.
   constexpr double speed = 10.0;
   start(NodeParams{});
   publish_twist(base_stamp_sec, speed, 0.0);
@@ -1338,10 +1337,14 @@ TEST_F(
   const auto second = await_output_cloud(2);
 
   // Assert
-  // This is a bug: the lookup is skipped because a transform is already cached, so this cloud
-  // is corrected as though it too were in base_link -- the shift stays along x instead of
-  // becoming -y. Compare UndistortsCloudGivenInLidarFrame.
-  expect_points_shifted_by(second, second_input, linear_shifts(speed), exact_tolerance);
+  // The transform is looked up per cloud, so this one is corrected in its own frame: +x in
+  // base_link lands as -y in the lidar frame, exactly as in UndistortsCloudGivenInLidarFrame.
+  std::vector<std::array<float, 3>> shifts;
+  for (size_t i = 0; i < num_points; ++i) {
+    const auto travelled = static_cast<float>(speed * point_interval_sec * static_cast<double>(i));
+    shifts.push_back({0.0F, -travelled, 0.0F});
+  }
+  expect_points_shifted_by(second, second_input, shifts, rotation_tolerance);
 }
 
 int main(int argc, char ** argv)
