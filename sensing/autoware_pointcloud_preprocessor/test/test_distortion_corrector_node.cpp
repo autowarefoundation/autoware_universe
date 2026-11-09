@@ -95,8 +95,8 @@ protected:
     return tf_msg;
   }
 
-  // Transforms previously looked up from TF and now injected directly into the corrector.
-  // The rotations are unit quaternions (as TF provides); the corrector assumes normalized input.
+  // Transforms injected directly into the corrector. The rotations are unit quaternions; the
+  // corrector assumes normalized input.
   static geometry_msgs::msg::TransformStamped get_lidar_to_base_link_transform()
   {
     return generate_transform_msg(
@@ -369,45 +369,6 @@ TEST_F(DistortionCorrectorTest, TestInsertImu)
   EXPECT_NEAR(
     distortion_corrector_2d_->get_angular_velocity_queue().front().vector.z, -0.03159,
     standard_tolerance);
-}
-
-TEST_F(DistortionCorrectorTest, TestUndistortPointcloudPrunesOldSensorSamples)
-{
-  const rclcpp::Time timestamp(timestamp_seconds, timestamp_nanoseconds, RCL_ROS_TIME);
-  const auto old_stamp = subtract_milliseconds(timestamp, 200);
-  const auto latest_before_first_point_stamp = subtract_milliseconds(timestamp, 50);
-  const auto after_first_point_stamp = add_milliseconds(timestamp, 20);
-
-  distortion_corrector_2d_->insert_twist(
-    generate_twist_msg(twist_linear_x, twist_angular_z, old_stamp));
-  distortion_corrector_2d_->insert_twist(
-    generate_twist_msg(twist_linear_x, twist_angular_z, latest_before_first_point_stamp));
-  distortion_corrector_2d_->insert_twist(
-    generate_twist_msg(twist_linear_x, twist_angular_z, after_first_point_stamp));
-
-  distortion_corrector_2d_->set_imu_transform(get_imu_to_base_link_transform());
-  distortion_corrector_2d_->insert_imu(
-    generate_imu_msg(imu_angular_x, imu_angular_y, imu_angular_z, old_stamp));
-  distortion_corrector_2d_->insert_imu(
-    generate_imu_msg(imu_angular_x, imu_angular_y, imu_angular_z, latest_before_first_point_stamp));
-  distortion_corrector_2d_->insert_imu(
-    generate_imu_msg(imu_angular_x, imu_angular_y, imu_angular_z, after_first_point_stamp));
-
-  auto [default_points, default_azimuths] =
-    generate_default_pointcloud(AngleCoordinateSystem::CARTESIAN);
-  auto pointcloud = generate_pointcloud_msg(false, timestamp, default_points, default_azimuths);
-  distortion_corrector_2d_->undistort_pointcloud(
-    true, std::nullopt, get_base_link_transform(), pointcloud);
-
-  ASSERT_EQ(distortion_corrector_2d_->get_twist_queue().size(), 2U);
-  EXPECT_EQ(
-    rclcpp::Time(distortion_corrector_2d_->get_twist_queue().front().header.stamp).nanoseconds(),
-    latest_before_first_point_stamp.nanoseconds());
-  ASSERT_EQ(distortion_corrector_2d_->get_angular_velocity_queue().size(), 2U);
-  EXPECT_EQ(
-    rclcpp::Time(distortion_corrector_2d_->get_angular_velocity_queue().front().header.stamp)
-      .nanoseconds(),
-    latest_before_first_point_stamp.nanoseconds());
 }
 
 TEST_F(DistortionCorrectorTest, TestCheckPointcloudValidity)

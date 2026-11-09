@@ -27,6 +27,18 @@
 
 namespace autoware::pointcloud_preprocessor
 {
+namespace
+{
+geometry_msgs::msg::TransformStamped identity_transform(const std::string & frame_id)
+{
+  geometry_msgs::msg::TransformStamped transform;
+  transform.header.frame_id = frame_id;
+  transform.child_frame_id = frame_id;
+  transform.transform.rotation.w = 1.0;
+  return transform;
+}
+}  // namespace
+
 /** @brief Constructor. */
 DistortionCorrectorComponent::DistortionCorrectorComponent(const rclcpp::NodeOptions & options)
 : Node("distortion_corrector_node", options)
@@ -108,50 +120,47 @@ void DistortionCorrectorComponent::pointcloud_callback(PointCloud2::UniquePtr po
 
   if (use_imu_) {
     std::vector<sensor_msgs::msg::Imu::ConstSharedPtr> imu_msgs = imu_sub_->take_data();
-    for (const auto & msg : imu_msgs) {
+    if (!imu_msgs.empty()) {
       const auto imu_to_base_link =
         managed_tf_buffer_->getTransform<geometry_msgs::msg::TransformStamped>(
-          base_frame_, msg->header.frame_id, this->now(), rclcpp::Duration::from_seconds(1.0),
-          this->get_logger());
-      if (!imu_to_base_link.has_value()) {
-        continue;
+          base_frame_, imu_msgs.front()->header.frame_id, this->now(),
+          rclcpp::Duration::from_seconds(1.0), this->get_logger());
+      if (imu_to_base_link.has_value()) {
+        distortion_corrector_->set_imu_transform(*imu_to_base_link);
+        for (const auto & msg : imu_msgs) {
+          distortion_corrector_->insert_imu(msg);
+        }
       }
-      distortion_corrector_->set_imu_transform(*imu_to_base_link);
-      distortion_corrector_->insert_imu(msg);
     }
   }
 
-  const auto lidar_to_base_link =
-    managed_tf_buffer_->getTransform<geometry_msgs::msg::TransformStamped>(
+  // The lidar-to-base transform is resolved once and reused for all later clouds. Until it
+  // resolves, the cloud is undistorted as if it were given in the base frame.
+  if (!lidar_to_base_link_.has_value()) {
+    lidar_to_base_link_ = managed_tf_buffer_->getTransform<geometry_msgs::msg::TransformStamped>(
       base_frame_, pointcloud_msg->header.frame_id, this->now(),
       rclcpp::Duration::from_seconds(1.0), this->get_logger());
-  if (lidar_to_base_link.has_value()) {
-    if (update_azimuth_and_distance_ && !angle_conversion_opt_.has_value()) {
-      angle_conversion_opt_ = distortion_corrector_->try_compute_angle_conversion(*pointcloud_msg);
-      if (angle_conversion_opt_.has_value()) {
-        RCLCPP_INFO(
-          this->get_logger(),
-          "Success to get the conversion formula between Cartesian coordinates and LiDAR azimuth "
-          "coordinates");
-      } else {
-        RCLCPP_ERROR_STREAM_THROTTLE(
-          this->get_logger(), *this->get_clock(), 10000 /* ms */,
-          "Failed to get the angle conversion between Cartesian coordinates and LiDAR azimuth "
-          "coordinates. This pointcloud will not update azimuth and distance");
-      }
-    }
+  }
+  const auto lidar_to_base_link = lidar_to_base_link_.value_or(identity_transform(base_frame_));
 
-    const auto undistortion_result = distortion_corrector_->undistort_pointcloud(
-      use_imu_, angle_conversion_opt_, *lidar_to_base_link, *pointcloud_msg);
-    log_undistortion_result(undistortion_result, *pointcloud_msg);
+  if (update_azimuth_and_distance_ && !angle_conversion_opt_.has_value()) {
+    angle_conversion_opt_ = distortion_corrector_->try_compute_angle_conversion(*pointcloud_msg);
+    if (angle_conversion_opt_.has_value()) {
+      RCLCPP_INFO(
+        this->get_logger(),
+        "Success to get the conversion formula between Cartesian coordinates and LiDAR azimuth "
+        "coordinates");
+    } else {
+      RCLCPP_ERROR_STREAM_THROTTLE(
+        this->get_logger(), *this->get_clock(), 10000 /* ms */,
+        "Failed to get the angle conversion between Cartesian coordinates and LiDAR azimuth "
+        "coordinates. This pointcloud will not update azimuth and distance");
+    }
   }
-  if (!lidar_to_base_link.has_value()) {
-    RCLCPP_WARN_STREAM_THROTTLE(
-      get_logger(), *get_clock(), 10000 /* ms */,
-      "Failed to get the transform from " << pointcloud_msg->header.frame_id << " to "
-                                          << base_frame_
-                                          << ". This pointcloud will not be undistorted.");
-  }
+
+  const auto undistortion_result = distortion_corrector_->undistort_pointcloud(
+    use_imu_, angle_conversion_opt_, lidar_to_base_link, *pointcloud_msg);
+  log_undistortion_result(undistortion_result, *pointcloud_msg);
 
   const rclcpp::Time stamp(pointcloud_msg->header.stamp);
 

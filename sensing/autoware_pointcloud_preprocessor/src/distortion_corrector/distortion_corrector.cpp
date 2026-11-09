@@ -14,6 +14,7 @@
 
 #include "autoware/pointcloud_preprocessor/distortion_corrector/distortion_corrector.hpp"
 
+#include "autoware/pointcloud_preprocessor/concatenate_data/time_utils.hpp"
 #include "autoware/pointcloud_preprocessor/utility/memory.hpp"
 #include "autoware_utils/math/constants.hpp"
 
@@ -21,7 +22,7 @@
 #include <autoware_utils/math/trigonometry.hpp>
 #include <tf2/LinearMath/Quaternion.hpp>
 
-#include <cstdint>
+#include <chrono>
 #include <deque>
 #include <memory>
 #include <string>
@@ -30,66 +31,17 @@ namespace autoware::pointcloud_preprocessor
 {
 namespace
 {
-constexpr int64_t kNanosecondsPerSecond = 1'000'000'000LL;
-
-template <typename Stamp>
-int64_t to_nanoseconds(const Stamp & stamp)
-{
-  return static_cast<int64_t>(stamp.sec) * kNanosecondsPerSecond + stamp.nanosec;
-}
-
-template <typename Stamp>
-double to_seconds(const Stamp & stamp)
-{
-  return static_cast<double>(to_nanoseconds(stamp)) * 1e-9;
-}
-
-tf2::Transform to_tf2_transform(const geometry_msgs::msg::Transform & transform)
-{
-  const tf2::Vector3 origin(
-    transform.translation.x, transform.translation.y, transform.translation.z);
-  const tf2::Quaternion rotation(
-    transform.rotation.x, transform.rotation.y, transform.rotation.z, transform.rotation.w);
-
-  tf2::Transform out;
-  out.setOrigin(origin);
-  out.setRotation(rotation);
-  return out;
-}
-
 Eigen::Matrix4f to_eigen_matrix(const geometry_msgs::msg::Transform & transform)
 {
-  const Eigen::Translation3d translation(
-    transform.translation.x, transform.translation.y, transform.translation.z);
-  const Eigen::Quaterniond rotation(
-    transform.rotation.w, transform.rotation.x, transform.rotation.y, transform.rotation.z);
-  const Eigen::Isometry3d isometry = translation * rotation;
-  return isometry.matrix().cast<float>();
-}
-
-template <class Queue>
-void prune_before_latest_before_stamp(Queue & queue, const int64_t stamp_nanoseconds)
-{
-  if (queue.size() < 2) {
-    return;
-  }
-
-  auto keep_it = std::lower_bound(
-    std::begin(queue), std::end(queue), stamp_nanoseconds,
-    [](const auto & sample, const int64_t stamp) {
-      return to_nanoseconds(sample.header.stamp) < stamp;
-    });
-
-  if (keep_it == std::end(queue)) {
-    keep_it = std::prev(std::end(queue));
-  } else if (to_nanoseconds(keep_it->header.stamp) > stamp_nanoseconds) {
-    if (keep_it == std::begin(queue)) {
-      return;
-    }
-    --keep_it;
-  }
-
-  queue.erase(std::begin(queue), keep_it);
+  const Eigen::Quaternionf rotation(
+    static_cast<float>(transform.rotation.w), static_cast<float>(transform.rotation.x),
+    static_cast<float>(transform.rotation.y), static_cast<float>(transform.rotation.z));
+  Eigen::Matrix4f matrix = Eigen::Matrix4f::Identity();
+  matrix.block<3, 3>(0, 0) = rotation.toRotationMatrix();
+  matrix.block<3, 1>(0, 3) = Eigen::Vector3f(
+    static_cast<float>(transform.translation.x), static_cast<float>(transform.translation.y),
+    static_cast<float>(transform.translation.z));
+  return matrix;
 }
 }  // namespace
 
@@ -119,6 +71,24 @@ void DistortionCorrectorBase::insert_twist(
   geometry_msgs::msg::TwistStamped msg;
   msg.header = twist_msg->header;
   msg.twist = twist_msg->twist.twist;
+
+  // If time jumps backwards (e.g. when a rosbag restarts), clear buffer
+  if (!twist_queue_.empty()) {
+    if (is_earlier(msg.header.stamp, twist_queue_.front().header.stamp)) {
+      twist_queue_.clear();
+    }
+  }
+
+  // Twist data in the queue that is older than the current twist by 1 second will be cleared.
+  const auto cutoff_time = add(msg.header.stamp, -std::chrono::seconds(1));
+
+  while (!twist_queue_.empty()) {
+    if (is_earlier(cutoff_time, twist_queue_.front().header.stamp)) {
+      break;
+    }
+    twist_queue_.pop_front();
+  }
+
   twist_queue_.push_back(msg);
 }
 
@@ -155,18 +125,24 @@ void DistortionCorrectorBase::enqueue_imu(const sensor_msgs::msg::Imu::ConstShar
   transformed_angular_velocity.vector.z = rotated_angular_velocity.z();
   transformed_angular_velocity.header = imu_msg->header;
 
+  // If time jumps backwards (e.g. when a rosbag restarts), clear buffer
+  if (!angular_velocity_queue_.empty()) {
+    if (is_earlier(imu_msg->header.stamp, angular_velocity_queue_.front().header.stamp)) {
+      angular_velocity_queue_.clear();
+    }
+  }
+
+  // IMU data in the queue that is older than the current imu msg by 1 second will be cleared.
+  const auto cutoff_time = add(imu_msg->header.stamp, -std::chrono::seconds(1));
+
+  while (!angular_velocity_queue_.empty()) {
+    if (is_earlier(cutoff_time, angular_velocity_queue_.front().header.stamp)) {
+      break;
+    }
+    angular_velocity_queue_.pop_front();
+  }
+
   angular_velocity_queue_.push_back(transformed_angular_velocity);
-}
-
-void DistortionCorrectorBase::prune_twist_queue(const int64_t first_point_stamp_nanoseconds)
-{
-  prune_before_latest_before_stamp(twist_queue_, first_point_stamp_nanoseconds);
-}
-
-void DistortionCorrectorBase::prune_angular_velocity_queue(
-  const int64_t first_point_stamp_nanoseconds)
-{
-  prune_before_latest_before_stamp(angular_velocity_queue_, first_point_stamp_nanoseconds);
 }
 
 void DistortionCorrectorBase::get_twist_and_imu_iterator(
@@ -295,6 +271,17 @@ std::optional<AngleConversion> DistortionCorrectorBase::try_compute_angle_conver
   return std::nullopt;
 }
 
+tf2::Transform DistortionCorrectorBase::convert_matrix_to_transform(const Eigen::Matrix4f & matrix)
+{
+  tf2::Transform transform;
+  transform.setOrigin(tf2::Vector3(matrix(0, 3), matrix(1, 3), matrix(2, 3)));
+  transform.setBasis(
+    tf2::Matrix3x3(
+      matrix(0, 0), matrix(0, 1), matrix(0, 2), matrix(1, 0), matrix(1, 1), matrix(1, 2),
+      matrix(2, 0), matrix(2, 1), matrix(2, 2)));
+  return transform;
+}
+
 template <class T>
 UndistortionResult DistortionCorrector<T>::undistort_pointcloud(
   bool use_imu, std::optional<AngleConversion> angle_conversion_opt,
@@ -322,13 +309,6 @@ UndistortionResult DistortionCorrector<T>::undistort_pointcloud(
   sensor_msgs::PointCloud2Iterator<float> it_azimuth(pointcloud, "azimuth");
   sensor_msgs::PointCloud2Iterator<float> it_distance(pointcloud, "distance");
   sensor_msgs::PointCloud2ConstIterator<std::uint32_t> it_time_stamp(pointcloud, "time_stamp");
-
-  const int64_t pointcloud_stamp_nanoseconds = to_nanoseconds(pointcloud.header.stamp);
-  const int64_t first_point_stamp_nanoseconds = pointcloud_stamp_nanoseconds + *it_time_stamp;
-  prune_twist_queue(first_point_stamp_nanoseconds);
-  if (use_imu) {
-    prune_angular_velocity_queue(first_point_stamp_nanoseconds);
-  }
 
   this->set_pointcloud_transform(lidar_to_base_link);
 
@@ -445,7 +425,8 @@ void DistortionCorrector3D::initialize()
 void DistortionCorrector2D::set_pointcloud_transform(
   const geometry_msgs::msg::TransformStamped & lidar_to_base_link)
 {
-  tf2_lidar_to_base_link_ = to_tf2_transform(lidar_to_base_link.transform);
+  tf2_lidar_to_base_link_ =
+    convert_matrix_to_transform(to_eigen_matrix(lidar_to_base_link.transform));
   tf2_base_link_to_lidar_ = tf2_lidar_to_base_link_.inverse();
   pointcloud_transform_exists_ = true;
   pointcloud_transform_needed_ =

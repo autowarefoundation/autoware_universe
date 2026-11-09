@@ -25,12 +25,14 @@
 #include <managed_transform_buffer/managed_transform_buffer.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <geometry_msgs/msg/transform_stamped.hpp>
 #include <geometry_msgs/msg/twist_stamped.hpp>
 #include <geometry_msgs/msg/twist_with_covariance_stamped.hpp>
 #include <sensor_msgs/msg/imu.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -70,6 +72,7 @@ private:
 
   std::unique_ptr<DistortionCorrectorBase> distortion_corrector_;
   std::unique_ptr<managed_transform_buffer::ManagedTransformBuffer> managed_tf_buffer_;
+  std::optional<geometry_msgs::msg::TransformStamped> lidar_to_base_link_;
 
   // Diagnostic
   std::unique_ptr<autoware_utils::DiagnosticsInterface> diagnostics_interface_;

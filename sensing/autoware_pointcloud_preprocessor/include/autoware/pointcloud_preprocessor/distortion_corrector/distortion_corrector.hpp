@@ -56,8 +56,8 @@ enum class PointcloudValidity {
   kIncompatibleLayout,
 };
 
-// Outcome of undistort_pointcloud(). Conditions that the node used to log directly are surfaced
-// here so the (ROS-free) core can report them to its caller.
+// Outcome of undistort_pointcloud(). The core reports these conditions to its caller instead of
+// logging them.
 struct UndistortionResult
 {
   PointcloudValidity validity{PointcloudValidity::kValid};
@@ -80,12 +80,11 @@ protected:
   double timestamp_mismatch_fraction_{0.0};
 
   void enqueue_imu(const sensor_msgs::msg::Imu::ConstSharedPtr imu_msg);
-  void prune_twist_queue(int64_t first_point_stamp_nanoseconds);
-  void prune_angular_velocity_queue(int64_t first_point_stamp_nanoseconds);
   void get_twist_and_imu_iterator(
     bool use_imu, double first_point_time_stamp_sec,
     std::deque<geometry_msgs::msg::TwistStamped>::iterator & it_twist,
     std::deque<geometry_msgs::msg::Vector3Stamped>::iterator & it_imu);
+  static tf2::Transform convert_matrix_to_transform(const Eigen::Matrix4f & matrix);
   // The lidar-to-base-frame transform (header.frame_id = base frame, child_frame_id = lidar frame)
   // is supplied by the caller; TF lookup remains outside the core.
   virtual void set_pointcloud_transform(
@@ -100,14 +99,15 @@ public:
   [[nodiscard]] bool pointcloud_transform_needed() const;
   std::deque<geometry_msgs::msg::TwistStamped> get_twist_queue();
   std::deque<geometry_msgs::msg::Vector3Stamped> get_angular_velocity_queue();
-  // Inputs must be inserted in nondecreasing timestamp order. The corrector does not sort them.
+  // Samples are expected in timestamp order. A sample older than the queue front clears the queue
+  // (e.g. a rosbag restart); samples older than the newest one by more than 1 s are dropped.
   void insert_twist(const geometry_msgs::msg::TwistWithCovarianceStamped::ConstSharedPtr twist_msg);
 
   // The IMU-to-base-frame transform must be provided (via set_imu_transform) before processing IMU
   // messages, so that angular velocities can be rotated into the base frame.
   void set_imu_transform(const geometry_msgs::msg::TransformStamped & imu_to_base_link);
 
-  // Inputs must be inserted in nondecreasing timestamp order. The corrector does not sort them.
+  // Same ordering and retention rules as insert_twist().
   void insert_imu(const sensor_msgs::msg::Imu::ConstSharedPtr imu_msg);
 
   std::optional<AngleConversion> try_compute_angle_conversion(
