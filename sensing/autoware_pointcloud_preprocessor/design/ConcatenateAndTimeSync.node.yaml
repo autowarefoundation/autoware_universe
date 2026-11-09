@@ -42,6 +42,9 @@ param_values:
   - name: output_frame
     type: string
     default: base_link
+  - name: output_point_type
+    type: string
+    default: XYZIRC
   - name: input_topics
     type: array
     default: "[${input input1}, ${input input2}]"

@@ -43,6 +43,7 @@ using autoware::pointcloud_preprocessor::ConcatenationDiagnosticsOptions;
 using autoware::pointcloud_preprocessor::LateCloudPolicy;
 using autoware::pointcloud_preprocessor::MatchingStrategyType;
 using autoware::pointcloud_preprocessor::parse_matching_strategy;
+using autoware::pointcloud_preprocessor::PointFormat;
 using CloudConcatenator =
   autoware::pointcloud_preprocessor::CloudConcatenator<sensor_msgs::msg::PointCloud2>;
 
@@ -89,7 +90,8 @@ sensor_msgs::msg::PointCloud2::ConstSharedPtr make_cloud(
 CloudConcatenator make_naive_concatenator(double timeout_sec = 0.2)
 {
   return CloudConcatenator(
-    kInputTopics, kOutputFrame, timeout_sec, /*is_motion_compensated=*/false,
+    kInputTopics, kOutputFrame, PointFormat::XYZIRC, timeout_sec,
+    /*is_motion_compensated=*/false,
     /*publish_synchronized_pointcloud=*/false,
     /*keep_input_frame_in_synchronized_pointcloud=*/false, MatchingStrategyType::naive);
 }
@@ -97,7 +99,8 @@ CloudConcatenator make_naive_concatenator(double timeout_sec = 0.2)
 CloudConcatenator make_advanced_concatenator(double timeout_sec = 0.2)
 {
   return CloudConcatenator(
-    kInputTopics, kOutputFrame, timeout_sec, /*is_motion_compensated=*/false,
+    kInputTopics, kOutputFrame, PointFormat::XYZIRC, timeout_sec,
+    /*is_motion_compensated=*/false,
     /*publish_synchronized_pointcloud=*/false,
     /*keep_input_frame_in_synchronized_pointcloud=*/false, MatchingStrategyType::advanced, kOffsets,
     kNoise);
@@ -133,8 +136,8 @@ TEST(CloudConcatenatorConstruction, DuplicateInputTopicIsRejected)
   // the timeout path. Reject it at construction instead.
   const auto construct_with_duplicate_topic = [] {
     return CloudConcatenator(
-      {"lidar_top", "lidar_left", "lidar_top"}, kOutputFrame, 0.2, false, false, false,
-      MatchingStrategyType::naive);
+      {"lidar_top", "lidar_left", "lidar_top"}, kOutputFrame, PointFormat::XYZIRC, 0.2, false,
+      false, false, MatchingStrategyType::naive);
   };
 
   // Act & Assert
@@ -146,7 +149,8 @@ TEST(CloudConcatenatorConstruction, AdvancedRequiresOffsetsAndNoiseWindow)
   // Arrange
   const auto construct_without_offsets = [] {
     return CloudConcatenator(
-      kInputTopics, kOutputFrame, 0.2, false, false, false, MatchingStrategyType::advanced);
+      kInputTopics, kOutputFrame, PointFormat::XYZIRC, 0.2, false, false, false,
+      MatchingStrategyType::advanced);
   };
 
   // Act & Assert
@@ -159,8 +163,8 @@ TEST(CloudConcatenatorConstruction, AdvancedRejectsMismatchedSizes)
   // Size validation is delegated to AdvancedMatchingPolicy (shared with the node).
   const auto construct_with_too_few_offsets = [] {
     return CloudConcatenator(
-      kInputTopics, kOutputFrame, 0.2, false, false, false, MatchingStrategyType::advanced,
-      std::vector<double>{0.0, 0.04}, kNoise);
+      kInputTopics, kOutputFrame, PointFormat::XYZIRC, 0.2, false, false, false,
+      MatchingStrategyType::advanced, std::vector<double>{0.0, 0.04}, kNoise);
   };
 
   // Act & Assert
@@ -280,7 +284,7 @@ TEST(CloudConcatenator, ClockGoingBackwardsKeepsLiveCollectorsOverStaleOnes)
   // Arrange
   // Two partial frames are open when the bag restarts.
   CloudConcatenator concatenator(
-    kInputTopics, kOutputFrame, /*timeout_sec=*/0.2, false, false, false,
+    kInputTopics, kOutputFrame, PointFormat::XYZIRC, /*timeout_sec=*/0.2, false, false, false,
     MatchingStrategyType::advanced, kOffsets, kNoise, /*max_open_collectors=*/3);
   static_cast<void>(concatenator.process_cloud("lidar_top", make_cloud(10, 0), 100.0));
   static_cast<void>(concatenator.process_cloud("lidar_top", make_cloud(10, 500'000'000), 100.1));
@@ -393,7 +397,7 @@ TEST(CloudConcatenator, MaxOpenCollectorsDropsOldestUnpublished)
   // Cap of 2 open collectors (the node uses its historical pool size). Two lidar_top clouds with
   // stamps far outside each other's windows fill it with two collectors.
   CloudConcatenator concatenator(
-    kInputTopics, kOutputFrame, /*timeout_sec=*/10.0, false, false, false,
+    kInputTopics, kOutputFrame, PointFormat::XYZIRC, /*timeout_sec=*/10.0, false, false, false,
     MatchingStrategyType::advanced, kOffsets, kNoise, /*max_open_collectors=*/2);
   static_cast<void>(concatenator.process_cloud("lidar_top", make_cloud(10, 0), 100.0));
   static_cast<void>(concatenator.process_cloud("lidar_top", make_cloud(11, 0), 100.1));
@@ -580,8 +584,8 @@ CloudConcatenator make_concatenator(MatchingStrategyType strategy, LateCloudPoli
 {
   const bool advanced = strategy == MatchingStrategyType::advanced;
   return CloudConcatenator(
-    kInputTopics, kOutputFrame, /*timeout_sec=*/0.2, false, false, false, strategy,
-    advanced ? std::optional(kOffsets) : std::nullopt,
+    kInputTopics, kOutputFrame, PointFormat::XYZIRC, /*timeout_sec=*/0.2, false, false, false,
+    strategy, advanced ? std::optional(kOffsets) : std::nullopt,
     advanced ? std::optional(kNoise) : std::nullopt,
     /*max_open_collectors=*/0, policy);
 }
