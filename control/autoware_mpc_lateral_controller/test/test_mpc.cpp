@@ -306,25 +306,40 @@ TEST_F(MPCTest, OsqpSteerRateLimitByCurvatureIsSymmetricInTurnDirection)
   // that is very restrictive on straight sections and relaxed on curves, so that a sign error in
   // the curvature lookup would throttle one turn direction but not the other.
   const double straight_steer_rate_lim = 0.01;  // [rad/s]
-  const auto solve = [&](const Trajectory & trajectory) {
+  const auto create_mpc = [&](const Trajectory & trajectory) {
     auto mpc = std::make_unique<MPC>();
     initializeMPC(*mpc);
     mpc->m_steer_rate_lim_map_by_curvature = {
       {0.0, straight_steer_rate_lim}, {0.1, steer_rate_lim}};
     const auto current_kinematics = makeOdometry(trajectory.points.front().pose, 0.0);
     mpc->setReferenceTrajectory(trajectory, trajectory_param, current_kinematics);
-    mpc->setVehicleModel(
-      std::make_shared<KinematicsBicycleModel>(wheelbase, steer_limit, steer_tau));
-    mpc->setQPSolver(std::make_shared<QPSolverOSQP>());
 
-    const auto odom = makeOdometry(pose_zero, default_velocity);
-    const auto mpc_result = mpc->calculateMPC(neutral_steer, odom, odom.header.stamp);
-    EXPECT_TRUE(mpc_result.result);
-    return mpc_result.ctrl_cmd.steering_tire_angle;
+    std::shared_ptr<VehicleModelInterface> vehicle_model_ptr =
+      std::make_shared<KinematicsBicycleModel>(wheelbase, steer_limit, steer_tau);
+    mpc->setVehicleModel(vehicle_model_ptr);
+
+    std::shared_ptr<QPSolverInterface> qpsolver_ptr = std::make_shared<QPSolverOSQP>();
+    mpc->setQPSolver(qpsolver_ptr);
+    return mpc;
   };
 
-  const float right_turn_steer = solve(dummy_right_turn_trajectory);
-  const float left_turn_steer = solve(dummy_left_turn_trajectory);
+  const auto right_turn_mpc = create_mpc(dummy_right_turn_trajectory);
+  ASSERT_TRUE(right_turn_mpc->hasVehicleModel());
+  ASSERT_TRUE(right_turn_mpc->hasQPSolver());
+  const auto left_turn_mpc = create_mpc(dummy_left_turn_trajectory);
+  ASSERT_TRUE(left_turn_mpc->hasVehicleModel());
+  ASSERT_TRUE(left_turn_mpc->hasQPSolver());
+
+  // Calculate MPC
+  const auto odom = makeOdometry(pose_zero, default_velocity);
+  const auto right_turn_result =
+    right_turn_mpc->calculateMPC(neutral_steer, odom, odom.header.stamp);
+  ASSERT_TRUE(right_turn_result.result);
+  const auto left_turn_result = left_turn_mpc->calculateMPC(neutral_steer, odom, odom.header.stamp);
+  ASSERT_TRUE(left_turn_result.result);
+
+  const float right_turn_steer = right_turn_result.ctrl_cmd.steering_tire_angle;
+  const float left_turn_steer = left_turn_result.ctrl_cmd.steering_tire_angle;
 
   // Both turns are on a curve, so neither of them may be throttled by the straight-section limit.
   EXPECT_LT(right_turn_steer, -static_cast<float>(straight_steer_rate_lim * ctrl_period));
