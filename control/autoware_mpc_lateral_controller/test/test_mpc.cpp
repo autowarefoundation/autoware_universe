@@ -294,6 +294,44 @@ TEST_F(MPCTest, OsqpCalculateRightTurn)
   EXPECT_LT(mpc_result.ctrl_cmd_horizon.controls.front().steering_tire_rotation_rate, 0.0f);
 }
 
+TEST_F(MPCTest, OsqpSteerRateLimitByCurvatureIsSymmetricInTurnDirection)
+{
+  // Mirror the right turn trajectory about the x-axis to get a left turn with the same shape.
+  Trajectory dummy_left_turn_trajectory = dummy_right_turn_trajectory;
+  for (auto & p : dummy_left_turn_trajectory.points) {
+    p.pose.position.y = -p.pose.position.y;
+  }
+
+  // The curvature-based steer rate limit must depend on the curvature magnitude only. Use a map
+  // that is very restrictive on straight sections and relaxed on curves, so that a sign error in
+  // the curvature lookup would throttle one turn direction but not the other.
+  const double straight_steer_rate_lim = 0.01;  // [rad/s]
+  const auto solve = [&](const Trajectory & trajectory) {
+    auto mpc = std::make_unique<MPC>();
+    initializeMPC(*mpc);
+    mpc->m_steer_rate_lim_map_by_curvature = {
+      {0.0, straight_steer_rate_lim}, {0.1, steer_rate_lim}};
+    const auto current_kinematics = makeOdometry(trajectory.points.front().pose, 0.0);
+    mpc->setReferenceTrajectory(trajectory, trajectory_param, current_kinematics);
+    mpc->setVehicleModel(
+      std::make_shared<KinematicsBicycleModel>(wheelbase, steer_limit, steer_tau));
+    mpc->setQPSolver(std::make_shared<QPSolverOSQP>());
+
+    const auto odom = makeOdometry(pose_zero, default_velocity);
+    const auto mpc_result = mpc->calculateMPC(neutral_steer, odom, odom.header.stamp);
+    EXPECT_TRUE(mpc_result.result);
+    return mpc_result.ctrl_cmd.steering_tire_angle;
+  };
+
+  const float right_turn_steer = solve(dummy_right_turn_trajectory);
+  const float left_turn_steer = solve(dummy_left_turn_trajectory);
+
+  // Both turns are on a curve, so neither of them may be throttled by the straight-section limit.
+  EXPECT_LT(right_turn_steer, -static_cast<float>(straight_steer_rate_lim * ctrl_period));
+  EXPECT_GT(left_turn_steer, static_cast<float>(straight_steer_rate_lim * ctrl_period));
+  EXPECT_NEAR(left_turn_steer, -right_turn_steer, 1.0e-3f);
+}
+
 TEST_F(MPCTest, KinematicsNoDelayCalculate)
 {
   auto mpc = std::make_unique<MPC>();
