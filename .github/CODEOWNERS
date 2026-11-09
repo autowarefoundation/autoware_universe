@@ -198,11 +198,6 @@ simulator/autoware_fault_injection/** junya.sasaki@tier4.jp keisuke.shima@tier4.
 simulator/autoware_redundancy_command_selector/** makoto.kurihara@tier4.jp tetsuhiro.kawaguchi@tier4.jp
 simulator/autoware_vehicle_door_simulator/** isamu.takagi@tier4.jp junya.sasaki@tier4.jp
 simulator/tier4_dummy_object_rviz_plugin/** yukihiro.saito@tier4.jp
-system/autoware_command_mode_decider/** isamu.takagi@tier4.jp
-system/autoware_command_mode_decider_plugins/** isamu.takagi@tier4.jp
-system/autoware_command_mode_switcher/** isamu.takagi@tier4.jp
-system/autoware_command_mode_switcher_plugins/** isamu.takagi@tier4.jp
-system/autoware_command_mode_types/** isamu.takagi@tier4.jp
 system/autoware_component_state_monitor/** isamu.takagi@tier4.jp junya.sasaki@tier4.jp
 system/autoware_diagnostic_graph_aggregator/** isamu.takagi@tier4.jp junya.sasaki@tier4.jp
 system/autoware_diagnostic_graph_merger/** isamu.takagi@tier4.jp tetsuhiro.kawaguchi@tier4.jp
