@@ -1,6 +1,6 @@
 /**:
   ros__parameters:
-    inputs: [11, 12, 13, 14, 21]  # See autoware_command_mode_types/sources.hpp
+    inputs: [11, 12, 13, 14, 21]  # Use the same ID as your plugin for the driving_mode_manager.
     inputs_names:
       11: stop
       12: main
