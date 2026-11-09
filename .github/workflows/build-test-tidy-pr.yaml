@@ -13,12 +13,107 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # A PR that modifies no package and no build input has nothing to build, so it does not need the label.
+  # This runs on a plain runner, without the large CI images.
+  # Like any job on pull_request, it runs code of the PR (colcon reads setup.py files), so the approval is the gate.
+  # If this job fails or is cancelled, require-label does not run, the required check stays missing,
+  # and the PR cannot merge. Re-run the job then.
+  check-if-build-is-needed:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    outputs:
+      result: ${{ steps.check.outputs.result }}
+    steps:
+      - name: Set PR fetch depth
+        run: echo "PR_FETCH_DEPTH=$(( ${{ github.event.pull_request.commits }} + 1 ))" >> "${GITHUB_ENV}"
+        shell: bash
+
+      - name: Checkout PR branch and all PR commits
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: ${{ env.PR_FETCH_DEPTH }}
+          persist-credentials: false
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # get-modified-packages needs only `colcon list`.
+      - name: Install colcon
+        run: pip3 install colcon-core colcon-ros colcon-package-information colcon-package-selection
+        shell: bash
+
+      # get-modified-packages gives an empty list when `colcon list` fails, so make sure that colcon works.
+      - name: Check that colcon finds the packages
+        run: |
+          if [ -z "$(colcon list --names-only)" ]; then
+            echo "::error::colcon list found no package."
+            exit 1
+          fi
+        shell: bash
+
+      - name: Get modified packages
+        id: get-modified-packages
+        uses: autowarefoundation/autoware-github-actions/get-modified-packages@v1
+
+      - name: Check if the build is needed
+        id: check
+        # Besides the packages, these files change what the build runs, so they need the label too:
+        # - The build workflows and their local actions.
+        #   Not the .repos files: the build imports them only when a package changed,
+        #   and check-build-depends builds a change of build_depends*.repos.
+        # - .clang-tidy-ci: clang-tidy-differential is meant to check all packages when it changes.
+        # - package.xml and the files that make colcon ignore a package, also if colcon cannot list the package.
+        #   This is cautious: a PR that only removes a package needs the label, though the build then builds nothing.
+        # origin/<base> exists because get-modified-packages fetches it.
+        # `git diff --quiet` exits 1 on a change and more on an error, so both need the label.
+        env:
+          MODIFIED_PACKAGES: ${{ steps.get-modified-packages.outputs.modified-packages }}
+        run: |
+          build_inputs=(
+            .github/workflows/build-test-tidy-pr.yaml
+            .github/workflows/build-and-test-differential.yaml
+            .github/workflows/build-and-test-packages-above-differential.yaml
+            .github/workflows/clang-tidy-differential.yaml
+            .github/actions
+            .clang-tidy-ci
+            '*package.xml'
+            '*COLCON_IGNORE'
+            '*AMENT_IGNORE'
+            '*CATKIN_IGNORE'
+          )
+          rc=0
+          git diff --quiet "origin/${GITHUB_BASE_REF}...HEAD" -- "${build_inputs[@]}" || rc=$?
+          if [ "${rc}" -gt 1 ]; then
+            echo "::warning::git diff failed with exit code ${rc}, so the label is required."
+          fi
+          if [ -n "${MODIFIED_PACKAGES}" ] || [ "${rc}" -ne 0 ]; then
+            result=true
+          else
+            result=false
+          fi
+          echo "Modified packages: ${MODIFIED_PACKAGES:-none}"
+          echo "Changed build inputs:"
+          git diff --name-only "origin/${GITHUB_BASE_REF}...HEAD" -- "${build_inputs[@]}" || true
+          echo "result=${result}" | tee -a "${GITHUB_OUTPUT}"
+        shell: bash
+
   require-label:
+    # No always() or !cancelled() here. With them, a failed check job would leave the result empty,
+    # the job inside the reusable workflow would skip, and the skipped required check would pass.
+    needs: check-if-build-is-needed
     uses: autowarefoundation/autoware-github-actions/.github/workflows/require-label.yaml@v1
     with:
       label: run:build-and-test-differential
+      # With the label, it runs anyway, so the label still starts the build jobs, for example to test a CI change.
+      run-condition: ${{ needs.check-if-build-is-needed.outputs.result == 'true' || contains(github.event.pull_request.labels.*.name, 'run:build-and-test-differential') }}
 
   check-if-cuda-job-is-needed:
+    # The CUDA and clang-tidy jobs run only after this job, so this gates them on the label.
+    if: ${{ needs.require-label.outputs.result == 'true' }}
     needs: require-label
     runs-on: ubuntu-24.04
     outputs:

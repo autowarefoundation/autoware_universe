@@ -61,56 +61,30 @@ void convert_cloud(
     *output_cloud, input_cloud->header.frame_id};
   output_modifier.reserve(input_cloud->width);
 
-  bool has_valid_intensity =
-    std::any_of(input_cloud->fields.begin(), input_cloud->fields.end(), [](const auto & field) {
-      return field.name == "intensity" && field.datatype == sensor_msgs::msg::PointField::UINT8;
-    });
-
-  bool has_valid_return_type =
-    std::any_of(input_cloud->fields.begin(), input_cloud->fields.end(), [](const auto & field) {
-      return field.name == "return_type" && field.datatype == sensor_msgs::msg::PointField::UINT8;
-    });
-
-  bool has_valid_channel =
-    std::any_of(input_cloud->fields.begin(), input_cloud->fields.end(), [](const auto & field) {
-      return field.name == "channel" && field.datatype == sensor_msgs::msg::PointField::UINT16;
-    });
-
   sensor_msgs::PointCloud2ConstIterator<float> it_x(*input_cloud, "x");
   sensor_msgs::PointCloud2ConstIterator<float> it_y(*input_cloud, "y");
   sensor_msgs::PointCloud2ConstIterator<float> it_z(*input_cloud, "z");
+  sensor_msgs::PointCloud2ConstIterator<std::uint8_t> it_i(*input_cloud, "intensity");
+  sensor_msgs::PointCloud2ConstIterator<std::uint8_t> it_r(*input_cloud, "return_type");
+  sensor_msgs::PointCloud2ConstIterator<std::uint16_t> it_c(*input_cloud, "channel");
+  std::optional<sensor_msgs::PointCloud2ConstIterator<std::uint32_t>> it_t;
+  if constexpr (std::is_same_v<PointT, PointXYZIRCT>) {
+    it_t.emplace(*input_cloud, "time_stamp");
+  }
 
-  if (has_valid_intensity && has_valid_return_type && has_valid_channel) {
-    sensor_msgs::PointCloud2ConstIterator<std::uint8_t> it_i(*input_cloud, "intensity");
-    sensor_msgs::PointCloud2ConstIterator<std::uint8_t> it_r(*input_cloud, "return_type");
-    sensor_msgs::PointCloud2ConstIterator<std::uint16_t> it_c(*input_cloud, "channel");
-    std::optional<sensor_msgs::PointCloud2ConstIterator<std::uint32_t>> it_t;
+  for (; it_x != it_x.end(); ++it_x, ++it_y, ++it_z, ++it_i, ++it_r, ++it_c) {
+    PointT point;
+    point.x = *it_x;
+    point.y = *it_y;
+    point.z = *it_z;
+    point.intensity = *it_i;
+    point.return_type = *it_r;
+    point.channel = *it_c;
     if constexpr (std::is_same_v<PointT, PointXYZIRCT>) {
-      it_t.emplace(*input_cloud, "time_stamp");
+      point.time_stamp = time_offset_ns + **it_t;
+      ++*it_t;
     }
-
-    for (; it_x != it_x.end(); ++it_x, ++it_y, ++it_z, ++it_i, ++it_r, ++it_c) {
-      PointT point;
-      point.x = *it_x;
-      point.y = *it_y;
-      point.z = *it_z;
-      point.intensity = *it_i;
-      point.return_type = *it_r;
-      point.channel = *it_c;
-      if constexpr (std::is_same_v<PointT, PointXYZIRCT>) {
-        point.time_stamp = time_offset_ns + **it_t;
-        ++*it_t;
-      }
-      output_modifier.push_back(std::move(point));
-    }
-  } else {
-    for (; it_x != it_x.end(); ++it_x, ++it_y, ++it_z) {
-      PointT point;
-      point.x = *it_x;
-      point.y = *it_y;
-      point.z = *it_z;
-      output_modifier.push_back(std::move(point));
-    }
+    output_modifier.push_back(std::move(point));
   }
 }
 
