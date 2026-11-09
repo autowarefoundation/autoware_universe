@@ -18,6 +18,7 @@
 
 #include <autoware/cuda_utils/cuda_check_error.hpp>
 #include <autoware/cuda_utils/cuda_gtest_utils.hpp>
+#include <autoware/point_types/types.hpp>
 
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <sensor_msgs/msg/imu.hpp>
@@ -27,11 +28,14 @@
 #include <cuda_runtime.h>
 #include <gtest/gtest.h>
 
+#include <cmath>
 #include <cstring>
 #include <deque>
+#include <map>
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace autoware::cuda_pointcloud_preprocessor
@@ -40,6 +44,7 @@ namespace
 {
 
 using autoware::point_types::PointXYZIRC;
+using autoware::point_types::PointXYZIRCT;
 
 constexpr auto kOutputFormat = CudaPointcloudPreprocessor::OutputPointFormat::XYZIRC;
 
@@ -179,6 +184,9 @@ std::vector<InputPointType> make_ring_points(const int ring_count, const int poi
 struct ProcessedCloud
 {
   std::uint32_t width{};
+  std::uint32_t point_step{};
+  std::uint32_t row_step{};
+  std::vector<sensor_msgs::msg::PointField> fields;
   std::vector<std::uint8_t> data;
   ProcessingStats stats;
 };
@@ -192,6 +200,9 @@ ProcessedCloud process_cloud(
     input_cloud, make_identity_transform(), twist_queue, angular_velocity_queue, 0U);
   ProcessedCloud processed;
   processed.width = output_cloud->width;
+  processed.point_step = output_cloud->point_step;
+  processed.row_step = output_cloud->row_step;
+  processed.fields = output_cloud->fields;
   processed.data.resize(output_cloud->row_step);
   if (!processed.data.empty()) {
     CHECK_CUDA_ERROR(cudaMemcpy(
@@ -441,6 +452,222 @@ TEST_F(CudaPointcloudPreprocessorDeviceTest, TruncatesInputCloudToConfiguredMaxi
   EXPECT_EQ(output_cloud->height, 1U);
   EXPECT_EQ(output_cloud->width, 2U);
   EXPECT_EQ(output_cloud->row_step, 2U * sizeof(PointXYZIRC));
+}
+
+// ---------------------------------------------------------------------------------------------
+// output_point_type == XYZIRCT
+//
+// Points are keyed by (channel, intensity), which make_ring_points keeps unique per frame, and get
+// a time_stamp that is distinct across rings too, so a stamp landing on the wrong point shows up.
+
+std::vector<InputPointType> make_stamped_ring_points(
+  const int ring_count, const int points_per_ring)
+{
+  auto points = make_ring_points(ring_count, points_per_ring);
+  for (auto & point : points) {
+    point.time_stamp = static_cast<std::uint32_t>(point.intensity) * 1'000'000U + point.channel;
+  }
+  return points;
+}
+
+std::map<std::pair<std::uint16_t, std::uint8_t>, InputPointType> index_by_channel_and_intensity(
+  const std::vector<InputPointType> & points)
+{
+  std::map<std::pair<std::uint16_t, std::uint8_t>, InputPointType> index;
+  for (const auto & point : points) {
+    index[{point.channel, point.intensity}] = point;
+  }
+  return index;
+}
+
+template <typename PointT>
+std::vector<PointT> as_points(const ProcessedCloud & cloud)
+{
+  EXPECT_EQ(cloud.point_step, sizeof(PointT));
+  std::vector<PointT> points(cloud.width);
+  std::memcpy(points.data(), cloud.data.data(), cloud.width * sizeof(PointT));
+  return points;
+}
+
+void expect_output_fields(const ProcessedCloud & cloud, const bool with_time_stamp)
+{
+  using sensor_msgs::msg::PointField;
+  std::vector<PointField> expected = {
+    make_point_field("x", 0, PointField::FLOAT32),
+    make_point_field("y", 4, PointField::FLOAT32),
+    make_point_field("z", 8, PointField::FLOAT32),
+    make_point_field("intensity", 12, PointField::UINT8),
+    make_point_field("return_type", 13, PointField::UINT8),
+    make_point_field("channel", 14, PointField::UINT16)};
+  if (with_time_stamp) {
+    expected.push_back(make_point_field("time_stamp", 16, PointField::UINT32));
+  }
+  ASSERT_EQ(cloud.fields.size(), expected.size());
+  for (std::size_t i = 0; i < expected.size(); ++i) {
+    EXPECT_EQ(cloud.fields[i].name, expected[i].name) << i;
+    EXPECT_EQ(cloud.fields[i].offset, expected[i].offset) << expected[i].name;
+    EXPECT_EQ(cloud.fields[i].datatype, expected[i].datatype) << expected[i].name;
+    EXPECT_EQ(cloud.fields[i].count, 1U) << expected[i].name;
+  }
+}
+
+CudaPointcloudPreprocessor make_passthrough_preprocessor(
+  const std::size_t max_input_point_count,
+  const CudaPointcloudPreprocessor::OutputPointFormat output_format,
+  const std::size_t max_twist_struct_count = 1)
+{
+  CudaPointcloudPreprocessor preprocessor{
+    make_capacity(max_input_point_count, max_twist_struct_count), output_format};
+  preprocessor.setRingOutlierFilterActive(false);
+  preprocessor.setUndistortionType(CudaPointcloudPreprocessor::UndistortionType::Undistortion2D);
+  return preprocessor;
+}
+
+TEST_F(CudaPointcloudPreprocessorDeviceTest, XyzirctOutputCopiesEachPointsTimeStamp)
+{
+  const auto points = make_stamped_ring_points(3, 5);
+  auto preprocessor = make_passthrough_preprocessor(
+    points.size(), CudaPointcloudPreprocessor::OutputPointFormat::XYZIRCT);
+
+  const auto output = process_cloud(preprocessor, make_input_cloud(points));
+
+  ASSERT_EQ(output.width, points.size());
+  EXPECT_EQ(output.point_step, sizeof(PointXYZIRCT));
+  EXPECT_EQ(output.row_step, points.size() * sizeof(PointXYZIRCT));
+  expect_output_fields(output, true);
+  const auto by_key = index_by_channel_and_intensity(points);
+  for (const auto & point : as_points<PointXYZIRCT>(output)) {
+    const auto & input = by_key.at({point.channel, point.intensity});
+    EXPECT_FLOAT_EQ(point.x, input.x);
+    EXPECT_FLOAT_EQ(point.y, input.y);
+    EXPECT_FLOAT_EQ(point.z, input.z);
+    EXPECT_EQ(point.return_type, input.return_type);
+    EXPECT_EQ(point.time_stamp, input.time_stamp)
+      << "ring " << point.channel << " point " << static_cast<int>(point.intensity);
+  }
+}
+
+TEST_F(CudaPointcloudPreprocessorDeviceTest, XyzircOutputIsThePrefixOfTheXyzirctOutput)
+{
+  const auto points = make_stamped_ring_points(2, 4);
+  auto xyzirc = make_passthrough_preprocessor(
+    points.size(), CudaPointcloudPreprocessor::OutputPointFormat::XYZIRC);
+  auto xyzirct = make_passthrough_preprocessor(
+    points.size(), CudaPointcloudPreprocessor::OutputPointFormat::XYZIRCT);
+
+  const auto input_cloud = make_input_cloud(points);
+  const auto from_xyzirc = process_cloud(xyzirc, input_cloud);
+  const auto from_xyzirct = process_cloud(xyzirct, input_cloud);
+
+  ASSERT_EQ(from_xyzirc.width, from_xyzirct.width);
+  EXPECT_EQ(from_xyzirc.point_step, sizeof(PointXYZIRC));
+  EXPECT_EQ(from_xyzirct.point_step, sizeof(PointXYZIRCT));
+  expect_output_fields(from_xyzirc, false);
+  expect_output_fields(from_xyzirct, true);
+  for (std::uint32_t i = 0; i < from_xyzirc.width; ++i) {
+    EXPECT_EQ(
+      0, std::memcmp(
+           from_xyzirc.data.data() + i * sizeof(PointXYZIRC),
+           from_xyzirct.data.data() + i * sizeof(PointXYZIRCT), sizeof(PointXYZIRC)))
+      << i;
+  }
+}
+
+TEST_F(CudaPointcloudPreprocessorDeviceTest, UndistortionLeavesXyzirctTimeStampsUntouched)
+{
+  const auto points = make_stamped_ring_points(1, 6);  // stamps 0 ms .. 5 ms
+  auto preprocessor = make_passthrough_preprocessor(
+    points.size(), CudaPointcloudPreprocessor::OutputPointFormat::XYZIRCT, 3);
+
+  std::deque<geometry_msgs::msg::TwistWithCovarianceStamped> twist_queue;
+  for (const std::uint32_t nanosec : {0U, 3'000'000U, 10'000'000U}) {
+    auto twist = make_twist(nanosec, 1);
+    twist.twist.twist.linear.x = 10.0;  // 1 cm per ms
+    twist_queue.push_back(twist);
+  }
+
+  const auto output = process_cloud(preprocessor, make_input_cloud(points), twist_queue);
+
+  ASSERT_EQ(output.width, points.size());
+  const auto by_key = index_by_channel_and_intensity(points);
+  bool moved = false;
+  for (const auto & point : as_points<PointXYZIRCT>(output)) {
+    const auto & input = by_key.at({point.channel, point.intensity});
+    EXPECT_EQ(point.time_stamp, input.time_stamp);
+    moved |= std::fabs(point.x - input.x) > 1e-4F;
+  }
+  EXPECT_TRUE(moved) << "the twist did not move any point, so undistortion was not exercised";
+}
+
+TEST_F(CudaPointcloudPreprocessorDeviceTest, CropBoxCompactionKeepsEachPointsOwnTimeStamp)
+{
+  const auto points = make_stamped_ring_points(2, 6);  // x = 1.00 .. 1.05 on both rings
+  auto preprocessor = make_passthrough_preprocessor(
+    points.size(), CudaPointcloudPreprocessor::OutputPointFormat::XYZIRCT);
+  CropBoxParameters crop_box{};
+  crop_box.min_x = 0.995F;
+  crop_box.max_x = 1.025F;  // removes the first three points of each ring
+  crop_box.min_y = -1.0F;
+  crop_box.max_y = 1.0F;
+  crop_box.min_z = -1.0F;
+  crop_box.max_z = 1.0F;
+  crop_box.negative = true;
+  preprocessor.setCropBoxParameters({crop_box});
+
+  const auto output = process_cloud(preprocessor, make_input_cloud(points));
+
+  ASSERT_EQ(output.width, 6U);
+  const auto by_key = index_by_channel_and_intensity(points);
+  for (const auto & point : as_points<PointXYZIRCT>(output)) {
+    EXPECT_GE(point.intensity, 3);
+    EXPECT_EQ(point.time_stamp, by_key.at({point.channel, point.intensity}).time_stamp);
+  }
+}
+
+TEST_F(CudaPointcloudPreprocessorDeviceTest, EmptyInputStillAdvertisesTheXyzirctLayout)
+{
+  auto preprocessor =
+    make_passthrough_preprocessor(4, CudaPointcloudPreprocessor::OutputPointFormat::XYZIRCT);
+
+  const auto output = process_cloud(preprocessor, make_input_cloud({}));
+
+  EXPECT_EQ(output.width, 0U);
+  EXPECT_EQ(output.row_step, 0U);
+  EXPECT_EQ(output.point_step, sizeof(PointXYZIRCT));
+  expect_output_fields(output, true);
+}
+
+TEST_F(CudaPointcloudPreprocessorDeviceTest, FullCapacityFrameFitsTwentyByteXyzirctPoints)
+{
+  // The output buffer is preallocated for the capacity, so a frame that fills it exactly and
+  // keeps every point must fit with the 20-byte stride (visible under compute-sanitizer).
+  const auto points = make_stamped_ring_points(16, 250);
+  auto preprocessor = make_passthrough_preprocessor(
+    points.size(), CudaPointcloudPreprocessor::OutputPointFormat::XYZIRCT);
+
+  const auto output = process_cloud(preprocessor, make_input_cloud(points));
+
+  ASSERT_EQ(output.width, points.size());
+  EXPECT_EQ(output.row_step, points.size() * sizeof(PointXYZIRCT));
+  const auto by_key = index_by_channel_and_intensity(points);
+  std::size_t mismatches = 0;
+  for (const auto & point : as_points<PointXYZIRCT>(output)) {
+    mismatches += point.time_stamp != by_key.at({point.channel, point.intensity}).time_stamp;
+  }
+  EXPECT_EQ(mismatches, 0U);
+}
+
+TEST_F(CudaPointcloudPreprocessorDeviceTest, TruncatesXyzirctOutputWithTheTwentyByteStride)
+{
+  auto preprocessor =
+    make_passthrough_preprocessor(2, CudaPointcloudPreprocessor::OutputPointFormat::XYZIRCT);
+
+  const auto output = process_cloud(
+    preprocessor,
+    make_input_cloud({make_point(1.0F, 0), make_point(2.0F, 1), make_point(3.0F, 2)}));
+
+  EXPECT_EQ(output.width, 2U);
+  EXPECT_EQ(output.row_step, 2U * sizeof(PointXYZIRCT));
 }
 
 }  // namespace
