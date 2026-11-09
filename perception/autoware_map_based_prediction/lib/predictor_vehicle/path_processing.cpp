@@ -179,10 +179,19 @@ std::vector<LaneletPathWithPathInfo> suppressUndetectedLaneChangePaths(
       suppressed_paths->push_back(paths[i]);
     }
   }
-  // A center candidate is never suppressed; retain the original set defensively.
   if (filtered_paths.empty()) {
+    // No center survived (inconsistent metadata; normal generation always retains the center):
+    // fall back to the original set, except the opposite side of a detected lane change, which
+    // carries probability 0 and must never come back. An empty result makes the generator use
+    // the straight path.
     if (suppressed_paths) suppressed_paths->clear();
-    return paths;
+    for (size_t i = 0; i < paths.size(); ++i) {
+      const auto & maneuver = paths[i].second.maneuver;
+      const auto & detected = origins.at(i).detected_maneuver;
+      const bool opposite_of_detected =
+        isDetectedLaneChange(detected) && maneuver != Maneuver::LANE_FOLLOW && maneuver != detected;
+      if (!opposite_of_detected) filtered_paths.push_back(paths[i]);
+    }
   }
   return filtered_paths;
 }

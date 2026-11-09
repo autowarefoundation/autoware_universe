@@ -519,5 +519,21 @@ TEST_F(LaneChangePathSuppressionTest, FallsBackIfAllCandidatesWouldBeRemoved)
   // Defensive behavior for inconsistent metadata; normal generation always retains the center.
   EXPECT_EQ(suppressUndetectedLaneChangePaths(paths, origins, true, true).size(), 2U);
 }
+
+TEST_F(LaneChangePathSuppressionTest, FallbackNeverRestoresTheOppositeOfADetectedLaneChange)
+{
+  // Detected LEFT whose origin has neither a center nor a left candidate: only RIGHT remains.
+  auto paths = makePaths();
+  paths.erase(paths.begin(), paths.begin() + 2);
+  ASSERT_EQ(paths.size(), 1U);
+  ASSERT_EQ(paths.front().second.maneuver, Maneuver::RIGHT_LANE_CHANGE);
+  const std::vector<LaneChangePathSuppressionInfo> origins(
+    1, {Maneuver::LEFT_LANE_CHANGE, false, false});
+  std::vector<LaneletPathWithPathInfo> suppressed;
+  // The opposite side carries probability 0: the fallback must not bring it back even when that
+  // leaves nothing (the generator then uses the straight path), and it is never held.
+  EXPECT_TRUE(suppressUndetectedLaneChangePaths(paths, origins, true, true, &suppressed).empty());
+  EXPECT_TRUE(suppressed.empty());
+}
 }  // namespace
 }  // namespace autoware::map_based_prediction::detail
