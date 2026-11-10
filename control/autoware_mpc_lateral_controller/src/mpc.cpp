@@ -1086,7 +1086,9 @@ VectorXd MPC::calcSteerRateLimitOnTrajectory(
   // calculate steering rate limit
   VectorXd steer_rate_limits = VectorXd::Zero(m_param.prediction_horizon);
   for (int i = 0; i < m_param.prediction_horizon; ++i) {
-    const auto limit_by_curvature = interp(m_steer_rate_lim_map_by_curvature, trajectory.k.at(i));
+    // The limit depends on how sharp the curve is, not on the turn direction.
+    const auto limit_by_curvature =
+      interp(m_steer_rate_lim_map_by_curvature, std::fabs(trajectory.k.at(i)));
     const auto limit_by_velocity = interp(m_steer_rate_lim_map_by_velocity, trajectory.vx.at(i));
     steer_rate_limits(i) = std::min(limit_by_curvature, limit_by_velocity);
   }
