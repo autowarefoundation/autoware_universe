@@ -150,12 +150,12 @@
         },
         "save_frame_id": {
           "type": "string",
-          "description": "",
+          "description": "Frame in which the detected marker pointcloud is published and saved",
           "default": "velodyne_top"
         },
         "radius_for_extracting_marker_pointcloud": {
           "type": "number",
-          "description": "Only points closer than this value to the marker center on the xy plane are extracted as the “marker point cloud”. [m]",
+          "description": "Only points closer than this value to the marker center are extracted as the “marker point cloud” for the debug visualization and the saved log. The distance is measured on the xy plane, or on the xz plane in road_surface_mode. [m]",
           "default": 0.4,
           "minimum": 0.0
         },

@@ -47,6 +47,8 @@
     save_file_name: detected_reflector_intensity
     save_frame_id: velodyne_top
 
-    # for visualize the detected marker pointcloud
+    # for extracting the detected marker pointcloud (debug visualization and save log)
     radius_for_extracting_marker_pointcloud: 0.4 # [m] within
+
+    # for debug publishers
     queue_size_for_debug_pub_msg: 10 # Queue size for debug publishers

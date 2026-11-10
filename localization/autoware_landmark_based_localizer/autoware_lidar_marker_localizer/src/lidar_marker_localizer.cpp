@@ -18,7 +18,6 @@
 #include <autoware/pointcloud_preprocessor/utility/memory.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/ros/diagnostics_interface.hpp>
-#include <autoware_utils/transform/transforms.hpp>
 #include <rclcpp/qos.hpp>
 
 #include <geometry_msgs/msg/vector3.hpp>
@@ -516,9 +515,6 @@ void LidarMarkerLocalizer::output_detected_marker(
   pcl::PointCloud<pcl::PointXYZI> marker_points_save_frame;
   transform_marker_pointcloud(
     param_.save_frame_id, points_msg_ptr->header.frame_id, marker_points, marker_points_save_frame);
-  marker_points_save_frame.width = marker_points_save_frame.size();
-  marker_points_save_frame.height = 1;
-  marker_points_save_frame.is_dense = false;
 
   // visualize for debug
   if (has_subscriber) {
@@ -594,11 +590,9 @@ void LidarMarkerLocalizer::transform_marker_pointcloud(
     return;
   }
 
-  const geometry_msgs::msg::PoseStamped source_to_target_pose_stamped =
-    autoware_utils::transform2pose(transform);
   const Eigen::Matrix4f source_to_target_matrix =
-    autoware::localization_util::pose_to_matrix4f(source_to_target_pose_stamped.pose);
-  autoware_utils::transform_pointcloud(input, output, source_to_target_matrix);
+    tf2::transformToEigen(transform).matrix().cast<float>();
+  pcl::transformPointCloud(input, output, source_to_target_matrix);
 }
 
 // Explicit instantiation
