@@ -370,15 +370,22 @@ void LidarMarkerLocalizer::main_process(const PointCloud2::ConstSharedPtr & poin
   result.pose.pose.orientation = self_pose.orientation;
 
   // set covariance
-  // NOTE: Since z is not corrected, the z variance in base_covariance should be increased,
-  // and it should be tuned for each environment. It is left unchanged here because the
-  // impact is small even as it is.
   const Eigen::Quaterniond map_to_base_link_quat = Eigen::Quaterniond(
     result.pose.pose.orientation.w, result.pose.pose.orientation.x, result.pose.pose.orientation.y,
     result.pose.pose.orientation.z);
   const Eigen::Matrix3d map_to_base_link_rotation =
     map_to_base_link_quat.normalized().toRotationMatrix();
   result.pose.covariance = rotate_covariance(param_.base_covariance, map_to_base_link_rotation);
+
+  // z is not corrected and is just the EKF's own z, so make it uninformative
+  // so that it is not fed back to the EKF as a confident measurement
+  constexpr double z_stddev = 3.0;  // [m]
+  constexpr size_t z_index = 2;
+  for (size_t i = 0; i < 6; ++i) {
+    result.pose.covariance[z_index * 6 + i] = 0.0;
+    result.pose.covariance[i * 6 + z_index] = 0.0;
+  }
+  result.pose.covariance[z_index * 6 + z_index] = z_stddev * z_stddev;
 
   pub_base_link_pose_with_covariance_on_map_->publish(result);
   pub_debug_pose_with_covariance_->publish(result);
