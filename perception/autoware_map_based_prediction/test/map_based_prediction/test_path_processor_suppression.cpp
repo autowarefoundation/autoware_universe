@@ -112,6 +112,24 @@ protected:
     return path;
   }
 
+  // Arc of |radius| from the origin along +x; negative radius bends to the right (y < 0).
+  PosePath arcReference(const double radius)
+  {
+    PosePath path;
+    const double r = std::fabs(radius);
+    const double sign = radius < 0.0 ? -1.0 : 1.0;
+    for (int i = 0; i <= 200; ++i) {
+      const double yaw = i * 0.5 / r;
+      geometry_msgs::msg::Pose pose;
+      pose.position.x = r * std::sin(yaw);
+      pose.position.y = sign * r * (1.0 - std::cos(yaw));
+      pose.orientation.z = std::sin(sign * yaw / 2.0);
+      pose.orientation.w = std::cos(sign * yaw / 2.0);
+      path.push_back(pose);
+    }
+    return path;
+  }
+
   void cache(
     const LaneletPathWithPathInfo & candidate, const PosePath & path, const double width = 4.0)
   {
@@ -272,6 +290,27 @@ TEST_F(PathProcessorSuppressionTest, KeepsLaneChangeSuppressedWhenCenterFailsLat
   EXPECT_GT(path.path.back().position.y, 1.0);
   EXPECT_FLOAT_EQ(path.confidence, 1.0F);
   EXPECT_EQ(processing_passes_, 1U);
+}
+
+TEST_F(PathProcessorSuppressionTest, FallbackPrefersTheLeastBentPathRegardlessOfSide)
+{
+  // Every path fails the (tiny) lateral acceleration limit, so the fallback returns the path
+  // with the smallest average curvature magnitude. A signed average preferred the tight right
+  // bend (negative curvature) over the gentle left one.
+  for (const double sign : {1.0, -1.0}) {
+    const auto gentle = candidate(100, Maneuver::LANE_FOLLOW);
+    const auto tight = candidate(200, Maneuver::LANE_FOLLOW);
+    cache(gentle, arcReference(sign * 100.0));
+    cache(tight, arcReference(-sign * 15.0));
+    ASSERT_FALSE(accepted(gentle));
+    ASSERT_FALSE(accepted(tight));
+    const auto result = runAll({tight, gentle}, {});
+    ASSERT_TRUE(result.has_value());
+    ASSERT_EQ(result->kinematics.predicted_paths.size(), 1U);
+    const double end_y = result->kinematics.predicted_paths.front().path.back().position.y;
+    EXPECT_GT(sign * end_y, 1.0) << "sign " << sign;
+    EXPECT_LT(std::fabs(end_y), 10.0) << "sign " << sign;
+  }
 }
 
 TEST_F(PathProcessorSuppressionTest, LateralAccelerationStraightIsAlwaysSatisfied)

@@ -484,8 +484,13 @@ void PathProcessor::generateOnLanePaths(
       calcTrajectoryCurvatureFrom3Points(trajectory_with_const_velocity, idx_dist);
     if (curvature_v.empty()) continue;
 
+    // calc_curvature is signed (left positive); the fallback compares how much a path bends,
+    // not which way, so the magnitude is averaged.
     const auto curvature_avg =
-      std::accumulate(curvature_v.begin(), curvature_v.end(), 0.0) / curvature_v.size();
+      std::accumulate(
+        curvature_v.begin(), curvature_v.end(), 0.0,
+        [](const double sum, const double curvature) { return sum + std::fabs(curvature); }) /
+      static_cast<double>(curvature_v.size());
     if (curvature_avg < candidates.min_avg_curvature) {
       candidates.min_avg_curvature = curvature_avg;
       candidates.path_with_smallest_avg_curvature = predicted_path;
