@@ -63,10 +63,6 @@ PurePursuitLateralControllerNode::PurePursuitLateralControllerNode(rclcpp::Node 
     node.create_publisher<autoware_internal_debug_msgs::msg::Float32MultiArrayStamped>(
       "~/debug/ld_outputs", rclcpp::QoS{1});
 
-  // Publish predicted trajectory
-  pub_predicted_trajectory_ = node.create_publisher<autoware_planning_msgs::msg::Trajectory>(
-    "~/output/predicted_trajectory", 1);
-
   pub_processing_time_ms_ =
     node.create_publisher<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "~/lateral/debug/processing_time_ms", 1);
@@ -112,9 +108,6 @@ tl::expected<LateralOutput, std::string> PurePursuitLateralControllerNode::run(
 
   if (result.lookahead_debug_values) {
     pub_debug_values_->publish(*result.lookahead_debug_values);
-  }
-  if (result.predicted_trajectory) {
-    pub_predicted_trajectory_->publish(*result.predicted_trajectory);
   }
 
   publish_processing_time(pub_processing_time_ms_, stop_watch, *clock_);

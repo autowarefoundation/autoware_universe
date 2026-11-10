@@ -454,8 +454,9 @@ TEST_F(TestAEB, CollisionDataKeeper)
   obj.position.x = 0.0;
   rclcpp::sleep_for(100ms);
 
+  // sleep_for only guarantees a lower bound, so stamp obj2 exactly 100 ms after obj
   ObjectData obj2;
-  obj2.stamp = aeb_node_->now();
+  obj2.stamp = obj.stamp + rclcpp::Duration(100ms);
   obj2.velocity = 0.0;
   obj2.position.x = 0.1;
   rclcpp::sleep_for(100ms);

@@ -23,7 +23,9 @@
 #include <tl_expected/expected.hpp>
 
 #include "autoware_control_msgs/msg/lateral.hpp"
+#include "autoware_planning_msgs/msg/trajectory.hpp"
 
+#include <optional>
 #include <string>
 
 namespace autoware::motion::control::trajectory_follower
@@ -34,6 +36,7 @@ struct LateralOutput
   Lateral control_cmd;
   LateralHorizon control_cmd_horizon;
   LateralSyncData sync_data;
+  std::optional<autoware_planning_msgs::msg::Trajectory> predicted_trajectory{std::nullopt};
 };
 
 class LateralControllerInterface

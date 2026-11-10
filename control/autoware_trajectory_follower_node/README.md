@@ -122,6 +122,7 @@ Giving the longitudinal controller information about steer convergence allows it
 #### Outputs
 
 - `autoware_control_msgs/Control`: message containing both lateral and longitudinal commands.
+- `autoware_planning_msgs/Trajectory`: trajectory that the lateral controller predicts for the ego vehicle. It is published on `~/output/predicted_trajectory` together with the control command.
 - `autoware_control_msgs/ControlHorizon`: message containing both lateral and longitudinal horizon commands. this is NOT published by default. by using this, the performance of vehicle control may be improved, and by turning the default on, it can be used as an experimental topic.
 
 #### Parameter
@@ -153,4 +154,4 @@ Debug information are published by the lateral and longitudinal controller using
 
 A configuration file for [PlotJuggler](https://github.com/facontidavide/PlotJuggler) is provided in the `config` folder which, when loaded, allow to automatically subscribe and visualize information useful for debugging.
 
-In addition, the predicted MPC trajectory is published on topic `output/lateral/predicted_trajectory` and can be visualized in Rviz.
+In addition, the predicted trajectory of the lateral controller is published on topic `~/output/predicted_trajectory` and can be visualized in Rviz.

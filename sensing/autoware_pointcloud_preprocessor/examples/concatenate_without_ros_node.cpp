@@ -58,6 +58,7 @@ using autoware::pointcloud_preprocessor::ConcatenatedFrame;
 using autoware::pointcloud_preprocessor::ConcatenatedFrameStatus;
 using autoware::pointcloud_preprocessor::ConcatenationDiagnosticsOptions;
 using autoware::pointcloud_preprocessor::MatchingStrategyType;
+using autoware::pointcloud_preprocessor::PointFormat;
 using point_cloud_msg_wrapper::PointCloud2Modifier;
 using sensor_msgs::msg::PointCloud2;
 
@@ -225,7 +226,8 @@ int main(int argc, char ** argv)
   const std::vector<double> offsets(input_topics.size(), 0.0);
   const std::vector<double> noise_windows(input_topics.size(), 0.02);
   CloudConcatenator<PointCloud2> concatenator(
-    input_topics, output_frame, /*timeout_sec=*/0.2, /*is_motion_compensated=*/true,
+    input_topics, output_frame, PointFormat::XYZIRC, /*timeout_sec=*/0.2,
+    /*is_motion_compensated=*/true,
     /*publish_synchronized_pointcloud=*/false,
     /*keep_input_frame_in_synchronized_pointcloud=*/false, MatchingStrategyType::advanced, offsets,
     noise_windows);

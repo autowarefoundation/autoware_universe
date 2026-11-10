@@ -4,7 +4,7 @@
   <name>tier4_camera_view_rviz_plugin</name>
   <version>0.53.0</version>
   <description>The autoware camera view rviz plugin package</description>
-  <maintainer email="uken.ryu@tier4.jp">Yuxuan Liu</maintainer>
+  <maintainer email="619684051@qq.com">Yuxuan Liu</maintainer>
   <maintainer email="makoto.yabuta@tier4.jp">Makoto Yabuta</maintainer>
   <license>Apache License 2.0</license>
 

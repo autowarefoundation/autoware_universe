@@ -142,7 +142,7 @@ void ActiveGeneratorPanel::subscribe()
     auto node = getDisplayContext()->getRosNodeAbstraction().lock()->get_raw_node();
     subscription_ =
       node->create_subscription<autoware_internal_planning_msgs::msg::ScoredCandidateTrajectories>(
-        "/planning/trajectory_selector/ranker/scored_trajectories", 10,
+        "/planning/trajectory_selector/trajectory_selector_node/output/scored_trajectories", 10,
         std::bind(&ActiveGeneratorPanel::processMessage, this, std::placeholders::_1));
   } catch (const std::exception & e) {
     generator_label_->setText("Error: Topic subscription failed");

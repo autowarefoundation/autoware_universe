@@ -6,7 +6,6 @@
   <description>The autoware_behavior_path_goal_planner_module package</description>
 
   <maintainer email="takumi.odashima@tier4.jp">Takumi Odashima</maintainer>
-  <maintainer email="kosuke.takeuchi@tier4.jp">Kosuke Takeuchi</maintainer>
   <maintainer email="mamoru.sobue@tier4.jp">Mamoru Sobue</maintainer>
 
   <license>Apache License 2.0</license>

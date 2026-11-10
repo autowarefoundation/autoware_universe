@@ -29,6 +29,7 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <type_traits>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -36,133 +37,70 @@
 namespace autoware::pointcloud_preprocessor
 {
 
+using autoware::point_types::PointXYZIRCT;
+
+bool CombineCloudHandler<sensor_msgs::msg::PointCloud2>::is_input_layout_supported(
+  const sensor_msgs::msg::PointCloud2 & cloud) const
+{
+  // Fields are read by name, so any cloud that carries the output fields can be rewritten.
+  return autoware::point_types::is_data_convertible_to(cloud.fields, output_fields_);
+}
+
 namespace
 {
 
-std::size_t field_byte_size(uint8_t datatype)
+/// Rewrites `input_cloud` into PointT. For PointXYZIRCT, `time_offset_ns` is added to every point's
+/// time_stamp.
+template <typename PointT, typename GeneratorT>
+void convert_cloud(
+  const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input_cloud,
+  sensor_msgs::msg::PointCloud2::UniquePtr & output_cloud, std::uint32_t time_offset_ns)
 {
-  using sensor_msgs::msg::PointField;
-  switch (datatype) {
-    case PointField::INT8:
-    case PointField::UINT8:
-      return 1;
-    case PointField::INT16:
-    case PointField::UINT16:
-      return 2;
-    case PointField::INT32:
-    case PointField::UINT32:
-    case PointField::FLOAT32:
-      return 4;
-    case PointField::FLOAT64:
-      return 8;
-    default:
-      return 0;
+  output_cloud->header = input_cloud->header;
+
+  PointCloud2Modifier<PointT, GeneratorT> output_modifier{
+    *output_cloud, input_cloud->header.frame_id};
+  output_modifier.reserve(input_cloud->width);
+
+  sensor_msgs::PointCloud2ConstIterator<float> it_x(*input_cloud, "x");
+  sensor_msgs::PointCloud2ConstIterator<float> it_y(*input_cloud, "y");
+  sensor_msgs::PointCloud2ConstIterator<float> it_z(*input_cloud, "z");
+  sensor_msgs::PointCloud2ConstIterator<std::uint8_t> it_i(*input_cloud, "intensity");
+  sensor_msgs::PointCloud2ConstIterator<std::uint8_t> it_r(*input_cloud, "return_type");
+  sensor_msgs::PointCloud2ConstIterator<std::uint16_t> it_c(*input_cloud, "channel");
+  std::optional<sensor_msgs::PointCloud2ConstIterator<std::uint32_t>> it_t;
+  if constexpr (std::is_same_v<PointT, PointXYZIRCT>) {
+    it_t.emplace(*input_cloud, "time_stamp");
+  }
+
+  for (; it_x != it_x.end(); ++it_x, ++it_y, ++it_z, ++it_i, ++it_r, ++it_c) {
+    PointT point;
+    point.x = *it_x;
+    point.y = *it_y;
+    point.z = *it_z;
+    point.intensity = *it_i;
+    point.return_type = *it_r;
+    point.channel = *it_c;
+    if constexpr (std::is_same_v<PointT, PointXYZIRCT>) {
+      point.time_stamp = time_offset_ns + **it_t;
+      ++*it_t;
+    }
+    output_modifier.push_back(std::move(point));
   }
 }
 
 }  // namespace
 
-// The XYZIRC conversion walks the cloud with sensor_msgs::PointCloud2ConstIterator, whose end is
-// data.size() past the field offset in steps of point_step: a layout where those do not line up
-// never reaches the end and reads past the buffer. Reject such a cloud before building any
-// iterator, with std::invalid_argument so the caller (node, example, Python) sees a bad input.
-void validate_cloud_layout(const sensor_msgs::msg::PointCloud2 & cloud)
-{
-  // No data means an empty cloud whatever width/height say (drivers and the node's tests send a
-  // "null" cloud that way): nothing is read from it, so there is nothing to check.
-  if (cloud.data.empty()) return;
-  if (cloud.point_step == 0) {
-    throw std::invalid_argument("invalid point cloud layout: point_step must be positive");
-  }
-  const std::size_t points = static_cast<std::size_t>(cloud.width) * cloud.height;
-  if (cloud.data.size() < points * cloud.point_step) {
-    throw std::invalid_argument(
-      "invalid point cloud layout: data holds " + std::to_string(cloud.data.size()) +
-      " bytes but width * height * point_step is " + std::to_string(points * cloud.point_step));
-  }
-  if (cloud.data.size() % cloud.point_step != 0) {
-    throw std::invalid_argument(
-      "invalid point cloud layout: data size " + std::to_string(cloud.data.size()) +
-      " is not a multiple of point_step " + std::to_string(cloud.point_step));
-  }
-  for (const auto & field : cloud.fields) {
-    const std::size_t size = field_byte_size(field.datatype);
-    if (size == 0) {
-      throw std::invalid_argument(
-        "invalid point cloud layout: field '" + field.name + "' has unknown datatype " +
-        std::to_string(field.datatype));
-    }
-    if (static_cast<std::size_t>(field.offset) + size * field.count > cloud.point_step) {
-      throw std::invalid_argument(
-        "invalid point cloud layout: field '" + field.name + "' extends past point_step " +
-        std::to_string(cloud.point_step));
-    }
-  }
-  for (const char * name : {"x", "y", "z"}) {
-    const auto it = std::find_if(
-      cloud.fields.begin(), cloud.fields.end(), [name](const auto & f) { return f.name == name; });
-    if (it == cloud.fields.end() || it->datatype != sensor_msgs::msg::PointField::FLOAT32) {
-      throw std::invalid_argument(
-        std::string("invalid point cloud layout: field '") + name +
-        "' is missing or is not FLOAT32");
-    }
-  }
-}
-
-void CombineCloudHandler<sensor_msgs::msg::PointCloud2>::convert_to_xyzirc_cloud(
+void CombineCloudHandler<sensor_msgs::msg::PointCloud2>::convert_to_output_cloud(
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input_cloud,
-  sensor_msgs::msg::PointCloud2::UniquePtr & xyzirc_cloud)
+  sensor_msgs::msg::PointCloud2::UniquePtr & output_cloud, std::uint32_t time_offset_ns) const
 {
-  validate_cloud_layout(*input_cloud);
-  xyzirc_cloud->header = input_cloud->header;
-
-  PointCloud2Modifier<PointXYZIRC, autoware::point_types::PointXYZIRCGenerator> output_modifier{
-    *xyzirc_cloud, input_cloud->header.frame_id};
-  output_modifier.reserve(input_cloud->width);
-  if (input_cloud->data.empty()) return;  // nothing to read; the iterators below need data
-
-  bool has_valid_intensity =
-    std::any_of(input_cloud->fields.begin(), input_cloud->fields.end(), [](const auto & field) {
-      return field.name == "intensity" && field.datatype == sensor_msgs::msg::PointField::UINT8;
-    });
-
-  bool has_valid_return_type =
-    std::any_of(input_cloud->fields.begin(), input_cloud->fields.end(), [](const auto & field) {
-      return field.name == "return_type" && field.datatype == sensor_msgs::msg::PointField::UINT8;
-    });
-
-  bool has_valid_channel =
-    std::any_of(input_cloud->fields.begin(), input_cloud->fields.end(), [](const auto & field) {
-      return field.name == "channel" && field.datatype == sensor_msgs::msg::PointField::UINT16;
-    });
-
-  sensor_msgs::PointCloud2ConstIterator<float> it_x(*input_cloud, "x");
-  sensor_msgs::PointCloud2ConstIterator<float> it_y(*input_cloud, "y");
-  sensor_msgs::PointCloud2ConstIterator<float> it_z(*input_cloud, "z");
-
-  if (has_valid_intensity && has_valid_return_type && has_valid_channel) {
-    sensor_msgs::PointCloud2ConstIterator<std::uint8_t> it_i(*input_cloud, "intensity");
-    sensor_msgs::PointCloud2ConstIterator<std::uint8_t> it_r(*input_cloud, "return_type");
-    sensor_msgs::PointCloud2ConstIterator<std::uint16_t> it_c(*input_cloud, "channel");
-
-    for (; it_x != it_x.end(); ++it_x, ++it_y, ++it_z, ++it_i, ++it_r, ++it_c) {
-      PointXYZIRC point;
-      point.x = *it_x;
-      point.y = *it_y;
-      point.z = *it_z;
-      point.intensity = *it_i;
-      point.return_type = *it_r;
-      point.channel = *it_c;
-      output_modifier.push_back(std::move(point));
-    }
+  if (output_point_format_ == PointFormat::XYZIRCT) {
+    convert_cloud<PointXYZIRCT, autoware::point_types::PointXYZIRCTGenerator>(
+      input_cloud, output_cloud, time_offset_ns);
   } else {
-    for (; it_x != it_x.end(); ++it_x, ++it_y, ++it_z) {
-      PointXYZIRC point;
-      point.x = *it_x;
-      point.y = *it_y;
-      point.z = *it_z;
-      output_modifier.push_back(std::move(point));
-    }
+    convert_cloud<PointXYZIRC, autoware::point_types::PointXYZIRCGenerator>(
+      input_cloud, output_cloud, 0U);
   }
 }
 
@@ -193,7 +131,7 @@ void CombineCloudHandler<sensor_msgs::msg::PointCloud2>::transform_pointcloud(
 void CombineCloudHandler<sensor_msgs::msg::PointCloud2>::append_pointcloud(
   const sensor_msgs::msg::PointCloud2 & src, sensor_msgs::msg::PointCloud2 & dst)
 {
-  // Both clouds share the PointXYZIRC layout (identical fields and point_step), so concatenating is
+  // Both clouds share the output layout (identical fields and point_step), so concatenating is
   // a byte append of the point data. width/height/row_step are recomputed by the caller afterwards.
   dst.data.insert(dst.data.end(), src.data.begin(), src.data.end());
 }
@@ -258,11 +196,17 @@ void CombineCloudHandler<sensor_msgs::msg::PointCloud2>::initialize_concatenated
 
   {
     // append_pointcloud() is a raw byte append and never creates or copies a field layout, so the
-    // output cloud's XYZIRC layout (fields, point_step, frame_id) must be established here up
-    // front. This also keeps the output XYZIRC-compatible when every input cloud is empty and
+    // output cloud's layout (fields, point_step, frame_id) must be established here up
+    // front. This also keeps the output layout-compatible when every input cloud is empty and
     // nothing is ever appended.
-    PointCloud2Modifier<PointXYZIRC, autoware::point_types::PointXYZIRCGenerator>
-      concatenate_cloud_modifier{*result.concatenate_cloud_ptr, output_frame_};
+    auto & concatenate_cloud = *result.concatenate_cloud_ptr;
+    if (output_point_format_ == PointFormat::XYZIRCT) {
+      PointCloud2Modifier<PointXYZIRCT, autoware::point_types::PointXYZIRCTGenerator>
+        concatenate_cloud_modifier{concatenate_cloud, output_frame_};
+    } else {
+      PointCloud2Modifier<PointXYZIRC, autoware::point_types::PointXYZIRCGenerator>
+        concatenate_cloud_modifier{concatenate_cloud, output_frame_};
+    }
   }
 
   // An empty cloud is trivially dense; process_input_cloud() folds in each appended cloud's
@@ -337,21 +281,24 @@ void CombineCloudHandler<sensor_msgs::msg::PointCloud2>::process_input_cloud(
   std::unordered_map<builtin_interfaces::msg::Time, Eigen::Matrix4f, TimeHash> & transform_memo,
   ConcatenatedCloudResult<sensor_msgs::msg::PointCloud2> & result)
 {
-  // convert to XYZIRC pointcloud if pointcloud is not empty
-  auto xyzirc_cloud = std::make_unique<sensor_msgs::msg::PointCloud2>();
-  convert_to_xyzirc_cloud(cloud, xyzirc_cloud);
+  // Rewrite into the output point type. Point times, if kept, are rebased from this cloud's
+  // header stamp onto the concatenated cloud's (oldest_stamp).
+  const auto time_offset_ns =
+    static_cast<std::uint32_t>(subtract(cloud->header.stamp, oldest_stamp).count());
+  auto converted_cloud = std::make_unique<sensor_msgs::msg::PointCloud2>();
+  convert_to_output_cloud(cloud, converted_cloud, time_offset_ns);
 
-  const auto sensor_to_output = get_transform_to_output_frame(xyzirc_cloud->header.frame_id);
+  const auto sensor_to_output = get_transform_to_output_frame(converted_cloud->header.frame_id);
   if (!sensor_to_output.has_value()) {
-    result.dropped_sources_missing_transform.push_back({topic, xyzirc_cloud->header.frame_id});
+    result.dropped_sources_missing_transform.push_back({topic, converted_cloud->header.frame_id});
     concatenation_info_manager_.update_source_from_point_cloud(
-      *xyzirc_cloud, topic, autoware_sensing_msgs::msg::SourcePointCloudInfo::STATUS_INVALID,
+      *converted_cloud, topic, autoware_sensing_msgs::msg::SourcePointCloudInfo::STATUS_INVALID,
       *result.concatenation_info_ptr);
     return;
   }
 
   auto transformed_cloud_ptr = std::make_unique<sensor_msgs::msg::PointCloud2>();
-  transform_pointcloud(*sensor_to_output, *xyzirc_cloud, *transformed_cloud_ptr);
+  transform_pointcloud(*sensor_to_output, *converted_cloud, *transformed_cloud_ptr);
   transformed_cloud_ptr->header.frame_id = output_frame_;
 
   // compensate pointcloud
@@ -371,7 +318,7 @@ void CombineCloudHandler<sensor_msgs::msg::PointCloud2>::process_input_cloud(
     0) {
     append_pointcloud(*transformed_delay_compensated_cloud_ptr, *result.concatenate_cloud_ptr);
     // Fold this source cloud's density into the running output density (uses the original cloud's
-    // is_dense, which the XYZIRC conversion does not carry over).
+    // is_dense, which the output conversion does not carry over).
     result.concatenate_cloud_ptr->is_dense =
       result.concatenate_cloud_ptr->is_dense && cloud->is_dense;
   }

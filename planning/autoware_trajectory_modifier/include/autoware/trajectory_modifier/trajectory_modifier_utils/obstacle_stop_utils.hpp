@@ -27,6 +27,7 @@
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 
+#include <boost/functional/hash.hpp>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_hash.hpp>

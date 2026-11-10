@@ -166,7 +166,6 @@ MpcLateralControllerNode::MpcLateralControllerNode(
 {
   m_controller = std::make_unique<MpcLateralController>(createConfig(node), writer_);
 
-  m_pub_predicted_traj = node.create_publisher<Trajectory>("~/output/predicted_trajectory", 1);
   m_pub_predicted_traj_frenet =
     node.create_publisher<Trajectory>("~/debug/predicted_trajectory_in_frenet_coordinate", 1);
   m_pub_resampled_reference_traj =
@@ -208,9 +207,6 @@ tl::expected<trajectory_follower::LateralOutput, std::string> MpcLateralControll
 
 void MpcLateralControllerNode::publish(const MpcLateralControllerResult & result)
 {
-  auto predicted_trajectory = result.mpc.predicted_trajectory;
-  m_pub_predicted_traj->publish(predicted_trajectory);
-
   if (result.mpc.debug_msgs) {
     const auto & debug_msgs = *result.mpc.debug_msgs;
     m_pub_predicted_traj_frenet->publish(debug_msgs.predicted_trajectory_frenet);

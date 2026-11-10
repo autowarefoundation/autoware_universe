@@ -22,6 +22,7 @@
 
 #include <algorithm>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
@@ -29,6 +30,59 @@
 namespace autoware::pointcloud_preprocessor
 {
 using autoware::point_types::PointXYZIRADRT;
+
+namespace
+{
+using autoware::point_types::PointXYZIRCAEDT;
+
+// Returns the number of points skipped because their channel is out of range
+size_t group_points_by_ring(
+  const sensor_msgs::msg::PointCloud2 & input, const size_t channel_offset,
+  const size_t max_points_num_per_ring, std::vector<std::vector<size_t>> & ring2indices)
+{
+  // is_valid() already rejects this, but faster_filter() can also be called directly
+  if (input.point_step == 0) {
+    return 0;
+  }
+
+  for (auto & indices : ring2indices) {
+    indices.reserve(max_points_num_per_ring);
+  }
+
+  size_t num_points_with_invalid_ring = 0;
+  for (size_t data_idx = 0; data_idx + channel_offset + sizeof(uint16_t) <= input.data.size();
+       data_idx += input.point_step) {
+    const uint16_t ring =
+      *reinterpret_cast<const uint16_t *>(&input.data[data_idx + channel_offset]);
+    if (ring >= ring2indices.size()) {
+      ++num_points_with_invalid_ring;
+      continue;
+    }
+    ring2indices[ring].push_back(data_idx);
+  }
+  return num_points_with_invalid_ring;
+}
+
+std::vector<pcl::PointCloud<PointXYZIRCAEDT>> split_points_by_ring(
+  const pcl::PointCloud<PointXYZIRCAEDT> & cloud, const uint32_t vertical_bins)
+{
+  std::vector<pcl::PointCloud<PointXYZIRCAEDT>> ring_point_clouds(vertical_bins);
+  for (const auto & point : cloud.points) {
+    if (point.channel < vertical_bins) {
+      ring_point_clouds[point.channel].push_back(point);
+    }
+  }
+  return ring_point_clouds;
+}
+
+// Float rounding can give num_bins for an azimuth just below max_azimuth.
+// num_bins > 0 is guaranteed by validate_visibility_param().
+uint32_t to_bin_index(
+  const float azimuth, const float min_azimuth, const float resolution, const uint32_t num_bins)
+{
+  return std::min(static_cast<uint32_t>((azimuth - min_azimuth) / resolution), num_bins - 1);
+}
+}  // namespace
 
 RingOutlierFilterComponent::RingOutlierFilterComponent(const rclcpp::NodeOptions & options)
 : Filter("RingOutlierFilter", options)
@@ -61,13 +115,18 @@ RingOutlierFilterComponent::RingOutlierFilterComponent(const rclcpp::NodeOptions
 
     publish_outlier_pointcloud_ = declare_parameter<bool>("publish_outlier_pointcloud");
 
-    min_azimuth_deg_ = declare_parameter<float>("min_azimuth_deg");
-    max_azimuth_deg_ = declare_parameter<float>("max_azimuth_deg");
+    visibility_param_.min_azimuth_deg = declare_parameter<float>("min_azimuth_deg");
+    visibility_param_.max_azimuth_deg = declare_parameter<float>("max_azimuth_deg");
     max_distance_ = declare_parameter<float>("max_distance");
-    vertical_bins_ = declare_parameter<int>("vertical_bins");
-    horizontal_bins_ = declare_parameter<int>("horizontal_bins");
+    visibility_param_.vertical_bins = declare_parameter<int>("vertical_bins");
+    visibility_param_.horizontal_bins = declare_parameter<int>("horizontal_bins");
     noise_threshold_ = declare_parameter<int>("noise_threshold");
     processing_time_threshold_sec_ = declare_parameter<float>("processing_time_threshold_sec");
+
+    std::string reason;
+    if (!validate_visibility_param(visibility_param_, reason)) {
+      throw std::invalid_argument(reason);
+    }
   }
 
   // Diagnostic
@@ -108,18 +167,14 @@ void RingOutlierFilterComponent::faster_filter(
   const auto input_return_type_offset =
     input->fields.at(static_cast<size_t>(InputPointIndex::ReturnType)).offset;
 
-  std::vector<std::vector<size_t>> ring2indices;
-  ring2indices.reserve(max_rings_num_);
-
-  for (uint16_t i = 0; i < max_rings_num_; i++) {
-    ring2indices.push_back(std::vector<size_t>());
-    ring2indices.back().reserve(max_points_num_per_ring_);
-  }
-
-  for (size_t data_idx = 0; data_idx < input->data.size(); data_idx += input->point_step) {
-    const uint16_t ring =
-      *reinterpret_cast<const uint16_t *>(&input->data[data_idx + input_channel_offset]);
-    ring2indices[ring].push_back(data_idx);
+  std::vector<std::vector<size_t>> ring2indices(max_rings_num_);
+  const size_t num_points_with_invalid_ring =
+    group_points_by_ring(*input, input_channel_offset, max_points_num_per_ring_, ring2indices);
+  if (num_points_with_invalid_ring > 0) {
+    RCLCPP_WARN_THROTTLE(
+      get_logger(), *get_clock(), 5000,
+      "Skipped %zu points whose channel is not less than max_rings_num (%u).",
+      num_points_with_invalid_ring, static_cast<unsigned int>(max_rings_num_));
   }
 
   // walk range: [walk_first_idx, walk_last_idx]
@@ -182,7 +237,7 @@ void RingOutlierFilterComponent::faster_filter(
             &input->data[indices[i] + input_return_type_offset]);
           output_ptr->return_type = return_type;
 
-          const std::uint8_t & channel = *reinterpret_cast<const std::uint8_t *>(
+          const std::uint16_t & channel = *reinterpret_cast<const std::uint16_t *>(
             &input->data[indices[i] + input_channel_offset]);
           output_ptr->channel = channel;
 
@@ -235,8 +290,8 @@ void RingOutlierFilterComponent::faster_filter(
           &input->data[indices[i] + input_return_type_offset]);
         output_ptr->return_type = return_type;
 
-        const std::uint8_t & channel =
-          *reinterpret_cast<const std::uint8_t *>(&input->data[indices[i] + input_channel_offset]);
+        const std::uint16_t & channel =
+          *reinterpret_cast<const std::uint16_t *>(&input->data[indices[i] + input_channel_offset]);
         output_ptr->channel = channel;
 
         output_size += output.point_step;
@@ -336,10 +391,43 @@ void RingOutlierFilterComponent::filter(
   (void)output;
 }
 
+bool RingOutlierFilterComponent::validate_visibility_param(
+  const VisibilityParam & param, std::string & reason)
+{
+  if (param.vertical_bins < 1) {
+    reason = "vertical_bins must be at least 1";
+    return false;
+  }
+  if (param.horizontal_bins < 1) {
+    reason = "horizontal_bins must be at least 1";
+    return false;
+  }
+  if (!(param.min_azimuth_deg < param.max_azimuth_deg)) {
+    reason = "min_azimuth_deg must be less than max_azimuth_deg";
+    return false;
+  }
+  return true;
+}
+
 rcl_interfaces::msg::SetParametersResult RingOutlierFilterComponent::param_callback(
   const std::vector<rclcpp::Parameter> & p)
 {
   std::scoped_lock lock(mutex_);
+
+  rcl_interfaces::msg::SetParametersResult result;
+
+  // Check the new values together before applying any of them
+  VisibilityParam new_visibility_param = visibility_param_;
+  get_param(p, "vertical_bins", new_visibility_param.vertical_bins);
+  get_param(p, "horizontal_bins", new_visibility_param.horizontal_bins);
+  get_param(p, "min_azimuth_deg", new_visibility_param.min_azimuth_deg);
+  get_param(p, "max_azimuth_deg", new_visibility_param.max_azimuth_deg);
+  std::string reason;
+  if (!validate_visibility_param(new_visibility_param, reason)) {
+    result.successful = false;
+    result.reason = reason;
+    return result;
+  }
 
   if (get_param(p, "distance_ratio", distance_ratio_)) {
     RCLCPP_DEBUG(get_logger(), "Setting new distance ratio to: %f.", distance_ratio_);
@@ -352,26 +440,29 @@ rcl_interfaces::msg::SetParametersResult RingOutlierFilterComponent::param_callb
     RCLCPP_DEBUG(
       get_logger(), "Setting new publish_outlier_pointcloud to: %d.", publish_outlier_pointcloud_);
   }
-  if (get_param(p, "vertical_bins", vertical_bins_)) {
-    RCLCPP_DEBUG(get_logger(), "Setting new vertical_bins to: %d.", vertical_bins_);
+  if (get_param(p, "vertical_bins", visibility_param_.vertical_bins)) {
+    RCLCPP_DEBUG(
+      get_logger(), "Setting new vertical_bins to: %d.", visibility_param_.vertical_bins);
   }
-  if (get_param(p, "horizontal_bins", horizontal_bins_)) {
-    RCLCPP_DEBUG(get_logger(), "Setting new horizontal_bins to: %d.", horizontal_bins_);
+  if (get_param(p, "horizontal_bins", visibility_param_.horizontal_bins)) {
+    RCLCPP_DEBUG(
+      get_logger(), "Setting new horizontal_bins to: %d.", visibility_param_.horizontal_bins);
   }
   if (get_param(p, "noise_threshold", noise_threshold_)) {
     RCLCPP_DEBUG(get_logger(), "Setting new noise_threshold to: %d.", noise_threshold_);
   }
-  if (get_param(p, "max_azimuth_deg", max_azimuth_deg_)) {
-    RCLCPP_DEBUG(get_logger(), "Setting new max_azimuth_deg to: %f.", max_azimuth_deg_);
+  if (get_param(p, "max_azimuth_deg", visibility_param_.max_azimuth_deg)) {
+    RCLCPP_DEBUG(
+      get_logger(), "Setting new max_azimuth_deg to: %f.", visibility_param_.max_azimuth_deg);
   }
-  if (get_param(p, "min_azimuth_deg", min_azimuth_deg_)) {
-    RCLCPP_DEBUG(get_logger(), "Setting new min_azimuth_deg to: %f.", min_azimuth_deg_);
+  if (get_param(p, "min_azimuth_deg", visibility_param_.min_azimuth_deg)) {
+    RCLCPP_DEBUG(
+      get_logger(), "Setting new min_azimuth_deg to: %f.", visibility_param_.min_azimuth_deg);
   }
   if (get_param(p, "max_distance", max_distance_)) {
     RCLCPP_DEBUG(get_logger(), "Setting new max_distance to: %f.", max_distance_);
   }
 
-  rcl_interfaces::msg::SetParametersResult result;
   result.successful = true;
   result.reason = "success";
 
@@ -406,21 +497,16 @@ float RingOutlierFilterComponent::calculate_visibility_score(
   pcl::PointCloud<InputPointType>::Ptr input_cloud(new pcl::PointCloud<InputPointType>);
   pcl::fromROSMsg(input, *input_cloud);
 
-  const uint32_t vertical_bins = vertical_bins_;
-  const uint32_t horizontal_bins = horizontal_bins_;
-  const float max_azimuth = max_azimuth_deg_ * (M_PI / 180.f);
-  const float min_azimuth = min_azimuth_deg_ * (M_PI / 180.f);
+  const uint32_t vertical_bins = visibility_param_.vertical_bins;
+  const uint32_t horizontal_bins = visibility_param_.horizontal_bins;
+  const float max_azimuth = visibility_param_.max_azimuth_deg * (M_PI / 180.f);
+  const float min_azimuth = visibility_param_.min_azimuth_deg * (M_PI / 180.f);
 
-  const uint32_t horizontal_resolution =
-    static_cast<uint32_t>((max_azimuth - min_azimuth) / horizontal_bins);
+  const float horizontal_resolution =
+    (max_azimuth - min_azimuth) / static_cast<float>(horizontal_bins);
 
-  std::vector<pcl::PointCloud<InputPointType>> ring_point_clouds(vertical_bins);
+  const auto ring_point_clouds = split_points_by_ring(*input_cloud, vertical_bins);
   cv::Mat frequency_image(cv::Size(horizontal_bins, vertical_bins), CV_8UC1, cv::Scalar(0));
-
-  // Split points into rings
-  for (const auto & point : input_cloud->points) {
-    ring_point_clouds.at(point.channel).push_back(point);
-  }
 
   // Calculate frequency for each bin in each ring
   for (const auto & ring_points : ring_point_clouds) {
@@ -433,8 +519,8 @@ float RingOutlierFilterComponent::calculate_visibility_score(
       if (point.azimuth < min_azimuth || point.azimuth >= max_azimuth) continue;
       if (point.distance >= max_distance_) continue;
 
-      const uint bin_index =
-        static_cast<uint>((point.azimuth - min_azimuth) / horizontal_resolution);
+      const uint32_t bin_index =
+        to_bin_index(point.azimuth, min_azimuth, horizontal_resolution, horizontal_bins);
 
       frequency_in_ring[bin_index]++;
       frequency_in_ring[bin_index] =

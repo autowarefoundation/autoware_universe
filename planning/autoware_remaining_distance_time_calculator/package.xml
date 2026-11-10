@@ -4,9 +4,11 @@
   <version>0.53.0</version>
   <description>Calculates and publishes remaining distance and time of the mission.</description>
 
-  <maintainer email="ahmed.ebrahim@leodrive.ai">Ahmed Ebrahim</maintainer>
+  <maintainer email="mfc@autoware.org">Mete Fatih Cırıt</maintainer>
+  <maintainer email="ryohsuke.mitsudome@tier4.jp">Ryohsuke Mitsudome</maintainer>
 
   <license>Apache License 2.0</license>
+  <author email="ahmed.ebrahim@leodrive.ai">Ahmed Ebrahim</author>
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
   <buildtool_depend>autoware_cmake</buildtool_depend>

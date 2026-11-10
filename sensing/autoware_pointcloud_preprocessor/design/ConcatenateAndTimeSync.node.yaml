@@ -1,4 +1,4 @@
-autoware_system_design_format: 0.3.0
+autoware_system_design_format: 0.4.1
 
 # node information
 name: ConcatenateAndTimeSync.node
@@ -42,12 +42,21 @@ param_values:
   - name: output_frame
     type: string
     default: base_link
+  - name: output_point_type
+    type: string
+    default: XYZIRC
   - name: input_topics
     type: array
     default: "[${input input1}, ${input input2}]"
 
 # processes
 processes:
+  - name: queue_twist
+    trigger_conditions:
+      - on_input: twist
+      - on_input: odometry
+    outcomes:
+      - to_queue: twist
   - name: update
     trigger_conditions:
       - on_input: input1
@@ -58,5 +67,8 @@ processes:
     trigger_conditions:
       - on_trigger: update
       - periodic: 10.0 # Hz
+    reads:
+      - from_queue: twist
     outcomes:
       - to_output: output
+      - to_output: output_info

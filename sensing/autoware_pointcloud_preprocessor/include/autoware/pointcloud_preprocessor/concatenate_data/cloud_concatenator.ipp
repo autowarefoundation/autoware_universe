@@ -69,8 +69,9 @@ std::unique_ptr<MatchingPolicy> CloudConcatenator<PointCloudMsgT>::make_matching
 template <typename PointCloudMsgT>
 CloudConcatenator<PointCloudMsgT>::CloudConcatenator(
   const std::vector<std::string> & input_topics, const std::string & output_frame,
-  double timeout_sec, bool is_motion_compensated, bool publish_synchronized_pointcloud,
-  bool keep_input_frame_in_synchronized_pointcloud, MatchingStrategyType matching_strategy,
+  PointFormat output_point_format, double timeout_sec, bool is_motion_compensated,
+  bool publish_synchronized_pointcloud, bool keep_input_frame_in_synchronized_pointcloud,
+  MatchingStrategyType matching_strategy,
   const std::optional<std::vector<double>> & lidar_timestamp_offsets,
   const std::optional<std::vector<double>> & lidar_timestamp_noise_window,
   std::size_t max_open_collectors, LateCloudPolicy late_cloud_policy)
@@ -82,8 +83,8 @@ CloudConcatenator<PointCloudMsgT>::CloudConcatenator(
   matching_policy_(make_matching_policy(
     input_topics, matching_strategy, lidar_timestamp_offsets, lidar_timestamp_noise_window)),
   handler_(
-    input_topics, output_frame, is_motion_compensated, publish_synchronized_pointcloud,
-    keep_input_frame_in_synchronized_pointcloud, matching_strategy)
+    input_topics, output_frame, output_point_format, is_motion_compensated,
+    publish_synchronized_pointcloud, keep_input_frame_in_synchronized_pointcloud, matching_strategy)
 {
 }
 
@@ -116,10 +117,14 @@ std::vector<ConcatenatedFrame<PointCloudMsgT>> CloudConcatenator<PointCloudMsgT>
     throw std::invalid_argument(
       "unknown topic '" + topic + "'; expected one of the configured input_topics");
   }
-  if (!cloud) {
-    throw std::invalid_argument("cloud must not be null");
+
+  // The node drops unsupported clouds before reaching here; the offline API (example, bindings)
+  // has no such gate, so refuse the cloud before any collector state changes.
+  if (!handler_.is_input_layout_supported(*cloud)) {
+    throw std::invalid_argument(
+      "the point cloud layout of topic '" + topic +
+      "' cannot be converted to the configured output point type");
   }
-  validate_cloud_layout(*cloud);  // before any state changes, so a bad cloud is blamed on this call
 
   // (1) Timeout: close any collector whose timer has expired in arrival time (it can no longer
   // receive more clouds).

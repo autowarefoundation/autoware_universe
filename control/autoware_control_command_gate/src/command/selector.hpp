@@ -24,6 +24,14 @@
 #include <string>
 #include <unordered_map>
 
+namespace autoware::control_command_gate::source_types
+{
+
+constexpr uint16_t unknown = 0;
+constexpr uint16_t builtin = 1;
+
+}  // namespace autoware::control_command_gate::source_types
+
 namespace autoware::control_command_gate
 {
 

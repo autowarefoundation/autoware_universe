@@ -802,7 +802,7 @@ MPCMatrix MPC::generateMPCMatrix(
     m.R2ex.block(i, i, 2, 2) += J;
   }
 
-  addSteerWeightR(prediction_dt, m.R1ex);
+  addSteerWeightR(prediction_dt, m.R2ex);
 
   return m;
 }
@@ -934,14 +934,16 @@ void MPC::addSteerWeightR(const double prediction_dt, MatrixXd & R) const
 
 void MPC::addSteerWeightF(const double prediction_dt, MatrixXd & f) const
 {
-  if (f.rows() < 2) {
+  // f is a row vector (1 x DIM_U_N)
+  if (f.cols() < 2) {
     return;
   }
 
   const double DT = prediction_dt;
 
-  // steer rate for i = 0
-  f(0, 0) += -2.0 * m_param.nominal_weight.steer_rate / (std::pow(DT, 2)) * 0.5;
+  // steer rate for i = 0: {(u(0) - u_prev) / ctrl_period}^2
+  f(0, 0) += -2.0 * m_raw_steer_cmd_prev * m_param.nominal_weight.steer_rate /
+             (m_ctrl_period * m_ctrl_period) * 0.5;
 
   // const double steer_acc_r = m_param.weight_steer_acc / std::pow(DT, 4);
   const double steer_acc_r_cp1 =
@@ -951,7 +953,7 @@ void MPC::addSteerWeightF(const double prediction_dt, MatrixXd & f) const
   const double steer_acc_r_cp4 = m_param.nominal_weight.steer_acc / std::pow(m_ctrl_period, 4);
 
   // steer acc  i = 0
-  f(0, 0) += ((-2.0 * m_raw_steer_cmd_prev + m_raw_steer_cmd_pprev) * steer_acc_r_cp4) * 0.5;
+  f(0, 0) += (2.0 * (-2.0 * m_raw_steer_cmd_prev + m_raw_steer_cmd_pprev) * steer_acc_r_cp4) * 0.5;
 
   // steer acc for i = 1
   f(0, 0) += (-2.0 * m_raw_steer_cmd_prev * (steer_acc_r_cp1 + steer_acc_r_cp2)) * 0.5;
@@ -1084,7 +1086,9 @@ VectorXd MPC::calcSteerRateLimitOnTrajectory(
   // calculate steering rate limit
   VectorXd steer_rate_limits = VectorXd::Zero(m_param.prediction_horizon);
   for (int i = 0; i < m_param.prediction_horizon; ++i) {
-    const auto limit_by_curvature = interp(m_steer_rate_lim_map_by_curvature, trajectory.k.at(i));
+    // The limit depends on how sharp the curve is, not on the turn direction.
+    const auto limit_by_curvature =
+      interp(m_steer_rate_lim_map_by_curvature, std::fabs(trajectory.k.at(i)));
     const auto limit_by_velocity = interp(m_steer_rate_lim_map_by_velocity, trajectory.vx.at(i));
     steer_rate_limits(i) = std::min(limit_by_curvature, limit_by_velocity);
   }
