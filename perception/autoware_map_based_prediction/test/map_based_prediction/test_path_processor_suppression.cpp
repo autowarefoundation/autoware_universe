@@ -24,6 +24,7 @@
 #include <lanelet2_routing/RoutingGraph.h>
 #include <lanelet2_traffic_rules/TrafficRulesFactory.h>
 
+#include <algorithm>
 #include <cmath>
 #include <memory>
 #include <utility>
@@ -155,6 +156,40 @@ protected:
       object_, {}, lanelet_ref_paths, suppressed, nullptr, &processing_passes_);
   }
 
+  // Constant-speed trajectory sampled like the path generator (speed * 0.5 s): a straight
+  // section of straight_length followed by an arc of the given radius (0 means straight only).
+  TrajectoryPoints trajectory(
+    const double speed, const double straight_length, const double radius,
+    const double first_yaw = 0.0)
+  {
+    TrajectoryPoints points;
+    const double interval = speed * params_.prediction_sampling_time_interval;
+    for (int i = 0; i <= 20; ++i) {
+      const double s = i * interval;
+      const double arc = std::max(s - straight_length, 0.0);
+      const double yaw = radius > 0.0 ? arc / radius : 0.0;
+      TrajectoryPoint p;
+      p.pose.position.x = radius > 0.0 && arc > 0.0 ? straight_length + radius * std::sin(yaw)
+                                                    : std::min(s, straight_length + arc);
+      p.pose.position.y = radius > 0.0 ? radius * (1.0 - std::cos(yaw)) : 0.0;
+      const double pose_yaw = i == 0 ? first_yaw : yaw;
+      p.pose.orientation.z = std::sin(pose_yaw / 2.0);
+      p.pose.orientation.w = std::cos(pose_yaw / 2.0);
+      p.longitudinal_velocity_mps = speed;
+      points.push_back(p);
+    }
+    return points;
+  }
+
+  bool satisfied(const TrajectoryPoints & points, const double max_accel, const double min_accel)
+  {
+    params_.max_lateral_accel = max_accel;
+    params_.min_acceleration_before_curve = min_accel;
+    processor_->setParams(params_);
+    return processor_->isLateralAccelerationConstraintSatisfied(
+      points, params_.prediction_sampling_time_interval);
+  }
+
   lanelet::LaneletMapPtr map_{std::make_shared<lanelet::LaneletMap>()};
   std::shared_ptr<autoware::agnocast_wrapper::Node> node_;
   std::unique_ptr<PathProcessor> processor_;
@@ -219,8 +254,11 @@ TEST_F(PathProcessorSuppressionTest, OnePointCenterWithoutLaneChangeUsesStraight
   EXPECT_DOUBLE_EQ(result->kinematics.predicted_paths.front().path.back().position.y, 0.0);
 }
 
-TEST_F(PathProcessorSuppressionTest, RestoresLaneChangeWhenCenterFailsLateralAcceleration)
+TEST_F(PathProcessorSuppressionTest, KeepsLaneChangeSuppressedWhenCenterFailsLateralAcceleration)
 {
+  // The lane-follow path exists on the map; exceeding the lateral acceleration limit on it is no
+  // evidence of a lane change, so the held lane change is not restored. The center comes back as
+  // the smallest-curvature fallback.
   const auto center = candidate(100, Maneuver::LANE_FOLLOW);
   const auto held = candidate(200, Maneuver::LEFT_LANE_CHANGE);
   cache(center, reference(true));
@@ -231,10 +269,46 @@ TEST_F(PathProcessorSuppressionTest, RestoresLaneChangeWhenCenterFailsLateralAcc
   ASSERT_TRUE(result.has_value());
   ASSERT_EQ(result->kinematics.predicted_paths.size(), 1U);
   const auto & path = result->kinematics.predicted_paths.front();
-  EXPECT_GT(path.path.back().position.x, 20.0);
-  EXPECT_NEAR(path.path.back().position.y, 0.0, 1e-6);
+  EXPECT_GT(path.path.back().position.y, 1.0);
   EXPECT_FLOAT_EQ(path.confidence, 1.0F);
-  EXPECT_EQ(processing_passes_, 2U);
+  EXPECT_EQ(processing_passes_, 1U);
+}
+
+TEST_F(PathProcessorSuppressionTest, LateralAccelerationStraightIsAlwaysSatisfied)
+{
+  EXPECT_TRUE(satisfied(trajectory(11.0, 100.0, 0.0), 2.0, -2.0));
+  EXPECT_TRUE(satisfied(trajectory(30.0, 1000.0, 0.0), 0.01, -0.01));
+}
+
+TEST_F(PathProcessorSuppressionTest, LateralAccelerationIgnoresObjectYawOfFirstPose)
+{
+  // The first pose is the object pose; its yaw is not the path tangent.
+  EXPECT_TRUE(satisfied(trajectory(11.0, 100.0, 0.0, 0.3), 2.0, -2.0));
+}
+
+TEST_F(PathProcessorSuppressionTest, LateralAccelerationGentleCurveAheadIsSatisfied)
+{
+  // R 50 m at 11 m/s: a = 2.42 m/s^2, v_max = 10 m/s, 5.25 m to slow down at -2 m/s^2.
+  // The former yaw-rate formula gave v_max = 3 m/s (28 m) and rejected this path.
+  EXPECT_TRUE(satisfied(trajectory(11.0, 6.0, 50.0), 2.0, -2.0));
+  EXPECT_TRUE(satisfied(trajectory(11.0, 20.0, 50.0), 2.0, -2.0));
+}
+
+TEST_F(PathProcessorSuppressionTest, LateralAccelerationTightCurveAheadIsRejected)
+{
+  // R 10 m at 11 m/s: a = 12.1 m/s^2, v_max = 4.5 m/s, about 25 m to slow down.
+  EXPECT_FALSE(satisfied(trajectory(11.0, 5.0, 10.0), 2.0, -2.0));
+  EXPECT_TRUE(satisfied(trajectory(11.0, 40.0, 10.0), 2.0, -2.0));
+}
+
+TEST_F(PathProcessorSuppressionTest, LateralAccelerationAtOneMeterPerSecond)
+{
+  // At 1 m/s the yaw rate equals the curvature, so the former formula gives the same result.
+  // R 10 m: a = 0.1 m/s^2.
+  EXPECT_TRUE(satisfied(trajectory(1.0, 0.0, 10.0), 2.0, -2.0));
+  // a_max 0.05 m/s^2: v_max = 0.71 m/s, 25 m to slow down at -0.01 m/s^2.
+  EXPECT_FALSE(satisfied(trajectory(1.0, 2.0, 10.0), 0.05, -0.01));
+  EXPECT_TRUE(satisfied(trajectory(1.0, 2.0, 10.0), 0.05, -0.5));
 }
 
 TEST_F(PathProcessorSuppressionTest, RestoresLaneChangeWhenCenterConversionIsEmpty)
