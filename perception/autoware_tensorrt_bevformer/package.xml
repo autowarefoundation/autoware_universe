@@ -5,13 +5,13 @@
   <version>0.53.0</version>
   <description>TensorRT implementation of BEVFormer for Autoware</description>
 
-  <maintainer email="selventhiran@multicorewareinc.com">Selventhiran Rengaraj</maintainer>
-  <maintainer email="ramaseshan.subramanian@multicorewareinc.com">Ramaseshan Subramanian</maintainer>
-  <maintainer email="naveen.sathiyaseelan@multicorewareinc.com">Naveen Sathiyaseelan</maintainer>
-  <maintainer email="dhinesh.panneerselvam@multicorewareinc.com">Dhinesh Panneerselvam</maintainer>
-  <maintainer email="rahul.sundar@multicorewareinc.com">Rahul Gandhi Sundar</maintainer>
   <maintainer email="kokseang.tan@tier4.jp">Kok Seang Tan</maintainer>
   <license>Apache License 2.0</license>
+  <author email="selventhiran@multicorewareinc.com">Selventhiran Rengaraj</author>
+  <author email="ramaseshan.subramanian@multicorewareinc.com">Ramaseshan Subramanian</author>
+  <author email="naveen.sathiyaseelan@multicorewareinc.com">Naveen Sathiyaseelan</author>
+  <author email="dhinesh.panneerselvam@multicorewareinc.com">Dhinesh Panneerselvam</author>
+  <author email="rahul.sundar@multicorewareinc.com">Rahul Gandhi Sundar</author>
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
   <buildtool_depend>autoware_cmake</buildtool_depend>

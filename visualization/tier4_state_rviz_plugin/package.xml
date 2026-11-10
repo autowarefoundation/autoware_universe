@@ -6,10 +6,10 @@
   <description>The autoware state rviz plugin package</description>
   <maintainer email="hiroki.ota@tier4.jp">Hiroki OTA</maintainer>
   <maintainer email="isamu.takagi@tier4.jp">Takagi, Isamu</maintainer>
-  <maintainer email="khalil@leodrive.ai">Khalil Selyan</maintainer>
   <maintainer email="ryohsuke.mitsudome@tier4.jp">Ryohsuke Mitsudome</maintainer>
   <maintainer email="junya.sasaki@tier4.jp">Junya Sasaki</maintainer>
   <license>Apache License 2.0</license>
+  <author email="khalil@leodrive.ai">Khalil Selyan</author>
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
   <buildtool_depend>autoware_cmake</buildtool_depend>
