@@ -18,6 +18,7 @@
 #include "autoware/freespace_planning_algorithms/abstract_algorithm.hpp"
 #include "autoware/freespace_planning_algorithms/reeds_shepp.hpp"
 
+#include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <nav_msgs/msg/path.hpp>
@@ -95,17 +96,18 @@ class AstarSearch : public AbstractPlanningAlgorithm
 {
 public:
   AstarSearch(
-    const PlannerCommonParam & planner_common_param, const VehicleShape & collision_vehicle_shape,
-    const AstarParam & astar_param);
+    const PlannerCommonParam & planner_common_param,
+    const vehicle_info_utils::VehicleInfo & collision_vehicle_info, const AstarParam & astar_param);
 
   AstarSearch(
-    const PlannerCommonParam & planner_common_param, const VehicleShape & collision_vehicle_shape,
-    const AstarParam & astar_param, const rclcpp::Clock::SharedPtr & clock);
+    const PlannerCommonParam & planner_common_param,
+    const vehicle_info_utils::VehicleInfo & collision_vehicle_info, const AstarParam & astar_param,
+    const rclcpp::Clock::SharedPtr & clock);
   AstarSearch(
-    const PlannerCommonParam & planner_common_param, const VehicleShape & collision_vehicle_shape,
-    rclcpp::Node & node)
+    const PlannerCommonParam & planner_common_param,
+    const vehicle_info_utils::VehicleInfo & collision_vehicle_info, rclcpp::Node & node)
   : AstarSearch(
-      planner_common_param, collision_vehicle_shape,
+      planner_common_param, collision_vehicle_info,
       AstarParam{
         node.declare_parameter<std::string>("astar.search_method"),
         node.declare_parameter<bool>("astar.only_behind_solutions"),
