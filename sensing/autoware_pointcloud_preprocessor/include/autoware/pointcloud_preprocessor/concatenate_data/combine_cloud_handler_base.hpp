@@ -93,15 +93,13 @@ public:
 
   void process_odometry(const nav_msgs::msg::Odometry::ConstSharedPtr & input);
 
-  std::deque<geometry_msgs::msg::TwistStamped> get_twist_queue();
+  virtual void allocate_pointclouds() = 0;
 
+protected:
   Eigen::Matrix4f compute_transform_to_adjust_for_old_timestamp(
     const builtin_interfaces::msg::Time & old_stamp,
     const builtin_interfaces::msg::Time & new_stamp, MotionCompensationStatus * status = nullptr);
 
-  virtual void allocate_pointclouds() = 0;
-
-protected:
   [[nodiscard]] std::optional<Eigen::Matrix4f> get_transform_to_output_frame(
     const std::string & frame_id) const;
 

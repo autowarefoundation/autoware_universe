@@ -63,10 +63,6 @@ public:
     const rclcpp::NodeOptions & node_options);
   ~PointCloudConcatenateDataSynchronizerComponentTemplated() override = default;
 
-  void publish_clouds(
-    ConcatenatedCloudResult<typename MsgTraits::PointCloudMessage> && concatenated_cloud_result,
-    std::shared_ptr<CollectorInfoBase> collector_info);
-
 private:
   struct Parameters
   {
@@ -157,6 +153,9 @@ private:
   // Publish every emitted frame (reconstructing the collector info the diagnostics expect) and
   // replenish the combine buffers afterwards.
   void publish_frames(std::vector<ConcatenatedFrame<PointCloudMessage>> && frames);
+  void publish_clouds(
+    ConcatenatedCloudResult<typename MsgTraits::PointCloudMessage> && concatenated_cloud_result,
+    std::shared_ptr<CollectorInfoBase> collector_info);
   // Surface concatenator stat increments (force-dropped collectors, duplicate-topic inserts) as
   // throttled warnings.
   void report_concatenator_warnings();
