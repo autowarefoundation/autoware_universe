@@ -513,8 +513,12 @@ void LidarMarkerLocalizer::output_detected_marker(
   // transform input_frame to save_frame_id
   // the order of points is kept, so ring_ids still corresponds to each point
   pcl::PointCloud<pcl::PointXYZI> marker_points_save_frame;
-  transform_marker_pointcloud(
-    param_.save_frame_id, points_msg_ptr->header.frame_id, marker_points, marker_points_save_frame);
+  if (!transform_marker_pointcloud(
+        param_.save_frame_id, points_msg_ptr->header.frame_id, marker_points,
+        marker_points_save_frame)) {
+    // do not output points labeled with a frame they are not in
+    return;
+  }
 
   // visualize for debug
   if (has_subscriber) {
@@ -569,30 +573,29 @@ void LidarMarkerLocalizer::save_detected_marker_csv(
 }
 
 // Transform pointcloud from source_frame to target_frame
-void LidarMarkerLocalizer::transform_marker_pointcloud(
+bool LidarMarkerLocalizer::transform_marker_pointcloud(
   const std::string & target_frame, const std::string & source_frame,
   const pcl::PointCloud<pcl::PointXYZI> & input, pcl::PointCloud<pcl::PointXYZI> & output)
 {
   if (target_frame == source_frame || input.empty()) {
     output = input;
-    return;
+    return true;
   }
 
   geometry_msgs::msg::TransformStamped transform;
   try {
     transform = tf_buffer_->lookupTransform(target_frame, source_frame, tf2::TimePointZero);
   } catch (tf2::TransformException & ex) {
-    RCLCPP_WARN(this->get_logger(), "%s", ex.what());
-    RCLCPP_WARN(
-      this->get_logger(), "Please publish TF %s to %s", source_frame.c_str(), target_frame.c_str());
-    // Since there is no clear error handling policy, temporarily return as is.
-    output = input;
-    return;
+    RCLCPP_WARN_THROTTLE(
+      this->get_logger(), *this->get_clock(), 1000, "Please publish TF %s to %s: %s",
+      source_frame.c_str(), target_frame.c_str(), ex.what());
+    return false;
   }
 
   const Eigen::Matrix4f source_to_target_matrix =
     tf2::transformToEigen(transform).matrix().cast<float>();
   pcl::transformPointCloud(input, output, source_to_target_matrix);
+  return true;
 }
 
 // Explicit instantiation

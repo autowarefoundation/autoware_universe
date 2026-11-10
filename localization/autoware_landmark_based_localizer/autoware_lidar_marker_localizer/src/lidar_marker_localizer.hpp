@@ -116,7 +116,7 @@ private:
     const pcl::PointCloud<pcl::PointXYZI> & marker_points, const std::vector<uint16_t> & ring_ids,
     const builtin_interfaces::msg::Time & stamp) const;
 
-  void transform_marker_pointcloud(
+  bool transform_marker_pointcloud(
     const std::string & target_frame, const std::string & source_frame,
     const pcl::PointCloud<pcl::PointXYZI> & input, pcl::PointCloud<pcl::PointXYZI> & output);
 
