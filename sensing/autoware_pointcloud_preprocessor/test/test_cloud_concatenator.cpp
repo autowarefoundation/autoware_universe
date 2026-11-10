@@ -179,7 +179,7 @@ TEST(CloudConcatenator, ProcessCloudRejectsUnknownTopic)
     std::invalid_argument);
 }
 
-TEST(CloudConcatenator, RejectsAnInconsistentCloudLayout)
+TEST(CloudConcatenator, RejectsInconsistentCloudLayout)
 {
   // Each layout below would make the XYZ conversion read past the data buffer.
   auto mutable_cloud = [] {
