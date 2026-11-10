@@ -46,7 +46,7 @@ struct hash<unique_identifier_msgs::msg::UUID>
   size_t operator()(const unique_identifier_msgs::msg::UUID & uid) const
   {
     const auto & ids = uid.uuid;
-    boost::uuids::uuid u;
+    boost::uuids::uuid u{};
     std::copy(ids.begin(), ids.end(), u.begin());
     return boost::hash<boost::uuids::uuid>()(u);
   }
