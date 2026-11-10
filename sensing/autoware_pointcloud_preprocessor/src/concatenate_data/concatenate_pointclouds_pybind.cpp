@@ -55,6 +55,7 @@ using autoware::pointcloud_preprocessor::ConcatenationDiagnosticsSummary;
 using autoware::pointcloud_preprocessor::LateCloudPolicy;
 using autoware::pointcloud_preprocessor::MotionCompensationStatus;
 using autoware::pointcloud_preprocessor::parse_matching_strategy;
+using autoware::pointcloud_preprocessor::PointFormat;
 using autoware::pointcloud_preprocessor::ReferenceWindow;
 using autoware::pointcloud_preprocessor::summarize_frame;
 using ConcatenatedFrame =
@@ -233,7 +234,7 @@ public:
     std::size_t max_open_collectors, bool reject_late_clouds, double replay_jump_sec)
   : input_topics_(std::make_shared<const std::vector<std::string>>(input_topics)),
     concatenator_(
-      input_topics, output_frame, timeout_sec, is_motion_compensated,
+      input_topics, output_frame, PointFormat::XYZIRC, timeout_sec, is_motion_compensated,
       publish_synchronized_pointcloud, keep_input_frame_in_synchronized_pointcloud,
       parse_matching_strategy(matching_strategy), lidar_timestamp_offsets,
       lidar_timestamp_noise_window, max_open_collectors,
