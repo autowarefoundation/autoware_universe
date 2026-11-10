@@ -25,6 +25,7 @@
 #include <autoware_utils/system/time_keeper.hpp>
 
 #include <fmt/format.h>
+#include <fmt/ranges.h>
 
 #include <algorithm>
 #include <limits>
