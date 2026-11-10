@@ -65,7 +65,6 @@ jobs:
         # - The build workflows and their local actions.
         #   Not the .repos files: the build imports them only when a package changed,
         #   and check-build-depends builds a change of build_depends*.repos.
-        # - .clang-tidy-ci: clang-tidy-differential is meant to check all packages when it changes.
         # - package.xml and the files that make colcon ignore a package, also if colcon cannot list the package.
         #   This is cautious: a PR that only removes a package needs the label, though the build then builds nothing.
         # origin/<base> exists because get-modified-packages fetches it.
@@ -79,7 +78,6 @@ jobs:
             .github/workflows/build-and-test-packages-above-differential.yaml
             .github/workflows/clang-tidy-differential.yaml
             .github/actions
-            .clang-tidy-ci
             '*package.xml'
             '*COLCON_IGNORE'
             '*AMENT_IGNORE'
