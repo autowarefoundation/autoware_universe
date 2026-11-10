@@ -5,7 +5,6 @@
   <version>0.53.0</version>
   <description>The predicted_path_checker package</description>
 
-  <maintainer email="berkay@leodrive.ai">Berkay Karaman</maintainer>
   <maintainer email="junya.sasaki@tier4.jp">Junya Sasaki</maintainer>
   <license>Apache 2.0</license>
   <author email="berkay@leodrive.ai">Berkay Karaman</author>

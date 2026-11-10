@@ -5,12 +5,12 @@
   <version>0.53.0</version>
   <description>GPU-Accelerated ground segmentation</description>
   <maintainer email="dai.nguyen@tier4.jp">badai-nguyen</maintainer>
-  <maintainer email="anh.nguyen.2@tier4.jp">Anh Nguyen</maintainer>
   <maintainer email="manato.hirabayashi@tier4.jp">Manato Hirabayashi</maintainer>
 
   <license>Apache License 2.0</license>
 
   <author email="dai.nguyen@tier4.jp">badai-nguyen</author>
+  <author email="anh.nguyen.2@tier4.jp">Anh Nguyen</author>
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
   <buildtool_depend>autoware_cmake</buildtool_depend>
