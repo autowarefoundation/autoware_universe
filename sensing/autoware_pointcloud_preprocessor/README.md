@@ -99,8 +99,8 @@ Each frame carries `status` (`COMPLETE`, `TIMEOUT` or `LATE`), `result.concatena
 - `set_transform()` takes the transform from the sensor frame into the output frame
   (`header.frame_id` = output frame, `child_frame_id` = sensor frame). Any other form raises
   `ValueError`.
-- An unknown topic, a malformed `PointCloud2` or an invalid option raises `ValueError`. A message of
-  the wrong type raises `TypeError`.
+- An unknown topic, a `PointCloud2` without the PointXYZIRC fields or an invalid option raises
+  `ValueError`. A message of the wrong type raises `TypeError`.
 - For the `advanced` matching strategy, pass `matching_strategy="advanced"` together with
   `lidar_timestamp_offsets` and `lidar_timestamp_noise_window`, as in the node's parameters.
 

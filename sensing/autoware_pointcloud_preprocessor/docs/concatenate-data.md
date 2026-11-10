@@ -327,7 +327,7 @@ where `handle(frame)` reads `frame.status` (`COMPLETE`, `TIMEOUT`, or `LATE` wit
 - `process_odometry` takes the place of `process_twist` for an `input_twist_topic_type: odom` setup.
 - `frame.build_diagnostics()` returns the `DiagnosticStatus` the node would publish for that frame. The node also drops a frame whose timestamp is older than the last published one (unless `publish_previous_but_late_pointcloud` is set); offline that comparison is the caller's, reported with `build_diagnostics(drop_previous_but_late=True)`.
 - By default the number of open collectors is not bounded and a cloud that arrives after its frame was emitted opens a collector of its own (the core's offline defaults). Pass the node's `max_open_collectors` and `reject_late_clouds=True` to reproduce the node: a late cloud then comes back at once as a one-cloud `LATE` frame. `replay_jump_sec` (default 10 s, the node's `rosbag_length`) separates a late cloud from a looped-bag restart.
-- An inconsistent `PointCloud2` layout (`data` size vs `width`/`height`/`point_step`, a field past `point_step`, missing or non-FLOAT32 `x`/`y`/`z`) raises `ValueError`; a cloud with no `data` is empty whatever its `width` says. A message of the wrong type raises `TypeError`.
+- A `PointCloud2` without the fields of the output point type (`x`/`y`/`z`/`intensity`/`return_type`/`channel` for PointXYZIRC) raises `ValueError`. A message of the wrong type raises `TypeError`.
 - Keep `cloud.data` as the `array('B')` that `deserialize_message` returns: assigning `bytes` makes rclpy validate every element (about 0.2 s per 300 k-point cloud).
 
 ## Assumptions / Known Limits

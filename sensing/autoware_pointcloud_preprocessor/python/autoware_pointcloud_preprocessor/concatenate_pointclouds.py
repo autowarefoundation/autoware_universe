@@ -224,9 +224,8 @@ class Concatenator:
         Returns the frames this resolves: usually none or one, but several collectors can resolve
         at once.
 
-        :raises ValueError: if ``topic`` is not one of the input topics, or if the cloud's layout is
-            inconsistent (``data`` size vs ``width``/``height``/``point_step``, field offsets,
-            missing or non-FLOAT32 ``x``/``y``/``z``).
+        :raises ValueError: if ``topic`` is not one of the input topics, or if the cloud lacks a
+            field of the output point type (e.g. ``intensity``, ``return_type``, ``channel``).
         """
         _check_type(cloud, PointCloud2)
         frames = self._impl.process_cloud(topic, serialize_message(cloud), arrival_time)

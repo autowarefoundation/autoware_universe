@@ -50,7 +50,7 @@ STAMP_STEP_SEC = 0.01
 
 DEFAULT_POINTS_PER_CLOUD = 40000
 
-# The PointXYZIRC layout (16 bytes per point). A plain x/y/z cloud is accepted too.
+# The PointXYZIRC layout (16 bytes per point), the fields the default output requires.
 XYZIRC_FIELDS = [
     PointField(name="x", offset=0, datatype=PointField.FLOAT32, count=1),
     PointField(name="y", offset=4, datatype=PointField.FLOAT32, count=1),
