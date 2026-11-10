@@ -78,10 +78,10 @@ NetMonitor::NetMonitor(const rclcpp::NodeOptions & options)
   nl80211_.init();
 
   // Run I/O service processing loop
-  boost::system::error_code error_code;
-  io_service_.run(error_code);
-  if (error_code) {
-    RCLCPP_WARN(get_logger(), "Failed to run I/O service. %s", error_code.message().c_str());
+  try {
+    io_service_.run();
+  } catch (const boost::system::system_error & e) {
+    RCLCPP_WARN(get_logger(), "Failed to run I/O service. %s", e.code().message().c_str());
   }
 
   // Update list of network information

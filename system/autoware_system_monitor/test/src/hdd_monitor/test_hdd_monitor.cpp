@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "system_monitor/boost_process.hpp"
 #include "system_monitor/hdd_monitor/hdd_monitor.hpp"
 #include "system_monitor/hdd_reader/hdd_reader.hpp"
 
@@ -20,7 +21,6 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/filesystem.hpp>
-#include <boost/process.hpp>
 
 #include <fmt/format.h>
 #include <gtest/gtest.h>

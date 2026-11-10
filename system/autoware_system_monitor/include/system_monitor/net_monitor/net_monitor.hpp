@@ -392,7 +392,7 @@ protected:
   bool enable_traffic_monitor_;         //!< @brief enable nethogs
   std::string monitor_program_;         //!< @brief nethogs monitor program name
   std::string socket_path_;             //!< @brief Path of UNIX domain socket
-  boost::asio::io_service io_service_;  //!< @brief Core I/O functionality
+  boost::asio::io_context io_service_;  //!< @brief Core I/O functionality
   std::unique_ptr<local::stream_protocol::acceptor> acceptor_;  //!< @brief UNIX domain acceptor
   std::unique_ptr<local::stream_protocol::socket> socket_;      //!< @brief UNIX domain socket
 
