@@ -26,10 +26,25 @@ include_directories(
   ${OpenCV_INCLUDE_DIRS}
 )
 
-add_library(pointcloud_preprocessor_filter_base SHARED
-  src/filter.cpp
+# Point layout checks (utility/memory.hpp), free of rclcpp for distortion_corrector_core.
+add_library(pointcloud_preprocessor_memory_utils SHARED
   src/utility/memory.cpp
 )
+target_include_directories(pointcloud_preprocessor_memory_utils PUBLIC
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+  "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>"
+)
+target_include_directories(pointcloud_preprocessor_memory_utils SYSTEM PUBLIC
+  ${autoware_point_types_INCLUDE_DIRS}
+)
+target_link_libraries(pointcloud_preprocessor_memory_utils PUBLIC
+  ${sensor_msgs_TARGETS}
+)
+
+add_library(pointcloud_preprocessor_filter_base SHARED
+  src/filter.cpp
+)
+target_link_libraries(pointcloud_preprocessor_filter_base pointcloud_preprocessor_memory_utils)
 
 target_include_directories(pointcloud_preprocessor_filter_base PUBLIC
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
@@ -124,13 +139,10 @@ ament_target_dependencies(concatenate_data
   tf2_ros
 )
 
-# ROS-runtime-free core of the distortion corrector (no rclcpp/tf). Links message targets
-# directly to keep it that way. utility/memory.cpp is compiled in as well because the core validates
-# point layouts with it and pointcloud_preprocessor_filter_base links rclcpp.
+# Distortion corrector core, without rclcpp or tf.
 find_package(autoware_utils_math REQUIRED)
 add_library(distortion_corrector_core SHARED
   src/distortion_corrector/distortion_corrector.cpp
-  src/utility/memory.cpp
 )
 target_include_directories(distortion_corrector_core PUBLIC
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
@@ -147,6 +159,7 @@ target_link_libraries(distortion_corrector_core PUBLIC
   ${geometry_msgs_TARGETS}
   ${autoware_utils_math_LIBRARIES}
   tl_expected::tl_expected
+  pointcloud_preprocessor_memory_utils
 )
 
 ament_auto_add_library(pointcloud_preprocessor_filter SHARED
@@ -344,7 +357,8 @@ install(DIRECTORY
 )
 
 install(
-  TARGETS pointcloud_preprocessor_filter_base EXPORT export_${PROJECT_NAME}
+  TARGETS pointcloud_preprocessor_memory_utils pointcloud_preprocessor_filter_base
+  EXPORT export_${PROJECT_NAME}
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
@@ -390,8 +404,7 @@ if(BUILD_EXAMPLES)
   target_link_libraries(concatenate_without_ros_node concatenate_core)
 endif()
 
-# Python bindings of the distortion corrector core, for offline use. Messages cross the boundary as
-# CDR bytes, so only this module links rclcpp (for rclcpp::Serialization); the core does not.
+# Python bindings of the distortion corrector core. Only this module links rclcpp (for serialization).
 find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
 find_package(pybind11_vendor REQUIRED)
 find_package(pybind11 REQUIRED)
