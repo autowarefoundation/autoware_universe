@@ -18,6 +18,7 @@
 #include <Eigen/Core>
 #include <sophus/se3.hpp>
 #include <tf2/LinearMath/Transform.hpp>
+#include <tl_expected/expected.hpp>
 
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <geometry_msgs/msg/twist_stamped.hpp>
@@ -71,7 +72,6 @@ class DistortionCorrectorBase
 protected:
   geometry_msgs::msg::TransformStamped::SharedPtr geometry_imu_to_base_link_ptr_;
   bool pointcloud_transform_needed_{false};
-  bool pointcloud_transform_exists_{false};
 
   std::deque<geometry_msgs::msg::TwistStamped> twist_queue_;
   std::deque<geometry_msgs::msg::Vector3Stamped> angular_velocity_queue_;
@@ -95,8 +95,6 @@ public:
   DistortionCorrectorBase() = default;
   virtual ~DistortionCorrectorBase() = default;
 
-  [[nodiscard]] bool pointcloud_transform_exists() const;
-  [[nodiscard]] bool pointcloud_transform_needed() const;
   std::deque<geometry_msgs::msg::TwistStamped> get_twist_queue();
   std::deque<geometry_msgs::msg::Vector3Stamped> get_angular_velocity_queue();
   // Samples are expected in timestamp order. A sample older than the queue front clears the queue
@@ -110,7 +108,7 @@ public:
   // Same ordering and retention rules as insert_twist().
   void insert_imu(const sensor_msgs::msg::Imu::ConstSharedPtr imu_msg);
 
-  std::optional<AngleConversion> try_compute_angle_conversion(
+  tl::expected<AngleConversion, std::string> try_compute_angle_conversion(
     sensor_msgs::msg::PointCloud2 & pointcloud);
 
   PointcloudValidity check_pointcloud_validity(sensor_msgs::msg::PointCloud2 & pointcloud);

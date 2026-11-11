@@ -65,6 +65,7 @@
   <depend>tf2_geometry_msgs</depend>
   <depend>tf2_ros</depend>
   <depend>tf2_sensor_msgs</depend>
+  <depend>tl_expected</depend>
   <exec_depend>rclpy</exec_depend>
 
   <test_depend>ament_cmake_pytest</test_depend>
