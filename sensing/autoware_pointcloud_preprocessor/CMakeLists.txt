@@ -146,6 +146,7 @@ target_link_libraries(distortion_corrector_core PUBLIC
   ${sensor_msgs_TARGETS}
   ${geometry_msgs_TARGETS}
   ${autoware_utils_math_LIBRARIES}
+  tl_expected::tl_expected
 )
 
 ament_auto_add_library(pointcloud_preprocessor_filter SHARED

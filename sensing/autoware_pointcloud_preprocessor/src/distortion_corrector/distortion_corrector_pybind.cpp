@@ -109,7 +109,9 @@ public:
     auto cloud = deserialize<sensor_msgs::msg::PointCloud2>(pointcloud);
 
     if (update_azimuth_and_distance && !angle_conversion_opt_.has_value()) {
-      angle_conversion_opt_ = corrector_->try_compute_angle_conversion(cloud);
+      if (const auto angle_conversion = corrector_->try_compute_angle_conversion(cloud)) {
+        angle_conversion_opt_ = *angle_conversion;
+      }
     }
 
     const auto result = corrector_->undistort_pointcloud(
