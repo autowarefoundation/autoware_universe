@@ -23373,6 +23373,13 @@ In particular, this node implements:</p>
 <td>N/A</td>
 </tr>
 <tr>
+<td>output_<wbr>point_<wbr>type</wbr></wbr></td>
+<td>string</td>
+<td>Point type of the published cloud. XYZIRCT additionally carries a per-point timestamp, copied from the input.</td>
+<td>XYZIRC</td>
+<td>['XYZIRC', 'XYZIRCT']</td>
+</tr>
+<tr>
 <td>use_<wbr>imu</wbr></td>
 <td>boolean</td>
 <td>Use IMU angular velocity, otherwise, use twist angular velocity.</td>
@@ -23496,7 +23503,8 @@ In particular, this node implements:</p>
 <h2 id="assumptions-known-limits">Assumptions / Known limits<a class="headerlink" href="#assumptions-known-limits" title="Permanent link">#</a></h2>
 <ul>
 <li>The CUDA implementations, while following the original CPU ones, will not offer the same numerical results, and small approximations were needed to maximize GPU usage.</li>
-<li>This node expects that the input pointcloud follows the <code>autoware::point_types::PointXYZIRCAEDT</code> layout and the output pointcloud will use the <code>autoware::point_types::PointXYZIRC</code> layout defined in the <code>autoware_point_types</code> package.</li>
+<li>This node expects that the input pointcloud follows the <code>autoware::point_types::PointXYZIRCAEDT</code> layout. The output pointcloud uses the <code>autoware::point_types::PointXYZIRC</code> layout, or <code>autoware::point_types::PointXYZIRCT</code> when <code>output_point_type</code> is <code>XYZIRCT</code>; both are defined in the <code>autoware_point_types</code> package. The <code>time_stamp</code> of <code>PointXYZIRCT</code> is copied from the input, i.e. relative to the cloud's header stamp.</li>
+<li>Downstream nodes must accept 20-byte <code>PointXYZIRCT</code> points before <code>XYZIRCT</code> is enabled: the concatenation nodes only do so from <a href="https://github.com/autowarefoundation/autoware_universe/pull/13324">autowarefoundation/autoware_universe#13324</a> on.</li>
 </ul></div>
 
 
