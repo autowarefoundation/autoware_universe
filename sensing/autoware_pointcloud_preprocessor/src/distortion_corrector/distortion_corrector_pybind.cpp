@@ -32,8 +32,9 @@
 #include <cstring>
 #include <memory>
 #include <optional>
+#include <string>
 #include <string_view>
-#include <utility>
+#include <tuple>
 
 namespace py = pybind11;
 
@@ -102,22 +103,28 @@ public:
       std::make_shared<sensor_msgs::msg::Imu>(deserialize<sensor_msgs::msg::Imu>(imu)));
   }
 
-  std::pair<py::bytes, UndistortionResult> undistort_pointcloud(
+  // The third element holds why the angle conversion could not be computed on this call, if it was
+  // attempted and failed (the node logs it instead).
+  std::tuple<py::bytes, UndistortionResult, std::optional<std::string>> undistort_pointcloud(
     const py::bytes & pointcloud, const py::bytes & lidar_to_base_link, bool use_imu,
     bool update_azimuth_and_distance)
   {
     auto cloud = deserialize<sensor_msgs::msg::PointCloud2>(pointcloud);
 
+    std::optional<std::string> angle_conversion_error;
     if (update_azimuth_and_distance && !angle_conversion_opt_.has_value()) {
-      if (const auto angle_conversion = corrector_->try_compute_angle_conversion(cloud)) {
+      const auto angle_conversion = corrector_->try_compute_angle_conversion(cloud);
+      if (angle_conversion.has_value()) {
         angle_conversion_opt_ = *angle_conversion;
+      } else {
+        angle_conversion_error = angle_conversion.error();
       }
     }
 
     const auto result = corrector_->undistort_pointcloud(
       use_imu, update_azimuth_and_distance ? angle_conversion_opt_ : std::nullopt,
       deserialize<geometry_msgs::msg::TransformStamped>(lidar_to_base_link), cloud);
-    return {serialize(cloud), result};
+    return {serialize(cloud), result, angle_conversion_error};
   }
 
   [[nodiscard]] int get_timestamp_mismatch_count() const

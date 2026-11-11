@@ -167,6 +167,20 @@ def test_imu_yaw_rate_changes_result():
     assert _read_xyz(out_imu) != _read_xyz(out_twist)
 
 
+def test_angle_conversion_failure_is_reported():
+    # Arrange: every point has azimuth 0, so no conversion to azimuth can be derived.
+    corrector = DistortionCorrector()
+    cloud = _make_pointcloud(_DEFAULT_POINTS)
+
+    # Act
+    _, status = corrector.undistort_pointcloud(
+        cloud, _IDENTITY, use_imu=False, update_azimuth_and_distance=True
+    )
+
+    # Assert
+    assert status.angle_conversion_error is not None
+
+
 def test_input_cloud_is_left_unchanged():
     corrector = DistortionCorrector()
     _feed_twists(corrector)

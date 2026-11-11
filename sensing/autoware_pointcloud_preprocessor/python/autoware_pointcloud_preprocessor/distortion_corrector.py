@@ -21,6 +21,7 @@ unchanged.
 """
 
 from typing import NamedTuple
+from typing import Optional
 from typing import Tuple
 
 from geometry_msgs.msg import TransformStamped
@@ -52,6 +53,8 @@ class UndistortionStatus(NamedTuple):
     imu_timestamp_too_late: bool
     timestamp_mismatch_count: int
     timestamp_mismatch_fraction: float
+    # Why the azimuth conversion failed on this call; None if it was not attempted or succeeded.
+    angle_conversion_error: Optional[str]
 
 
 class DistortionCorrector:
@@ -88,7 +91,7 @@ class DistortionCorrector:
         ``update_azimuth_and_distance`` rewrites the azimuth and distance fields from the corrected
         positions; the Cartesian-to-azimuth conversion is computed on the first cloud and reused.
         """
-        out_bytes, result = self._impl.undistort_pointcloud(
+        out_bytes, result, angle_conversion_error = self._impl.undistort_pointcloud(
             _serialize(pointcloud, PointCloud2),
             _serialize(lidar_to_base_link, TransformStamped),
             use_imu,
@@ -101,5 +104,6 @@ class DistortionCorrector:
             imu_timestamp_too_late=result.imu_timestamp_too_late,
             timestamp_mismatch_count=self._impl.timestamp_mismatch_count,
             timestamp_mismatch_fraction=self._impl.timestamp_mismatch_fraction,
+            angle_conversion_error=angle_conversion_error,
         )
         return deserialize_message(out_bytes, PointCloud2), status

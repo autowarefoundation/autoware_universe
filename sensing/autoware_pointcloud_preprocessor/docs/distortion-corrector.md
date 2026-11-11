@@ -83,7 +83,7 @@ if status.validity is not PointcloudValidity.VALID:
 
 - Transforms have `header.frame_id` = base frame and `child_frame_id` = sensor frame, as TF provides them.
 - The twist and IMU queues follow the node's rules: a sample older than the queue front clears the queue, and samples older than the newest one by more than 1 s are dropped.
-- `status` also carries `twist_queue_empty`, `twist_timestamp_too_late`, `imu_timestamp_too_late`, `timestamp_mismatch_count` and `timestamp_mismatch_fraction`, the conditions the node logs or reports as diagnostics.
+- `status` also carries `twist_queue_empty`, `twist_timestamp_too_late`, `imu_timestamp_too_late`, `timestamp_mismatch_count`, `timestamp_mismatch_fraction` and `angle_conversion_error`, the conditions the node logs or reports as diagnostics. `angle_conversion_error` is set when `update_azimuth_and_distance=True` but the azimuth conversion could not be computed from this cloud, in which case azimuth and distance are left unchanged.
 - A message of the wrong type raises `TypeError`.
 
 ## References/External links
