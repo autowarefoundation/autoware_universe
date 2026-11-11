@@ -23749,6 +23749,13 @@
 <td>N/A</td>
 </tr>
 <tr>
+<td>output_<wbr>point_<wbr>type</wbr></wbr></td>
+<td>string</td>
+<td>Point type of the published clouds. XYZIRCT additionally carries each point's time_stamp in nanoseconds relative to the published header stamp and requires every input cloud to provide a time_stamp field. Inputs that cannot be converted are dropped.</td>
+<td>XYZIRC</td>
+<td>['XYZIRC', 'XYZIRCT']</td>
+</tr>
+<tr>
 <td>matching_<wbr>strategy.<wbr>type</wbr></wbr></td>
 <td>string</td>
 <td>Set it to <code>advanced</code> if you can synchronize your LiDAR sensor; otherwise, set it to <code>naive</code>.</td>
