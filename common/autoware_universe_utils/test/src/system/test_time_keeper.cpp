@@ -75,24 +75,28 @@ TEST_F(TimeKeeperTest, MultiThreadWarning)
 {
   testing::internal::CaptureStderr();
 
+  // The main thread must own the root track during the whole life of the other thread.
+  // Otherwise the other thread can start its own root track and no warning is printed.
+  time_keeper->start_track("MainFunction");
+
   std::thread t([this]() {
     time_keeper->start_track("ThreadFunction");
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
     time_keeper->end_track("ThreadFunction");
   });
 
-  time_keeper->start_track("MainFunction");
   std::this_thread::sleep_for(std::chrono::milliseconds(20));
+  t.join();
   time_keeper->end_track("MainFunction");
 
-  t.join();
-
   std::string err = testing::internal::GetCapturedStderr();
-  const bool error_found = err.find(
-                             "TimeKeeper::start_track(MainFunction) is called from a different "
-                             "thread. Ignoring the call.") != std::string::npos ||
-                           err.find(
-                             "TimeKeeper::start_track(ThreadFunction) is called from a different "
-                             "thread. Ignoring the call.") != std::string::npos;
-  EXPECT_TRUE(error_found);
+  EXPECT_NE(
+    err.find(
+      "TimeKeeper::start_track(ThreadFunction) is called from a different thread. Ignoring the "
+      "call."),
+    std::string::npos);
+
+  const std::string output = oss.str();
+  EXPECT_NE(output.find("MainFunction"), std::string::npos);
+  EXPECT_EQ(output.find("ThreadFunction"), std::string::npos);
 }
