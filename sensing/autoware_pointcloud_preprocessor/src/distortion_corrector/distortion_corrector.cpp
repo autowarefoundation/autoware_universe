@@ -45,16 +45,6 @@ Eigen::Matrix4f to_eigen_matrix(const geometry_msgs::msg::Transform & transform)
 }
 }  // namespace
 
-bool DistortionCorrectorBase::pointcloud_transform_exists() const
-{
-  return pointcloud_transform_exists_;
-}
-
-bool DistortionCorrectorBase::pointcloud_transform_needed() const
-{
-  return pointcloud_transform_needed_;
-}
-
 std::deque<geometry_msgs::msg::TwistStamped> DistortionCorrectorBase::get_twist_queue()
 {
   return twist_queue_;
@@ -189,13 +179,16 @@ PointcloudValidity DistortionCorrectorBase::check_pointcloud_validity(
   return PointcloudValidity::kValid;
 }
 
-std::optional<AngleConversion> DistortionCorrectorBase::try_compute_angle_conversion(
+tl::expected<AngleConversion, std::string> DistortionCorrectorBase::try_compute_angle_conversion(
   sensor_msgs::msg::PointCloud2 & pointcloud)
 {
   // This function tries to compute the angle conversion from Cartesian coordinates to LiDAR azimuth
   // coordinates system
 
-  if (check_pointcloud_validity(pointcloud) != PointcloudValidity::kValid) return std::nullopt;
+  if (check_pointcloud_validity(pointcloud) != PointcloudValidity::kValid) {
+    return tl::make_unexpected(
+      "Input pointcloud is invalid. Could not calculate the angle conversion.");
+  }
 
   AngleConversion angle_conversion;
 
@@ -212,8 +205,8 @@ std::optional<AngleConversion> DistortionCorrectorBase::try_compute_angle_conver
     next_it_y = it_y + 1;
     next_it_azimuth = it_azimuth + 1;
   } else {
-    // Current point cloud only has a single point; cannot calculate the angle conversion.
-    return std::nullopt;
+    return tl::make_unexpected(
+      "Current point cloud only has a single point. Could not calculate the angle conversion.");
   }
 
   for (; next_it_x != it_x.end();
@@ -268,7 +261,9 @@ std::optional<AngleConversion> DistortionCorrectorBase::try_compute_angle_conver
 
     return angle_conversion;
   }
-  return std::nullopt;
+  return tl::make_unexpected(
+    "No pair of consecutive points matches a valid angle conversion. Could not calculate the angle "
+    "conversion.");
 }
 
 tf2::Transform DistortionCorrectorBase::convert_matrix_to_transform(const Eigen::Matrix4f & matrix)
@@ -428,7 +423,6 @@ void DistortionCorrector2D::set_pointcloud_transform(
   tf2_lidar_to_base_link_ =
     convert_matrix_to_transform(to_eigen_matrix(lidar_to_base_link.transform));
   tf2_base_link_to_lidar_ = tf2_lidar_to_base_link_.inverse();
-  pointcloud_transform_exists_ = true;
   pointcloud_transform_needed_ =
     lidar_to_base_link.header.frame_id != lidar_to_base_link.child_frame_id;
 }
@@ -438,7 +432,6 @@ void DistortionCorrector3D::set_pointcloud_transform(
 {
   eigen_lidar_to_base_link_ = to_eigen_matrix(lidar_to_base_link.transform);
   eigen_base_link_to_lidar_ = eigen_lidar_to_base_link_.inverse();
-  pointcloud_transform_exists_ = true;
   pointcloud_transform_needed_ =
     lidar_to_base_link.header.frame_id != lidar_to_base_link.child_frame_id;
 }

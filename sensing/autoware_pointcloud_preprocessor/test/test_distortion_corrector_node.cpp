@@ -30,6 +30,7 @@
 #include "autoware_utils/math/trigonometry.hpp"
 
 #include <rclcpp/rclcpp.hpp>
+#include <tl_expected/expected.hpp>
 
 #include <geometry_msgs/msg/twist_stamped.hpp>
 #include <geometry_msgs/msg/twist_with_covariance_stamped.hpp>
@@ -41,6 +42,7 @@
 
 #include <cassert>
 #include <memory>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <vector>
@@ -74,6 +76,13 @@ protected:
     check_input(ms);
     auto ms_in_ns = rclcpp::Duration(0, ms * 1000000);
     return stamp - ms_in_ns;
+  }
+
+  static std::optional<autoware::pointcloud_preprocessor::AngleConversion> to_optional(
+    const tl::expected<autoware::pointcloud_preprocessor::AngleConversion, std::string> & result)
+  {
+    if (!result.has_value()) return std::nullopt;
+    return *result;
   }
 
   static geometry_msgs::msg::TransformStamped generate_transform_msg(
@@ -385,38 +394,6 @@ TEST_F(DistortionCorrectorTest, TestCheckPointcloudValidity)
   auto empty_pointcloud = generate_empty_pointcloud_msg(timestamp);
   result = distortion_corrector_2d_->check_pointcloud_validity(empty_pointcloud);
   EXPECT_EQ(result, autoware::pointcloud_preprocessor::PointcloudValidity::kEmpty);
-}
-
-TEST_F(DistortionCorrectorTest, TestUndistortPointcloudWithBaseLinkTransform)
-{
-  const rclcpp::Time timestamp(timestamp_seconds, timestamp_nanoseconds, RCL_ROS_TIME);
-  auto twist_msg = generate_twist_msg(twist_linear_x, twist_angular_z, timestamp);
-  distortion_corrector_2d_->insert_twist(twist_msg);
-
-  auto [default_points, default_azimuths] =
-    generate_default_pointcloud(AngleCoordinateSystem::CARTESIAN);
-  auto pointcloud = generate_pointcloud_msg(false, timestamp, default_points, default_azimuths);
-  distortion_corrector_2d_->undistort_pointcloud(
-    false, std::nullopt, get_base_link_transform(), pointcloud);
-
-  EXPECT_TRUE(distortion_corrector_2d_->pointcloud_transform_exists());
-  EXPECT_FALSE(distortion_corrector_2d_->pointcloud_transform_needed());
-}
-
-TEST_F(DistortionCorrectorTest, TestUndistortPointcloudWithLidarFrameTransform)
-{
-  const rclcpp::Time timestamp(timestamp_seconds, timestamp_nanoseconds, RCL_ROS_TIME);
-  auto twist_msg = generate_twist_msg(twist_linear_x, twist_angular_z, timestamp);
-  distortion_corrector_2d_->insert_twist(twist_msg);
-
-  auto [default_points, default_azimuths] =
-    generate_default_pointcloud(AngleCoordinateSystem::CARTESIAN);
-  auto pointcloud = generate_pointcloud_msg(true, timestamp, default_points, default_azimuths);
-  distortion_corrector_2d_->undistort_pointcloud(
-    false, std::nullopt, get_lidar_to_base_link_transform(), pointcloud);
-
-  EXPECT_TRUE(distortion_corrector_2d_->pointcloud_transform_exists());
-  EXPECT_TRUE(distortion_corrector_2d_->pointcloud_transform_needed());
 }
 
 TEST_F(DistortionCorrectorTest, TestUndistortPointcloudWithEmptyTwist)
@@ -955,7 +932,7 @@ TEST_F(DistortionCorrectorTest, TestUndistortPointcloudWithPureRotationalMotion)
 TEST_F(DistortionCorrectorTest, TestUndistortPointcloudNotUpdatingAzimuthAndDistance)
 {
   // Test the case when the cloud will not update the azimuth and distance values
-  // 1. when pointcloud is in base_link (pointcloud_transform_needed() is false)
+  // 1. when pointcloud is in base_link (pointcloud_transform_needed_ is false)
 
   // Generate the point cloud message in base_link
   rclcpp::Time timestamp(timestamp_seconds, timestamp_nanoseconds, RCL_ROS_TIME);
@@ -970,7 +947,7 @@ TEST_F(DistortionCorrectorTest, TestUndistortPointcloudNotUpdatingAzimuthAndDist
   // Generate and process multiple IMU messages
   generate_and_process_imu_msgs(distortion_corrector_2d_, timestamp);
   auto angle_conversion_opt =
-    distortion_corrector_2d_->try_compute_angle_conversion(pointcloud_base_link);
+    to_optional(distortion_corrector_2d_->try_compute_angle_conversion(pointcloud_base_link));
 
   // Test for expected runtime error
   EXPECT_THROW(
@@ -1045,7 +1022,8 @@ TEST_F(DistortionCorrectorTest, TestUndistortPointcloudUpdateAzimuthAndDistanceI
 
   // Generate and process multiple IMU messages
   generate_and_process_imu_msgs(distortion_corrector_2d_, timestamp);
-  auto angle_conversion_opt = distortion_corrector_2d_->try_compute_angle_conversion(pointcloud);
+  auto angle_conversion_opt =
+    to_optional(distortion_corrector_2d_->try_compute_angle_conversion(pointcloud));
   distortion_corrector_2d_->undistort_pointcloud(
     true, angle_conversion_opt, get_lidar_to_base_link_transform(), pointcloud);
 
@@ -1103,7 +1081,8 @@ TEST_F(DistortionCorrectorTest, TestUndistortPointcloudUpdateAzimuthAndDistanceI
 
   // Generate and process multiple IMU messages
   generate_and_process_imu_msgs(distortion_corrector_2d_, timestamp);
-  auto angle_conversion_opt = distortion_corrector_2d_->try_compute_angle_conversion(pointcloud);
+  auto angle_conversion_opt =
+    to_optional(distortion_corrector_2d_->try_compute_angle_conversion(pointcloud));
   distortion_corrector_2d_->undistort_pointcloud(
     true, angle_conversion_opt, get_lidar_to_base_link_transform(), pointcloud);
 

@@ -144,13 +144,17 @@ void DistortionCorrectorComponent::pointcloud_callback(PointCloud2::UniquePtr po
   const auto lidar_to_base_link = lidar_to_base_link_.value_or(identity_transform(base_frame_));
 
   if (update_azimuth_and_distance_ && !angle_conversion_opt_.has_value()) {
-    angle_conversion_opt_ = distortion_corrector_->try_compute_angle_conversion(*pointcloud_msg);
-    if (angle_conversion_opt_.has_value()) {
+    const auto angle_conversion =
+      distortion_corrector_->try_compute_angle_conversion(*pointcloud_msg);
+    if (angle_conversion.has_value()) {
+      angle_conversion_opt_ = *angle_conversion;
       RCLCPP_INFO(
         this->get_logger(),
         "Success to get the conversion formula between Cartesian coordinates and LiDAR azimuth "
         "coordinates");
     } else {
+      RCLCPP_WARN_STREAM_THROTTLE(
+        this->get_logger(), *this->get_clock(), 10000 /* ms */, angle_conversion.error());
       RCLCPP_ERROR_STREAM_THROTTLE(
         this->get_logger(), *this->get_clock(), 10000 /* ms */,
         "Failed to get the angle conversion between Cartesian coordinates and LiDAR azimuth "
