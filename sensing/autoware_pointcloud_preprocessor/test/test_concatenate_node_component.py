@@ -294,6 +294,13 @@ def get_output_points(cloud_msg) -> np.ndarray:
     return points
 
 
+def sort_points(points: np.ndarray) -> np.ndarray:
+    # The node does not define the order of the input clouds in its output, so compare the points
+    # in a fixed order. y and z are integers set by the sensor poses and the motion compensation
+    # changes only x, so they give a stable order.
+    return points[np.lexsort((points[:, 2], points[:, 1]))]
+
+
 class TestConcatenateNode(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -410,7 +417,9 @@ class TestConcatenateNode(unittest.TestCase):
             print("concatenate_cloud: ", concatenate_cloud)
 
         self.assertTrue(
-            np.allclose(concatenate_cloud, expected_pointcloud, atol=1e-3),
+            np.allclose(
+                sort_points(concatenate_cloud), sort_points(expected_pointcloud), atol=1e-3
+            ),
             "The concatenation node have weird output",
         )
 
@@ -480,7 +489,9 @@ class TestConcatenateNode(unittest.TestCase):
             print("concatenate_cloud: ", concatenate_cloud)
 
         self.assertTrue(
-            np.allclose(concatenate_cloud, expected_pointcloud, atol=2e-2),
+            np.allclose(
+                sort_points(concatenate_cloud), sort_points(expected_pointcloud), atol=2e-2
+            ),
             "The concatenation node have weird output",
         )
 
@@ -549,7 +560,9 @@ class TestConcatenateNode(unittest.TestCase):
             print("concatenate_cloud: ", concatenate_cloud)
 
         self.assertTrue(
-            np.allclose(concatenate_cloud, expected_pointcloud, atol=1e-3),
+            np.allclose(
+                sort_points(concatenate_cloud), sort_points(expected_pointcloud), atol=1e-3
+            ),
             "The concatenation node have weird output",
         )
 
@@ -645,7 +658,9 @@ class TestConcatenateNode(unittest.TestCase):
             print("concatenate_cloud: ", concatenate_cloud)
 
         self.assertTrue(
-            np.allclose(concatenate_cloud, expected_pointcloud, atol=1e-3),
+            np.allclose(
+                sort_points(concatenate_cloud), sort_points(expected_pointcloud), atol=1e-3
+            ),
             "The concatenation node have weird output",
         )
 
@@ -705,7 +720,9 @@ class TestConcatenateNode(unittest.TestCase):
             print("concatenate_cloud: ", concatenate_cloud)
 
         self.assertTrue(
-            np.allclose(concatenate_cloud, expected_pointcloud, atol=1e-3),
+            np.allclose(
+                sort_points(concatenate_cloud), sort_points(expected_pointcloud), atol=1e-3
+            ),
             "The concatenation node have weird output",
         )
 
@@ -785,7 +802,9 @@ class TestConcatenateNode(unittest.TestCase):
             print("concatenate_cloud 1: ", concatenate_cloud1)
 
         self.assertTrue(
-            np.allclose(concatenate_cloud1, expected_pointcloud1, atol=1e-3),
+            np.allclose(
+                sort_points(concatenate_cloud1), sort_points(expected_pointcloud1), atol=1e-3
+            ),
             "The concatenation node have weird output",
         )
 
@@ -803,7 +822,9 @@ class TestConcatenateNode(unittest.TestCase):
             print("concatenate_cloud 2: ", concatenate_cloud2)
 
         self.assertTrue(
-            np.allclose(concatenate_cloud2, expected_pointcloud2, atol=1e-3),
+            np.allclose(
+                sort_points(concatenate_cloud2), sort_points(expected_pointcloud2), atol=1e-3
+            ),
             "The concatenation node have weird output",
         )
 
@@ -883,7 +904,9 @@ class TestConcatenateNode(unittest.TestCase):
             print("concatenate_cloud 1: ", concatenate_cloud1)
 
         self.assertTrue(
-            np.allclose(concatenate_cloud1, expected_pointcloud1, atol=1e-3),
+            np.allclose(
+                sort_points(concatenate_cloud1), sort_points(expected_pointcloud1), atol=1e-3
+            ),
             "The concatenation node have weird output",
         )
 
@@ -907,7 +930,9 @@ class TestConcatenateNode(unittest.TestCase):
             print("concatenate_cloud 2: ", concatenate_cloud2)
 
         self.assertTrue(
-            np.allclose(concatenate_cloud2, expected_pointcloud2, atol=1e-3),
+            np.allclose(
+                sort_points(concatenate_cloud2), sort_points(expected_pointcloud2), atol=1e-3
+            ),
             "The concatenation node have weird output",
         )
 
