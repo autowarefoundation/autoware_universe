@@ -32,6 +32,7 @@
 #include <cstring>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <tuple>
@@ -95,10 +96,14 @@ public:
   {
     corrector_->set_imu_transform(
       deserialize<geometry_msgs::msg::TransformStamped>(imu_to_base_link));
+    imu_transform_set_ = true;
   }
 
   void insert_imu(const py::bytes & imu)
   {
+    if (!imu_transform_set_) {
+      throw std::runtime_error("set_imu_transform() must be called before insert_imu()");
+    }
     corrector_->insert_imu(
       std::make_shared<sensor_msgs::msg::Imu>(deserialize<sensor_msgs::msg::Imu>(imu)));
   }
@@ -140,6 +145,7 @@ public:
 private:
   std::unique_ptr<DistortionCorrectorBase> corrector_;
   std::optional<AngleConversion> angle_conversion_opt_;
+  bool imu_transform_set_{false};
 };
 }  // namespace
 

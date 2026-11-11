@@ -100,36 +100,61 @@ _DEFAULT_POINTS = [
 ]
 
 
+# Sample stamps spanning the point times (10.10 .. 10.14 s).
+_SAMPLE_NANOSECS = [90_000_000 + ms * 1_000_000 for ms in (95, 110, 125, 140, 155)]
+
+
 def _feed_twists(corrector):
-    # Twist stamps spanning the point times (10.10 .. 10.14 s).
-    for ms in (95, 110, 125, 140, 155):
-        corrector.insert_twist(_make_twist(_CLOUD_SEC, 90_000_000 + ms * 1_000_000))
+    for nanosec in _SAMPLE_NANOSECS:
+        corrector.insert_twist(_make_twist(_CLOUD_SEC, nanosec))
+
+
+def _feed_imus(corrector, yaw_rate=0.5):
+    for nanosec in _SAMPLE_NANOSECS:
+        imu = Imu()
+        imu.header.stamp.sec = _CLOUD_SEC
+        imu.header.stamp.nanosec = nanosec
+        imu.header.frame_id = "imu_link"
+        imu.angular_velocity.z = yaw_rate
+        corrector.insert_imu(imu)
 
 
 def test_empty_pointcloud_reports_empty():
+    # Arrange
     corrector = DistortionCorrector()
     empty = _make_pointcloud([])
+
+    # Act
     _, status = corrector.undistort_pointcloud(empty, _IDENTITY, use_imu=False)
+
+    # Assert
     assert status.validity == PointcloudValidity.EMPTY
 
 
 def test_empty_twist_queue_leaves_cloud_unchanged():
+    # Arrange
     corrector = DistortionCorrector()
     cloud = _make_pointcloud(_DEFAULT_POINTS)
+
+    # Act
     out, status = corrector.undistort_pointcloud(cloud, _IDENTITY, use_imu=False)
 
+    # Assert
     assert status.validity == PointcloudValidity.VALID
     assert status.twist_queue_empty is True
     assert _read_xyz(out) == _read_xyz(cloud)
 
 
 def test_undistortion_changes_points_2d():
+    # Arrange
     corrector = DistortionCorrector(use_3d_distortion_correction=False)
     _feed_twists(corrector)
-
     cloud = _make_pointcloud(_DEFAULT_POINTS)
+
+    # Act
     out, status = corrector.undistort_pointcloud(cloud, _IDENTITY, use_imu=False)
 
+    # Assert
     assert status.validity == PointcloudValidity.VALID
     assert status.twist_queue_empty is False
     # Later points accumulate motion correction, so at least one point must move.
@@ -137,36 +162,45 @@ def test_undistortion_changes_points_2d():
 
 
 def test_undistortion_runs_3d():
+    # Arrange
     corrector = DistortionCorrector(use_3d_distortion_correction=True)
     _feed_twists(corrector)
-
     cloud = _make_pointcloud(_DEFAULT_POINTS)
+
+    # Act
     out, status = corrector.undistort_pointcloud(cloud, _IDENTITY, use_imu=False)
 
+    # Assert
     assert status.validity == PointcloudValidity.VALID
     assert _read_xyz(out) != _read_xyz(cloud)
 
 
 def test_imu_yaw_rate_changes_result():
+    # Arrange
     without_imu = DistortionCorrector()
     with_imu = DistortionCorrector()
     for corrector in (without_imu, with_imu):
         _feed_twists(corrector)
     with_imu.set_imu_transform(_identity_transform("imu_link"))
-    for ms in (95, 110, 125, 140, 155):
-        imu = Imu()
-        imu.header.stamp.sec = _CLOUD_SEC
-        imu.header.stamp.nanosec = 90_000_000 + ms * 1_000_000
-        imu.header.frame_id = "imu_link"
-        imu.angular_velocity.z = 0.5
-        with_imu.insert_imu(imu)
-
+    _feed_imus(with_imu)
     cloud = _make_pointcloud(_DEFAULT_POINTS)
+
+    # Act
     out_twist, _ = without_imu.undistort_pointcloud(cloud, _IDENTITY, use_imu=False)
     out_imu, status = with_imu.undistort_pointcloud(cloud, _IDENTITY, use_imu=True)
 
+    # Assert
     assert status.validity == PointcloudValidity.VALID
     assert _read_xyz(out_imu) != _read_xyz(out_twist)
+
+
+def test_insert_imu_without_transform_raises():
+    # Arrange
+    corrector = DistortionCorrector()
+
+    # Act & Assert
+    with pytest.raises(RuntimeError):
+        corrector.insert_imu(Imu())
 
 
 def test_angle_conversion_failure_is_reported():
@@ -184,16 +218,24 @@ def test_angle_conversion_failure_is_reported():
 
 
 def test_input_cloud_is_left_unchanged():
+    # Arrange
     corrector = DistortionCorrector()
     _feed_twists(corrector)
     cloud = _make_pointcloud(_DEFAULT_POINTS)
     before = bytes(cloud.data)
+
+    # Act
     corrector.undistort_pointcloud(cloud, _IDENTITY, use_imu=False)
+
+    # Assert
     assert bytes(cloud.data) == before
 
 
 def test_wrong_message_type_raises():
+    # Arrange
     corrector = DistortionCorrector()
+
+    # Act & Assert
     with pytest.raises(TypeError):
         corrector.insert_twist(_identity_transform("base_link"))
     with pytest.raises(TypeError):
