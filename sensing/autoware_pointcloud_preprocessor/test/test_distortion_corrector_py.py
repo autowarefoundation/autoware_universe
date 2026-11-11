@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# cspell: ignore Hfff
+
 import struct
 
 from autoware_pointcloud_preprocessor.distortion_corrector import DistortionCorrector
