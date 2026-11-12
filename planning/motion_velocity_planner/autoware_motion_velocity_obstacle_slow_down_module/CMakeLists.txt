@@ -14,7 +14,7 @@ if(BUILD_TESTING)
   ament_add_ros_isolated_gtest(test_${PROJECT_NAME}
     test/test_pointcloud_characterization.cpp
     test/test_planning_factor.cpp
-    test/test_trajectory_polygon_box_filter.cpp
+    test/test_trajectory_polygon_filter.cpp
   )
 
   # Set test dependencies
