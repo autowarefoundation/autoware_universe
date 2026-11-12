@@ -23,10 +23,9 @@ middleware.
 Run it from the workspace root after building the package:
   source install/setup.bash
   python3 src/universe/autoware_universe/sensing/autoware_pointcloud_preprocessor/examples/\
-concatenate_without_ros_node.py [points_per_cloud]
+concatenate_without_ros_node.py
 """
 
-import argparse
 import sys
 
 from autoware_pointcloud_preprocessor.concatenate_pointclouds import Concatenator
@@ -48,7 +47,7 @@ OUTPUT_FRAME = "base_link"
 BASE_STAMP_SEC = 1000.0
 STAMP_STEP_SEC = 0.01
 
-DEFAULT_POINTS_PER_CLOUD = 40000
+POINTS_PER_CLOUD = 40000
 
 # The PointXYZIRC layout (16 bytes per point), the fields the default output requires.
 XYZIRC_FIELDS = [
@@ -107,16 +106,6 @@ def check(condition, what):
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument(
-        "points_per_cloud",
-        nargs="?",
-        type=int,
-        default=DEFAULT_POINTS_PER_CLOUD,
-        help=f"points in each source cloud (default {DEFAULT_POINTS_PER_CLOUD})",
-    )
-    points_per_cloud = parser.parse_args().points_per_cloud
-
     # ---------------------------------------------------------------------------------------
     # 1. Build the core. No node, no parameter server - the configuration is just arguments.
     #    This is the same object the concatenation node drives from its subscriptions.
@@ -148,7 +137,7 @@ def main():
     frames = []
     for sensor_index, topic in enumerate(INPUT_TOPICS):
         stamp_sec = BASE_STAMP_SEC + sensor_index * STAMP_STEP_SEC
-        cloud = make_cloud(sensor_index, stamp_sec, points_per_cloud)
+        cloud = make_cloud(sensor_index, stamp_sec, POINTS_PER_CLOUD)
         frames += concatenator.process_cloud(topic, cloud, arrival_time=stamp_sec)
     # The three clouds completed one collector. A stream that ends with an incomplete collector
     # would call concatenator.flush() here to close it as a timeout.
@@ -177,7 +166,7 @@ def main():
     all_ok = True
     all_ok &= check(cloud.header.frame_id == OUTPUT_FRAME, "cloud is in the output frame")
     all_ok &= check(
-        point_count == points_per_cloud * len(INPUT_TOPICS), "every source contributed its points"
+        point_count == POINTS_PER_CLOUD * len(INPUT_TOPICS), "every source contributed its points"
     )
     all_ok &= check(
         to_seconds(cloud.header.stamp) == BASE_STAMP_SEC, "stamp is the oldest input stamp"

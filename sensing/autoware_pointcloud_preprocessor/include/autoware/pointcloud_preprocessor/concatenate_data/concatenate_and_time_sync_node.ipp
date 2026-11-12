@@ -224,7 +224,7 @@ void PointCloudConcatenateDataSynchronizerComponentTemplated<MsgTraits>::cloud_c
     // this cloud only: the collectors are untouched and the timer stays armed.
     RCLCPP_ERROR_STREAM_THROTTLE(
       this->get_logger(), *this->get_clock(), std::chrono::milliseconds(10000).count(),
-      "Dropped a point cloud from '" << topic_name << "': " << e.what());
+      "Dropped one or more point clouds from '" << topic_name << "': " << e.what());
     return;
   }
   report_concatenator_warnings();

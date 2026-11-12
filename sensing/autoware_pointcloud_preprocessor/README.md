@@ -96,13 +96,8 @@ Each frame carries `status` (`COMPLETE`, `TIMEOUT` or `LATE`), `result.concatena
 `result.dropped_sources_missing_transform`. `frame.build_diagnostics()` returns the
 `DiagnosticStatus` the node would publish for it.
 
-- `set_transform()` takes the transform from the sensor frame into the output frame
-  (`header.frame_id` = output frame, `child_frame_id` = sensor frame). Any other form raises
-  `ValueError`.
-- An unknown topic, a `PointCloud2` without the PointXYZIRC fields or an invalid option raises
-  `ValueError`. A message of the wrong type raises `TypeError`.
-- For the `advanced` matching strategy, pass `matching_strategy="advanced"` together with
-  `lidar_timestamp_offsets` and `lidar_timestamp_noise_window`, as in the node's parameters.
+The arguments, return values and exceptions of each call are in the docstrings
+(`help(Concatenator)`).
 
 A runnable example is [`examples/concatenate_without_ros_node.py`](#concatenate_without_ros_nodepy).
 For reading a rosbag and for reproducing the node exactly (`max_open_collectors`,
@@ -174,12 +169,8 @@ workspace root:
 ```bash
 colcon build --packages-select autoware_pointcloud_preprocessor --cmake-args -DCMAKE_BUILD_TYPE=Release
 source install/setup.bash
-python3 src/universe/autoware_universe/sensing/autoware_pointcloud_preprocessor/examples/concatenate_without_ros_node.py [points_per_cloud]
+python3 src/universe/autoware_universe/sensing/autoware_pointcloud_preprocessor/examples/concatenate_without_ros_node.py
 ```
-
-| Argument           | Default | Description                               |
-| ------------------ | ------- | ----------------------------------------- |
-| `points_per_cloud` | 40000   | points in each of the three source clouds |
 
 ```text
 concatenated cloud

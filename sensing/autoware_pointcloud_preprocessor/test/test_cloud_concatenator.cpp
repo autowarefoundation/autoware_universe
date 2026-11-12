@@ -228,7 +228,7 @@ TEST(CloudConcatenator, DISABLED_RejectsCloudWithAFieldPastPointStep)
     std::invalid_argument);
 }
 
-TEST(CloudConcatenator, RejectsCloudWithoutAZField)
+TEST(CloudConcatenator, RejectsCloudWithoutAzimuthField)
 {
   // Arrange
   auto concatenator = make_naive_concatenator();
@@ -362,7 +362,7 @@ TEST(CloudConcatenator, CloseExpiredCollectorsWithoutACloud)
   EXPECT_EQ(frames[0].first_arrival_time, 100.0);
 }
 
-TEST(CloudConcatenator, CloseExpiredCollectorsKeepsACollectorOpenBeforeItsDeadline)
+TEST(CloudConcatenator, CloseExpiredCollectorsKeepsACollectorBeforeItsDeadlineOpen)
 {
   // Arrange
   auto concatenator = make_naive_concatenator(0.2);

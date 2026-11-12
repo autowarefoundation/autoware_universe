@@ -322,13 +322,12 @@ for frame in concatenator.flush():
 
 where `handle(frame)` reads `frame.status` (`COMPLETE`, `TIMEOUT`, or `LATE` with the options below), `frame.result.concatenated_cloud`, `frame.result.concatenation_info`, and, if needed, `frame.build_diagnostics()`.
 
-- The arrival time drives the collector timeouts and, for the naive strategy, the matching. Replaying the same messages with the same arrival times gives the same frames; changing the arrival times can change them.
-- Each transform must map a sensor frame into the output frame directly (`header.frame_id` = output frame, `child_frame_id` = sensor frame, as `tf2_ros.Buffer.lookup_transform("base_link", sensor_frame, ...)` returns); compose a chain of TF frames before passing it in. A transform of any other form raises `ValueError`; a cloud whose frame has no transform is left out and reported in `frame.result.dropped_sources_missing_transform`.
-- `process_odometry` takes the place of `process_twist` for an `input_twist_topic_type: odom` setup.
-- `frame.build_diagnostics()` returns the `DiagnosticStatus` the node would publish for that frame. The node also drops a frame whose timestamp is older than the last published one (unless `publish_previous_but_late_pointcloud` is set); offline that comparison is the caller's, reported with `build_diagnostics(drop_previous_but_late=True)`.
-- By default the number of open collectors is not bounded and a cloud that arrives after its frame was emitted opens a collector of its own (the core's offline defaults). Pass the node's `max_open_collectors` and `reject_late_clouds=True` to reproduce the node: a late cloud then comes back at once as a one-cloud `LATE` frame. `replay_jump_sec` (default 10 s, the node's `rosbag_length`) separates a late cloud from a looped-bag restart.
-- A `PointCloud2` without the fields of the output point type (`x`/`y`/`z`/`intensity`/`return_type`/`channel` for PointXYZIRC) raises `ValueError`. A message of the wrong type raises `TypeError`.
-- Keep `cloud.data` as the `array('B')` that `deserialize_message` returns: assigning `bytes` makes rclpy validate every element (about 0.2 s per 300 k-point cloud).
+- The same messages with the same arrival times always give the same frames.
+- Each transform maps a sensor frame directly into the output frame, as `lookup_transform(output_frame, sensor_frame, ...)` returns.
+- To reproduce the node exactly, pass its `max_open_collectors` and `reject_late_clouds=True`.
+- Keep `cloud.data` as the `array('B')` that `deserialize_message` returns; assigning `bytes` is slow.
+
+See the docstrings (`help(Concatenator)`) for all options and exceptions.
 
 ## Assumptions / Known Limits
 

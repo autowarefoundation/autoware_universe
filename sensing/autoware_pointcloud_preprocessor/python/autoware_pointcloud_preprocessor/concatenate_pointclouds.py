@@ -14,8 +14,7 @@
 
 """Offline Python interface to the point cloud concatenation core.
 
-:class:`Concatenator` runs the same C++ ``CloudConcatenator`` as the concatenation node; this module
-only converts between rclpy messages and the CDR bytes the extension exchanges.
+:class:`Concatenator` runs the same C++ ``CloudConcatenator`` as the concatenation node.
 
 Time is supplied by the caller: every cloud comes with its arrival time (e.g. the rosbag record
 timestamp), which drives the collector timeouts and, for the naive strategy, the matching. The
@@ -53,15 +52,24 @@ __all__ = [
 
 
 class ConcatenationResult(NamedTuple):
-    """The concatenated cloud of one frame and its metadata."""
+    """The concatenated cloud of one frame and its metadata.
+
+    Attributes:
+        concatenated_cloud: The concatenated cloud, in the output frame.
+        concatenation_info: The ``ConcatenatedPointCloudInfo`` the node publishes with the cloud.
+        transformed_clouds: The input clouds by topic, or ``None`` unless
+            ``publish_synchronized_pointcloud`` is set.
+        motion_compensation_status: Whether motion compensation ran, and if not, why.
+        topic_to_original_stamp: Header stamp (seconds) of each contributing cloud, by topic.
+        dropped_sources_missing_transform: Topic to sensor frame of the clouds left out because
+            no transform to the output frame was set.
+    """
 
     concatenated_cloud: PointCloud2
     concatenation_info: ConcatenatedPointCloudInfo
-    # Per-topic clouds; None unless publish_synchronized_pointcloud is set.
     transformed_clouds: Optional[Dict[str, PointCloud2]]
     motion_compensation_status: MotionCompensationStatus
     topic_to_original_stamp: Dict[str, float]
-    # Topic -> sensor frame of the clouds left out because no transform to the output frame was set.
     dropped_sources_missing_transform: Dict[str, str]
 
 
@@ -69,9 +77,13 @@ class ConcatenationResult(NamedTuple):
 class ConcatenatedFrame:
     """One frame emitted by :class:`Concatenator`.
 
-    ``reference_time`` / ``noise_window`` / ``first_arrival_time`` describe the collector that
-    produced it: for ``advanced``, ``reference_time +/- noise_window`` is its matching window;
-    ``first_arrival_time`` is the arrival time of the cloud that opened it.
+    Attributes:
+        status: Why the collector closed: ``COMPLETE``, ``TIMEOUT`` or ``LATE``.
+        result: The concatenated cloud and its metadata.
+        reference_time: Reference timestamp (seconds) of the collector that produced the frame.
+        noise_window: Half-width (seconds) of the collector's matching window around
+            ``reference_time``; 0 for the ``naive`` strategy.
+        first_arrival_time: Arrival time (seconds) of the cloud that opened the collector.
     """
 
     status: FrameStatus
@@ -91,13 +103,21 @@ class ConcatenatedFrame:
         now: Optional[float] = None,
         drop_previous_but_late: bool = False,
     ) -> DiagnosticStatus:
-        """Build the :class:`DiagnosticStatus` the node publishes for this frame.
+        """Build the ``DiagnosticStatus`` the node publishes for this frame.
 
-        ``node_name`` defaults to the node's. ``"Processing time (ms)"`` is added only when
-        ``processing_time_ms`` is given, and the latency entries only when ``now`` (seconds) is
-        given, since neither has an offline meaning otherwise. ``drop_previous_but_late`` reports
-        the frame as dropped for being older than the last published one, as the node does when
-        ``publish_previous_but_late_pointcloud`` is off (that check is the caller's offline).
+        Args:
+            node_name: Node name used in the status name. Defaults to the node's.
+            diagnostic_name: Name of the diagnostic task. Defaults to the node's.
+            processing_time_ms: Value of the ``"Processing time (ms)"`` entry, which is left out
+                if ``None``.
+            now: Current time (seconds) the latency entries are measured against. They are left
+                out if ``None``.
+            drop_previous_but_late: Report the frame as dropped for being older than the last
+                published one, as the node does when ``publish_previous_but_late_pointcloud`` is
+                off. Offline, the caller makes that comparison.
+
+        Returns:
+            The diagnostic status of this frame.
         """
         status = self._diagnostics.build(
             node_name, diagnostic_name, processing_time_ms, now, drop_previous_but_late
@@ -149,20 +169,12 @@ class Concatenator:
 
     Feed clouds with :meth:`process_cloud` in arrival order. A frame is emitted when every input
     topic has contributed to a collector (``COMPLETE``), or once the arrival clock reaches the
-    collector's creation plus ``timeout_sec`` (``TIMEOUT``); call :meth:`flush` at the end of the
+    collector's creation plus ``timeout_sec`` (``TIMEOUT``). Call :meth:`flush` at the end of the
     stream for the collectors still open.
 
-    For the ``advanced`` strategy, give ``lidar_timestamp_offsets`` and
-    ``lidar_timestamp_noise_window`` (seconds, one per input topic, in ``input_topics`` order),
-    the same values the node reads from its parameters.
-
-    The defaults keep every collector open until it completes or times out, as the core does
-    offline. To reproduce the node exactly, also pass its ``max_open_collectors`` and, for
-    ``publish_previous_but_late_pointcloud: false``, ``reject_late_clouds=True``: a cloud arriving
-    after its frame was emitted is then returned at once as a one-cloud ``LATE`` frame (which the
-    node drops) instead of opening a collector of its own. A cloud more than ``replay_jump_sec``
-    (the node's ``rosbag_length``, default 10 s) behind the last emitted frame is a replay restart,
-    not a late cloud.
+    The defaults keep every collector open until it completes or times out. To reproduce the node
+    exactly, pass its ``max_open_collectors`` and, for
+    ``publish_previous_but_late_pointcloud: false``, ``reject_late_clouds=True``.
     """
 
     def __init__(
@@ -180,6 +192,38 @@ class Concatenator:
         reject_late_clouds: bool = False,
         replay_jump_sec: float = 10.0,
     ) -> None:
+        """Create a concatenator with no open collector, no transform and no velocity.
+
+        Args:
+            input_topics: Topics of the clouds to concatenate, without duplicates.
+            output_frame: Frame of the concatenated cloud.
+            timeout_sec: Time after its first cloud's arrival at which an incomplete collector is
+                emitted as ``TIMEOUT``.
+            is_motion_compensated: Compensate each cloud for the ego motion between its stamp and
+                the oldest stamp of the frame.
+            publish_synchronized_pointcloud: Also return the input clouds, in
+                ``transformed_clouds``.
+            keep_input_frame_in_synchronized_pointcloud: Keep those clouds in their sensor frame
+                instead of the output frame.
+            matching_strategy: ``"naive"`` or ``"advanced"``, as in the node.
+            lidar_timestamp_offsets: Timestamp offset (seconds) of each input topic, in
+                ``input_topics`` order, as in the node's parameter. Required for ``"advanced"``.
+            lidar_timestamp_noise_window: Timestamp noise window (seconds) of each input topic,
+                in ``input_topics`` order, as in the node's parameter. Required for
+                ``"advanced"``.
+            max_open_collectors: Number of collectors that may be open at once; opening another
+                one discards the oldest without emitting it. 0 means no limit.
+            reject_late_clouds: Return a cloud that arrives after its frame was emitted as a
+                one-cloud ``LATE`` frame, instead of opening a collector for it.
+            replay_jump_sec: With ``reject_late_clouds``, a cloud older than the last emitted
+                frame by more than this is a replay restart, not a late cloud (the node's
+                ``rosbag_length``).
+
+        Raises:
+            ValueError: If ``input_topics`` has duplicates, ``matching_strategy`` is unknown, or
+                the ``"advanced"`` offsets and noise windows are missing or do not have one value
+                per input topic.
+        """
         self._impl = _ext.Concatenator(
             list(input_topics),
             output_frame,
@@ -196,45 +240,90 @@ class Concatenator:
         )
 
     def set_transform(self, sensor_to_output_frame: TransformStamped) -> None:
-        """Set the extrinsic of one sensor frame.
+        """Set the transform from one sensor frame into the output frame.
 
-        ``header.frame_id`` must be the output frame and ``child_frame_id`` the sensor frame, i.e.
-        the transform tf2 returns for ``lookup_transform(output_frame, sensor_frame, ...)``. Clouds
-        in a sensor frame without a transform are left out of the frame and reported in
+        Clouds in a sensor frame without a transform are left out of the frame and reported in
         ``dropped_sources_missing_transform``.
 
-        :raises ValueError: if the transform does not have that form.
+        Args:
+            sensor_to_output_frame: Transform with ``header.frame_id`` = output frame and
+                ``child_frame_id`` = sensor frame, as tf2 returns for
+                ``lookup_transform(output_frame, sensor_frame, ...)``.
+
+        Raises:
+            TypeError: If ``sensor_to_output_frame`` is not a ``TransformStamped``.
+            ValueError: If the transform does not have that form.
         """
         _check_type(sensor_to_output_frame, TransformStamped)
         self._impl.set_transform(serialize_message(sensor_to_output_frame))
 
     def process_twist(self, twist: TwistWithCovarianceStamped) -> None:
+        """Queue a velocity sample for motion compensation.
+
+        Args:
+            twist: Vehicle twist. Only the linear x and angular z velocities are used.
+
+        Raises:
+            TypeError: If ``twist`` is not a ``TwistWithCovarianceStamped``.
+        """
         _check_type(twist, TwistWithCovarianceStamped)
         self._impl.process_twist(serialize_message(twist))
 
     def process_odometry(self, odometry: Odometry) -> None:
+        """Queue a velocity sample for motion compensation, from odometry.
+
+        Takes the place of :meth:`process_twist` for an ``input_twist_topic_type: odom`` setup.
+
+        Args:
+            odometry: Vehicle odometry. Only its twist's linear x and angular z velocities are
+                used.
+
+        Raises:
+            TypeError: If ``odometry`` is not an ``Odometry``.
+        """
         _check_type(odometry, Odometry)
         self._impl.process_odometry(serialize_message(odometry))
 
     def process_cloud(
         self, topic: str, cloud: PointCloud2, arrival_time: float
     ) -> List[ConcatenatedFrame]:
-        """Add ``cloud``, received on ``topic`` at ``arrival_time`` (seconds).
+        """Add a cloud to its collector and return the frames this resolves.
 
-        Returns the frames this resolves: usually none or one, but several collectors can resolve
-        at once.
+        Args:
+            topic: Input topic the cloud was received on.
+            cloud: Cloud with the PointXYZIRC fields.
+            arrival_time: Time (seconds) the cloud was received, e.g. its rosbag record time. It
+                takes the place of the node's clock.
 
-        :raises ValueError: if ``topic`` is not one of the input topics, or if the cloud lacks a
-            field of the output point type (e.g. ``intensity``, ``return_type``, ``channel``).
+        Returns:
+            The frames resolved by this cloud: usually none or one, but several collectors can
+            resolve at once.
+
+        Raises:
+            TypeError: If ``cloud`` is not a ``PointCloud2``.
+            ValueError: If ``topic`` is not one of the input topics, or the cloud lacks a field
+                of the output point type (``x``, ``y``, ``z``, ``intensity``, ``return_type``,
+                ``channel``).
         """
         _check_type(cloud, PointCloud2)
         frames = self._impl.process_cloud(topic, serialize_message(cloud), arrival_time)
         return [_wrap_frame(frame) for frame in frames]
 
     def close_expired_collectors(self, now: float) -> List[ConcatenatedFrame]:
-        """Return the collectors whose timeout has expired at ``now``, without adding a cloud."""
+        """Emit the collectors whose timeout has expired, without adding a cloud.
+
+        Args:
+            now: Current time (seconds), on the same clock as the arrival times.
+
+        Returns:
+            One ``TIMEOUT`` frame per expired collector.
+        """
         return [_wrap_frame(frame) for frame in self._impl.close_expired_collectors(now)]
 
     def flush(self) -> List[ConcatenatedFrame]:
-        """Return every collector still open, as timed out (call at the end of the stream)."""
+        """Emit every collector still open. Call it at the end of the stream.
+
+        Returns:
+            One ``TIMEOUT`` frame per open collector.
+        """
         return [_wrap_frame(frame) for frame in self._impl.flush()]
