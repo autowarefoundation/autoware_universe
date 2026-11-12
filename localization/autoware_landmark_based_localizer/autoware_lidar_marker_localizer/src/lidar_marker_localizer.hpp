@@ -21,6 +21,7 @@
 
 #include <autoware/landmark_manager/landmark_manager.hpp>
 #include <autoware_utils/ros/diagnostics_interface.hpp>
+#include <builtin_interfaces/msg/time.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <tf2_eigen/tf2_eigen.hpp>
 
@@ -80,8 +81,6 @@ class LidarMarkerLocalizer : public rclcpp::Node
     double limit_distance_from_self_pose_to_marker;
     std::array<double, 36> base_covariance;
 
-    double marker_width;
-
     bool enable_save_log;
     std::string save_file_directory_path;
     std::string save_file_name;
@@ -105,22 +104,21 @@ private:
   template <typename PointType>
   std::vector<landmark_manager::Landmark> detect_landmarks(
     const PointCloud2::ConstSharedPtr & points_msg_ptr);
-  sensor_msgs::msg::PointCloud2::SharedPtr extract_marker_pointcloud(
-    const sensor_msgs::msg::PointCloud2::ConstSharedPtr & points_msg_ptr,
-    const geometry_msgs::msg::Pose marker_pose) const;
-  void save_detected_marker_log(const sensor_msgs::msg::PointCloud2::SharedPtr & points_msg_ptr);
   landmark_manager::Landmark get_nearest_landmark(
     const geometry_msgs::msg::Pose & self_pose,
     const std::vector<landmark_manager::Landmark> & landmarks) const;
   std::array<double, 36> rotate_covariance(
     const std::array<double, 36> & src_covariance, const Eigen::Matrix3d & rotation) const;
   template <typename PointT>
-  void save_intensity(const PointCloud2::ConstSharedPtr & points_msg_ptr, const Pose marker_pose);
+  void output_detected_marker(
+    const PointCloud2::ConstSharedPtr & points_msg_ptr, const Pose marker_pose);
+  void save_detected_marker_csv(
+    const pcl::PointCloud<pcl::PointXYZI> & marker_points, const std::vector<uint16_t> & ring_ids,
+    const builtin_interfaces::msg::Time & stamp) const;
 
-  void transform_sensor_measurement(
-    const std::string & source_frame, const std::string & target_frame,
-    const sensor_msgs::msg::PointCloud2::SharedPtr & sensor_points_input_ptr,
-    sensor_msgs::msg::PointCloud2::SharedPtr & sensor_points_output_ptr);
+  bool transform_marker_pointcloud(
+    const std::string & target_frame, const std::string & source_frame,
+    const pcl::PointCloud<pcl::PointXYZI> & input, pcl::PointCloud<pcl::PointXYZI> & output);
 
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
   std::shared_ptr<tf2_ros::Buffer> tf_buffer_;

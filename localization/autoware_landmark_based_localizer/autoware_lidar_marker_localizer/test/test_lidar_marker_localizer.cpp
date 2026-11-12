@@ -186,7 +186,6 @@ TEST(LidarMarkerLocalizer, Initialization)
      {"marker_to_vehicle_offset_y", 0.0},
      {"marker_height_from_ground", 0.0},
      {"reference_ring_number", 0},
-     {"marker_width", 0.8},
      {"self_pose_timeout_sec", 1.0},
      {"self_pose_distance_tolerance_m", 1.0},
      {"limit_distance_from_self_pose_to_nearest_marker", 1.0},

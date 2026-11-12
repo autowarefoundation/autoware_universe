@@ -133,12 +133,6 @@
             0.0, 0.0, 0.0, 0.00030625
           ]
         },
-        "marker_width": {
-          "type": "number",
-          "description": "Width of a marker. This param is used for visualizing the detected marker pointcloud[m]",
-          "default": 0.8,
-          "minimum": 0.0
-        },
         "enable_save_log": {
           "type": "boolean",
           "description": "",
@@ -156,12 +150,12 @@
         },
         "save_frame_id": {
           "type": "string",
-          "description": "",
+          "description": "Frame in which the detected marker pointcloud is published and saved",
           "default": "velodyne_top"
         },
         "radius_for_extracting_marker_pointcloud": {
           "type": "number",
-          "description": "Only points closer than this value to the marker center on the xy plane are extracted as the “marker point cloud”. [m]",
+          "description": "Only points closer than this value to the marker center are extracted as the “marker point cloud” for the debug visualization and the saved log. The distance is measured on the xy plane, or on the xz plane in road_surface_mode. [m]",
           "default": 0.4,
           "minimum": 0.0
         },
@@ -188,7 +182,6 @@
         "limit_distance_from_self_pose_to_nearest_marker_y",
         "limit_distance_from_self_pose_to_marker",
         "base_covariance",
-        "marker_width",
         "enable_save_log",
         "save_file_directory_path",
         "save_file_name",
