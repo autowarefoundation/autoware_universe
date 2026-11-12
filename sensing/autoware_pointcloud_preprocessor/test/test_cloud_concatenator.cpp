@@ -186,7 +186,7 @@ TEST(CloudConcatenator, ProcessCloudRejectsUnknownTopic)
 
 // Each inconsistent layout below would make the XYZ conversion read past the data buffer.
 
-// TODO(vividf): re-enable once the upcoming input sanity check covers data size and offsets.
+// TODO(sasakisasaki): re-enable once the upcoming input sanity check covers data size and offsets.
 TEST(CloudConcatenator, DISABLED_RejectsCloudWhoseDataIsNotAMultipleOfPointStep)
 {
   // Arrange
@@ -200,7 +200,7 @@ TEST(CloudConcatenator, DISABLED_RejectsCloudWhoseDataIsNotAMultipleOfPointStep)
     std::invalid_argument);
 }
 
-// TODO(vividf): re-enable once the upcoming input sanity check covers data size and offsets.
+// TODO(sasakisasaki): re-enable once the upcoming input sanity check covers data size and offsets.
 TEST(CloudConcatenator, DISABLED_RejectsCloudWhoseWidthExceedsItsData)
 {
   // Arrange
@@ -214,7 +214,7 @@ TEST(CloudConcatenator, DISABLED_RejectsCloudWhoseWidthExceedsItsData)
     std::invalid_argument);
 }
 
-// TODO(vividf): re-enable once the upcoming input sanity check covers data size and offsets.
+// TODO(sasakisasaki): re-enable once the upcoming input sanity check covers data size and offsets.
 TEST(CloudConcatenator, DISABLED_RejectsCloudWithAFieldPastPointStep)
 {
   // Arrange
@@ -254,7 +254,7 @@ TEST(CloudConcatenator, RejectsCloudWithANonFloat32XField)
     std::invalid_argument);
 }
 
-// TODO(vividf): re-enable once the upcoming input sanity check covers data size and offsets.
+// TODO(sasakisasaki): re-enable once the upcoming input sanity check covers data size and offsets.
 TEST(CloudConcatenator, DISABLED_RejectsCloudWithZeroPointStep)
 {
   // Arrange
