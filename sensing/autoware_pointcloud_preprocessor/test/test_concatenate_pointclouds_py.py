@@ -441,7 +441,8 @@ def _make_xyzirct_cloud(sec, nanosec, time_stamps_ns):
     msg.point_step = 20
     msg.row_step = 20 * len(time_stamps_ns)
     msg.data = b"".join(
-        struct.pack("<fffBBHI", *_POINTS[0], 0, 0, 0, time_stamp) for time_stamp in time_stamps_ns
+        struct.pack("<fffBBH", *_POINTS[0], 0, 0, 0) + struct.pack("<I", time_stamp)
+        for time_stamp in time_stamps_ns
     )
     return msg
 
