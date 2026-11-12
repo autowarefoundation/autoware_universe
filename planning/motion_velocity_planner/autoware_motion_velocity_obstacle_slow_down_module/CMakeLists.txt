@@ -14,6 +14,7 @@ if(BUILD_TESTING)
   ament_add_ros_isolated_gtest(test_${PROJECT_NAME}
     test/test_pointcloud_characterization.cpp
     test/test_planning_factor.cpp
+    test/test_trajectory_lateral_offset_calculator.cpp
   )
 
   # Set test dependencies
