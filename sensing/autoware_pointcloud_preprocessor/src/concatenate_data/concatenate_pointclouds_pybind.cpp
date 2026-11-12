@@ -64,6 +64,15 @@ using CloudConcatenator =
   autoware::pointcloud_preprocessor::CloudConcatenator<sensor_msgs::msg::PointCloud2>;
 using InputTopics = std::shared_ptr<const std::vector<std::string>>;
 
+PointFormat parse_output_point_type(const std::string & output_point_type)
+{
+  // The same values as the node's output_point_type parameter.
+  if (output_point_type == "XYZIRC") return PointFormat::XYZIRC;
+  if (output_point_type == "XYZIRCT") return PointFormat::XYZIRCT;
+  throw std::invalid_argument(
+    "output_point_type must be 'XYZIRC' or 'XYZIRCT', got '" + output_point_type + "'");
+}
+
 template <typename MsgT>
 MsgT deserialize(const py::bytes & data)
 {
@@ -231,13 +240,14 @@ public:
     bool keep_input_frame_in_synchronized_pointcloud, const std::string & matching_strategy,
     const std::optional<std::vector<double>> & lidar_timestamp_offsets,
     const std::optional<std::vector<double>> & lidar_timestamp_noise_window,
-    std::size_t max_open_collectors, bool reject_late_clouds, double replay_jump_sec)
+    std::size_t max_open_collectors, bool reject_late_clouds, double replay_jump_sec,
+    const std::string & output_point_type)
   : input_topics_(std::make_shared<const std::vector<std::string>>(input_topics)),
     concatenator_(
-      input_topics, output_frame, PointFormat::XYZIRC, timeout_sec, is_motion_compensated,
-      publish_synchronized_pointcloud, keep_input_frame_in_synchronized_pointcloud,
-      parse_matching_strategy(matching_strategy), lidar_timestamp_offsets,
-      lidar_timestamp_noise_window, max_open_collectors,
+      input_topics, output_frame, parse_output_point_type(output_point_type), timeout_sec,
+      is_motion_compensated, publish_synchronized_pointcloud,
+      keep_input_frame_in_synchronized_pointcloud, parse_matching_strategy(matching_strategy),
+      lidar_timestamp_offsets, lidar_timestamp_noise_window, max_open_collectors,
       LateCloudPolicy{reject_late_clouds, replay_jump_sec})
   {
   }
@@ -341,12 +351,14 @@ PYBIND11_MODULE(_concatenate_pointclouds_pybind, m)
       py::init<
         const std::vector<std::string> &, const std::string &, double, bool, bool, bool,
         const std::string &, const std::optional<std::vector<double>> &,
-        const std::optional<std::vector<double>> &, std::size_t, bool, double>(),
+        const std::optional<std::vector<double>> &, std::size_t, bool, double,
+        const std::string &>(),
       py::arg("input_topics"), py::arg("output_frame"), py::arg("timeout_sec"),
       py::arg("is_motion_compensated"), py::arg("publish_synchronized_pointcloud"),
       py::arg("keep_input_frame_in_synchronized_pointcloud"), py::arg("matching_strategy"),
       py::arg("lidar_timestamp_offsets"), py::arg("lidar_timestamp_noise_window"),
-      py::arg("max_open_collectors"), py::arg("reject_late_clouds"), py::arg("replay_jump_sec"))
+      py::arg("max_open_collectors"), py::arg("reject_late_clouds"), py::arg("replay_jump_sec"),
+      py::arg("output_point_type"))
     .def("set_transform", &ConcatenatorWrapper::set_transform, py::arg("sensor_to_output_frame"))
     .def("process_twist", &ConcatenatorWrapper::process_twist, py::arg("twist"))
     .def("process_odometry", &ConcatenatorWrapper::process_odometry, py::arg("odometry"))

@@ -432,6 +432,51 @@ def test_synchronized_clouds_default_to_the_output_frame():
     _assert_points(_read_xyz(synchronized), _UNIT_POINTS_IN_OUTPUT_FRAME)
 
 
+def _make_xyzirct_cloud(sec, nanosec, time_stamps_ns):
+    """Return a PointXYZIRCT cloud (point_step 20) with one point per given time_stamp."""
+    msg = _make_cloud(sec, nanosec, [_POINTS[0]] * len(time_stamps_ns))
+    msg.fields = _FIELDS + [
+        PointField(name="time_stamp", offset=16, datatype=PointField.UINT32, count=1)
+    ]
+    msg.point_step = 20
+    msg.row_step = 20 * len(time_stamps_ns)
+    msg.data = b"".join(
+        struct.pack("<fffBBHI", *_POINTS[0], 0, 0, 0, time_stamp) for time_stamp in time_stamps_ns
+    )
+    return msg
+
+
+def test_output_point_type_xyzirct_keeps_time_stamps_relative_to_the_frame_stamp():
+    concatenator = _make_concatenator(["lidar_a", "lidar_b"], output_point_type="XYZIRCT")
+    concatenator.process_cloud("lidar_a", _make_xyzirct_cloud(10, 0, [5, 7]), arrival_time=100.0)
+
+    frames = concatenator.process_cloud(
+        "lidar_b", _make_xyzirct_cloud(10, 40_000_000, [5]), arrival_time=100.01
+    )
+
+    cloud = frames[0].result.concatenated_cloud
+    assert [field.name for field in cloud.fields][-1] == "time_stamp"
+    assert cloud.point_step == 20
+    time_stamps = [
+        struct.unpack_from("<I", cloud.data, i * cloud.point_step + 16)[0]
+        for i in range(cloud.width)
+    ]
+    # lidar_b's cloud is stamped 40 ms after the frame's (oldest) stamp.
+    assert sorted(time_stamps) == [5, 7, 40_000_005]
+
+
+def test_output_point_type_xyzirct_rejects_a_cloud_without_time_stamp():
+    concatenator = _make_concatenator(["lidar_x"], output_point_type="XYZIRCT")
+
+    with pytest.raises(ValueError):
+        concatenator.process_cloud("lidar_x", _make_cloud(10, 0), arrival_time=100.0)
+
+
+def test_unknown_output_point_type_raises_value_error():
+    with pytest.raises(ValueError, match="output_point_type"):
+        _make_concatenator(output_point_type="XYZ")
+
+
 def test_node_parity_options_reject_late_clouds_and_cap_collectors():
     concatenator = _make_concatenator(
         ["lidar_a", "lidar_b"], timeout_sec=0.1, max_open_collectors=1, reject_late_clouds=True

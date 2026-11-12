@@ -191,6 +191,7 @@ class Concatenator:
         max_open_collectors: int = 0,
         reject_late_clouds: bool = False,
         replay_jump_sec: float = 10.0,
+        output_point_type: str = "XYZIRC",
     ) -> None:
         """Create a concatenator with no open collector, no transform and no velocity.
 
@@ -218,11 +219,14 @@ class Concatenator:
             replay_jump_sec: With ``reject_late_clouds``, a cloud older than the last emitted
                 frame by more than this is a replay restart, not a late cloud (the node's
                 ``rosbag_length``).
+            output_point_type: ``"XYZIRC"`` or ``"XYZIRCT"``, as in the node. ``"XYZIRCT"`` keeps
+                each point's ``time_stamp``, rewritten relative to the frame's stamp, and needs
+                input clouds with that field.
 
         Raises:
-            ValueError: If ``input_topics`` has duplicates, ``matching_strategy`` is unknown, or
-                the ``"advanced"`` offsets and noise windows are missing or do not have one value
-                per input topic.
+            ValueError: If ``input_topics`` has duplicates, ``matching_strategy`` or
+                ``output_point_type`` is unknown, or the ``"advanced"`` offsets and noise windows
+                are missing or do not have one value per input topic.
         """
         self._impl = _ext.Concatenator(
             list(input_topics),
@@ -237,6 +241,7 @@ class Concatenator:
             max_open_collectors,
             reject_late_clouds,
             replay_jump_sec,
+            output_point_type,
         )
 
     def set_transform(self, sensor_to_output_frame: TransformStamped) -> None:
@@ -291,7 +296,7 @@ class Concatenator:
 
         Args:
             topic: Input topic the cloud was received on.
-            cloud: Cloud with the PointXYZIRC fields.
+            cloud: Cloud with the fields of the output point type.
             arrival_time: Time (seconds) the cloud was received, e.g. its rosbag record time. It
                 takes the place of the node's clock.
 
@@ -303,7 +308,7 @@ class Concatenator:
             TypeError: If ``cloud`` is not a ``PointCloud2``.
             ValueError: If ``topic`` is not one of the input topics, or the cloud lacks a field
                 of the output point type (``x``, ``y``, ``z``, ``intensity``, ``return_type``,
-                ``channel``).
+                ``channel``, and ``time_stamp`` for ``"XYZIRCT"``).
         """
         _check_type(cloud, PointCloud2)
         frames = self._impl.process_cloud(topic, serialize_message(cloud), arrival_time)
