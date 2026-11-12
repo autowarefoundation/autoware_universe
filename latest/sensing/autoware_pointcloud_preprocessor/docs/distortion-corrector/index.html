@@ -17293,6 +17293,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#offline-use-from-python" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Offline use from Python
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#referencesexternal-links" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -23299,6 +23310,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#offline-use-from-python" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Offline use from Python
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#referencesexternal-links" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -23470,6 +23492,39 @@
 </tr>
 </tbody>
 </table>
+<h2 id="offline-use-from-python">Offline use from Python<a class="headerlink" href="#offline-use-from-python" title="Permanent link">#</a></h2>
+<p>The correction core (<code>DistortionCorrector2D</code> / <code>DistortionCorrector3D</code>, which the node runs) can be used from Python through <code>autoware_pointcloud_preprocessor.distortion_corrector</code>. It is built and installed with the package. It takes and returns rclpy messages and needs no ROS node: no <code>rclpy.init()</code>, no executor and no TF listener, so the result depends only on the inputs.</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">autoware_pointcloud_preprocessor.distortion_corrector</span><span class="w"> </span><span class="kn">import</span> <span class="n">DistortionCorrector</span><span class="p">,</span> <span class="n">PointcloudValidity</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">geometry_msgs.msg</span><span class="w"> </span><span class="kn">import</span> <span class="n">TransformStamped</span><span class="p">,</span> <span class="n">TwistWithCovarianceStamped</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sensor_msgs.msg</span><span class="w"> </span><span class="kn">import</span> <span class="n">Imu</span><span class="p">,</span> <span class="n">PointCloud2</span>
+
+<span class="c1"># Inputs, e.g. read from a rosbag.</span>
+<span class="n">twists</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">TwistWithCovarianceStamped</span><span class="p">]</span>
+<span class="n">imus</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Imu</span><span class="p">]</span>
+<span class="n">cloud</span><span class="p">:</span> <span class="n">PointCloud2</span>
+<span class="n">imu_to_base_link</span><span class="p">:</span> <span class="n">TransformStamped</span>
+<span class="n">lidar_to_base_link</span><span class="p">:</span> <span class="n">TransformStamped</span>
+
+<span class="n">corrector</span> <span class="o">=</span> <span class="n">DistortionCorrector</span><span class="p">(</span><span class="n">use_3d_distortion_correction</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">corrector</span><span class="o">.</span><span class="n">set_imu_transform</span><span class="p">(</span><span class="n">imu_to_base_link</span><span class="p">)</span>  <span class="c1"># only needed with use_imu=True</span>
+
+<span class="c1"># Feed twist and IMU messages in timestamp order, then undistort each cloud.</span>
+<span class="k">for</span> <span class="n">twist</span> <span class="ow">in</span> <span class="n">twists</span><span class="p">:</span>
+    <span class="n">corrector</span><span class="o">.</span><span class="n">insert_twist</span><span class="p">(</span><span class="n">twist</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">imu</span> <span class="ow">in</span> <span class="n">imus</span><span class="p">:</span>
+    <span class="n">corrector</span><span class="o">.</span><span class="n">insert_imu</span><span class="p">(</span><span class="n">imu</span><span class="p">)</span>
+<span class="n">undistorted</span><span class="p">,</span> <span class="n">status</span> <span class="o">=</span> <span class="n">corrector</span><span class="o">.</span><span class="n">undistort_pointcloud</span><span class="p">(</span>
+    <span class="n">cloud</span><span class="p">,</span> <span class="n">lidar_to_base_link</span><span class="p">,</span> <span class="n">use_imu</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">update_azimuth_and_distance</span><span class="o">=</span><span class="kc">False</span>
+<span class="p">)</span>
+<span class="k">if</span> <span class="n">status</span><span class="o">.</span><span class="n">validity</span> <span class="ow">is</span> <span class="ow">not</span> <span class="n">PointcloudValidity</span><span class="o">.</span><span class="n">VALID</span><span class="p">:</span>
+    <span class="o">...</span>  <span class="c1"># the cloud was returned unchanged; see status.validity</span>
+</code></pre></div>
+<ul>
+<li>Transforms have <code>header.frame_id</code> = base frame and <code>child_frame_id</code> = sensor frame, as TF provides them.</li>
+<li>The twist and IMU queues follow the node's rules: a sample older than the queue front clears the queue, and samples older than the newest one by more than 1 s are dropped.</li>
+<li><code>status</code> also carries <code>twist_queue_empty</code>, <code>twist_timestamp_too_late</code>, <code>imu_timestamp_too_late</code>, <code>timestamp_mismatch_count</code>, <code>timestamp_mismatch_fraction</code> and <code>angle_conversion_error</code>, the conditions the node logs or reports as diagnostics. <code>angle_conversion_error</code> is set when <code>update_azimuth_and_distance=True</code> but the azimuth conversion could not be computed from this cloud, in which case azimuth and distance are left unchanged.</li>
+<li>A message of the wrong type raises <code>TypeError</code>, and <code>insert_imu</code> before <code>set_imu_transform</code> raises <code>RuntimeError</code>.</li>
+</ul>
 <h2 id="referencesexternal-links">References/External links<a class="headerlink" href="#referencesexternal-links" title="Permanent link">#</a></h2>
 <p><a href="https://docs.opencv.org/3.4/db/de0/group__core__utils.html#ga7b356498dd314380a0c386b059852270">https://docs.opencv.org/3.4/db/de0/group__core__utils.html#ga7b356498dd314380a0c386b059852270</a></p></div>
 
