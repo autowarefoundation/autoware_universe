@@ -59,23 +59,44 @@ constexpr char not_connected_message[] = "not connected";
 
 constexpr std::chrono::seconds diagnostics_timeout{15};
 
+// ComponentManager is a node, so main() destroys it before rclcpp::shutdown(). A node that
+// outlives main() keeps the context, and with it the DDS participant and its threads, alive
+// while the RMW library is unloaded.
+struct ComponentLoader
+{
+  std::unique_ptr<rclcpp_components::ComponentManager> manager;
+  std::shared_ptr<rclcpp_components::NodeFactory> factory;
+};
+
+ComponentLoader & component_loader()
+{
+  static ComponentLoader loader;
+  return loader;
+}
+
 // Loads the component library once for the whole test binary; nullptr if the plugin is not
-// registered. The manager and factory are leaked on purpose: class_loader unloads the library
-// in its destructor, which runs after rclcpp::shutdown() and aborts the process.
+// registered.
 std::shared_ptr<rclcpp_components::NodeFactory> get_component_factory()
 {
-  static auto * factory = [] {
-    auto * cached = new std::shared_ptr<rclcpp_components::NodeFactory>();
-    auto * manager = new rclcpp_components::ComponentManager();
-    for (const auto & resource : manager->get_component_resources(package_name)) {
+  auto & loader = component_loader();
+  if (!loader.manager) {
+    loader.manager = std::make_unique<rclcpp_components::ComponentManager>();
+    for (const auto & resource : loader.manager->get_component_resources(package_name)) {
       if (resource.first == plugin_name) {
-        *cached = manager->create_component_factory(resource);
+        loader.factory = loader.manager->create_component_factory(resource);
         break;
       }
     }
-    return cached;
-  }();
-  return *factory;
+  }
+  return loader.factory;
+}
+
+// The factory goes first, as the manager's class loader created it.
+void release_component_factory()
+{
+  auto & loader = component_loader();
+  loader.factory.reset();
+  loader.manager.reset();
 }
 
 // GoogleTest here shows nothing of GTEST_SKIP()'s message -- not on the console, not in the
@@ -476,6 +497,7 @@ int main(int argc, char ** argv)
   ::testing::InitGoogleTest(&argc, argv);
   rclcpp::init(argc, argv);
   const int result = RUN_ALL_TESTS();
+  release_component_factory();
   rclcpp::shutdown();
   return result;
 }
