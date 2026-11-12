@@ -17359,6 +17359,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#offline-use-from-python" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Offline use from Python
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#assumptions-known-limits" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -23543,6 +23554,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#offline-use-from-python" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Offline use from Python
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#assumptions-known-limits" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -23950,6 +23972,42 @@ status:
 <h2 id="node-separation-options">Node separation options<a class="headerlink" href="#node-separation-options" title="Permanent link">#</a></h2>
 <p>There is also an option to separate the concatenate_and_time_sync_node into two nodes: one for <code>time synchronization</code> and another for <code>concatenate pointclouds</code> (<a href="https://github.com/autowarefoundation/autoware_universe/pull/3312">See this PR</a>).</p>
 <p>Note that the <code>concatenate_pointclouds</code> and <code>time_synchronizer_nodelet</code> are using the <a href="https://github.com/autowarefoundation/autoware_universe/blob/9bb228fe5b7fa4c6edb47e4713c73489a02366e1/sensing/autoware_pointcloud_preprocessor/docs/concatenate-data.md">old design</a> of the concatenate node.</p>
+<h2 id="offline-use-from-python">Offline use from Python<a class="headerlink" href="#offline-use-from-python" title="Permanent link">#</a></h2>
+<p><code>autoware_pointcloud_preprocessor.concatenate_pointclouds.Concatenator</code> runs the node's concatenation core (<code>CloudConcatenator</code>) without ROS, e.g. to re-concatenate a rosbag. The caller supplies each cloud's arrival time (here the record time), which takes the place of the node's clock:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">autoware_pointcloud_preprocessor.concatenate_pointclouds</span><span class="w"> </span><span class="kn">import</span> <span class="n">Concatenator</span><span class="p">,</span> <span class="n">FrameStatus</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">geometry_msgs.msg</span><span class="w"> </span><span class="kn">import</span> <span class="n">TwistWithCovarianceStamped</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rclpy.serialization</span><span class="w"> </span><span class="kn">import</span> <span class="n">deserialize_message</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rosbag2_py</span><span class="w"> </span><span class="kn">import</span> <span class="n">ConverterOptions</span><span class="p">,</span> <span class="n">SequentialReader</span><span class="p">,</span> <span class="n">StorageOptions</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sensor_msgs.msg</span><span class="w"> </span><span class="kn">import</span> <span class="n">PointCloud2</span>
+
+<span class="n">input_topics</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"/sensing/lidar/top/pointcloud"</span><span class="p">,</span> <span class="s2">"/sensing/lidar/left/pointcloud"</span><span class="p">]</span>
+<span class="n">twist_topic</span> <span class="o">=</span> <span class="s2">"/sensing/vehicle_velocity_converter/twist_with_covariance"</span>
+
+<span class="n">concatenator</span> <span class="o">=</span> <span class="n">Concatenator</span><span class="p">(</span><span class="n">input_topics</span><span class="p">,</span> <span class="n">output_frame</span><span class="o">=</span><span class="s2">"base_link"</span><span class="p">,</span> <span class="n">timeout_sec</span><span class="o">=</span><span class="mf">0.1</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">transform</span> <span class="ow">in</span> <span class="n">sensor_to_base_link</span><span class="p">:</span>  <span class="c1"># one TransformStamped per sensor frame, see below</span>
+    <span class="n">concatenator</span><span class="o">.</span><span class="n">set_transform</span><span class="p">(</span><span class="n">transform</span><span class="p">)</span>
+
+<span class="n">reader</span> <span class="o">=</span> <span class="n">SequentialReader</span><span class="p">()</span>
+<span class="n">reader</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">StorageOptions</span><span class="p">(</span><span class="n">uri</span><span class="o">=</span><span class="s2">"my_bag"</span><span class="p">,</span> <span class="n">storage_id</span><span class="o">=</span><span class="s2">"mcap"</span><span class="p">),</span> <span class="n">ConverterOptions</span><span class="p">(</span><span class="s2">""</span><span class="p">,</span> <span class="s2">""</span><span class="p">))</span>
+<span class="k">while</span> <span class="n">reader</span><span class="o">.</span><span class="n">has_next</span><span class="p">():</span>
+    <span class="n">topic</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">record_time_ns</span> <span class="o">=</span> <span class="n">reader</span><span class="o">.</span><span class="n">read_next</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">topic</span> <span class="o">==</span> <span class="n">twist_topic</span><span class="p">:</span>
+        <span class="n">concatenator</span><span class="o">.</span><span class="n">process_twist</span><span class="p">(</span><span class="n">deserialize_message</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">TwistWithCovarianceStamped</span><span class="p">))</span>
+    <span class="k">elif</span> <span class="n">topic</span> <span class="ow">in</span> <span class="n">input_topics</span><span class="p">:</span>
+        <span class="n">cloud</span> <span class="o">=</span> <span class="n">deserialize_message</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">PointCloud2</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">frame</span> <span class="ow">in</span> <span class="n">concatenator</span><span class="o">.</span><span class="n">process_cloud</span><span class="p">(</span><span class="n">topic</span><span class="p">,</span> <span class="n">cloud</span><span class="p">,</span> <span class="n">arrival_time</span><span class="o">=</span><span class="n">record_time_ns</span> <span class="o">*</span> <span class="mf">1e-9</span><span class="p">):</span>
+            <span class="n">handle</span><span class="p">(</span><span class="n">frame</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">frame</span> <span class="ow">in</span> <span class="n">concatenator</span><span class="o">.</span><span class="n">flush</span><span class="p">():</span>
+    <span class="n">handle</span><span class="p">(</span><span class="n">frame</span><span class="p">)</span>
+</code></pre></div>
+<p>where <code>handle(frame)</code> reads <code>frame.status</code> (<code>COMPLETE</code>, <code>TIMEOUT</code>, or <code>LATE</code> with the options below), <code>frame.result.concatenated_cloud</code>, <code>frame.result.concatenation_info</code>, and, if needed, <code>frame.build_diagnostics()</code>.</p>
+<ul>
+<li>The same messages with the same arrival times always give the same frames.</li>
+<li>Each transform maps a sensor frame directly into the output frame, as <code>lookup_transform(output_frame, sensor_frame, ...)</code> returns.</li>
+<li>To reproduce the node exactly, pass its <code>max_open_collectors</code> and <code>reject_late_clouds=True</code>.</li>
+<li>Keep <code>cloud.data</code> as the <code>array('B')</code> that <code>deserialize_message</code> returns; assigning <code>bytes</code> is slow.</li>
+</ul>
+<p>See the docstrings (<code>help(Concatenator)</code>) for all options and exceptions.</p>
 <h2 id="assumptions-known-limits">Assumptions / Known Limits<a class="headerlink" href="#assumptions-known-limits" title="Permanent link">#</a></h2>
 <ul>
 <li>If <code>is_motion_compensated</code> is set to <code>false</code>, the <code>concatenate_and_time_sync_node</code> will directly concatenate the point clouds without applying for motion compensation. This can save several milliseconds depending on the number of LiDARs being concatenated. Therefore, if the timestamp differences between point clouds are negligible, the user can set <code>is_motion_compensated</code> to <code>false</code> and omit the need for twist or odometry input for the node.</li>

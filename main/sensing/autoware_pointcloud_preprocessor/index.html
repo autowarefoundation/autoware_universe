@@ -23119,6 +23119,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#python-binding-for-point-cloud-concatenation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Python binding for point cloud concatenation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#examples" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -23135,6 +23146,17 @@
     <span class="md-ellipsis">
       
         concatenate_without_ros_node
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#concatenate_without_ros_nodepy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        concatenate_without_ros_node.py
       
     </span>
   </a>
@@ -23410,8 +23432,42 @@
 <h2 id="assumptions-known-limits">Assumptions / Known limits<a class="headerlink" href="#assumptions-known-limits" title="Permanent link">#</a></h2>
 <p><code>autoware::pointcloud_preprocessor::Filter</code> is implemented based on pcl_perception [1] because
 of <a href="https://github.com/ros-perception/perception_pcl/issues/9">this issue</a>.</p>
+<h2 id="python-binding-for-point-cloud-concatenation">Python binding for point cloud concatenation<a class="headerlink" href="#python-binding-for-point-cloud-concatenation" title="Permanent link">#</a></h2>
+<p>The concatenation core (<code>CloudConcatenator</code>, which the <code>concatenate_data</code> node runs) can be used
+from Python through <code>autoware_pointcloud_preprocessor.concatenate_pointclouds</code>. It is built and
+installed with the package, so no extra build option is needed. It takes and returns rclpy messages
+and needs no ROS node: no <code>rclpy.init()</code>, no executor and no TF listener. This makes it useful for
+offline work such as re-concatenating a rosbag.</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">autoware_pointcloud_preprocessor.concatenate_pointclouds</span><span class="w"> </span><span class="kn">import</span> <span class="n">Concatenator</span><span class="p">,</span> <span class="n">FrameStatus</span>
+
+<span class="n">concatenator</span> <span class="o">=</span> <span class="n">Concatenator</span><span class="p">(</span>
+    <span class="p">[</span><span class="s2">"/sensing/lidar/top/pointcloud"</span><span class="p">,</span> <span class="s2">"/sensing/lidar/left/pointcloud"</span><span class="p">],</span>
+    <span class="n">output_frame</span><span class="o">=</span><span class="s2">"base_link"</span><span class="p">,</span>
+    <span class="n">timeout_sec</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">concatenator</span><span class="o">.</span><span class="n">set_transform</span><span class="p">(</span><span class="n">top_to_base_link</span><span class="p">)</span>  <span class="c1"># a TransformStamped per sensor frame</span>
+<span class="n">concatenator</span><span class="o">.</span><span class="n">set_transform</span><span class="p">(</span><span class="n">left_to_base_link</span><span class="p">)</span>
+<span class="n">concatenator</span><span class="o">.</span><span class="n">process_twist</span><span class="p">(</span><span class="n">twist</span><span class="p">)</span>  <span class="c1"># TwistWithCovarianceStamped; or process_odometry(odometry)</span>
+
+<span class="c1"># Feed the clouds in arrival order. The arrival time (seconds) replaces the node's clock.</span>
+<span class="k">for</span> <span class="n">frame</span> <span class="ow">in</span> <span class="n">concatenator</span><span class="o">.</span><span class="n">process_cloud</span><span class="p">(</span><span class="s2">"/sensing/lidar/top/pointcloud"</span><span class="p">,</span> <span class="n">cloud</span><span class="p">,</span> <span class="n">arrival_time</span><span class="o">=</span><span class="n">t</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">frame</span><span class="o">.</span><span class="n">status</span> <span class="ow">is</span> <span class="n">FrameStatus</span><span class="o">.</span><span class="n">COMPLETE</span><span class="p">:</span>
+        <span class="n">merged</span> <span class="o">=</span> <span class="n">frame</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">concatenated_cloud</span>  <span class="c1"># sensor_msgs.msg.PointCloud2</span>
+
+<span class="c1"># At the end of the stream, close the collectors that are still open (as TIMEOUT frames).</span>
+<span class="n">remaining</span> <span class="o">=</span> <span class="n">concatenator</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+</code></pre></div>
+<p>Each frame carries <code>status</code> (<code>COMPLETE</code>, <code>TIMEOUT</code> or <code>LATE</code>), <code>result.concatenated_cloud</code>,
+<code>result.concatenation_info</code>, <code>result.motion_compensation_status</code> and
+<code>result.dropped_sources_missing_transform</code>. <code>frame.build_diagnostics()</code> returns the
+<code>DiagnosticStatus</code> the node would publish for it.</p>
+<p>The arguments, return values and exceptions of each call are in the docstrings
+(<code>help(Concatenator)</code>).</p>
+<p>A runnable example is <a href="#concatenate_without_ros_nodepy"><code>examples/concatenate_without_ros_node.py</code></a>.
+For reading a rosbag and for reproducing the node exactly (<code>max_open_collectors</code>,
+<code>reject_late_clouds</code>), see <a href="docs/concatenate-data/#offline-use-from-python">Offline use from Python</a>.</p>
 <h2 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">#</a></h2>
-<p>Examples are not built by default, so release builds do not pay for them. Enable them with
+<p>The C++ examples are not built by default, so release builds do not pay for them. Enable them with
 <code>-DBUILD_EXAMPLES=ON</code>:</p>
 <div class="highlight"><pre><span></span><code>colcon<span class="w"> </span>build<span class="w"> </span>--packages-select<span class="w"> </span>autoware_pointcloud_preprocessor<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--cmake-args<span class="w"> </span>-DCMAKE_BUILD_TYPE<span class="o">=</span>Release<span class="w"> </span>-DBUILD_EXAMPLES<span class="o">=</span>ON
@@ -23473,6 +23529,29 @@ concatenation time over 200 runs
 <p>The absolute figures depend on the machine; use them to compare runs, not as a specification.</p>
 <p>Build with <code>-DCMAKE_BUILD_TYPE=Release</code> before reading anything into the timings. Without it the
 package compiles unoptimized and the same run is roughly 80x slower.</p>
+<h3 id="concatenate_without_ros_nodepy">concatenate_without_ros_node.py<a class="headerlink" href="#concatenate_without_ros_nodepy" title="Permanent link">#</a></h3>
+<p>The Python counterpart of <code>concatenate_without_ros_node</code>, using the
+<a href="#python-binding-for-point-cloud-concatenation">Python binding</a>. It concatenates the same three clouds
+and makes the same checks, but does not measure timings. It needs no build option. From the
+workspace root:</p>
+<div class="highlight"><pre><span></span><code>colcon<span class="w"> </span>build<span class="w"> </span>--packages-select<span class="w"> </span>autoware_pointcloud_preprocessor<span class="w"> </span>--cmake-args<span class="w"> </span>-DCMAKE_BUILD_TYPE<span class="o">=</span>Release
+<span class="nb">source</span><span class="w"> </span>install/setup.bash
+python3<span class="w"> </span>src/universe/autoware_universe/sensing/autoware_pointcloud_preprocessor/examples/concatenate_without_ros_node.py
+</code></pre></div>
+<div class="highlight"><pre><span></span><code>concatenated cloud
+  frame_id   : base_link
+  stamp      : 1000
+  points     : 120000
+  point_step : 16
+  sources    : 3
+  frames     : 1
+
+  ok   cloud is in the output frame
+  ok   every source contributed its points
+  ...
+
+PASS: concatenation ran without a ROS node
+</code></pre></div>
 <h2 id="measuring-the-performance">Measuring the performance<a class="headerlink" href="#measuring-the-performance" title="Permanent link">#</a></h2>
 <p>In Autoware, point cloud data from each LiDAR sensor undergoes preprocessing in the sensing pipeline before being input
 into the perception pipeline. The preprocessing stages are illustrated in the diagram below:</p>
