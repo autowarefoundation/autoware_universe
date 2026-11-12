@@ -29,8 +29,6 @@
   <buildtool_depend>ament_cmake_python</buildtool_depend>
   <buildtool_depend>autoware_cmake</buildtool_depend>
 
-  <build_depend>python3-dev</build_depend>
-
   <depend>autoware_agnocast_wrapper</depend>
   <depend>autoware_internal_debug_msgs</depend>
   <depend>autoware_lanelet2_extension</depend>
@@ -39,6 +37,7 @@
   <depend>autoware_point_types</depend>
   <depend>autoware_sensing_msgs</depend>
   <depend>autoware_utils</depend>
+  <depend>autoware_utils_math</depend>
   <depend>autoware_vehicle_msgs</depend>
   <depend>cgal</depend>
   <depend>cv_bridge</depend>
@@ -57,6 +56,7 @@
   <depend>pcl_ros</depend>
   <depend>point_cloud_msg_wrapper</depend>
   <depend>pybind11_vendor</depend>
+  <depend>python3-dev</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
   <depend>sensor_msgs</depend>
@@ -67,7 +67,7 @@
   <depend>tf2_geometry_msgs</depend>
   <depend>tf2_ros</depend>
   <depend>tf2_sensor_msgs</depend>
-
+  <depend>tl_expected</depend>
   <exec_depend>rclpy</exec_depend>
 
   <test_depend>ament_cmake_pytest</test_depend>

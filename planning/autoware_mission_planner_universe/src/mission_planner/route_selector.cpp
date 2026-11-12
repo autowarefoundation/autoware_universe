@@ -89,7 +89,6 @@ RouteSelector::RouteSelector(const rclcpp::NodeOptions & options)
 : autoware::agnocast_wrapper::Node("route_selector", options), main_(get_clock()), mrm_(get_clock())
 {
   using std::placeholders::_1;
-  using std::placeholders::_2;
   const rclcpp::QoS service_qos = rclcpp::ServicesQoS();
   const auto durable_qos = rclcpp::QoS(1).transient_local();
 

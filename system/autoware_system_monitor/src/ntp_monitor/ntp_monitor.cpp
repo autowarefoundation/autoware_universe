@@ -19,10 +19,11 @@
 
 #include "system_monitor/ntp_monitor/ntp_monitor.hpp"
 
+#include "system_monitor/boost_process.hpp"
+
 #include <autoware_utils/system/stop_watch.hpp>
 
 #include <boost/filesystem.hpp>
-#include <boost/process.hpp>
 
 #include <fmt/format.h>
 

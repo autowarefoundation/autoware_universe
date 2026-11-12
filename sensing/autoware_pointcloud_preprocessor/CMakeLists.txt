@@ -26,10 +26,25 @@ include_directories(
   ${OpenCV_INCLUDE_DIRS}
 )
 
-add_library(pointcloud_preprocessor_filter_base SHARED
-  src/filter.cpp
+# Point layout checks (utility/memory.hpp), free of rclcpp for distortion_corrector_core.
+add_library(pointcloud_preprocessor_memory_utils SHARED
   src/utility/memory.cpp
 )
+target_include_directories(pointcloud_preprocessor_memory_utils PUBLIC
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+  "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>"
+)
+target_include_directories(pointcloud_preprocessor_memory_utils SYSTEM PUBLIC
+  ${autoware_point_types_INCLUDE_DIRS}
+)
+target_link_libraries(pointcloud_preprocessor_memory_utils PUBLIC
+  ${sensor_msgs_TARGETS}
+)
+
+add_library(pointcloud_preprocessor_filter_base SHARED
+  src/filter.cpp
+)
+target_link_libraries(pointcloud_preprocessor_filter_base pointcloud_preprocessor_memory_utils)
 
 target_include_directories(pointcloud_preprocessor_filter_base PUBLIC
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
@@ -124,6 +139,29 @@ ament_target_dependencies(concatenate_data
   tf2_ros
 )
 
+# Distortion corrector core, without rclcpp or tf.
+find_package(autoware_utils_math REQUIRED)
+add_library(distortion_corrector_core SHARED
+  src/distortion_corrector/distortion_corrector.cpp
+)
+target_include_directories(distortion_corrector_core PUBLIC
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+  "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>"
+)
+# Header-only dependencies (tf2 is used for LinearMath only).
+target_include_directories(distortion_corrector_core SYSTEM PUBLIC
+  ${autoware_utils_INCLUDE_DIRS}
+  ${autoware_point_types_INCLUDE_DIRS}
+  ${tf2_INCLUDE_DIRS}
+)
+target_link_libraries(distortion_corrector_core PUBLIC
+  ${sensor_msgs_TARGETS}
+  ${geometry_msgs_TARGETS}
+  ${autoware_utils_math_LIBRARIES}
+  tl_expected::tl_expected
+  pointcloud_preprocessor_memory_utils
+)
+
 ament_auto_add_library(pointcloud_preprocessor_filter SHARED
   src/concatenate_data/concatenate_and_time_sync_node.cpp
   src/crop_box_filter/crop_box_filter_node.cpp
@@ -143,7 +181,6 @@ ament_auto_add_library(pointcloud_preprocessor_filter SHARED
   src/passthrough_filter/passthrough_uint16.cpp
   src/pointcloud_accumulator/pointcloud_accumulator_node.cpp
   src/vector_map_filter/lanelet2_map_filter_node.cpp
-  src/distortion_corrector/distortion_corrector.cpp
   src/distortion_corrector/distortion_corrector_node.cpp
   src/blockage_diag/blockage_detection.cpp
   src/blockage_diag/blockage_diag.cpp
@@ -282,6 +319,7 @@ rclcpp_components_register_node(pointcloud_preprocessor_filter
   EXECUTABLE vector_map_filter_node)
 
 # ========== Distortion Corrector ==========
+target_link_libraries(pointcloud_preprocessor_filter distortion_corrector_core)
 rclcpp_components_register_node(pointcloud_preprocessor_filter
   PLUGIN "autoware::pointcloud_preprocessor::DistortionCorrectorComponent"
   EXECUTABLE distortion_corrector_node)
@@ -319,7 +357,15 @@ install(DIRECTORY
 )
 
 install(
-  TARGETS pointcloud_preprocessor_filter_base EXPORT export_${PROJECT_NAME}
+  TARGETS pointcloud_preprocessor_memory_utils pointcloud_preprocessor_filter_base
+  EXPORT export_${PROJECT_NAME}
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+)
+
+install(
+  TARGETS distortion_corrector_core EXPORT export_${PROJECT_NAME}
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
@@ -358,16 +404,22 @@ if(BUILD_EXAMPLES)
   target_link_libraries(concatenate_without_ros_node concatenate_core)
 endif()
 
-# Python bindings of the concatenation core, for offline use. Messages cross the boundary as CDR
-# bytes, so only this module links rclcpp (for rclcpp::Serialization); concatenate_core does not.
+# Python bindings of the concatenation and distortion corrector cores, for offline use. Messages
+# cross the boundary as CDR bytes, so only these modules link rclcpp (for rclcpp::Serialization);
+# the cores do not.
 find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
+find_package(pybind11_vendor REQUIRED)
 find_package(pybind11 REQUIRED)
 pybind11_add_module(_concatenate_pointclouds_pybind
   src/concatenate_data/concatenate_pointclouds_pybind.cpp
 )
 target_link_libraries(_concatenate_pointclouds_pybind PRIVATE concatenate_core rclcpp::rclcpp)
+pybind11_add_module(_distortion_corrector_pybind
+  src/distortion_corrector/distortion_corrector_pybind.cpp
+)
+target_link_libraries(_distortion_corrector_pybind PRIVATE distortion_corrector_core rclcpp::rclcpp)
 ament_get_python_install_dir(python_install_dir)
-install(TARGETS _concatenate_pointclouds_pybind
+install(TARGETS _concatenate_pointclouds_pybind _distortion_corrector_pybind
   DESTINATION "${python_install_dir}/${PROJECT_NAME}"
 )
 ament_python_install_package(${PROJECT_NAME} PACKAGE_DIR python/${PROJECT_NAME})
@@ -396,6 +448,11 @@ if(BUILD_TESTING)
   ament_add_gtest(test_distortion_corrector_node_characterization
     test/test_distortion_corrector_node_characterization.cpp
     TIMEOUT 180
+  )
+
+  find_package(ament_cmake_pytest REQUIRED)
+  ament_add_pytest_test(test_distortion_corrector_py
+    test/test_distortion_corrector_py.py
   )
 
   ament_add_gtest(test_concatenate_node_unit

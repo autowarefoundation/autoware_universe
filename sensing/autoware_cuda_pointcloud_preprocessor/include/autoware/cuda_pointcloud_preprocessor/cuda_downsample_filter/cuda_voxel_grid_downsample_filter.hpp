@@ -34,6 +34,8 @@ namespace autoware::cuda_pointcloud_preprocessor
 class CudaVoxelGridDownsampleFilter
 {
 public:
+  using PointXYZIRC = autoware::point_types::PointXYZIRC;
+
   template <typename T>
   struct ThreeDim
   {
@@ -107,15 +109,15 @@ private:
   size_t searchValidVoxel(
     const cuda_blackboard::CudaPointCloud2::ConstSharedPtr & points,
     size_t * voxel_index_buffer_dev, size_t * point_index_buffer_dev,
-    decltype(OutputPointType::return_type) * return_type_field_dev,
-    decltype(OutputPointType::channel) * channel_field_dev);
+    decltype(PointXYZIRC::return_type) * return_type_field_dev,
+    decltype(PointXYZIRC::channel) * channel_field_dev);
   void getCentroid(
     const cuda_blackboard::CudaPointCloud2::ConstSharedPtr & input_points,
     const size_t num_valid_voxel, const size_t * voxel_index_dev, const size_t * point_index_dev,
     size_t * index_map_dev, Centroid * buffer_dev,
     std::unique_ptr<cuda_blackboard::CudaPointCloud2> & output_points,
-    decltype(OutputPointType::return_type) * return_type_field_dev,
-    decltype(OutputPointType::channel) * channel_field_dev);
+    decltype(PointXYZIRC::return_type) * return_type_field_dev,
+    decltype(PointXYZIRC::channel) * channel_field_dev);
 
   VoxelInfo voxel_info_{};
 
