@@ -209,8 +209,10 @@ pcl::PointCloud<pcl::PointXYZ> make_random_points()
   std::uniform_real_distribution<double> dist_y(-14.0, 14.0);
   pcl::PointCloud<pcl::PointXYZ> cloud;
   for (int i = 0; i < 200; ++i) {
-    cloud.push_back(
-      pcl::PointXYZ(static_cast<float>(dist_x(rng)), static_cast<float>(dist_y(rng)), 0.5F));
+    // The order of the two draws is fixed (y, then x) because the expected values depend on it.
+    const double y = dist_y(rng);
+    const double x = dist_x(rng);
+    cloud.push_back(pcl::PointXYZ(static_cast<float>(x), static_cast<float>(y), 0.5F));
   }
   return cloud;
 }
