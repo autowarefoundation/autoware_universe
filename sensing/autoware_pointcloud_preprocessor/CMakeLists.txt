@@ -404,16 +404,22 @@ if(BUILD_EXAMPLES)
   target_link_libraries(concatenate_without_ros_node concatenate_core)
 endif()
 
-# Python bindings of the distortion corrector core. Only this module links rclcpp (for serialization).
+# Python bindings of the concatenation and distortion corrector cores, for offline use. Messages
+# cross the boundary as CDR bytes, so only these modules link rclcpp (for rclcpp::Serialization);
+# the cores do not.
 find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
 find_package(pybind11_vendor REQUIRED)
 find_package(pybind11 REQUIRED)
+pybind11_add_module(_concatenate_pointclouds_pybind
+  src/concatenate_data/concatenate_pointclouds_pybind.cpp
+)
+target_link_libraries(_concatenate_pointclouds_pybind PRIVATE concatenate_core rclcpp::rclcpp)
 pybind11_add_module(_distortion_corrector_pybind
   src/distortion_corrector/distortion_corrector_pybind.cpp
 )
 target_link_libraries(_distortion_corrector_pybind PRIVATE distortion_corrector_core rclcpp::rclcpp)
 ament_get_python_install_dir(python_install_dir)
-install(TARGETS _distortion_corrector_pybind
+install(TARGETS _concatenate_pointclouds_pybind _distortion_corrector_pybind
   DESTINATION "${python_install_dir}/${PROJECT_NAME}"
 )
 ament_python_install_package(${PROJECT_NAME} PACKAGE_DIR python/${PROJECT_NAME})
@@ -546,5 +552,10 @@ if(BUILD_TESTING)
   target_link_libraries(test_concatenate_node_characterization pointcloud_preprocessor_filter)
   ament_target_dependencies(
     test_concatenate_node_characterization rclcpp_components rosgraph_msgs tf2_ros)
+
+  find_package(ament_cmake_pytest REQUIRED)
+  ament_add_pytest_test(test_concatenate_pointclouds_py
+    test/test_concatenate_pointclouds_py.py
+  )
 
 endif()

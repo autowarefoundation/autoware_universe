@@ -142,8 +142,7 @@ public:
   /// Add a cloud received at @p arrival_time (seconds) and return the frames this resolves: any
   /// collectors whose timeout expired at @p arrival_time, plus the cloud's own collector when it
   /// completes. Feed clouds in arrival order. @throws std::invalid_argument for a topic not in
-  /// input_topics or a cloud layout the handler cannot convert to the output point type (see
-  /// CombineCloudHandler::is_input_layout_supported()).
+  /// input_topics, or a cloud layout the handler cannot convert (see is_input_layout_supported()).
   [[nodiscard]] std::vector<ConcatenatedFrame<PointCloudMsgT>> process_cloud(
     const std::string & topic, typename PointCloudMsgT::ConstSharedPtr cloud, double arrival_time);
 

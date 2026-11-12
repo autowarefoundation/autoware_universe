@@ -111,12 +111,6 @@ public:
 
   void process_odometry(const nav_msgs::msg::Odometry::ConstSharedPtr & input);
 
-  std::deque<geometry_msgs::msg::TwistStamped> get_twist_queue();
-
-  Eigen::Matrix4f compute_transform_to_adjust_for_old_timestamp(
-    const builtin_interfaces::msg::Time & old_stamp,
-    const builtin_interfaces::msg::Time & new_stamp, MotionCompensationStatus * status = nullptr);
-
   virtual void allocate_pointclouds() = 0;
 
   /// Whether `cloud` can be consumed for the configured output point type. Checked per input
@@ -124,6 +118,10 @@ public:
   virtual bool is_input_layout_supported(const sensor_msgs::msg::PointCloud2 & cloud) const = 0;
 
 protected:
+  Eigen::Matrix4f compute_transform_to_adjust_for_old_timestamp(
+    const builtin_interfaces::msg::Time & old_stamp,
+    const builtin_interfaces::msg::Time & new_stamp, MotionCompensationStatus * status = nullptr);
+
   [[nodiscard]] std::optional<Eigen::Matrix4f> get_transform_to_output_frame(
     const std::string & frame_id) const;
 
