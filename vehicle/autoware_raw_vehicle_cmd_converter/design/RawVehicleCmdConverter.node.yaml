@@ -58,3 +58,13 @@ processes:
     outcomes:
       - to_output: actuation_cmd
       - to_output: control_component_latency
+  - name: update_steering
+    trigger_conditions:
+      - on_input: steering
+    outcomes:
+      - terminal: null
+  - name: convert_actuation_status
+    trigger_conditions:
+      - on_input: actuation_status
+    outcomes:
+      - to_output: steering_status

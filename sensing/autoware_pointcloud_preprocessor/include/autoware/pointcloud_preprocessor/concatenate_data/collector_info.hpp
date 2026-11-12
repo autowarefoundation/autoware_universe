@@ -17,9 +17,9 @@
 namespace autoware::pointcloud_preprocessor
 {
 
-// Per-collector matching state stored on a CloudCollector. Created from the MatchingReference
-// returned by MatchingPolicy::reference_for(), and read back into CandidateCollectorState when
-// matching later clouds (see matching_policy.hpp).
+// The matching context of a closed collector: the MatchingReference it was opened with (see
+// matching_policy.hpp). Passed to CombineCloudHandler, which records it in the
+// ConcatenatedPointCloudInfo, and to the node's diagnostics.
 struct CollectorInfoBase
 {
   virtual ~CollectorInfoBase() = default;

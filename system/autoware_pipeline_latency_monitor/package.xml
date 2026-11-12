@@ -6,7 +6,6 @@
   <description>Monitor latency in the Autoware pipeline and publish diagnostics when a threshold is exceeded</description>
   <maintainer email="kyoichi.sugahara@tier4.jp">Kyoichi Sugahara</maintainer>
   <maintainer email="maxime.clement@tier4.jp">Maxime Clement</maintainer>
-  <maintainer email="takeshi.iwanari@tier4.jp">Takeshi Iwanari</maintainer>
   <maintainer email="yoshi.ri@tier4.jp">Yoshi Ri</maintainer>
   <maintainer email="taekjin.lee@tier4.jp">Taekjin Lee</maintainer>
 

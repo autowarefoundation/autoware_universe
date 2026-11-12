@@ -16,10 +16,11 @@
 // set the "debug_" value to true to display the point cloud values. Then,
 // replace the expected values with the newly displayed undistorted point cloud values.
 
-#include "autoware/pointcloud_preprocessor/concatenate_data/cloud_collector.hpp"
+#include "autoware/pointcloud_preprocessor/concatenate_data/cloud_concatenator.hpp"
 #include "autoware/pointcloud_preprocessor/concatenate_data/combine_cloud_handler.hpp"
 #include "autoware/pointcloud_preprocessor/concatenate_data/concatenate_and_time_sync_node.hpp"
 
+#include <autoware/point_types/memory.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <sensor_msgs/msg/point_cloud2.hpp>
@@ -30,17 +31,22 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <cstdint>
 #include <limits>
 #include <memory>
 #include <string>
 #include <thread>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
-using autoware::pointcloud_preprocessor::CloudCollector;
 using autoware::pointcloud_preprocessor::CombineCloudHandler;
-using autoware::pointcloud_preprocessor::PointCloud2Traits;
+using autoware::pointcloud_preprocessor::ConcatenatedFrameStatus;
+using autoware::pointcloud_preprocessor::MatchingStrategyType;
 using autoware::pointcloud_preprocessor::PointCloudConcatenateDataSynchronizerComponent;
+using autoware::pointcloud_preprocessor::PointFormat;
+using CloudConcatenator =
+  autoware::pointcloud_preprocessor::CloudConcatenator<sensor_msgs::msg::PointCloud2>;
 
 class ConcatenateCloudTest : public ::testing::Test
 {
@@ -64,6 +70,7 @@ protected:
        {"input_twist_topic_type", "twist"},
        {"input_topics", input_topics},
        {"output_frame", "base_link"},
+       {"output_point_type", "XYZIRC"},
        {"matching_strategy.type", "advanced"},
        {"matching_strategy.lidar_timestamp_offsets", std::vector<double>{0.0, 0.04, 0.08}},
        {"matching_strategy.lidar_timestamp_noise_window", std::vector<double>{0.01, 0.01, 0.01}}});
@@ -71,16 +78,21 @@ protected:
     concatenate_node_ =
       std::make_shared<PointCloudConcatenateDataSynchronizerComponent>(node_options);
     combine_cloud_handler_ = std::make_shared<CombineCloudHandler<sensor_msgs::msg::PointCloud2>>(
-      input_topics, "base_link", true, true, true,
-      autoware::pointcloud_preprocessor::MatchingStrategyType::advanced);
+      input_topics, "base_link", PointFormat::XYZIRC, true, true, true,
+      MatchingStrategyType::advanced);
+    combine_cloud_handler_xyzirct_ =
+      std::make_shared<CombineCloudHandler<sensor_msgs::msg::PointCloud2>>(
+        input_topics, "base_link", PointFormat::XYZIRCT, true, true, true,
+        MatchingStrategyType::advanced);
 
-    collector_ = std::make_shared<CloudCollector<PointCloud2Traits>>(
-      std::dynamic_pointer_cast<PointCloudConcatenateDataSynchronizerComponent>(
-        concatenate_node_->shared_from_this()),
-      combine_cloud_handler_, number_of_pointcloud, timeout_sec, collector_debug_mode);
+    concatenator_ = std::make_unique<CloudConcatenator>(
+      input_topics, "base_link", PointFormat::XYZIRC, timeout_sec, true, true, true,
+      MatchingStrategyType::advanced, std::vector<double>{0.0, 0.04, 0.08},
+      std::vector<double>{0.01, 0.01, 0.01});
 
     for (const auto & transform : generate_static_transform_msgs()) {
       ASSERT_TRUE(combine_cloud_handler_->set_transform(transform));
+      ASSERT_TRUE(concatenator_->set_transform(transform));
     }
   }
 
@@ -142,7 +154,7 @@ protected:
         *iter_x = points[i].x();
         *iter_y = points[i].y();
         *iter_z = points[i].z();
-        *iter_t = 0;
+        *iter_t = static_cast<std::uint32_t>(i) * point_time_step_ns;
         ++iter_x;
         ++iter_y;
         ++iter_z;
@@ -156,6 +168,31 @@ protected:
     return pointcloud_msg;
   }
 
+  static std::unordered_map<std::string, sensor_msgs::msg::PointCloud2::ConstSharedPtr>
+  generate_topic_to_cloud_map(
+    const rclcpp::Time & top_stamp, const rclcpp::Time & left_stamp,
+    const rclcpp::Time & right_stamp)
+  {
+    std::unordered_map<std::string, sensor_msgs::msg::PointCloud2::ConstSharedPtr> map;
+    map["lidar_top"] = std::make_shared<sensor_msgs::msg::PointCloud2>(
+      generate_pointcloud_msg(true, false, "lidar_top", top_stamp));
+    map["lidar_left"] = std::make_shared<sensor_msgs::msg::PointCloud2>(
+      generate_pointcloud_msg(true, false, "lidar_left", left_stamp));
+    map["lidar_right"] = std::make_shared<sensor_msgs::msg::PointCloud2>(
+      generate_pointcloud_msg(true, false, "lidar_right", right_stamp));
+    return map;
+  }
+
+  static std::vector<std::uint32_t> read_time_stamps(const sensor_msgs::msg::PointCloud2 & cloud)
+  {
+    std::vector<std::uint32_t> time_stamps;
+    for (sensor_msgs::PointCloud2ConstIterator<std::uint32_t> it(cloud, "time_stamp");
+         it != it.end(); ++it) {
+      time_stamps.push_back(*it);
+    }
+    return time_stamps;
+  }
+
   static std::vector<geometry_msgs::msg::TransformStamped> generate_static_transform_msgs()
   {
     // generate defined transformations
@@ -167,159 +204,20 @@ protected:
 
   std::shared_ptr<PointCloudConcatenateDataSynchronizerComponent> concatenate_node_;
   std::shared_ptr<CombineCloudHandler<sensor_msgs::msg::PointCloud2>> combine_cloud_handler_;
-  std::shared_ptr<CloudCollector<PointCloud2Traits>> collector_;
+  std::shared_ptr<CombineCloudHandler<sensor_msgs::msg::PointCloud2>>
+    combine_cloud_handler_xyzirct_;
+  std::unique_ptr<CloudConcatenator> concatenator_;
 
   static constexpr int32_t timestamp_seconds{10};
   static constexpr uint32_t timestamp_nanoseconds{100'000'000};
   static constexpr size_t number_of_points{3};
+  static constexpr std::uint32_t point_time_step_ns{10'000'000};  // per-point time within a cloud
   static constexpr float standard_tolerance{1e-4};
-  static constexpr int number_of_pointcloud{3};
   static constexpr float timeout_sec{0.2};
-  static constexpr bool collector_debug_mode{false};  // For showing collector information
-  bool debug_{false};                                 // For the Unit test
+  bool debug_{false};  // For the Unit test
 };
 
-//////////////////////////////// Test combine_cloud_handler ////////////////////////////////
-TEST_F(ConcatenateCloudTest, TestProcessTwist)
-{
-  auto twist_msg = std::make_shared<geometry_msgs::msg::TwistWithCovarianceStamped>();
-  twist_msg->header.stamp = rclcpp::Time(10, 0);
-  twist_msg->twist.twist.linear.x = 1.0;
-  twist_msg->twist.twist.angular.z = 0.1;
-
-  combine_cloud_handler_->process_twist(twist_msg);
-
-  ASSERT_FALSE(combine_cloud_handler_->get_twist_queue().empty());
-  EXPECT_EQ(combine_cloud_handler_->get_twist_queue().front().twist.linear.x, 1.0);
-  EXPECT_EQ(combine_cloud_handler_->get_twist_queue().front().twist.angular.z, 0.1);
-}
-
-TEST_F(ConcatenateCloudTest, TestProcessOdometry)
-{
-  auto odom_msg = std::make_shared<nav_msgs::msg::Odometry>();
-  odom_msg->header.stamp = rclcpp::Time(10, 0);
-  odom_msg->twist.twist.linear.x = 1.0;
-  odom_msg->twist.twist.angular.z = 0.1;
-
-  combine_cloud_handler_->process_odometry(odom_msg);
-
-  ASSERT_FALSE(combine_cloud_handler_->get_twist_queue().empty());
-  EXPECT_EQ(combine_cloud_handler_->get_twist_queue().front().twist.linear.x, 1.0);
-  EXPECT_EQ(combine_cloud_handler_->get_twist_queue().front().twist.angular.z, 0.1);
-}
-
-TEST_F(ConcatenateCloudTest, TestComputeTransformToAdjustForOldTimestamp)
-{
-  // If time difference between twist msg and pointcloud stamp is more than 100 miliseconds, return
-  // Identity transformation. case 1: time difference larger than 100 miliseconds
-  rclcpp::Time pointcloud_stamp1(10, 100'000'000, RCL_ROS_TIME);
-  rclcpp::Time pointcloud_stamp2(10, 210'000'000, RCL_ROS_TIME);
-  auto twist_msg1 = std::make_shared<geometry_msgs::msg::TwistWithCovarianceStamped>();
-  twist_msg1->header.stamp = rclcpp::Time(9, 130'000'000, RCL_ROS_TIME);
-  twist_msg1->twist.twist.linear.x = 1.0;
-  twist_msg1->twist.twist.angular.z = 0.1;
-  combine_cloud_handler_->process_twist(twist_msg1);
-
-  auto twist_msg2 = std::make_shared<geometry_msgs::msg::TwistWithCovarianceStamped>();
-  twist_msg2->header.stamp = rclcpp::Time(9, 160'000'000, RCL_ROS_TIME);
-  twist_msg2->twist.twist.linear.x = 1.0;
-  twist_msg2->twist.twist.angular.z = 0.1;
-  combine_cloud_handler_->process_twist(twist_msg2);
-
-  Eigen::Matrix4f transform = combine_cloud_handler_->compute_transform_to_adjust_for_old_timestamp(
-    pointcloud_stamp1, pointcloud_stamp2);
-
-  // translation
-  EXPECT_NEAR(transform(0, 3), 0.0, standard_tolerance);
-  EXPECT_NEAR(transform(1, 3), 0.0, standard_tolerance);
-
-  EXPECT_NEAR(transform(0, 0), 1.0, standard_tolerance);
-  EXPECT_NEAR(transform(0, 1), 0.0, standard_tolerance);
-  EXPECT_NEAR(transform(1, 0), 0.0, standard_tolerance);
-  EXPECT_NEAR(transform(1, 1), 1.0, standard_tolerance);
-
-  std::ostringstream oss;
-  oss << "Transformation matrix from cloud 2 to cloud 1:\n" << transform;
-
-  if (debug_) {
-    const std::string & str = oss.str();
-    RCLCPP_INFO(concatenate_node_->get_logger(), "%s", str.c_str());
-  }
-
-  // case 2: time difference smaller than 100 miliseconds
-  rclcpp::Time pointcloud_stamp3(11, 100'000'000, RCL_ROS_TIME);
-  rclcpp::Time pointcloud_stamp4(11, 150'000'000, RCL_ROS_TIME);
-  auto twist_msg3 = std::make_shared<geometry_msgs::msg::TwistWithCovarianceStamped>();
-  twist_msg3->header.stamp = rclcpp::Time(11, 130'000'000, RCL_ROS_TIME);
-  twist_msg3->twist.twist.linear.x = 1.0;
-  twist_msg3->twist.twist.angular.z = 0.1;
-  combine_cloud_handler_->process_twist(twist_msg3);
-
-  auto twist_msg4 = std::make_shared<geometry_msgs::msg::TwistWithCovarianceStamped>();
-  twist_msg4->header.stamp = rclcpp::Time(11, 160'000'000, RCL_ROS_TIME);
-  twist_msg4->twist.twist.linear.x = 1.0;
-  twist_msg4->twist.twist.angular.z = 0.1;
-  combine_cloud_handler_->process_twist(twist_msg4);
-
-  transform = combine_cloud_handler_->compute_transform_to_adjust_for_old_timestamp(
-    pointcloud_stamp3, pointcloud_stamp4);
-
-  // translation
-  EXPECT_NEAR(transform(0, 3), 0.0499996, standard_tolerance);
-  EXPECT_NEAR(transform(1, 3), 0.000189999, standard_tolerance);
-
-  // rotation, yaw = 0.005
-  EXPECT_NEAR(transform(0, 0), 0.999987, standard_tolerance);
-  EXPECT_NEAR(transform(0, 1), -0.00499998, standard_tolerance);
-  EXPECT_NEAR(transform(1, 0), 0.00499998, standard_tolerance);
-  EXPECT_NEAR(transform(1, 1), 0.999987, standard_tolerance);
-
-  oss.str("");
-  oss.clear();
-  oss << "Transformation matrix from cloud 4 to cloud 3:\n" << transform;
-
-  if (debug_) {
-    const std::string & str = oss.str();
-    RCLCPP_INFO(concatenate_node_->get_logger(), "%s", str.c_str());
-  }
-}
-
-//////////////////////////////// Test cloud_collector ////////////////////////////////
-
-TEST_F(ConcatenateCloudTest, TestSetAndGetNaiveCollectorInfo)
-{
-  auto naive_info = std::make_shared<autoware::pointcloud_preprocessor::NaiveCollectorInfo>();
-  naive_info->timestamp = 15.0;
-
-  collector_->set_info(naive_info);
-  auto collector_info_new = collector_->get_info();
-
-  auto naive_info_new =
-    std::dynamic_pointer_cast<autoware::pointcloud_preprocessor::NaiveCollectorInfo>(
-      collector_info_new);
-  ASSERT_NE(naive_info_new, nullptr) << "Collector info is not of type NaiveCollectorInfo";
-
-  EXPECT_DOUBLE_EQ(naive_info_new->timestamp, 15.0);
-}
-
-TEST_F(ConcatenateCloudTest, TestSetAndGetAdvancedCollectorInfo)
-{
-  auto advanced_info = std::make_shared<autoware::pointcloud_preprocessor::AdvancedCollectorInfo>();
-  advanced_info->timestamp = 10.0;
-  advanced_info->noise_window = 0.1;
-  collector_->set_info(advanced_info);
-  auto collector_info_new = collector_->get_info();
-  auto advanced_info_new =
-    std::dynamic_pointer_cast<autoware::pointcloud_preprocessor::AdvancedCollectorInfo>(
-      collector_info_new);
-  ASSERT_NE(advanced_info_new, nullptr) << "Collector info is not of type AdvancedCollectorInfo";
-
-  // Validate the values
-  auto min = advanced_info_new->timestamp - advanced_info_new->noise_window;
-  auto max = advanced_info_new->timestamp + advanced_info_new->noise_window;
-  EXPECT_DOUBLE_EQ(min, 9.9);
-  EXPECT_DOUBLE_EQ(max, 10.1);
-}
+//////////////////////////////// Test concatenation core ////////////////////////////////
 
 TEST_F(ConcatenateCloudTest, TestConcatenateClouds)
 {
@@ -348,7 +246,7 @@ TEST_F(ConcatenateCloudTest, TestConcatenateClouds)
   auto
     [concatenate_cloud_ptr, concatenation_info_ptr, topic_to_transformed_cloud_map,
      topic_to_original_stamp_map, motion_compensation_status, dropped_sources_missing_transform] =
-      collector_->concatenate_pointclouds(topic_to_cloud_map);
+      combine_cloud_handler_->combine_pointclouds(topic_to_cloud_map, nullptr);
 
   // test output concatenate cloud
   // No input twist, so it will not do the motion compensation
@@ -513,7 +411,7 @@ TEST_F(ConcatenateCloudTest, TestConcatenateCloudsLeavesNonFinitePointsUnchanged
   std::unordered_map<std::string, sensor_msgs::msg::PointCloud2::ConstSharedPtr> topic_to_cloud_map;
   topic_to_cloud_map["lidar_top"] = std::make_shared<sensor_msgs::msg::PointCloud2>(cloud);
 
-  auto result = collector_->concatenate_pointclouds(topic_to_cloud_map);
+  auto result = combine_cloud_handler_->combine_pointclouds(topic_to_cloud_map, nullptr);
 
   const auto read_points = [](const sensor_msgs::msg::PointCloud2 & msg) {
     std::vector<Eigen::Vector3f> out;
@@ -556,38 +454,30 @@ TEST_F(ConcatenateCloudTest, TestConcatenateCloudsLeavesNonFinitePointsUnchanged
 
 TEST_F(ConcatenateCloudTest, TestProcessSingleCloud)
 {
-  concatenate_node_->add_cloud_collector(collector_);
-
+  // Arrange
+  // A single cloud opens a collector but resolves nothing yet.
   rclcpp::Time timestamp(timestamp_seconds, timestamp_nanoseconds, RCL_ROS_TIME);
   sensor_msgs::msg::PointCloud2 top_pointcloud =
     generate_pointcloud_msg(true, false, "lidar_top", timestamp);
   sensor_msgs::msg::PointCloud2::SharedPtr top_pointcloud_ptr =
     std::make_shared<sensor_msgs::msg::PointCloud2>(top_pointcloud);
-  collector_->process_pointcloud("lidar_top", top_pointcloud_ptr);
+  const auto after_top = concatenator_->process_cloud("lidar_top", top_pointcloud_ptr, 100.0);
 
-  auto topic_to_cloud_map = collector_->get_topic_to_cloud_map();
-  EXPECT_EQ(topic_to_cloud_map["lidar_top"], top_pointcloud_ptr);
-  EXPECT_EQ(
-    collector_->get_status(), autoware::pointcloud_preprocessor::CollectorStatus::Processing);
-  concatenate_node_->manage_collector_list();
-  EXPECT_EQ(concatenate_node_->get_cloud_collectors().size(), 1);
+  // Act
+  // Advancing the arrival clock past the timeout closes the collector (this is what the node's
+  // one-shot timer drives).
+  auto frames = concatenator_->close_expired_collectors(100.0 + timeout_sec + 0.01);
 
-  // Sleep for timeout seconds (200 ms)
-  std::this_thread::sleep_for(std::chrono::milliseconds(200));
-  rclcpp::spin_some(concatenate_node_);
-
-  // Collector should concatenate and publish the pointcloud, and set the status to IDLE
-  EXPECT_EQ(collector_->get_status(), autoware::pointcloud_preprocessor::CollectorStatus::Finished);
-  concatenate_node_->manage_collector_list();
-  EXPECT_EQ(
-    concatenate_node_->get_cloud_collectors().front()->get_status(),
-    autoware::pointcloud_preprocessor::CollectorStatus::Idle);
+  // Assert
+  EXPECT_TRUE(after_top.empty());
+  ASSERT_EQ(frames.size(), 1u);
+  EXPECT_EQ(frames[0].status, ConcatenatedFrameStatus::kTimeout);
+  EXPECT_EQ(frames[0].result.concatenate_cloud_ptr->width, number_of_points);
 }
 
 TEST_F(ConcatenateCloudTest, TestProcessMultipleCloud)
 {
-  concatenate_node_->add_cloud_collector(collector_);
-
+  // Arrange
   rclcpp::Time top_timestamp(timestamp_seconds, timestamp_nanoseconds, RCL_ROS_TIME);
   rclcpp::Time left_timestamp(timestamp_seconds, timestamp_nanoseconds + 40'000'000, RCL_ROS_TIME);
   rclcpp::Time right_timestamp(timestamp_seconds, timestamp_nanoseconds + 80'000'000, RCL_ROS_TIME);
@@ -605,15 +495,112 @@ TEST_F(ConcatenateCloudTest, TestProcessMultipleCloud)
   sensor_msgs::msg::PointCloud2::SharedPtr right_pointcloud_ptr =
     std::make_shared<sensor_msgs::msg::PointCloud2>(right_pointcloud);
 
-  collector_->process_pointcloud("lidar_top", top_pointcloud_ptr);
-  collector_->process_pointcloud("lidar_left", left_pointcloud_ptr);
-  collector_->process_pointcloud("lidar_right", right_pointcloud_ptr);
+  // Stamps are staggered by exactly the configured offsets, so the corrected timestamps agree and
+  // all three clouds join one collector.
+  const auto after_top = concatenator_->process_cloud("lidar_top", top_pointcloud_ptr, 100.00);
+  const auto after_left = concatenator_->process_cloud("lidar_left", left_pointcloud_ptr, 100.01);
 
-  EXPECT_EQ(collector_->get_status(), autoware::pointcloud_preprocessor::CollectorStatus::Finished);
-  concatenate_node_->manage_collector_list();
+  // Act
+  // The third cloud completes the collector.
+  auto frames = concatenator_->process_cloud("lidar_right", right_pointcloud_ptr, 100.02);
+
+  // Assert
+  EXPECT_TRUE(after_top.empty());
+  EXPECT_TRUE(after_left.empty());
+  ASSERT_EQ(frames.size(), 1u);
+  EXPECT_EQ(frames[0].status, ConcatenatedFrameStatus::kComplete);
+  EXPECT_EQ(frames[0].result.concatenate_cloud_ptr->width, 3 * number_of_points);
+}
+
+//////////////////////////////// Test output_point_type ////////////////////////////////
+
+TEST_F(ConcatenateCloudTest, TestInputLayoutSupport)
+{
+  rclcpp::Time stamp(timestamp_seconds, timestamp_nanoseconds, RCL_ROS_TIME);
+  const auto xyzircaedt_cloud = generate_pointcloud_msg(true, false, "lidar_top", stamp);
+  sensor_msgs::msg::PointCloud2 xyzirc_cloud;
+  xyzirc_cloud.fields = autoware::point_types::create_fields_point_xyzirc();
+
+  // XYZIRC output accepts any cloud that carries its fields
+  EXPECT_TRUE(combine_cloud_handler_->is_input_layout_supported(xyzircaedt_cloud));
+  EXPECT_TRUE(combine_cloud_handler_->is_input_layout_supported(xyzirc_cloud));
+  // XYZIRCT output additionally requires a time_stamp field
+  EXPECT_TRUE(combine_cloud_handler_xyzirct_->is_input_layout_supported(xyzircaedt_cloud));
+  EXPECT_FALSE(combine_cloud_handler_xyzirct_->is_input_layout_supported(xyzirc_cloud));
+}
+
+TEST_F(ConcatenateCloudTest, TestConcatenateCloudsXYZIRC)
+{
+  rclcpp::Time top_timestamp(timestamp_seconds, timestamp_nanoseconds, RCL_ROS_TIME);
+  rclcpp::Time left_timestamp(timestamp_seconds, timestamp_nanoseconds + 40'000'000, RCL_ROS_TIME);
+  rclcpp::Time right_timestamp(timestamp_seconds, timestamp_nanoseconds + 80'000'000, RCL_ROS_TIME);
+  auto topic_to_cloud_map =
+    generate_topic_to_cloud_map(top_timestamp, left_timestamp, right_timestamp);
+
+  const auto result = combine_cloud_handler_->combine_pointclouds(topic_to_cloud_map, nullptr);
+
+  // XYZIRC output drops the inputs' time_stamp
   EXPECT_EQ(
-    concatenate_node_->get_cloud_collectors().front()->get_status(),
-    autoware::pointcloud_preprocessor::CollectorStatus::Idle);
+    result.concatenate_cloud_ptr->fields, autoware::point_types::create_fields_point_xyzirc());
+  EXPECT_EQ(result.concatenate_cloud_ptr->point_step, sizeof(autoware::point_types::PointXYZIRC));
+  EXPECT_EQ(result.concatenate_cloud_ptr->width, 3 * number_of_points);
+}
+
+TEST_F(ConcatenateCloudTest, TestConcatenateCloudsXYZIRCT)
+{
+  constexpr std::uint32_t ms = 1'000'000;
+  // Header stamps 0 / +40 ms / +80 ms, per-point times 0 / 10 / 20 ms within each cloud
+  rclcpp::Time top_timestamp(timestamp_seconds, timestamp_nanoseconds, RCL_ROS_TIME);
+  rclcpp::Time left_timestamp(timestamp_seconds, timestamp_nanoseconds + 40 * ms, RCL_ROS_TIME);
+  rclcpp::Time right_timestamp(timestamp_seconds, timestamp_nanoseconds + 80 * ms, RCL_ROS_TIME);
+  auto topic_to_cloud_map =
+    generate_topic_to_cloud_map(top_timestamp, left_timestamp, right_timestamp);
+
+  const auto result =
+    combine_cloud_handler_xyzirct_->combine_pointclouds(topic_to_cloud_map, nullptr);
+  const auto & concatenated = *result.concatenate_cloud_ptr;
+
+  EXPECT_EQ(concatenated.fields, autoware::point_types::create_fields_point_xyzirct());
+  EXPECT_EQ(concatenated.point_step, sizeof(autoware::point_types::PointXYZIRCT));
+  EXPECT_EQ(rclcpp::Time(concatenated.header.stamp), top_timestamp);
+
+  // Point times are rebased onto the concatenated cloud's header stamp (the oldest input stamp).
+  // The concatenation order follows the input map, so compare as sorted multisets.
+  auto times = read_time_stamps(concatenated);
+  std::sort(times.begin(), times.end());
+  const std::vector<std::uint32_t> expected_times{0,       10 * ms, 20 * ms, 40 * ms, 50 * ms,
+                                                  60 * ms, 80 * ms, 90 * ms, 100 * ms};
+  EXPECT_EQ(times, expected_times);
+
+  // The synchronized per-topic clouds carry the same header stamp and the rebased times
+  const auto & sync_clouds = result.topic_to_transformed_cloud_map.value();
+  EXPECT_EQ(rclcpp::Time(sync_clouds.at("lidar_left")->header.stamp), top_timestamp);
+  EXPECT_EQ(
+    read_time_stamps(*sync_clouds.at("lidar_top")),
+    (std::vector<std::uint32_t>{0, 10 * ms, 20 * ms}));
+  EXPECT_EQ(
+    read_time_stamps(*sync_clouds.at("lidar_left")),
+    (std::vector<std::uint32_t>{40 * ms, 50 * ms, 60 * ms}));
+  EXPECT_EQ(
+    read_time_stamps(*sync_clouds.at("lidar_right")),
+    (std::vector<std::uint32_t>{80 * ms, 90 * ms, 100 * ms}));
+}
+
+TEST_F(ConcatenateCloudTest, TestConcatenateCloudsXYZIRCTIdenticalStamps)
+{
+  constexpr std::uint32_t ms = 1'000'000;
+  rclcpp::Time stamp(timestamp_seconds, timestamp_nanoseconds, RCL_ROS_TIME);
+  auto topic_to_cloud_map = generate_topic_to_cloud_map(stamp, stamp, stamp);
+
+  const auto result =
+    combine_cloud_handler_xyzirct_->combine_pointclouds(topic_to_cloud_map, nullptr);
+
+  // Identical header stamps leave the per-point times unchanged
+  auto times = read_time_stamps(*result.concatenate_cloud_ptr);
+  std::sort(times.begin(), times.end());
+  const std::vector<std::uint32_t> expected_times{0,       0,       0,       10 * ms, 10 * ms,
+                                                  10 * ms, 20 * ms, 20 * ms, 20 * ms};
+  EXPECT_EQ(times, expected_times);
 }
 
 int main(int argc, char ** argv)

@@ -15,9 +15,8 @@
 #ifndef AUTOWARE__TRAJECTORY_FOLLOWER_NODE__CONTROLLER_NODE_HPP_
 #define AUTOWARE__TRAJECTORY_FOLLOWER_NODE__CONTROLLER_NODE_HPP_
 
-#include "autoware/trajectory_follower_base/control_horizon.hpp"
-#include "autoware/trajectory_follower_base/lateral_controller_interface.hpp"
 #include "autoware/trajectory_follower_base/longitudinal_controller_interface.hpp"
+#include "autoware/trajectory_follower_node/trajectory_follower.hpp"
 #include "autoware/trajectory_follower_node/visibility_control.hpp"
 #include "autoware_utils/ros/logger_level_configure.hpp"
 #include "autoware_utils/ros/polling_subscriber.hpp"
@@ -38,20 +37,15 @@
 #include <boost/optional.hpp>
 
 #include <memory>
-#include <optional>
 #include <string>
 
 namespace autoware::motion::control
 {
-using trajectory_follower::LateralHorizon;
-using trajectory_follower::LateralOutput;
-using trajectory_follower::LongitudinalHorizon;
 using trajectory_follower::LongitudinalOutput;
 namespace trajectory_follower_node
 {
 
 using autoware_adapi_v1_msgs::msg::OperationModeState;
-using autoware_control_msgs::msg::ControlHorizon;
 
 namespace trajectory_follower = ::autoware::motion::control::trajectory_follower;
 
@@ -73,10 +67,7 @@ private:
   std::shared_ptr<diagnostic_updater::Updater>
     diag_updater_;  // Diagnostic updater for publishing diagnostic data.
 
-  // output of the lateral controller in the previous cycle, passed to the longitudinal controller
-  trajectory_follower::LateralSyncData previous_lateral_sync_data_;
-  std::shared_ptr<trajectory_follower::LongitudinalControllerInterface> longitudinal_controller_;
-  std::shared_ptr<trajectory_follower::LateralControllerInterface> lateral_controller_;
+  std::unique_ptr<TrajectoryFollower> trajectory_follower_;
 
   // Subscribers
   autoware_utils::InterProcessPollingSubscriber<autoware_planning_msgs::msg::Trajectory>
@@ -101,6 +92,7 @@ private:
 
   // Publishers
   rclcpp::Publisher<autoware_control_msgs::msg::Control>::SharedPtr control_cmd_pub_;
+  rclcpp::Publisher<autoware_planning_msgs::msg::Trajectory>::SharedPtr predicted_trajectory_pub_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr debug_marker_pub_;
   rclcpp::Publisher<autoware_control_msgs::msg::ControlHorizon>::SharedPtr control_cmd_horizon_pub_;
 
@@ -126,27 +118,10 @@ private:
   boost::optional<trajectory_follower::InputData> createInputData(rclcpp::Clock & clock);
   void callbackTimerControl();
   bool processData(rclcpp::Clock & clock);
-  bool isTimeOut(const LongitudinalOutput & lon_out, const LateralOutput & lat_out);
   void check_cyclic_message_timeout(diagnostic_updater::DiagnosticStatusWrapper & stat);
   LateralControllerMode getLateralControllerMode(const std::string & algorithm_name) const;
   LongitudinalControllerMode getLongitudinalControllerMode(
     const std::string & algorithm_name) const;
-  void publishDebugMarker(
-    const trajectory_follower::InputData & input_data,
-    const trajectory_follower::LateralOutput & lat_out) const;
-  /**
-   * @brief merge lateral and longitudinal horizons
-   * @details If one of the commands has only one control, repeat the control to match the other
-   *          horizon. If each horizon has different time intervals, resample them to match the size
-   *          with the greatest common divisor.
-   * @param lateral_horizon lateral horizon
-   * @param longitudinal_horizon longitudinal horizon
-   * @param stamp stamp
-   * @return merged control horizon
-   */
-  static std::optional<ControlHorizon> mergeLatLonHorizon(
-    const LateralHorizon & lateral_horizon, const LongitudinalHorizon & longitudinal_horizon,
-    const rclcpp::Time & stamp);
 
   std::unique_ptr<autoware_utils::LoggerLevelConfigure> logger_configure_;
 

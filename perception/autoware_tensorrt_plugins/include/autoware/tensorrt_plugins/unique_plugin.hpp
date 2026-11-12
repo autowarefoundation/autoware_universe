@@ -99,7 +99,6 @@ private:
   void initFieldsToSerialize();
 
   std::string layer_name_;
-  std::size_t workspace_size_{0};
   std::vector<nvinfer1::PluginField> data_to_serialize_;
   nvinfer1::PluginFieldCollection fc_to_serialize_;
 };

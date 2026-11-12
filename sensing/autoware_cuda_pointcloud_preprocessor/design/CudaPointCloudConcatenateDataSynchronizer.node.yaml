@@ -42,6 +42,9 @@ param_values:
   - name: input_topics
     type: array
     default: "[${input input1}, ${input input2}]"
+  - name: output_point_type
+    type: string
+    default: XYZIRC
 
 # processes
 processes:

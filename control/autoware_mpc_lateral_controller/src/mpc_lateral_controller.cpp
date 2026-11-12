@@ -231,12 +231,13 @@ MpcLateralControllerResult MpcLateralController::runDetailed(
   result.steering_offset.data = static_cast<float>(m_steering_offset_filtered_);
 
   const auto createLateralOutput =
-    [this, &stamp](
+    [this, &stamp, &mpc_solved_status](
       const auto & cmd, const bool is_mpc_solved,
       const auto & cmd_horizon) -> trajectory_follower::LateralOutput {
     trajectory_follower::LateralOutput output;
     output.control_cmd = createCtrlCmdMsg(cmd, stamp);
     output.control_cmd_horizon = createCtrlCmdHorizonMsg(cmd_horizon, stamp);
+    output.predicted_trajectory = mpc_solved_status.predicted_trajectory;
     // To be sure current steering of the vehicle is desired steering angle, we need to check
     // following conditions.
     // 1. At the last loop, mpc should be solved because command should be optimized output.

@@ -517,7 +517,7 @@ TEST(PurePursuitLateralControllerTest, PredictedTrajectoryIsReturned)
   PurePursuitLateralController controller(make_default_config(), no_log);
   const InputData input = Input().following(straight_path()).planned_at(1.0).driving_at(1.0);
 
-  const auto predicted = controller.runDetailed(input, at(0.0)).predicted_trajectory;
+  const auto predicted = controller.runDetailed(input, at(0.0)).output.predicted_trajectory;
 
   ASSERT_TRUE(predicted);
   ASSERT_GE(predicted->points.size(), 2u);

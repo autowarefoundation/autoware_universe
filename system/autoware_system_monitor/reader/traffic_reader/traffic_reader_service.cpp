@@ -19,8 +19,9 @@
 
 #include "system_monitor/traffic_reader/traffic_reader_service.hpp"
 
+#include "system_monitor/boost_process.hpp"
+
 #include <boost/archive/text_oarchive.hpp>
-#include <boost/process.hpp>
 
 #include <fmt/format.h>
 #include <signal.h>
@@ -51,10 +52,10 @@ bool TrafficReaderService::initialize()
   acceptor_ = std::make_unique<local::stream_protocol::acceptor>(io_service_, endpoint);
 
   // Run I/O service processing loop
-  boost::system::error_code error_code;
-  io_service_.run(error_code);
-  if (error_code) {
-    syslog(LOG_ERR, "Failed to run I/O service. %s\n", error_code.message().c_str());
+  try {
+    io_service_.run();
+  } catch (const boost::system::system_error & e) {
+    syslog(LOG_ERR, "Failed to run I/O service. %s\n", e.code().message().c_str());
     return false;
   }
 

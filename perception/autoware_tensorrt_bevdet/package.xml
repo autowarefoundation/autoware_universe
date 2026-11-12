@@ -5,7 +5,6 @@
   <description>This package is ported version toward Autoware from bevdet_vendor</description>
 
   <author email="cynthia.liu@autocore.ai">Cynthia</author>
-  <maintainer email="cynthia.liu@autocore.ai">Cynthia</maintainer>
   <maintainer email="yliuhb@connect.ust.hk">Yuxuan Liu</maintainer>
   <license>Apache License 2.0</license>
 

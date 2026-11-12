@@ -14,7 +14,7 @@ The node converts the message format; it does not transform coordinates, compens
 
 - Positions, orientations, sizes and their covariances are expressed in the frame named in `header.frame_id`, which is the frame the output objects are published in (typically `base_link`).
 - Velocities and accelerations are absolute (ground-relative) and expressed in that same frame, as the driver reports them; the node rotates them by the object's orientation so that the output twist and acceleration are expressed in the object's own frame, as Autoware's object messages require. The `absolute_dynamics` flag of `RadarInfo` is not checked.
-- The `RadarInfo` message declares the object fields the radar provides. The following fields are required, and objects are dropped until a `RadarInfo` that declares all of them has arrived: `existence_probability`, `position_x`, `position_y`, `velocity_x`, `velocity_y`, `acceleration_x`, `acceleration_y`, `orientation`.
+- The `RadarInfo` message declares the object fields the radar provides. The following fields are required, and objects are dropped until a `RadarInfo` that declares all of them has arrived: `existence_probability`, `position_x`, `position_y`, `velocity_x`, `velocity_y`, `acceleration_x`, `acceleration_y`, `orientation`. The first `RadarInfo` that declares them fixes what the radar provides; later `RadarInfo` messages are ignored.
 - Fields the `RadarInfo` does not declare are filled from the `default_*` parameters: `position_z`, `velocity_z`, `acceleration_z`, `size_x`, `size_y`, `size_z`. The yaw variances of the pose and the twist are set only when `orientation_std` and `orientation_rate_std` are declared.
 
 ### Parameter: classification_remap

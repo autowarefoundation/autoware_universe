@@ -37,7 +37,6 @@
 
 #include "autoware_internal_debug_msgs/msg/float32_multi_array_stamped.hpp"
 #include "autoware_internal_debug_msgs/msg/float64_stamped.hpp"
-#include "autoware_planning_msgs/msg/trajectory.hpp"
 
 #include <memory>
 #include <string>
@@ -64,8 +63,6 @@ private:
   // Debug Publisher
   rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float32MultiArrayStamped>::SharedPtr
     pub_debug_values_;
-  // Predicted Trajectory publish
-  rclcpp::Publisher<autoware_planning_msgs::msg::Trajectory>::SharedPtr pub_predicted_trajectory_;
   rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float64Stamped>::SharedPtr
     pub_processing_time_ms_;
 

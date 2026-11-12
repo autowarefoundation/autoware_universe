@@ -20,6 +20,9 @@ subscribers:
   - name: driving_mode_info
     message_type: tier4_system_msgs/msg/DrivingModeInfo
     remap_target: ~/input/driving_mode_info
+  - name: current_velocity_limit
+    message_type: autoware_internal_planning_msgs/msg/VelocityLimit
+    remap_target: ~/input/current_velocity_limit
 
 publishers:
   - name: status

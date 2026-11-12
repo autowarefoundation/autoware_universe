@@ -14,8 +14,8 @@
 
 #include "autoware/pointcloud_preprocessor/concatenate_data/combine_cloud_handler_base.hpp"
 
+#include "autoware/pointcloud_preprocessor/concatenate_data/time_utils.hpp"
 #include "conversion.hpp"
-#include "time_utils.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -101,11 +101,6 @@ void CombineCloudHandlerBase::process_odometry(
   }
 
   twist_queue_.push_back(msg);
-}
-
-std::deque<geometry_msgs::msg::TwistStamped> CombineCloudHandlerBase::get_twist_queue()
-{
-  return twist_queue_;
 }
 
 Eigen::Matrix4f CombineCloudHandlerBase::compute_transform_to_adjust_for_old_timestamp(
