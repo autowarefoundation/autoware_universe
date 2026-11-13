@@ -28,6 +28,15 @@ rclcpp_components_register_node(autoware_traffic_light_recognition_node
   PLUGIN "autoware::traffic_light::TrafficLightRecognitionNode"
   EXECUTABLE traffic_light_recognition_node)
 
+ament_auto_add_executable(traffic_light_pipeline_bag2bag_runner
+  bag2bag/main.cpp
+  bag2bag/config_builder.cpp
+  bag2bag/pipeline_runner.cpp
+)
+target_include_directories(traffic_light_pipeline_bag2bag_runner PRIVATE src bag2bag)
+target_link_libraries(traffic_light_pipeline_bag2bag_runner
+  autoware_traffic_light_recognition yaml-cpp)
+
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
 
