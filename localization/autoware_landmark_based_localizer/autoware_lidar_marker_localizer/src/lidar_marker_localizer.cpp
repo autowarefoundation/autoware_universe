@@ -34,6 +34,7 @@
 #include <limits>
 #include <memory>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
@@ -82,6 +83,19 @@ LidarMarkerLocalizer::LidarMarkerLocalizer(const rclcpp::NodeOptions & node_opti
     this->declare_parameter<double>("limit_distance_from_self_pose_to_marker");
   param_.detection.reference_ring_number =
     this->declare_parameter<int64_t>("reference_ring_number");
+  // The rings outside [lower_ring_id_init, upper_ring_id_init] are not used for the detection, so
+  // the reference ring must be in the range unless all the rings are used (255)
+  if (
+    param_.detection.lower_ring_id_init <= param_.detection.upper_ring_id_init &&
+    param_.detection.reference_ring_number != std::numeric_limits<uint8_t>::max() &&
+    (param_.detection.reference_ring_number < param_.detection.lower_ring_id_init ||
+     param_.detection.upper_ring_id_init < param_.detection.reference_ring_number)) {
+    throw std::invalid_argument(
+      "reference_ring_number (" + std::to_string(param_.detection.reference_ring_number) +
+      ") must be in [lower_ring_id_init, upper_ring_id_init] = [" +
+      std::to_string(param_.detection.lower_ring_id_init) + ", " +
+      std::to_string(param_.detection.upper_ring_id_init) + "], or 255 to use all the rings");
+  }
   std::vector<double> base_covariance =
     this->declare_parameter<std::vector<double>>("base_covariance");
   for (std::size_t i = 0; i < base_covariance.size(); ++i) {

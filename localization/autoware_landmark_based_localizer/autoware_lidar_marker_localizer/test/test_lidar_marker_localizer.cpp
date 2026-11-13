@@ -21,6 +21,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -266,8 +267,51 @@ TEST(DetectLandmarks, NoPointsInConfiguredRangeBetweenRings)
   EXPECT_TRUE(result.landmarks.empty());
 }
 
-// The node declares all the parameters, including road_surface_mode.
-TEST(LidarMarkerLocalizer, Initialization)
+// The reference ring 5 is not in the point cloud, so the y of the marker is unknown.
+TEST(DetectLandmarks, NoMarkerWithoutReferenceRing)
+{
+  DetectionParam param = make_param();
+  param.reference_ring_number = 5;
+
+  const DetectionResult result = detect_landmarks(make_points(10, true), make_header(), param);
+
+  EXPECT_EQ(result.status, DetectionStatus::ok);
+  EXPECT_TRUE(result.landmarks.empty());
+}
+
+// The reference ring 0 is excluded by the configured range [1, 2].
+TEST(DetectLandmarks, NoMarkerWithReferenceRingOutsideConfiguredRange)
+{
+  DetectionParam param = make_param();
+  param.reference_ring_number = 0;
+  param.lower_ring_id_init = 1;
+  param.upper_ring_id_init = 2;
+
+  const DetectionResult result = detect_landmarks(make_points(10, true), make_header(), param);
+
+  EXPECT_EQ(result.status, DetectionStatus::ok);
+  EXPECT_TRUE(result.landmarks.empty());
+}
+
+// In the road surface mode the y of the marker does not depend on the reference ring.
+TEST(DetectLandmarks, DetectMarkerOnRoadSurfaceWithoutReferenceRing)
+{
+  DetectionParam param = make_param();
+  param.road_surface_mode = true;
+  param.reference_ring_number = 5;
+
+  const DetectionResult result = detect_landmarks(make_points(10, true), make_header(), param);
+
+  EXPECT_EQ(result.status, DetectionStatus::ok);
+  ASSERT_EQ(result.landmarks.size(), 1U);
+  EXPECT_DOUBLE_EQ(result.landmarks.front().pose.position.y, 1.0);
+}
+
+namespace
+{
+rclcpp::NodeOptions make_node_options(
+  const int64_t lower_ring_id_init, const int64_t upper_ring_id_init,
+  const int64_t reference_ring_number)
 {
   rclcpp::NodeOptions node_options;
   node_options.parameter_overrides(
@@ -284,25 +328,44 @@ TEST(LidarMarkerLocalizer, Initialization)
      {"vote_threshold_for_detect_marker", 1},
      {"marker_to_vehicle_offset_y", 0.0},
      {"marker_height_from_ground", 0.0},
-     {"reference_ring_number", 0},
+     {"reference_ring_number", reference_ring_number},
      {"self_pose_timeout_sec", 1.0},
      {"self_pose_distance_tolerance_m", 1.0},
      {"limit_distance_from_self_pose_to_nearest_marker", 1.0},
      {"limit_distance_from_self_pose_to_nearest_marker_y", 1.0},
      {"limit_distance_from_self_pose_to_marker", 1.0},
      {"base_covariance", std::vector<double>(36, 0.0)},
-     {"lower_ring_id_init", 0},
-     {"upper_ring_id_init", 0},
+     {"lower_ring_id_init", lower_ring_id_init},
+     {"upper_ring_id_init", upper_ring_id_init},
      {"enable_save_log", false},
      {"save_file_directory_path", std::string("")},
      {"save_file_name", std::string("")},
      {"save_frame_id", std::string("")},
      {"radius_for_extracting_marker_pointcloud", 1.0},
      {"queue_size_for_debug_pub_msg", 1}});
+  return node_options;
+}
+}  // namespace
 
+// The node declares all the parameters, including road_surface_mode.
+TEST(LidarMarkerLocalizer, Initialization)
+{
   std::shared_ptr<LidarMarkerLocalizer> localizer;
-  ASSERT_NO_THROW(localizer = std::make_shared<LidarMarkerLocalizer>(node_options));
+  ASSERT_NO_THROW(localizer = std::make_shared<LidarMarkerLocalizer>(make_node_options(0, 0, 0)));
   EXPECT_FALSE(localizer->get_parameter("road_surface_mode").as_bool());
+}
+
+// The reference ring must be in the configured ring range unless all the rings are used.
+TEST(LidarMarkerLocalizer, RejectReferenceRingOutsideConfiguredRange)
+{
+  EXPECT_THROW(
+    std::make_shared<LidarMarkerLocalizer>(make_node_options(1, 2, 0)), std::invalid_argument);
+  EXPECT_THROW(
+    std::make_shared<LidarMarkerLocalizer>(make_node_options(1, 2, 3)), std::invalid_argument);
+  // 255 uses all the rings
+  EXPECT_NO_THROW(std::make_shared<LidarMarkerLocalizer>(make_node_options(1, 2, 255)));
+  // the default 128 > 0 uses all the rings in the point cloud
+  EXPECT_NO_THROW(std::make_shared<LidarMarkerLocalizer>(make_node_options(128, 0, 5)));
 }
 
 }  // namespace autoware::lidar_marker_localizer

@@ -239,6 +239,11 @@ DetectionResult detect_landmarks(
 
   for (size_t i = 0; i < bin_num - param.intensity_pattern.size(); i++) {
     if (vote[i] > param.vote_threshold_for_detect_marker) {
+      // The y of the marker on a vertical surface is unknown if the reference ring has no point in
+      // the bin, e.g. the reference ring is not in the point cloud
+      if (!param.road_surface_mode && reference_ring_y[i] == std::numeric_limits<float>::max()) {
+        continue;
+      }
       const double bin_position =
         static_cast<double>(i) + static_cast<double>(param.intensity_pattern.size()) / 2.0;
       geometry_msgs::msg::Pose marker_pose_on_base_link;
