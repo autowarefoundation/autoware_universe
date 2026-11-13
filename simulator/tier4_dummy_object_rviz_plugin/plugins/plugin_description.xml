@@ -19,6 +19,10 @@
          type="rviz_plugins::UnknownInitialPoseTool"
          base_class_type="rviz_common::Tool">
   </class>
+  <class name="rviz_plugins/StaticInitialPoseTool"
+         type="rviz_plugins::StaticInitialPoseTool"
+         base_class_type="rviz_common::Tool">
+  </class>
   <class name="rviz_plugins/DeleteAllObjectsTool"
          type="rviz_plugins::DeleteAllObjectsTool"
          base_class_type="rviz_common::Tool">

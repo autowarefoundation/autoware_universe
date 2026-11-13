@@ -5,6 +5,7 @@ find_package(autoware_cmake REQUIRED)
 autoware_package()
 
 find_package(Qt5 REQUIRED Core Widgets)
+find_package(magic_enum CONFIG REQUIRED)
 set(QT_LIBRARIES Qt5::Widgets)
 
 set(CMAKE_AUTOMOC ON)
@@ -17,10 +18,12 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   src/tools/pedestrian_pose.cpp
   src/tools/car_pose.cpp
   src/tools/unknown_pose.cpp
+  src/tools/static_pose.cpp
   src/tools/delete_all_objects.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}
+  magic_enum::magic_enum
   ${QT_LIBRARIES})
 
 # Export the plugin to be imported by rviz2

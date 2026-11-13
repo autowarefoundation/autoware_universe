@@ -9,15 +9,17 @@ This plugin is used to generate dummy pedestrians, cars, and obstacles in planni
 The CarInitialPoseTool sends a topic for generating a dummy car.  
 The PedestrianInitialPoseTool sends a topic for generating a dummy pedestrian.  
 The UnknownInitialPoseTool sends a topic for generating a dummy obstacle.  
+The StaticInitialPoseTool sends a topic for generating dummy static-area point clouds with a `PointCloudClassification` label.  
 The DeleteAllObjectsTool deletes the dummy cars, pedestrians, and obstacles displayed by the above three tools.
 
 ## Inputs / Outputs
 
 ### Output
 
-| Name                                                 | Type                                             | Description                                     |
-| ---------------------------------------------------- | ------------------------------------------------ | ----------------------------------------------- |
-| `/simulation/dummy_perception_publisher/object_info` | `autoware_simulation_msgs::msg::SimulatedObject` | The topic on which to publish dummy object info |
+| Name                                                 | Type                                             | Description                                          |
+| ---------------------------------------------------- | ------------------------------------------------ | ---------------------------------------------------- |
+| `/simulation/dummy_perception_publisher/object_info` | `autoware_simulation_msgs::msg::SimulatedObject` | The topic on which to publish dummy object info      |
+| `/simulation/dummy_perception_publisher/static_area` | `autoware_simulation_msgs::msg::SimulatedObject` | The topic on which to publish dummy static area info |
 
 ## Parameter
 
@@ -77,11 +79,27 @@ The DeleteAllObjectsTool deletes the dummy cars, pedestrians, and obstacles disp
 | `position_z_`     | float  | 0.0                                                  | Z position for initial pose [m]                 |
 | `velocity_`       | float  | 0.0                                                  | Velocity [m/s]                                  |
 
+#### StaticPose
+
+| Name              | Type   | Default Value                                        | Description                                                              |
+| ----------------- | ------ | ---------------------------------------------------- | ------------------------------------------------------------------------ |
+| `topic_property_` | string | `/simulation/dummy_perception_publisher/static_area` | The topic on which to publish dummy static area info                     |
+| `class_property_` | enum   | `VEGETATION`                                         | Point class defined by `autoware::point_types::PointCloudClassification` |
+| `std_dev_x_`      | float  | 0.03                                                 | X standard deviation for initial pose [m]                                |
+| `std_dev_y_`      | float  | 0.03                                                 | Y standard deviation for initial pose [m]                                |
+| `std_dev_z_`      | float  | 0.03                                                 | Z standard deviation for initial pose [m]                                |
+| `std_dev_theta_`  | float  | 5.0 \* M_PI / 180.0                                  | Theta standard deviation for initial pose [rad]                          |
+| `position_z_`     | float  | 0.0                                                  | Z position for initial pose [m]                                          |
+| `length_`         | float  | 0.8                                                  | Length of the static area [m]                                            |
+| `width_`          | float  | 0.8                                                  | Width of the static area [m]                                             |
+| `height_`         | float  | 2.0                                                  | Height of the static area [m]                                            |
+
 #### DeleteAllObjects
 
-| Name              | Type   | Default Value                                        | Description                                     |
-| ----------------- | ------ | ---------------------------------------------------- | ----------------------------------------------- |
-| `topic_property_` | string | `/simulation/dummy_perception_publisher/object_info` | The topic on which to publish dummy object info |
+| Name                          | Type   | Default Value                                        | Description                                          |
+| ----------------------------- | ------ | ---------------------------------------------------- | ---------------------------------------------------- |
+| `topic_property_`             | string | `/simulation/dummy_perception_publisher/object_info` | The topic on which to publish dummy object info      |
+| `static_area_topic_property_` | string | `/simulation/dummy_perception_publisher/static_area` | The topic on which to publish dummy static area info |
 
 ## Assumptions / Known limits
 
@@ -110,7 +128,7 @@ You can interactively manipulate the object.
 | action | key command                            |
 | ------ | -------------------------------------- |
 | ADD    | Shift + Click Right Button             |
-| MOVE   | Hold down Right Button + Drug and Drop |
+| MOVE   | Hold down Right Button + Drag and Drop |
 | DELETE | Alt + Click Right Button               |
 
 ## Material Design Icons
