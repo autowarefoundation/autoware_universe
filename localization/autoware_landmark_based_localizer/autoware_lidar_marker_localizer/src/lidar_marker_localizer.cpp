@@ -42,6 +42,51 @@
 namespace autoware::lidar_marker_localizer
 {
 
+namespace
+{
+void validate_ring_parameters(const DetectionParam & param)
+{
+  constexpr int64_t max_ring_id = std::numeric_limits<uint16_t>::max();
+  for (const auto & [name, value] :
+       {std::pair<const char *, int64_t>{"lower_ring_id_init", param.lower_ring_id_init},
+        std::pair<const char *, int64_t>{"upper_ring_id_init", param.upper_ring_id_init}}) {
+    if (value < 0 || max_ring_id < value) {
+      throw std::invalid_argument(
+        std::string(name) + " (" + std::to_string(value) + ") must be in [0, " +
+        std::to_string(max_ring_id) + "]");
+    }
+  }
+
+  // The following checks are for the case where only the rings in the range are used
+  if (param.upper_ring_id_init < param.lower_ring_id_init) {
+    return;
+  }
+  const std::string range = "[lower_ring_id_init, upper_ring_id_init] = [" +
+                            std::to_string(param.lower_ring_id_init) + ", " +
+                            std::to_string(param.upper_ring_id_init) + "]";
+
+  // The marker y on a vertical surface is taken from the reference ring, so it must be in the
+  // range unless all the rings are used (255)
+  if (
+    param.reference_ring_number != std::numeric_limits<uint8_t>::max() &&
+    (param.reference_ring_number < param.lower_ring_id_init ||
+     param.upper_ring_id_init < param.reference_ring_number)) {
+    throw std::invalid_argument(
+      "reference_ring_number (" + std::to_string(param.reference_ring_number) + ") must be in " +
+      range + ", or 255 to use all the rings");
+  }
+
+  // Each ring votes at most once for a bin, so a marker needs more rings than the threshold
+  const int64_t ring_num = param.upper_ring_id_init - param.lower_ring_id_init + 1;
+  if (ring_num <= param.vote_threshold_for_detect_marker) {
+    throw std::invalid_argument(
+      "The number of the rings in " + range + " (" + std::to_string(ring_num) +
+      ") must be more than vote_threshold_for_detect_marker (" +
+      std::to_string(param.vote_threshold_for_detect_marker) + ")");
+  }
+}
+}  // namespace
+
 LidarMarkerLocalizer::LidarMarkerLocalizer(const rclcpp::NodeOptions & node_options)
 : Node("lidar_marker_localizer", node_options), is_activated_(false)
 {
@@ -83,19 +128,7 @@ LidarMarkerLocalizer::LidarMarkerLocalizer(const rclcpp::NodeOptions & node_opti
     this->declare_parameter<double>("limit_distance_from_self_pose_to_marker");
   param_.detection.reference_ring_number =
     this->declare_parameter<int64_t>("reference_ring_number");
-  // The rings outside [lower_ring_id_init, upper_ring_id_init] are not used for the detection, so
-  // the reference ring must be in the range unless all the rings are used (255)
-  if (
-    param_.detection.lower_ring_id_init <= param_.detection.upper_ring_id_init &&
-    param_.detection.reference_ring_number != std::numeric_limits<uint8_t>::max() &&
-    (param_.detection.reference_ring_number < param_.detection.lower_ring_id_init ||
-     param_.detection.upper_ring_id_init < param_.detection.reference_ring_number)) {
-    throw std::invalid_argument(
-      "reference_ring_number (" + std::to_string(param_.detection.reference_ring_number) +
-      ") must be in [lower_ring_id_init, upper_ring_id_init] = [" +
-      std::to_string(param_.detection.lower_ring_id_init) + ", " +
-      std::to_string(param_.detection.upper_ring_id_init) + "], or 255 to use all the rings");
-  }
+  validate_ring_parameters(param_.detection);
   std::vector<double> base_covariance =
     this->declare_parameter<std::vector<double>>("base_covariance");
   for (std::size_t i = 0; i < base_covariance.size(); ++i) {
@@ -441,6 +474,16 @@ std::vector<landmark_manager::Landmark> LidarMarkerLocalizer::detect_landmarks(
     RCLCPP_WARN_STREAM_THROTTLE(
       this->get_logger(), *this->get_clock(), 1000, "bin_num is too small!");
     return {};
+  }
+  if (
+    result.ring_num_with_points <=
+    static_cast<size_t>(param_.detection.vote_threshold_for_detect_marker)) {
+    RCLCPP_WARN_STREAM_THROTTLE(
+      this->get_logger(), *this->get_clock(), 1000,
+      "No marker can be detected because only "
+        << result.ring_num_with_points
+        << " rings have points, which is not more than vote_threshold_for_detect_marker ("
+        << param_.detection.vote_threshold_for_detect_marker << ")");
   }
 
   pub_center_intensity_grid->publish(result.center_intensity_grid);

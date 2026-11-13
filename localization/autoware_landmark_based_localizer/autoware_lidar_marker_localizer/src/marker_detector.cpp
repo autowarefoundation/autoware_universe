@@ -41,45 +41,51 @@ DetectionResult detect_landmarks(
     return result;
   }
 
-  // Find the actual ring ID range of the points
+  // If lower_ring_id_init <= upper_ring_id_init, use only the rings in that range.
+  // Otherwise (e.g. the default 128 and 0), use all the rings in the points.
+  const bool use_ring_range = param.lower_ring_id_init <= param.upper_ring_id_init;
+  const auto is_in_ring_range = [&param, use_ring_range](const uint16_t ring_id) {
+    return !use_ring_range ||
+           (param.lower_ring_id_init <= ring_id && ring_id <= param.upper_ring_id_init);
+  };
+
+  // Find the range of the ring IDs and x of the points to be used
   uint16_t lower_ring_id = std::numeric_limits<uint16_t>::max();
   uint16_t upper_ring_id = 0;
-  for (const auto & point : points.points) {
-    lower_ring_id = std::min(get_ring_id(point), lower_ring_id);
-    upper_ring_id = std::max(get_ring_id(point), upper_ring_id);
-  }
-
-  // If lower_ring_id_init <= upper_ring_id_init, use only the rings in that range.
-  // Otherwise (e.g. the default 128 and 0), use the actual range of the points as it is.
-  if (param.lower_ring_id_init <= param.upper_ring_id_init) {
-    lower_ring_id = static_cast<uint16_t>(
-      std::max(static_cast<int64_t>(lower_ring_id), param.lower_ring_id_init));
-    upper_ring_id = static_cast<uint16_t>(
-      std::min(static_cast<int64_t>(upper_ring_id), param.upper_ring_id_init));
-    if (upper_ring_id < lower_ring_id) {
-      result.status = DetectionStatus::no_points_in_ring_range;
-      return result;
-    }
-  }
-  const uint16_t ring_num = upper_ring_id - lower_ring_id + 1;
-
-  std::vector<pcl::PointCloud<PointT>> ring_points(ring_num);
-
   float min_x = std::numeric_limits<float>::max();
   float max_x = std::numeric_limits<float>::lowest();
+  bool has_points_in_ring_range = false;
   for (const auto & point : points.points) {
     const uint16_t ring_id = get_ring_id(point);
-    if (ring_id < lower_ring_id || upper_ring_id < ring_id) {
+    if (!is_in_ring_range(ring_id)) {
       continue;
     }
-    ring_points[ring_id - lower_ring_id].push_back(point);
+    has_points_in_ring_range = true;
+    lower_ring_id = std::min(ring_id, lower_ring_id);
+    upper_ring_id = std::max(ring_id, upper_ring_id);
     min_x = std::min(min_x, point.x);
     max_x = std::max(max_x, point.x);
   }
-  // e.g. the points are on rings 0 and 10, and the configured ring range is [3, 5]
-  if (max_x < min_x) {
+  if (!has_points_in_ring_range) {
     result.status = DetectionStatus::no_points_in_ring_range;
     return result;
+  }
+
+  // size_t so as not to overflow when the ring IDs span 0 to 65535
+  const size_t ring_num = static_cast<size_t>(upper_ring_id) - lower_ring_id + 1;
+
+  std::vector<pcl::PointCloud<PointT>> ring_points(ring_num);
+  for (const auto & point : points.points) {
+    const uint16_t ring_id = get_ring_id(point);
+    if (!is_in_ring_range(ring_id)) {
+      continue;
+    }
+    ring_points[ring_id - lower_ring_id].push_back(point);
+  }
+  for (const auto & one_ring : ring_points) {
+    if (!one_ring.empty()) {
+      result.ring_num_with_points++;
+    }
   }
 
   // Check that the leaf size is not too small, given the size of the data

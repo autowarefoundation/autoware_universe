@@ -78,16 +78,18 @@
           "default": 1.075
         },
         "lower_ring_id_init": {
-          "type": "number",
+          "type": "integer",
           "description": "Lowest ring ID to be used for the detection. If it is greater than upper_ring_id_init, all the rings in the point cloud are used",
           "default": 128,
-          "minimum": 0
+          "minimum": 0,
+          "maximum": 65535
         },
         "upper_ring_id_init": {
-          "type": "number",
+          "type": "integer",
           "description": "Highest ring ID to be used for the detection. If it is less than lower_ring_id_init, all the rings in the point cloud are used",
           "default": 0,
-          "minimum": 0
+          "minimum": 0,
+          "maximum": 65535
         },
         "reference_ring_number": {
           "type": "number",

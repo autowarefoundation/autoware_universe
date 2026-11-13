@@ -177,6 +177,7 @@ TEST(DetectLandmarks, UseAllRingsWhenRingRangeIsInverted)
     detect_landmarks(make_points(10, true, 2), make_header(), make_param());
 
   EXPECT_EQ(result.status, DetectionStatus::ok);
+  EXPECT_EQ(result.ring_num_with_points, 3U);
   EXPECT_EQ(result.center_intensity_grid.info.height, 3U);
   ASSERT_EQ(result.landmarks.size(), 1U);
 }
@@ -191,6 +192,7 @@ TEST(DetectLandmarks, SkipRingsOutsideConfiguredRange)
   const DetectionResult result = detect_landmarks(make_points(10, true), make_header(), param);
 
   EXPECT_EQ(result.status, DetectionStatus::ok);
+  EXPECT_EQ(result.ring_num_with_points, 2U);
   EXPECT_EQ(result.center_intensity_grid.info.height, 2U);
   ASSERT_EQ(result.landmarks.size(), 1U);
   EXPECT_DOUBLE_EQ(result.landmarks.front().pose.position.y, 2.5);
@@ -216,26 +218,28 @@ TEST(DetectLandmarks, NarrowConfiguredRangeToActualRings)
   }
 }
 
-// The points are on rings 0, 1, 2, 4, 5 and 6, and the configured range is [3, 6], so the lowest
-// ring 3 in the range has no point. Its row of the grid is left empty, and rings 4, 5 and 6 are
-// put on rows 1, 2 and 3.
-TEST(DetectLandmarks, LowestRingInRangeHasNoPoint)
+// The points are on rings 0, 1, 2, 4, 5 and 6, so the row of ring 3 in the grid is left empty.
+TEST(DetectLandmarks, EmptyRowForRingWithoutPoint)
 {
   DetectionParam param = make_param();
-  param.lower_ring_id_init = 3;
-  param.upper_ring_id_init = 6;
+  param.lower_ring_id_init = 0;
+  param.upper_ring_id_init = 10;
   pcl::PointCloud<PointT> points = make_points(10, true);
   points += make_points(10, true, 4);
 
   const DetectionResult result = detect_landmarks(points, make_header(), param);
 
   EXPECT_EQ(result.status, DetectionStatus::ok);
+  EXPECT_EQ(result.ring_num_with_points, 6U);
   const auto & grid = result.center_intensity_grid;
-  ASSERT_EQ(grid.info.height, 4U);
+  ASSERT_EQ(grid.info.height, 7U);
   ASSERT_EQ(result.landmarks.size(), 1U);
-  EXPECT_EQ(grid.data.at(5), -1);
-  for (std::uint32_t row = 1; row < grid.info.height; ++row) {
-    EXPECT_NE(grid.data.at(row * grid.info.width + 5), -1) << "row " << row;
+  for (std::uint32_t row = 0; row < grid.info.height; ++row) {
+    if (row == 3) {
+      EXPECT_EQ(grid.data.at(row * grid.info.width + 5), -1);
+    } else {
+      EXPECT_NE(grid.data.at(row * grid.info.width + 5), -1) << "row " << row;
+    }
   }
 }
 
@@ -351,7 +355,8 @@ rclcpp::NodeOptions make_node_options(
 TEST(LidarMarkerLocalizer, Initialization)
 {
   std::shared_ptr<LidarMarkerLocalizer> localizer;
-  ASSERT_NO_THROW(localizer = std::make_shared<LidarMarkerLocalizer>(make_node_options(0, 0, 0)));
+  ASSERT_NO_THROW(
+    localizer = std::make_shared<LidarMarkerLocalizer>(make_node_options(128, 0, 255)));
   EXPECT_FALSE(localizer->get_parameter("road_surface_mode").as_bool());
 }
 
@@ -366,6 +371,26 @@ TEST(LidarMarkerLocalizer, RejectReferenceRingOutsideConfiguredRange)
   EXPECT_NO_THROW(std::make_shared<LidarMarkerLocalizer>(make_node_options(1, 2, 255)));
   // the default 128 > 0 uses all the rings in the point cloud
   EXPECT_NO_THROW(std::make_shared<LidarMarkerLocalizer>(make_node_options(128, 0, 5)));
+}
+
+// Each ring votes at most once for a bin, so the configured range must have more rings than
+// vote_threshold_for_detect_marker (1 in make_node_options).
+TEST(LidarMarkerLocalizer, RejectRingRangeNotMoreThanVoteThreshold)
+{
+  EXPECT_THROW(
+    std::make_shared<LidarMarkerLocalizer>(make_node_options(1, 1, 1)), std::invalid_argument);
+  EXPECT_NO_THROW(std::make_shared<LidarMarkerLocalizer>(make_node_options(1, 2, 1)));
+}
+
+// The ring IDs are uint16_t.
+TEST(LidarMarkerLocalizer, RejectRingIdOutOfRange)
+{
+  EXPECT_THROW(
+    std::make_shared<LidarMarkerLocalizer>(make_node_options(70000, 70010, 255)),
+    std::invalid_argument);
+  EXPECT_THROW(
+    std::make_shared<LidarMarkerLocalizer>(make_node_options(-1, 10, 255)), std::invalid_argument);
+  EXPECT_NO_THROW(std::make_shared<LidarMarkerLocalizer>(make_node_options(0, 65535, 255)));
 }
 
 }  // namespace autoware::lidar_marker_localizer

@@ -23,6 +23,7 @@
 
 #include <pcl/point_cloud.h>
 
+#include <cstddef>
 #include <cstdint>
 #include <vector>
 
@@ -50,6 +51,9 @@ enum class DetectionStatus { ok, no_points, no_points_in_ring_range, bin_num_too
 struct DetectionResult
 {
   DetectionStatus status{DetectionStatus::ok};
+  // number of the rings with points used for the detection. A marker needs votes from more rings
+  // than vote_threshold_for_detect_marker.
+  size_t ring_num_with_points{0};
   // poses of the detected markers on base_link
   std::vector<landmark_manager::Landmark> landmarks;
 
