@@ -41,23 +41,45 @@ DetectionResult detect_landmarks(
     return result;
   }
 
-  // Use parameters for initial lower/upper ring id
-  uint16_t lower_ring_id = static_cast<uint16_t>(param.lower_ring_id_init);
-  uint16_t upper_ring_id = static_cast<uint16_t>(param.upper_ring_id_init);
+  // Find the actual ring ID range of the points
+  uint16_t lower_ring_id = std::numeric_limits<uint16_t>::max();
+  uint16_t upper_ring_id = 0;
   for (const auto & point : points.points) {
     lower_ring_id = std::min(get_ring_id(point), lower_ring_id);
     upper_ring_id = std::max(get_ring_id(point), upper_ring_id);
   }
-  uint16_t ring_num = upper_ring_id - lower_ring_id + 1;
+
+  // If lower_ring_id_init <= upper_ring_id_init, use only the rings in that range.
+  // Otherwise (e.g. the default 128 and 0), use the actual range of the points as it is.
+  if (param.lower_ring_id_init <= param.upper_ring_id_init) {
+    lower_ring_id = static_cast<uint16_t>(
+      std::max(static_cast<int64_t>(lower_ring_id), param.lower_ring_id_init));
+    upper_ring_id = static_cast<uint16_t>(
+      std::min(static_cast<int64_t>(upper_ring_id), param.upper_ring_id_init));
+    if (upper_ring_id < lower_ring_id) {
+      result.status = DetectionStatus::no_points_in_ring_range;
+      return result;
+    }
+  }
+  const uint16_t ring_num = upper_ring_id - lower_ring_id + 1;
 
   std::vector<pcl::PointCloud<PointT>> ring_points(ring_num);
 
   float min_x = std::numeric_limits<float>::max();
   float max_x = std::numeric_limits<float>::lowest();
   for (const auto & point : points.points) {
-    ring_points[get_ring_id(point) - lower_ring_id].push_back(point);
+    const uint16_t ring_id = get_ring_id(point);
+    if (ring_id < lower_ring_id || upper_ring_id < ring_id) {
+      continue;
+    }
+    ring_points[ring_id - lower_ring_id].push_back(point);
     min_x = std::min(min_x, point.x);
     max_x = std::max(max_x, point.x);
+  }
+  // e.g. the points are on rings 0 and 10, and the configured ring range is [3, 5]
+  if (max_x < min_x) {
+    result.status = DetectionStatus::no_points_in_ring_range;
+    return result;
   }
 
   // Check that the leaf size is not too small, given the size of the data

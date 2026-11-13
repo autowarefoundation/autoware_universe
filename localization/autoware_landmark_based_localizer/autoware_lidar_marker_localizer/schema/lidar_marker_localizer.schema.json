@@ -79,13 +79,13 @@
         },
         "lower_ring_id_init": {
           "type": "number",
-          "description": "Initial value when searching for the lowest ring ID within the point cloud",
+          "description": "Lowest ring ID to be used for the detection. If it is greater than upper_ring_id_init, all the rings in the point cloud are used",
           "default": 128,
           "minimum": 0
         },
         "upper_ring_id_init": {
           "type": "number",
-          "description": "Initial value when searching for the highest ring ID within the point cloud",
+          "description": "Highest ring ID to be used for the detection. If it is less than lower_ring_id_init, all the rings in the point cloud are used",
           "default": 0,
           "minimum": 0
         },

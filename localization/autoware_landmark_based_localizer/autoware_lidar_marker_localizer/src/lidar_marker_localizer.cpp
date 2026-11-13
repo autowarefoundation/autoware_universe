@@ -416,6 +416,13 @@ std::vector<landmark_manager::Landmark> LidarMarkerLocalizer::detect_landmarks(
     RCLCPP_WARN_STREAM_THROTTLE(this->get_logger(), *this->get_clock(), 1000, "No points!");
     return {};
   }
+  if (result.status == DetectionStatus::no_points_in_ring_range) {
+    RCLCPP_WARN_STREAM_THROTTLE(
+      this->get_logger(), *this->get_clock(), 1000,
+      "No points in the configured ring range [" << param_.detection.lower_ring_id_init << ", "
+                                                 << param_.detection.upper_ring_id_init << "]!");
+    return {};
+  }
   if (result.status == DetectionStatus::bin_num_too_small) {
     RCLCPP_WARN_STREAM_THROTTLE(
       this->get_logger(), *this->get_clock(), 1000, "bin_num is too small!");

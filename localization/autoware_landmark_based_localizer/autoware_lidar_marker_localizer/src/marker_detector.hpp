@@ -45,7 +45,7 @@ struct DetectionParam
   int64_t upper_ring_id_init;
 };
 
-enum class DetectionStatus { ok, no_points, bin_num_too_small };
+enum class DetectionStatus { ok, no_points, no_points_in_ring_range, bin_num_too_small };
 
 struct DetectionResult
 {
