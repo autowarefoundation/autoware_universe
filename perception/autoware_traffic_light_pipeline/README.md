@@ -22,7 +22,7 @@ Single-node composition of the traffic light recognition pipeline.
 
 ## Prerequisites
 
-The ML models used by this pipeline (traffic light detector / classifier) must be downloaded in advance to `~/autoware_data/ml_models`. See [Manual downloading of artifacts](https://autowarefoundation.github.io/autoware-documentation/main/installation/autoware/source-installation/#manual-downloading-of-artifacts) for how to download them.
+The ML models used by this pipeline (traffic light detector / classifier) must be downloaded in advance to `~/autoware_data/ml_models`. See the [artifacts role README](https://github.com/autowarefoundation/autoware/tree/main/ansible/roles/artifacts#readme) for how to download them.
 
 The default `data_path` launch argument (see below) points to `~/autoware_data/ml_models`, so no additional configuration is needed once the models are placed there.
 
