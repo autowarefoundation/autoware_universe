@@ -49,7 +49,7 @@ jobs:
             build-pre-command: ""
 
           - arch: arm64
-            runner: "['ubuntu-22.04-arm']"
+            runner: "['ubuntu-24.04-arm']"
             build-pre-command: taskset --cpu-list 0-6
 
     uses: ./.github/workflows/build-and-test-reusable.yaml

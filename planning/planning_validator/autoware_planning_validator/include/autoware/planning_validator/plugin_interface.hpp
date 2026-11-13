@@ -18,6 +18,7 @@
 #include "autoware/planning_validator/types.hpp"
 #include "autoware_planning_validator/msg/planning_validator_status.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware/planning_factor_interface/planning_factor_interface.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -34,7 +35,7 @@ class PluginInterface
 public:
   virtual ~PluginInterface() = default;
   virtual void init(
-    rclcpp::Node & node, const std::string & name,
+    autoware::agnocast_wrapper::Node & node, const std::string & name,
     const std::shared_ptr<PlanningValidatorContext> & context) = 0;
   virtual void validate() = 0;
   virtual void setup_diag() = 0;
@@ -46,7 +47,8 @@ protected:
   std::shared_ptr<PlanningValidatorContext> context_;
   rclcpp::Clock::SharedPtr clock_{};
 
-  std::unique_ptr<autoware::planning_factor_interface::PlanningFactorInterface>
+  std::unique_ptr<
+    autoware::planning_factor_interface::PlanningFactorInterfaceT<autoware::agnocast_wrapper::Node>>
     planning_factor_interface_;
 };
 

@@ -59,7 +59,7 @@
 
 namespace autoware::pointcloud_preprocessor
 {
-class RandomDownsampleFilterComponent : public autoware::pointcloud_preprocessor::Filter
+class RandomDownsampleFilterComponent : public autoware::pointcloud_preprocessor::AgnocastFilter
 {
 protected:
   void filter(
@@ -69,7 +69,7 @@ private:
   size_t sample_num_;
 
   /** \brief Parameter service callback result : needed to be hold */
-  OnSetParametersCallbackHandle::SharedPtr set_param_res_;
+  rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr set_param_res_;
 
   /** \brief Parameter service callback */
   rcl_interfaces::msg::SetParametersResult param_callback(const std::vector<rclcpp::Parameter> & p);

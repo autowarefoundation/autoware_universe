@@ -25,7 +25,6 @@
 #include <geometry_msgs/msg/pose.hpp>
 
 #include <gtest/gtest.h>
-#include <lanelet2_core/geometry/LineString.h>
 
 #include <vector>
 

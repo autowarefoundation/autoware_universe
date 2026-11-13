@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="3">
   <name>autoware_camera_streampetr</name>
-  <version>0.52.0</version>
+  <version>0.53.0</version>
   <description>autoware_camera_streampetr</description>
   <maintainer email="samratthapa120@gmail.com">samrat</maintainer>
   <maintainer email="kokseang.tan@tier4.jp">Kok Seang Tan</maintainer>
@@ -23,6 +23,7 @@
   <depend>geometry_msgs</depend>
   <depend>image_transport</depend>
   <depend>nav_msgs</depend>
+  <depend>perception_utils</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
   <depend>sensor_msgs</depend>

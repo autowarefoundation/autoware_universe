@@ -78,6 +78,7 @@ The filter utilizes the following data from the `FilterContext`:
 | `traffic_light.treat_unknown_light_as_red_light`             | bool   | false   | When true, unknown lights are treated identically to red lights (rejection on intersection).                      |
 | `traffic_light.stop_overshoot_margin`                        | double | 0.5     | [m] Maximum distance between the stop line and the trajectory stop point to consider the trajectory feasible.     |
 | `traffic_light.allow_if_cannot_stop_distance`                | double | 0.0     | [m] Allow crossing when the ego front is within this distance and ego cannot stop before the stop line.           |
+| `traffic_light.min_lookahead_distance`                       | double | 20.0    | [m] Minimum forward length to scan for stop lines even when comfortable stopping distance is shorter.             |
 | `traffic_light.stable_duration_threshold_red`                | double | 0.0     | [s] Minimum duration a RED light must be seen before it is considered active (only when ego is moving).           |
 | `traffic_light.stable_duration_threshold_amber`              | double | 0.0     | [s] Minimum duration an AMBER light must be seen before it is considered active (only when ego is moving).        |
 | `traffic_light.stable_duration_threshold_unknown`            | double | 0.0     | [s] Minimum duration an UNKNOWN light must be seen before it is considered active (only when ego is moving).      |

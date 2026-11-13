@@ -24,6 +24,7 @@
 #include <autoware/motion_velocity_planner_common/utils.hpp>
 #include <autoware/motion_velocity_planner_common/velocity_planning_result.hpp>
 #include <autoware_motion_velocity_road_user_stop_module/road_user_stop_module_parameters.hpp>
+#include <autoware_utils_debug/time_keeper.hpp>
 #include <autoware_utils_geometry/geometry.hpp>
 #include <rclcpp/rclcpp.hpp>
 

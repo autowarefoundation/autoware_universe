@@ -90,12 +90,7 @@ Return LateralOutput which contains the following to the controller node
 - `autoware_control_msgs/Lateral`
 - LateralSyncData
   - steer angle convergence
-
-Publish the following messages.
-
-| Name                            | Type                               | Description                                                                                                                                                                |
-| ------------------------------- | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `~/output/predicted_trajectory` | autoware_planning_msgs::Trajectory | Predicted trajectory calculated by MPC. The trajectory size will be empty when the controller is in an emergency such as too large deviation from the planning trajectory. |
+- `autoware_planning_msgs/Trajectory`: predicted trajectory calculated by MPC. The trajectory size will be empty when the controller is in an emergency such as too large deviation from the planning trajectory. The controller node publishes it on `~/output/predicted_trajectory`.
 
 ### MPC class
 
@@ -171,6 +166,18 @@ nearest time on the trajectory was determined:
 | temporal_observation_used | whether an observed nearest time was found and used (1.0) or not (0.0)   |
 | temporal_window_min       | lower bound of the time window used to search for the observed time      |
 | temporal_window_max       | upper bound of the time window used to search for the observed time      |
+
+The `~/output/lateral_diagnostic` topic carries the following values at the end of its array.
+The first four are written only when `vehicle_model_type` is `dynamics`. The other vehicle
+models leave them at zero.
+
+| Index | Description                                          |
+| :---- | :--------------------------------------------------- |
+| 27    | lateral error derivative, before the low pass filter |
+| 28    | yaw error derivative, before the low pass filter     |
+| 29    | lateral error derivative                             |
+| 30    | yaw error derivative                                 |
+| 31    | wall time the call of the QP solver took [ms]        |
 
 ### How to tune MPC parameters
 

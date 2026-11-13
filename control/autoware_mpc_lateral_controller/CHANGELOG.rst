@@ -2,6 +2,212 @@
 Changelog for package autoware_mpc_lateral_controller
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* test(autoware_mpc_lateral_controller): add characterization tests (`#13356 <https://github.com/autowarefoundation/autoware_universe/issues/13356>`_)
+  test(autoware_mpc_lateral_controller): add characterization tests for MpcLateralController (`#13356 <https://github.com/autowarefoundation/autoware_universe/issues/13356>`_)
+  MpcLateralController has no test of its own, so the parameter declaration, the vehicle
+  model built from it, the steering offset compensation, the state kept between cycles and
+  the command reset are untested. Later work moves these responsibilities between classes,
+  and pinning the behaviour first makes a change visible. This adds 37 tests that drive the
+  controller through LateralControllerBase and assert on LateralOutput alone. Three of them
+  record a value or pin a behaviour that a later change is meant to break, so they carry the
+  DISABLED\_ prefix and stay out of the default run.
+* refactor(mpc_lateral_controller): decouple mpc logic from rclcpp::Node (`#13090 <https://github.com/autowarefoundation/autoware_universe/issues/13090>`_)
+  * refactor(autoware_mpc_lateral_controller): decouple QPSolverOSQP from rclcpp::Logger/Clock
+  Change QPSolverInterface::solve() to return a QPSolverResult (success flag
+  and warning message) instead of performing RCLCPP_WARN/RCLCPP_WARN_THROTTLE
+  internally. Logging is now done by the caller in MPC::executeOptimization,
+  allowing QPSolverOSQP to be constructed without a logger or clock.
+  * refactor(autoware_mpc_lateral_controller): use tl::expected for MPC helper return values
+  Replace std::pair<ResultWithReason, T> in getData, executeOptimization,
+  resampleMPCTrajectoryByTime, and updateStateForDelayCompensation with
+  tl::expected<T, std::string>, matching the Error-as-Value pattern already
+  used elsewhere in autoware_universe and avoiding the need to construct
+  dummy values on failure.
+  * refactor(autoware_mpc_lateral_controller): return predicted trajectory via MpcResult
+  Merge ResultWithReason into MpcResult and add a predicted_trajectory
+  field, so MPC::calculateMPC() returns the predicted trajectory instead
+  of writing it through an output parameter.
+  * refactor(autoware_mpc_lateral_controller): return ctrl_cmd via MpcResult
+  Add a ctrl_cmd field to MpcResult so MPC::calculateMPC() returns the
+  computed control command instead of writing it through an output
+  parameter.
+  * refactor(autoware_mpc_lateral_controller): move diagnostic into MpcResult
+  Add a Float32MultiArrayStamped field to MpcResult and remove the
+  diagnostic output parameter from calculateMPC, so callers get the
+  diagnostic data as part of the returned result instead of via a
+  mutable reference argument.
+  * refactor(autoware_mpc_lateral_controller): move ctrl_cmd_horizon into MpcResult
+  Add a LateralHorizon field to MpcResult and remove the ctrl_cmd_horizon
+  output parameter from calculateMPC, so callers get the control command
+  horizon as part of the returned result instead of via a mutable
+  reference argument.
+  * refactor(autoware_mpc_lateral_controller): change fields order
+  * refactor(autoware_mpc_lateral_controller): publish Frenet predicted trajectory from MpcLateralController::run()
+  Move the Frenet-coordinate predicted trajectory out of MPC's internal
+  debug publisher and expose it via MpcResult::debug_msgs instead, so
+  MpcLateralController::run() is responsible for publishing it alongside
+  the other MPC outputs.
+  * refactor(autoware_mpc_lateral_controller): publish resampled reference trajectory from MpcLateralController::run()
+  Move the resampled reference trajectory debug message creation out of
+  MPC::resampleMPCTrajectoryByTime and into MPC::calculateMPC, exposing
+  it via MpcResult::debug_msgs so MpcLateralController::run() publishes
+  it alongside the other debug topics.
+  * refactor(autoware_mpc_lateral_controller): publish nearest pose from MpcLateralController::run()
+  Move the nearest pose debug message creation out of MPC::publishNearestDebug
+  and into MPC::calculateMPC, exposing it via MpcResult::debug_msgs so
+  MpcLateralController::run() publishes it alongside the other debug topics.
+  * refactor(autoware_mpc_lateral_controller): publish nearest segment trajectory from MpcLateralController::run()
+  Extract the ego-nearest segment index computation and trajectory
+  construction out of MPC::publishNearestDebug and into MPC::getData,
+  storing the result in MPCData/MpcResult::debug_msgs so
+  MpcLateralController::run() publishes it alongside the other debug
+  topics. MPC::publishNearestDebug keeps only the nearest_info publish,
+  reusing the already-computed segment indices.
+  * refactor(autoware_mpc_lateral_controller): make buildNearestInfoMessage a member function returning the debug message
+  Turn MPC::publishNearestDebug into MPC::buildNearestInfoMessage, a
+  private member function that builds and returns the Float32MultiArrayStamped
+  instead of publishing it directly. Store the result in
+  MPCData::nearest_info / MpcDebugTopicMessage::nearest_info so
+  MpcLateralController::run() publishes it alongside the other debug
+  topics, and drop the now-unused m_debug_nearest_info_pub from MPC.
+  * refactor(autoware_mpc_lateral_controller): remove rclcpp::Node dependency from MPC
+  MPC's constructor no longer does anything now that all debug
+  publishers have moved to MpcLateralController, so drop the
+  rclcpp::Node & parameter and switch construction to the default
+  constructor at all call sites.
+  * refactor(autoware_mpc_lateral_controller): make debug_msgs optional in MpcResult
+  Only populate MpcResult::debug_msgs when publish_debug_trajectories is
+  enabled, and drive publishing in MpcLateralController::run() off the
+  optional's presence instead of separately checking m_mpc's flag.
+  * refactor(autoware_mpc_lateral_controller): extract publishDebugMessages logic
+  * fix(autoware_mpc_lateral_controller): stamp debug topics with MPC input timestamp
+  Debug/diagnostic outputs (frenet predicted trajectory, resampled
+  reference trajectory, nearest pose/segment/info, diagnostic) were
+  stamped with the wall-clock time at publish, causing a small offset
+  from the odometry data they were actually computed from. Stamp them
+  inside calculateMPC() using the odometry header timestamp instead, so
+  they align with the input data for debugging. The main predicted
+  trajectory output is left unchanged.
+  * fix(autoware_mpc_lateral_controller): use a single timestamp captured in run() for all published messages
+  run() is invoked once per control cycle by a timer, so all messages
+  produced during that cycle should share one timestamp. Previously,
+  ctrl_cmd and ctrl_cmd_horizon were each stamped with a separate
+  clock\_->now() call, and predicted_trajectory relied on
+  publishPredictedTraj() re-stamping it with clock\_->now() at publish
+  time, independently of the timestamp used for debug/diagnostic topics
+  in calculateMPC().
+  Capture the timestamp once at the top of run() and thread it through
+  calculateMPC(), createCtrlCmdMsg(), and createCtrlCmdHorizonMsg() so
+  every message published from the same control cycle carries the exact
+  same timestamp.
+  * refactor(autoware_mpc_lateral_controller): extract setTimestamp() to stamp all MpcResult messages
+  calculateMPC() stamped ctrl_cmd, ctrl_cmd_horizon, predicted_trajectory,
+  diagnostic, and each debug_msgs field individually inline. Extract this
+  into a single setTimestamp() free function so MpcResult is stamped
+  consistently in one place, regardless of which fields are populated.
+  * fix(autoware_mpc_lateral_controller): stamp MpcResult on every early-return failure path
+  When calculateMPC() returns early (getData, delay compensation,
+  trajectory resampling, or optimization failure), the returned
+  MpcResult was default-constructed, leaving diagnostic.stamp and
+  predicted_trajectory.header.stamp at zero. Since publishDebugValues()
+  and publishPredictedTraj() no longer re-stamp these messages
+  themselves, a zero timestamp was published on every MPC failure,
+  making these outputs unusable for time-based analysis.
+  Apply setTimestamp() to each failure-path MpcResult so it carries the
+  same per-cycle timestamp as a successful result.
+  * refactor(autoware_mpc_lateral_controller): set predicted trajectory frame_id inside calculateMPC
+  Move the header.frame_id assignment for predicted_trajectory from
+  MpcLateralController::publishPredictedTraj into MPC::calculateMPC via a new
+  setHeader helper, so the MpcResult returned by calculateMPC() is complete
+  (header stamp and frame_id both set) rather than relying on the node to
+  fill it in afterward. MPC now caches the reference trajectory's frame_id
+  in setReferenceTrajectory().
+  * refactor(autoware_mpc_lateral_controller): derive debug message frame_id from reference trajectory
+  Replace hardcoded "map" frame_id assignments on debug messages
+  (nearest_pose, nearest_segment_trajectory, resampled_reference_trajectory,
+  predicted_trajectory_frenet) with the actual reference trajectory frame_id,
+  set uniformly in setHeader alongside the timestamp.
+  * fix(autoware_mpc_lateral_controller): publish debug topics on MPC failure paths
+  Previously debug_msgs stayed nullopt whenever calculateMPC returned early
+  on failure, so resampled_reference_trajectory, nearest_pose,
+  nearest_segment_trajectory, and nearest_info stopped being published
+  entirely while MPC was failing, breaking offline analysis of failure
+  cases. Populate debug_msgs incrementally as each field becomes available
+  and carry it into every failure branch.
+  ---------
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+* fix(pre-commit): update pre-commit-hooks-ros to v0.10.3 and adapt include guards (`#13083 <https://github.com/autowarefoundation/autoware_universe/issues/13083>`_)
+  * chore: sync files
+  * fix(pre-commit): adapt include guards to pre-commit-hooks-ros v0.10.3
+  ros-include-guard v0.10.3 only recognises an include guard when #endif is the
+  last non-empty line of the file, so that feature test macros are no longer
+  mistaken for guards. 29 headers failed that check.
+  25 headers wrap the guard in "// clang-format off" / "// clang-format on"
+  because the #endif comment plus its // NOLINT exceeds the 100 column limit.
+  Drop only the trailing "on" marker; the "off" marker then runs to end of file
+  and still protects the line from being wrapped.
+  3 CUDA headers ended with "/* *INDENT-ON* */". Move it above the #endif so it
+  stays paired with the "/* *INDENT-OFF* */" near the top of the file.
+  autoware_behavior_path_planner/test/input.hpp closed its guard immediately after
+  opening it, leaving the entire body unguarded. Move the #endif to the end.
+  Also hold clang-format at v21.1.8. clang-format 22 migrates
+  "AlignAfterOpenBracket: AlwaysBreak" to "BreakAfterOpenBracketIf: true", which
+  forces a break after every "if (" whose condition does not fit on one line and
+  reformats 88 files.
+  ---------
+  Co-authored-by: github-actions <github-actions@github.com>
+  Co-authored-by: Mete Fatih Cırıt <mfc@autoware.org>
+* feat(trajectory_follower, pid, mpc): introduce temporal controller (`#12886 <https://github.com/autowarefoundation/autoware_universe/issues/12886>`_)
+  * initial change
+  remove resampling
+  feat: add temporal trajectory mode to MPC follower (keep spatial default)
+  add temporal target selection to PID and stabilize nearest-time in PID/MPC
+  remove old parameter
+  fix parameter load for MPC
+  small fi
+  ake temporal nearest-point selection time-driven for PID/MPC and add tests
+  fix: align temporal nearest-point handling in MPC and PID, and use input yaw fallback for short segment
+  stabilize temporal reference tracking in PID and MPC
+  add temporal tracking debug signals for PID and MPC
+  gate temporal yaw and curvature by ds dt and velocity
+  move diag_updater initialization to constructor initializer list
+  * update logic for isDrivingForward
+  * change curvature calculation
+  * feat: actively reset nearest time to zero if we receive new trajectory
+  * fix(pid_longitudinal_controller): reset temporal phase on trajectory replan
+  Mirror MPC `#3050 <https://github.com/autowarefoundation/autoware_universe/issues/3050>`_ by reinitializing m_prev_nearest_time from spatial nearest
+  when header.stamp changes, and fall back to global spatial nearest when the
+  temporal observation window has no candidates.
+  Co-authored-by: Cursor <cursoragent@cursor.com>
+  * precommit
+  * test(pid_longitudinal_controller): use empty time window for spatial fallback case
+  The fallback test used window [1.8, 2.2], which still contains t=2.0, so the
+  bounded search ran instead of spatial fallback and returned t=1.0. Match the
+  MPC fallback test by using a non-overlapping window [10.0, 11.0].
+  Co-authored-by: Cursor <cursoragent@cursor.com>
+  * fix spell
+  * add maintainer
+  * set mode flag to spatial
+  * Update control/autoware_mpc_lateral_controller/param/lateral_controller_defaults.param.yaml
+  Co-authored-by: Go Sakayori <go-sakayori@users.noreply.github.com>
+  * fix comment
+  * revert: PR `#3072 <https://github.com/autowarefoundation/autoware_universe/issues/3072>`_ and `#3050 <https://github.com/autowarefoundation/autoware_universe/issues/3050>`_ (reset nearest time on new trajectory)
+  (cherry picked from commit 9f54a422c4f86465183e5f8a484f543429694b6b)
+  * fix reference point selection
+  (cherry picked from commit 4ead7da4c53d6902f4573246498a917423c59136)
+  * refactors
+  (cherry picked from commit e661dc7403fa54bbeee862772b34da97d88208b8)
+  ---------
+  Co-authored-by: Go Sakayori <gsakayori@gmail.com>
+  Co-authored-by: Go Sakayori <go.sakayori@tier4.jp>
+  Co-authored-by: YuxuanLiuTier4Desktop <619684051@qq.com>
+  Co-authored-by: Cursor <cursoragent@cursor.com>
+  Co-authored-by: Go Sakayori <go-sakayori@users.noreply.github.com>
+* Contributors: Kazuki Komiya, Kotakku, Ryohsuke Mitsudome, Takahisa Ishikawa, awf-autoware-bot[bot]
+
 0.52.0 (2026-06-30)
 -------------------
 

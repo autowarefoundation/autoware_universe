@@ -24,6 +24,7 @@
 
 #include <memory>
 #include <optional>
+#include <string>
 #include <unordered_set>
 #include <vector>
 
@@ -35,6 +36,8 @@ enum class SourcePriority {
   EXTERNAL,    // Prioritize external signals
   PERCEPTION   // Prioritize perception signals
 };
+
+SourcePriority to_source_priority(const std::string & source_priority);
 
 /**
  * @class SignalMatchValidator
@@ -56,11 +59,14 @@ public:
    * @brief Construct a validator with the source-priority mode fixed at
    *        construction. The mode is immutable for the validator's lifetime.
    *
-   * @param source_priority CONFIDENCE (confidence-based selection),
-   *                        EXTERNAL (prioritize external), or
-   *                        PERCEPTION (prioritize perception).
+   * @param source_priority "confidence" (confidence-based selection),
+   *                        "external" (prioritize external), or
+   *                        "perception" (prioritize perception). Any other
+   *                        value is treated as "confidence", mirroring
+   *                        TrafficLightArbiterNode's parameter fallback.
    */
-  explicit SignalMatchValidator(SourcePriority source_priority) : source_priority_(source_priority)
+  explicit SignalMatchValidator(const std::string & source_priority)
+  : source_priority_(to_source_priority(source_priority))
   {
   }
 

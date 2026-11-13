@@ -2,6 +2,36 @@
 Changelog for package autoware_tensorrt_vad
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* fix: declare the dependencies the simulator, e2e and map packages use (`#13209 <https://github.com/autowarefoundation/autoware_universe/issues/13209>`_)
+  * fix: declare the dependencies the simulator, e2e and map packages use
+  Three packages use headers or symbols of packages that they never declare. Add the 12 missing <depend> entries.
+  * fix: declare tf2 in tier4_dummy_object_rviz_plugin
+  The plugin uses tf2::Transform and tf2::Quaternion directly, but only tf2_geometry_msgs and tf2_ros were declared.
+  ---------
+* docs: replace retired model hosting URLs with Hugging Face links (`#13204 <https://github.com/autowarefoundation/autoware_universe/issues/13204>`_)
+  * docs: replace retired model hosting URLs with Hugging Face links
+  The model artifacts moved from awf.ml.dev.web.auto and the
+  autoware-files S3 bucket to Hugging Face repositories under the
+  AutowareFoundation org (`autowarefoundation/autoware#7223 <https://github.com/autowarefoundation/autoware/issues/7223>`_). The READMEs
+  still pointed manual downloads at the old hosts, and the yabloc README
+  still gave wget instructions for the retired archive.
+  The two dataset links on the S3 bucket stay: the bucket keeps serving
+  datasets, maps and rosbags. Only the model objects are retired.
+  The centerpoint v0 and v1 files were never migrated and stop being
+  distributed, so their changelog rows lose the download links.
+  * docs: name the ML package configs in the model download notes
+  The launch files read transfusion_ml_package.param.yaml and
+  ml_package_camera_streampetr.param.yaml from the model directory. The
+  download notes did not name them, so a manual download missed two
+  required files.
+  ---------
+* refactor(e2e): move node design files into each package (`#13095 <https://github.com/autowarefoundation/autoware_universe/issues/13095>`_)
+  Co-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>
+* Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome, Taekjin LEE
+
 0.52.0 (2026-06-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

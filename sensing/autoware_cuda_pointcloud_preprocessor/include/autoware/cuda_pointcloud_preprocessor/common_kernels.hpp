@@ -22,9 +22,18 @@
 
 namespace autoware::cuda_pointcloud_preprocessor
 {
+void ringKeysLaunch(
+  const InputPointType * input_points, std::uint16_t * ring_keys, int num_points,
+  int threads_per_block, int blocks_per_grid, cudaStream_t & stream);
+
+void maxRingSizeLaunch(
+  const std::uint16_t * sorted_ring_keys, int num_points, std::uint32_t * output_max,
+  int threads_per_block, int blocks_per_grid, cudaStream_t & stream);
+
 void transformPointsLaunch(
-  const InputPointType * input_points, InputPointType * output_points, int num_points,
-  TransformStruct transform, int threads_per_block, int blocks_per_grid, cudaStream_t & stream);
+  const InputPointType * input_points, const std::uint32_t * point_indices,
+  InputPointType * output_points, int num_points, TransformStruct transform, int threads_per_block,
+  int blocks_per_grid, cudaStream_t & stream);
 
 void cropBoxLaunch(
   InputPointType * d_points, std::uint32_t * output_crop_mask, std::uint8_t * output_nan_mask,
@@ -35,10 +44,13 @@ void combineMasksLaunch(
   const std::uint32_t * mask1, const std::uint32_t * mask2, int num_points,
   std::uint32_t * output_mask, int threads_per_block, int blocks_per_grid, cudaStream_t & stream);
 
+/// Compacts the masked points into `output_points`. OutputPointT is either
+/// autoware::point_types::PointXYZIRC or autoware::point_types::PointXYZIRCT, which additionally
+/// receives the input's time_stamp.
+template <typename OutputPointT>
 void extractPointsLaunch(
   InputPointType * input_points, std::uint32_t * masks, std::uint32_t * indices, int num_points,
-  OutputPointType * output_points, int threads_per_block, int blocks_per_grid,
-  cudaStream_t & stream);
+  OutputPointT * output_points, int threads_per_block, int blocks_per_grid, cudaStream_t & stream);
 
 }  // namespace autoware::cuda_pointcloud_preprocessor
 

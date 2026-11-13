@@ -1785,7 +1785,20 @@ lanelet::ConstLanelets getExtendLanes(
       break;
     }
 
-    extend_lanelets.push_back(next_lanelets.front());
+    // A road network that loops back on itself (a city block, for instance)
+    // hands back a lanelet that is already in the sequence.  Appending it makes
+    // the ego project onto the second lap, so the arc coordinate grows with the
+    // sequence and forward_length never reaches forward_path_length: the loop
+    // would extend the lanes forever.
+    const auto & next_lanelet = next_lanelets.front();
+    const auto is_already_extended = std::any_of(
+      extend_lanelets.begin(), extend_lanelets.end(),
+      [&next_lanelet](const auto & lanelet) { return lanelet.id() == next_lanelet.id(); });
+    if (is_already_extended) {
+      break;
+    }
+
+    extend_lanelets.push_back(next_lanelet);
   }
 
   return extend_lanelets;

@@ -26,6 +26,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace autoware::ptv3
@@ -41,10 +42,16 @@ struct PTv3ConfigParams
   bool use_det3d_head = false;
   std::string plugins_path = "";
   std::int64_t cloud_capacity = 8;
+  std::string densification_world_frame_id = "map";
+  std::int64_t densification_num_past_frames = 1;
   std::vector<std::int64_t> voxels_num = {1, 4, 8};
+  std::vector<std::int64_t> pooled_voxels_num_max = {8, 8};
   std::vector<float> point_cloud_range = {-1.0F, -1.0F, -1.0F, 3.0F, 3.0F, 3.0F};
   std::vector<float> voxel_size = {1.0F, 1.0F, 1.0F};
-  std::vector<std::string> segmentation_class_names = {"background", "car"};
+  std::int64_t max_points_per_voxel = 2;
+  std::vector<std::string> segmentation_class_names = {"noise", "car"};
+  std::unordered_map<std::string, std::string> segmentation_class_mapping = {
+    {"noise", "NOISE"}, {"car", "CAR"}};
   std::vector<std::string> serialization_orders = {"z", "z-trans"};
   std::vector<std::int64_t> pooling_strides = {2, 2};
   std::vector<std::int64_t> enc_channels = {8, 16, 32};
@@ -64,11 +71,29 @@ struct PTv3ConfigParams
   std::vector<float> post_center_range = {-2.0F, -2.0F, -2.0F, 4.0F, 4.0F, 4.0F};
 };
 
+// Host reimplementation of the device-side serialized (Morton / Z-order) encoding. `transposed`
+// selects the "z-trans" order, which swaps the x and y planes.
+inline std::int64_t serialize_coord(
+  const std::int64_t x, const std::int64_t y, const std::int64_t z, const std::int32_t depth,
+  const bool transposed)
+{
+  std::int64_t code = 0;
+  for (std::int32_t bit = 0; bit < depth; ++bit) {
+    const std::int64_t mask = 1LL << bit;
+    code |= (((transposed ? y : x) & mask) << (2 * bit + 2));
+    code |= (((transposed ? x : y) & mask) << (2 * bit + 1));
+    code |= ((z & mask) << (2 * bit));
+  }
+  return code;
+}
+
 inline PTv3Config makeConfig(const PTv3ConfigParams & params = {})
 {
   return PTv3Config(
     params.use_seg3d_head, params.use_det3d_head, params.plugins_path, params.cloud_capacity,
-    params.voxels_num, params.point_cloud_range, params.voxel_size, params.segmentation_class_names,
+    params.densification_world_frame_id, params.densification_num_past_frames, params.voxels_num,
+    params.pooled_voxels_num_max, params.point_cloud_range, params.voxel_size,
+    params.max_points_per_voxel, params.segmentation_class_names, params.segmentation_class_mapping,
     params.serialization_orders, params.pooling_strides, params.enc_channels, params.palette,
     params.filter_classes, params.filter_output_format, params.filter_apply_to_segmentation,
     params.source_reconstruction, params.dec_depths, params.detection_class_names,

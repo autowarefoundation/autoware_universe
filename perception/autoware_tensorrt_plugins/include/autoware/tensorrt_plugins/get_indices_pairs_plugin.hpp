@@ -121,7 +121,7 @@ private:
   void initFieldsToSerialize();
 
   // upper bound of number of output indices. needed to bound memory usage.
-  static constexpr int out_indices_num_limit_{256000};
+  static constexpr int out_indices_num_limit_{512000};
 
   std::string layer_name_;
   GetIndicesPairsParameters params_;

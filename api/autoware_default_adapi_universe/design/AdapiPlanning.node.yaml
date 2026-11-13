@@ -1,0 +1,174 @@
+autoware_system_design_format: 0.4.0
+
+# node information
+name: AdapiPlanning.node
+
+description: Merges the planning factors of all planning modules and publishes them as the API velocity and steering factors, completing distance and status from the trajectory and ego kinematics.
+
+package:
+  name: autoware_default_adapi_universe
+  provider: autoware
+
+launch:
+  plugin: autoware::default_adapi::PlanningNode
+  node_output: screen
+
+# interfaces
+subscribers:
+  - name: trajectory
+    message_type: autoware_planning_msgs/msg/Trajectory
+    description: Planned trajectory used to compute factor distances.
+    remap_target: /planning/trajectory
+  - name: kinematic_state
+    message_type: nav_msgs/msg/Odometry
+    description: Ego kinematics for the stop check and factor distances.
+    remap_target: /localization/kinematic_state
+  - name: planning_factors/behavior_path_planner
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+    description: Planning factors of the behavior path planner module.
+    remap_target: /planning/planning_factors/behavior_path_planner
+  - name: planning_factors/blind_spot
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+    description: Planning factors of the blind spot module.
+    remap_target: /planning/planning_factors/blind_spot
+  - name: planning_factors/crosswalk
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+    description: Planning factors of the crosswalk module.
+    remap_target: /planning/planning_factors/crosswalk
+  - name: planning_factors/detection_area
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+    description: Planning factors of the detection area module.
+    remap_target: /planning/planning_factors/detection_area
+  - name: planning_factors/dynamic_obstacle_stop
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+    description: Planning factors of the dynamic obstacle stop module.
+    remap_target: /planning/planning_factors/dynamic_obstacle_stop
+  - name: planning_factors/intersection
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+    description: Planning factors of the intersection module.
+    remap_target: /planning/planning_factors/intersection
+  - name: planning_factors/merge_from_private
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+    description: Planning factors of the merge from private module.
+    remap_target: /planning/planning_factors/merge_from_private
+  - name: planning_factors/no_stopping_area
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+    description: Planning factors of the no stopping area module.
+    remap_target: /planning/planning_factors/no_stopping_area
+  - name: planning_factors/obstacle_cruise_planner
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+    description: Planning factors of the obstacle cruise planner module.
+    remap_target: /planning/planning_factors/obstacle_cruise_planner
+  - name: planning_factors/obstacle_stop_planner
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+    description: Planning factors of the obstacle stop planner module.
+    remap_target: /planning/planning_factors/obstacle_stop_planner
+  - name: planning_factors/obstacle_stop
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+    description: Planning factors of the obstacle stop module.
+    remap_target: /planning/planning_factors/obstacle_stop
+  - name: planning_factors/obstacle_cruise
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+    description: Planning factors of the obstacle cruise module.
+    remap_target: /planning/planning_factors/obstacle_cruise
+  - name: planning_factors/obstacle_slow_down
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+    description: Planning factors of the obstacle slow down module.
+    remap_target: /planning/planning_factors/obstacle_slow_down
+  - name: planning_factors/occlusion_spot
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+    description: Planning factors of the occlusion spot module.
+    remap_target: /planning/planning_factors/occlusion_spot
+  - name: planning_factors/run_out
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+    description: Planning factors of the run out module.
+    remap_target: /planning/planning_factors/run_out
+  - name: planning_factors/stop_line
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+    description: Planning factors of the stop line module.
+    remap_target: /planning/planning_factors/stop_line
+  - name: planning_factors/surround_obstacle_checker
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+    description: Planning factors of the surround obstacle checker module.
+    remap_target: /planning/planning_factors/surround_obstacle_checker
+  - name: planning_factors/traffic_light
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+    description: Planning factors of the traffic light module.
+    remap_target: /planning/planning_factors/traffic_light
+  - name: planning_factors/virtual_traffic_light
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+    description: Planning factors of the virtual traffic light module.
+    remap_target: /planning/planning_factors/virtual_traffic_light
+  - name: planning_factors/walkway
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+    description: Planning factors of the walkway module.
+    remap_target: /planning/planning_factors/walkway
+  - name: planning_factors/motion_velocity_planner
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+    description: Planning factors of the motion velocity planner module.
+    remap_target: /planning/planning_factors/motion_velocity_planner
+  - name: planning_factors/static_obstacle_avoidance
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+    description: Planning factors of the static obstacle avoidance module.
+    remap_target: /planning/planning_factors/static_obstacle_avoidance
+  - name: planning_factors/dynamic_obstacle_avoidance
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+    description: Planning factors of the dynamic obstacle avoidance module.
+    remap_target: /planning/planning_factors/dynamic_obstacle_avoidance
+  - name: planning_factors/avoidance_by_lane_change
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+    description: Planning factors of the avoidance by lane change module.
+    remap_target: /planning/planning_factors/avoidance_by_lane_change
+  - name: planning_factors/lane_change_left
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+    description: Planning factors of the lane change left module.
+    remap_target: /planning/planning_factors/lane_change_left
+  - name: planning_factors/lane_change_right
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+    description: Planning factors of the lane change right module.
+    remap_target: /planning/planning_factors/lane_change_right
+  - name: planning_factors/start_planner
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+    description: Planning factors of the start planner module.
+    remap_target: /planning/planning_factors/start_planner
+  - name: planning_factors/goal_planner
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+    description: Planning factors of the goal planner module.
+    remap_target: /planning/planning_factors/goal_planner
+  - name: planning_factors/roundabout
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+    description: Planning factors of the roundabout module.
+    remap_target: /planning/planning_factors/roundabout
+
+publishers:
+  - name: velocity_factors
+    message_type: autoware_adapi_v1_msgs/msg/VelocityFactorArray
+    description: Merged velocity factors for the API.
+    remap_target: /api/planning/velocity_factors
+  - name: steering_factors
+    message_type: autoware_adapi_v1_msgs/msg/SteeringFactorArray
+    description: Merged steering factors for the API.
+    remap_target: /api/planning/steering_factors
+
+# parameters
+param_files: []
+
+param_values:
+  - name: stop_distance
+    type: double
+    default: 1.0
+    description: Distance to the factor point below which a stopped vehicle marks the factor as stopped [m].
+  - name: stop_duration
+    type: double
+    default: 1.0
+    description: Duration the vehicle must be stationary to be considered stopped [s].
+
+# processes
+processes:
+  - name: publish_factors
+    description: Periodically merges the latest planning factors of all modules, fills distance and status, and publishes the velocity and steering factors.
+    trigger_conditions:
+      - periodic: 5.0
+    outcomes:
+      - to_output: velocity_factors
+      - to_output: steering_factors

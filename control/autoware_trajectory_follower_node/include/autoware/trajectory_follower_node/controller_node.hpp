@@ -15,57 +15,37 @@
 #ifndef AUTOWARE__TRAJECTORY_FOLLOWER_NODE__CONTROLLER_NODE_HPP_
 #define AUTOWARE__TRAJECTORY_FOLLOWER_NODE__CONTROLLER_NODE_HPP_
 
-#include "autoware/trajectory_follower_base/control_horizon.hpp"
-#include "autoware/trajectory_follower_base/lateral_controller_base.hpp"
-#include "autoware/trajectory_follower_base/longitudinal_controller_base.hpp"
+#include "autoware/trajectory_follower_base/longitudinal_controller_interface.hpp"
+#include "autoware/trajectory_follower_node/trajectory_follower.hpp"
 #include "autoware/trajectory_follower_node/visibility_control.hpp"
 #include "autoware_utils/ros/logger_level_configure.hpp"
 #include "autoware_utils/ros/polling_subscriber.hpp"
-#include "autoware_utils/system/stop_watch.hpp"
-#include "autoware_vehicle_info_utils/vehicle_info_utils.hpp"
 #include "rclcpp/rclcpp.hpp"
-#include "tf2_ros/buffer.h"
-#include "tf2_ros/transform_listener.h"
 
-#include <Eigen/Core>
-#include <Eigen/Geometry>
 #include <autoware_utils/ros/published_time_publisher.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
-#include <tf2/utils.hpp>
 
 #include "autoware_control_msgs/msg/control.hpp"
 #include "autoware_control_msgs/msg/control_horizon.hpp"
 #include "autoware_control_msgs/msg/longitudinal.hpp"
 #include "autoware_planning_msgs/msg/trajectory.hpp"
-#include "geometry_msgs/msg/accel_stamped.hpp"
 #include "geometry_msgs/msg/accel_with_covariance_stamped.hpp"
-#include "geometry_msgs/msg/pose_stamped.hpp"
 #include "nav_msgs/msg/odometry.hpp"
-#include "tf2_msgs/msg/tf_message.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
-#include <autoware_control_msgs/msg/detail/control_horizon__struct.hpp>
 #include <autoware_internal_debug_msgs/msg/float32_stamped.hpp>
-#include <autoware_internal_debug_msgs/msg/float64_stamped.hpp>
+
+#include <boost/optional.hpp>
 
 #include <memory>
-#include <optional>
 #include <string>
-#include <utility>
-#include <vector>
 
 namespace autoware::motion::control
 {
-using trajectory_follower::LateralHorizon;
-using trajectory_follower::LateralOutput;
-using trajectory_follower::LongitudinalHorizon;
 using trajectory_follower::LongitudinalOutput;
 namespace trajectory_follower_node
 {
 
 using autoware_adapi_v1_msgs::msg::OperationModeState;
-using autoware_control_msgs::msg::ControlHorizon;
-using autoware_internal_debug_msgs::msg::Float64Stamped;
-using autoware_utils::StopWatch;
 
 namespace trajectory_follower = ::autoware::motion::control::trajectory_follower;
 
@@ -87,8 +67,7 @@ private:
   std::shared_ptr<diagnostic_updater::Updater>
     diag_updater_;  // Diagnostic updater for publishing diagnostic data.
 
-  std::shared_ptr<trajectory_follower::LongitudinalControllerBase> longitudinal_controller_;
-  std::shared_ptr<trajectory_follower::LateralControllerBase> lateral_controller_;
+  std::unique_ptr<TrajectoryFollower> trajectory_follower_;
 
   // Subscribers
   autoware_utils::InterProcessPollingSubscriber<autoware_planning_msgs::msg::Trajectory>
@@ -108,11 +87,12 @@ private:
 
   rclcpp::Subscription<autoware_internal_debug_msgs::msg::Float32Stamped>::SharedPtr
     sub_steering_offset_update_;
+  // latest message received on ~/input/steering_offset_update, passed to the lateral controller
+  autoware_internal_debug_msgs::msg::Float32Stamped steering_offset_;
 
   // Publishers
   rclcpp::Publisher<autoware_control_msgs::msg::Control>::SharedPtr control_cmd_pub_;
-  rclcpp::Publisher<Float64Stamped>::SharedPtr pub_processing_time_lat_ms_;
-  rclcpp::Publisher<Float64Stamped>::SharedPtr pub_processing_time_lon_ms_;
+  rclcpp::Publisher<autoware_planning_msgs::msg::Trajectory>::SharedPtr predicted_trajectory_pub_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr debug_marker_pub_;
   rclcpp::Publisher<autoware_control_msgs::msg::ControlHorizon>::SharedPtr control_cmd_horizon_pub_;
 
@@ -138,35 +118,14 @@ private:
   boost::optional<trajectory_follower::InputData> createInputData(rclcpp::Clock & clock);
   void callbackTimerControl();
   bool processData(rclcpp::Clock & clock);
-  bool isTimeOut(const LongitudinalOutput & lon_out, const LateralOutput & lat_out);
   void check_cyclic_message_timeout(diagnostic_updater::DiagnosticStatusWrapper & stat);
   LateralControllerMode getLateralControllerMode(const std::string & algorithm_name) const;
   LongitudinalControllerMode getLongitudinalControllerMode(
     const std::string & algorithm_name) const;
-  void publishDebugMarker(
-    const trajectory_follower::InputData & input_data,
-    const trajectory_follower::LateralOutput & lat_out) const;
-  /**
-   * @brief merge lateral and longitudinal horizons
-   * @details If one of the commands has only one control, repeat the control to match the other
-   *          horizon. If each horizon has different time intervals, resample them to match the size
-   *          with the greatest common divisor.
-   * @param lateral_horizon lateral horizon
-   * @param longitudinal_horizon longitudinal horizon
-   * @param stamp stamp
-   * @return merged control horizon
-   */
-  static std::optional<ControlHorizon> mergeLatLonHorizon(
-    const LateralHorizon & lateral_horizon, const LongitudinalHorizon & longitudinal_horizon,
-    const rclcpp::Time & stamp);
 
   std::unique_ptr<autoware_utils::LoggerLevelConfigure> logger_configure_;
 
   std::unique_ptr<autoware_utils::PublishedTimePublisher> published_time_publisher_;
-
-  void publishProcessingTime(
-    const double t_ms, const rclcpp::Publisher<Float64Stamped>::SharedPtr pub);
-  StopWatch<std::chrono::milliseconds> stop_watch_;
 
   static constexpr double logger_throttle_interval = 5000;
 };

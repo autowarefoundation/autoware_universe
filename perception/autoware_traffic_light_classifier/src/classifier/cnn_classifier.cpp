@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "cnn_classifier.hpp"
+#include "autoware/traffic_light_classifier/classifier/cnn_classifier.hpp"
 
 #include "../traffic_light_classifier_process.hpp"
 

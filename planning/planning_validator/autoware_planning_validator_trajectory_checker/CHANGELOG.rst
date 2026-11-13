@@ -2,6 +2,33 @@
 Changelog for package autoware_planning_validator_trajectory_checker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* feat(planning_validator): apply `agnocast_wrapper::Node` to `planning_validator` (`#12964 <https://github.com/autowarefoundation/autoware_universe/issues/12964>`_)
+  * apply agnocast_wrapper::node
+  * style(pre-commit): autofix
+  * fix(autoware_planning_validator): feed stop checker per odometry message
+  Restore the original VehicleStopChecker behavior: subscribe to
+  /localization/kinematic_state and call addTwist() on every odometry message,
+  instead of feeding the latest polled odometry once per trajectory cycle.
+  * refactor(autoware_planning_validator): drop odometry subscriber comment
+  * refactor(planning_validator): migrate to polling:: API
+  * fix(planning_validator): adopt PlanningFactorInterfaceT<Node>
+  * fix(autoware_planning_validator): launch as a standalone node and fix the agnocast build wiring
+  * fix(autoware_planning_validator): pass the underlying rclcpp node to the planning test manager
+  * style(pre-commit): autofix
+  * refactor(autoware_planning_validator): declare the utils packages it includes and drop the stale comment
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+  Co-authored-by: kobayu858 <yutaro.kobayashi.2@tier4.jp>
+* chore(planning): update package maintainers (`#13186 <https://github.com/autowarefoundation/autoware_universe/issues/13186>`_)
+* fix(planning_validator, control_validator): fix include path for angles header (`#13026 <https://github.com/autowarefoundation/autoware_universe/issues/13026>`_)
+  * fix include path for angles header
+  * add missing package dependency
+  ---------
+* Contributors: Koichi Imai, Ryohsuke Mitsudome, Satoshi OTA, mkquda
+
 0.52.0 (2026-06-30)
 -------------------
 

@@ -4,7 +4,10 @@
   <arg name="input_frame" default="base_link"/>
   <arg name="output_frame" default="base_link"/>
   <arg name="crop_box_filter_param_file" default="$(find-pkg-share autoware_pointcloud_preprocessor)/config/crop_box_filter_node.param.yaml"/>
+  <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
+
   <node pkg="autoware_pointcloud_preprocessor" exec="crop_box_filter_node" name="crop_box_filter_node">
+    <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
     <param from="$(var crop_box_filter_param_file)"/>
     <remap from="input" to="$(var input_topic_name)"/>
     <remap from="output" to="$(var output_topic_name)"/>

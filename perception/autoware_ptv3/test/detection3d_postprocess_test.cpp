@@ -34,6 +34,7 @@ PTv3Config makePostprocessConfig()
   params.use_det3d_head = true;
   params.cloud_capacity = 8;
   params.voxels_num = {1, 4, 8};
+  params.pooled_voxels_num_max = {8, 8, 8, 8};
   params.point_cloud_range = {0.0F, 0.0F, 0.0F, 16.0F, 16.0F, 4.0F};
   params.voxel_size = {1.0F, 1.0F, 1.0F};
   params.pooling_strides = {2, 2, 2, 2};

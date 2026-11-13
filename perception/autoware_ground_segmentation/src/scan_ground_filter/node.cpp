@@ -37,7 +37,7 @@ using autoware_utils::normalize_radian;
 using autoware_utils::ScopedTimeTrack;
 
 ScanGroundFilterComponent::ScanGroundFilterComponent(const rclcpp::NodeOptions & options)
-: autoware::pointcloud_preprocessor::Filter("ScanGroundFilter", options)
+: autoware::pointcloud_preprocessor::AgnocastFilter("ScanGroundFilter", options)
 {
   // set initial parameters
   {
@@ -109,10 +109,10 @@ ScanGroundFilterComponent::ScanGroundFilterComponent(const rclcpp::NodeOptions &
 
   // initialize debug tool
   {
-    using autoware_utils::DebugPublisher;
     using autoware_utils::StopWatch;
     stop_watch_ptr_ = std::make_unique<StopWatch<std::chrono::milliseconds>>();
-    debug_publisher_ptr_ = std::make_unique<DebugPublisher>(this, "scan_ground_filter");
+    debug_publisher_ptr_ =
+      std::make_unique<autoware_utils::BasicDebugPublisher<NodeType>>(this, "scan_ground_filter");
     stop_watch_ptr_->tic("cyclic_time");
     stop_watch_ptr_->tic("processing_time");
 

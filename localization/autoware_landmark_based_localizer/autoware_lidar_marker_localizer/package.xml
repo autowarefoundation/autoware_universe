@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_lidar_marker_localizer</name>
-  <version>0.52.0</version>
+  <version>0.53.0</version>
   <description>The autoware_lidar_marker_localizer package</description>
   <maintainer email="yamato.ando@tier4.jp">Yamato Ando</maintainer>
   <license>Apache License 2.0</license>
@@ -21,7 +21,6 @@
   <depend>autoware_qos_utils</depend>
   <depend>autoware_utils</depend>
   <depend>pcl_conversions</depend>
-  <depend>pcl_ros</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
   <depend>sensor_msgs</depend>
@@ -32,6 +31,7 @@
   <depend>tf2_ros</depend>
   <depend>tf2_sensor_msgs</depend>
 
+  <test_depend>ament_cmake_gtest</test_depend>
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>autoware_lint_common</test_depend>
 

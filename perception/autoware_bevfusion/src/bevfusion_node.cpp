@@ -14,6 +14,7 @@
 
 #include "autoware/bevfusion/bevfusion_node.hpp"
 
+#include "autoware/bevfusion/ros_utils.hpp"
 #include "autoware/bevfusion/utils.hpp"
 
 #include <cstddef>
@@ -54,10 +55,10 @@ BEVFusionNode::BEVFusionNode(const rclcpp::NodeOptions & options)
     this->declare_parameter<std::int64_t>("densification_num_past_frames", descriptor);
 
   {  // IoU NMS
-    NMSParams p;
-    p.search_distance_2d_ =
+    perception_utils::IouBevNmsParams p;
+    p.search_distance_2d =
       this->declare_parameter<double>("iou_nms_search_distance_2d", descriptor);
-    p.iou_threshold_ = this->declare_parameter<double>("iou_nms_threshold", descriptor);
+    p.iou_threshold = this->declare_parameter<double>("iou_nms_threshold", descriptor);
     iou_bev_nms_.setParameters(p);
   }
 

@@ -2,6 +2,180 @@
 Changelog for package autoware_multi_object_tracker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* feat(multi_object_tracker): tracker batch trigger on stale target stream (`#13181 <https://github.com/autowarefoundation/autoware_universe/issues/13181>`_)
+  * Fix tracker batch trigger on stale target stream
+  * style(pre-commit): autofix
+  * Fix channel optimizer timer behavior
+  * Restore input manager optimizer order
+  * Address review: freshness cap, target hysteresis, gradual latency shift
+  - cap the freshness timeout so a rate-dropped channel is not relaxed into
+  the 'fresh' condition by its own grown interval statistics
+  - call optimizeChannelTimings() only from the optimizer timer, not from
+  InputManager::getObjects()
+  - keep the current target stream unless another fresh stream exceeds its
+  latency by the hysteresis, while a stale target still fails over at once
+  - rate-limit the increase of target_stream_latency\_ so the batch window
+  does not jump backward and export objects older than the tracker time
+  - add deterministic regression tests for the three behaviors above
+  Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+  Claude-Session: https://claude.ai/code/session_011NwvLwTeX7F3cyKJHNAMwP
+  * fix(multi_object_tracker): keep batch window open to the target stream during latency convergence (`#13259 <https://github.com/autowarefoundation/autoware_universe/issues/13259>`_)
+  * fix(multi_object_tracker): keep batch window open to the target stream during latency convergence
+  The gradual target latency shift moves the batch window end while the
+  window start stays at the export watermark; measurements below the
+  window start are dropped by getObjectsOlderThan(). After a target
+  dropout and recovery, the recovered stream's measurements fall into
+  that gap for the whole convergence period. The window start now stays
+  at or below the target stream's newest measurement, bounded by the
+  1-second interval.
+  Also:
+  - push objects with the node's current_time so association processing
+  time is not folded into the stream latency statistics
+  - de-vacuize SelectsLargestLatencyStreamAfterTimingOptimization by
+  placing the high-latency channel off the default target index
+  - add a dropout-failover-recovery regression test
+  * refactor(multi_object_tracker): flatten getObjectTimeInterval bound selection
+  The target stream's newest measurement is fetched once, and the window
+  bounds are clamped with min/max: the window end stays at or above it,
+  the window start at or below it, within the 1-second interval.
+  ---------
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+  Co-authored-by: Taekjin LEE <taekjin.lee@tier4.jp>
+* docs(mkdocs_macros): render README interfaces and parameters from node design files (`#13225 <https://github.com/autowarefoundation/autoware_universe/issues/13225>`_)
+  * feat(autoware_multi_object_tracker): enhance node design with additional subscribers, publishers, and parameter descriptions
+  * feat(mkdocs_macros): enhance node design documentation with YAML interface and parameter rendering
+  * feat(node): update autoware_system_design_format to 0.4.0
+  * docs(mkdocs_macros): fix heading levels, inline ros__parameters, and typos
+  - render generated sections at a configurable heading level (default h3)
+  - document schemas that inline ros__parameters without a $ref
+  - fix 'fo channel' typos in interface descriptions
+  * feat(mkdocs_macros): enhance identifier formatting with line-break opportunities
+  ---------
+* fix(autoware_multi_object_tracker): protect exported trackers from overlap-merge deletion (`#13088 <https://github.com/autowarefoundation/autoware_universe/issues/13088>`_)
+  * lazy merge for only confident tracker wins
+  * style(pre-commit): autofix
+  * replace channel dominant to sum-up score
+  * store channel_support to snapshot
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* chore(pre-commit): update clang-format to v22.1.5 (`#13126 <https://github.com/autowarefoundation/autoware_universe/issues/13126>`_)
+  * chore(pre-commit): update clang-format to v22.1.5
+  * style(pre-commit): autofix
+  ---------
+* feat(autoware_multi_object_tracker): orientation sign belief for heading flip decisions (`#13050 <https://github.com/autowarefoundation/autoware_universe/issues/13050>`_)
+  * feat: implement orientation sign belief
+  * also vote by velocity
+  * vel-obj integrated sign belief
+  * sync multi-layer tracker orientation
+  * orient and velocity sign belief separately
+  * move parameters to sign belief
+  * also flip in partial update
+  * swap u covariance orientation
+  * style(pre-commit): autofix
+  * fix comment to follow current impl
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* fix(autoware_multi_object_tracker): prefer fresh bbox tracker over long partially-updated tracker in overlap pruning (`#12996 <https://github.com/autowarefoundation/autoware_universe/issues/12996>`_)
+  * refactor(multi_object_tracker): restructure overlap merge into a staged pipeline
+  Extract the tracker overlap merge into a merger/ module: shared snapshot and
+  decision-context types (detail/overlap_types), the spatial gate (detail/
+  overlap_gate, per-label pruning distances), and the survival ranking
+  (detail/survival_ranking). tracker_overlap_manager drives a four-stage
+  pipeline — snapshot, decide directed merge edges, group one best winner per
+  loser, apply the star-forest merges. Move redundancy_check under merger/detail
+  and update includes.
+  Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+  Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
+  * feat(multi_object_tracker): rank a loser's competing winners by substance
+  Group merge edges with compareWinnerSubstance — priority, confidence, known
+  probability, position covariance, measurement count — so the intrinsically
+  stronger winner claims a contested loser; distance and UUID only break ties.
+  Apply merges strongest-winner-first so star-forest conflicts resolve toward
+  the stronger edge.
+  Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+  Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
+  * feat(multi_object_tracker): add tolerance deadband to overlap ranking comparisons
+  Introduce withinDeadband, a relative-or-absolute tolerance band, and apply it to
+  the continuous-quantity comparisons in overlap ranking: the position-covariance
+  survival tier and the distance tie-break between equally-strong winners. Values
+  that differ only within the band compare equal and defer to the next tie-break.
+  Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+  Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
+  * feat(multi_object_tracker): rank overlap survival by full-measurement freshness
+  Track the time of each vehicle tracker's last full (trust_extension)
+  measurement in tracker_base and expose getElapsedTimeFromFullMeasurement:
+  the stabilized extension update also refreshes it, and non-vehicle trackers
+  always count as fully measured. The overlap merge snapshots a
+  fully_measured_stale flag (elapsed > 0.35 s) and adds a survival tier that
+  prefers the fresh, fully-measured tracker, so a tracker coasting on partial
+  updates yields to a fresh bbox-spawned tracker.
+  Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+  Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
+  * feat(multi_object_tracker): gate overlap pairs by size-aware multi-circle cover
+  Replace the per-label distance-threshold gate with a size-aware spatial gate:
+  cover each tracker's extents with a chain of equal circles along its longer
+  axis and admit a pair only when their circles fall within
+  (radius_a + radius_b + margin), via a bulk-loaded R-tree. Parametric shapes
+  take their extents from dimensions; polygon shapes from their footprint's
+  bounds in the object frame. Remove the now-unused pruning_distance_thresholds
+  parameter from configuration, schema, node, and tests.
+  Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+  Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
+  * style(pre-commit): autofix
+  * fix revise circle gate params
+  * summarize comments
+  * fix pedestrian and bicycle trackers getElapsedTimeFromFullMeasurement
+  * fix pedestrian and bicycle trackers getElapsedTimeFromFullMeasurement with test
+  ---------
+  Co-authored-by: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* fix(autoware_multi_object_tracker): make axle covariance blend inflate-only (`#13004 <https://github.com/autowarefoundation/autoware_universe/issues/13004>`_)
+  fix: blend axle covariance to only enlarge covariances
+* fix(autoware_multi_object_tracker): lock wheelbase length in partial wheel update to stabilize stationary vehicles (`#12990 <https://github.com/autowarefoundation/autoware_universe/issues/12990>`_)
+  * feat(multi-object-tracker): enhance pose covariance propagation in BicycleMotionModel
+  * fix(multi-object-tracker): enhance wheel kinematics handling in updateStatePoseWheel method
+  * fix(multi-object-tracker): improve comments and clarity in getPredictedState method's pose covariance handling
+  * style(pre-commit): autofix
+  * fix(multi-object-tracker): rename variable for clarity in pose covariance test
+  * Potential fix for pull request finding
+  Co-authored-by: Copilot Autofix powered by AI <175728472+Copilot@users.noreply.github.com>
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+  Co-authored-by: Copilot Autofix powered by AI <175728472+Copilot@users.noreply.github.com>
+* fix(autoware_multi_object_tracker): blend front/rear axle covariance to absorb common lateral position error (`#12982 <https://github.com/autowarefoundation/autoware_universe/issues/12982>`_)
+  * feat(multi-object-tracker): implement axle covariance blending for improved yaw stability
+  * feat(multi-object-tracker): adjust yaw update mechanism with axle covariance blending
+  * refactor(multi-object-tracker): streamline axle covariance blend comments and remove redundant ego pose handling
+  * feat(multi-object-tracker): enhance process noise structure in BicycleMotionModel for improved covariance handling
+  * fix(multi-object-tracker): update pose covariance indices in getPredictedState method
+  * Revert "fix(multi-object-tracker): update pose covariance indices in getPredictedState method"
+  This reverts commit cbc80f3a1b68e17846118d7c6bcddcfe9fa9d55a.
+  * fix(multi-object-tracker): rename last_update_time to last_prediction_time for clarity
+  * fix(multi-object-tracker): rename last_predict_dt\_ to time_since_correction\_ for clarity and accuracy in covariance blending
+  * fix(multi-object-tracker): update variable names in BlendAxleCovariance test for clarity
+  * fix(multi-object-tracker): simplify comment in predict method for clarity
+  ---------
+* fix(multi_object_tracker): merge footprints using convex hull (`#12926 <https://github.com/autowarefoundation/autoware_universe/issues/12926>`_)
+  * fix(multi-object-tracker): fix unionFootprints to merge footprints using convex hull
+  * fix(multi-object-tracker): update exportTo method to assign footprint directly
+  * fix(multi-object-tracker): improve comments for clarity in convertConvexHullToBoundingBox and unionFootprints
+  * fix(multi-object-tracker): enhance footprint handling in PedestrianShapeModel and update method signature
+  * fix(multi-object-tracker): simplify comments in PedestrianShapeModel for clarity
+  * fix(multi-object-tracker): update exportTo method to use output time for footprint freshness check
+  * fix(multi-object-tracker): update footprint freshness checks in PedestrianShapeModel and VehicleShapeModel
+  * fix(multi-object-tracker): optimize unionFootprints by avoiding redundant vertex closure
+  ---------
+* fix(multi_object_tracker): enforce BOUNDING_BOX output type in PedestrianShapeModel export (`#12938 <https://github.com/autowarefoundation/autoware_universe/issues/12938>`_)
+  * fix(multi-object-tracker): enforce BOUNDING_BOX output type in PedestrianShapeModel export
+  * fix(multi-object-tracker): update method documentation for clarity on parameters and output types
+  fix(multi-object-tracker): simplify comment in getTrackedObject method for clarity
+  ---------
+* Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome, Taekjin LEE, Yoshi Ri
+
 0.52.0 (2026-06-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

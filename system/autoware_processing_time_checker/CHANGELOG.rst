@@ -2,6 +2,47 @@
 Changelog for package autoware_processing_time_checker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* fix(design): align the system node designs with the packages they describe (`#13338 <https://github.com/autowarefoundation/autoware_universe/issues/13338>`_)
+  * fix(design): declare the fixed-name interfaces of the system node designs as remap targets
+  The diagnostic graph ports, the diagnostics array publisher and the automatic
+  pose initializer's localization interfaces are pinned with global:, which keeps
+  them out of the design graph: link_manager skips any connection whose target is
+  a global input port and the exporter emits no remap. remap_target: keeps the
+  same fixed topic and service names while letting the ports take part in the
+  graph.
+  * feat(autoware_default_adapi_universe): add node designs for the AD API nodes
+  The package builds fifteen AD API components with no design of their own, so a
+  system that composes the AD API from design modules cannot reference them.
+  * feat(design): add the diagnostic graph and component state monitor node designs
+  autoware_component_state_monitor and autoware_diagnostic_graph_aggregator build
+  three components with no design of their own: the state monitor that aggregates
+  topic monitor diagnostics into per-component availability, the aggregator that
+  turns /diagnostics into the diagnostic graph, and the converter that derives
+  operation mode availability from it.
+  DiagnosticGraphLogging and ProcessingTimeChecker declare the parameters their
+  launchers pass, which have no package param file to come from.
+  ---------
+* chore(autoware_trajectory_processor)!: rename to autoware_trajectory_modifier (`#13389 <https://github.com/autowarefoundation/autoware_universe/issues/13389>`_)
+  rename processor -> modifier
+* feat(trajectory_processor): unify Modifier and Optimizer nodes into Processor node (`#13165 <https://github.com/autowarefoundation/autoware_universe/issues/13165>`_)
+* refactor(system): move node design files into each package (`#13103 <https://github.com/autowarefoundation/autoware_universe/issues/13103>`_)
+  Co-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>
+* style(processing_time_checker): adjust comment indentation (`#12780 <https://github.com/autowarefoundation/autoware_universe/issues/12780>`_)
+  adjust comment indentation
+  Co-authored-by: Junya Sasaki <junya.sasaki@tier4.jp>
+* feat(processing_time_checker): apply `agnocast_wrapper::Node` to `processing_time_checker` (`#12761 <https://github.com/autowarefoundation/autoware_universe/issues/12761>`_)
+  * apply agnocast_wrapper::Node to processing_time_checker
+  * launch and Cmake
+  * fix copilot review
+  * fix to use ALLOCATE
+  * fix cpplint
+  ---------
+  Co-authored-by: atsushi yano <55824710+atsushi421@users.noreply.github.com>
+* Contributors: Koichi Imai, Maxime CLEMENT, Ryohsuke Mitsudome, Taekjin LEE, Taeseung Sohn
+
 0.52.0 (2026-06-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

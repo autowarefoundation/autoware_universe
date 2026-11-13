@@ -30,7 +30,7 @@ class TrajectoryChecker : public PluginInterface
 {
 public:
   void init(
-    rclcpp::Node & node, const std::string & name,
+    autoware::agnocast_wrapper::Node & node, const std::string & name,
     const std::shared_ptr<PlanningValidatorContext> & context) override;
   void validate() override;
   void setup_diag() override;
@@ -55,7 +55,7 @@ public:
   bool check_trajectory_shift();
 
 private:
-  void setup_parameters(rclcpp::Node & node);
+  void setup_parameters(autoware::agnocast_wrapper::Node & node);
 
   void set_diag_status(
     DiagnosticStatusWrapper & stat, const bool & is_ok, const std::string & msg) const;

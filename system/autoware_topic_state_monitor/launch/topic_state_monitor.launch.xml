@@ -10,8 +10,10 @@
   <arg name="timeout" description="timeout period[s]"/>
   <arg name="window_size" default="10" description="window size"/>
   <arg name="pub_topic_name" default="/diagnostics" description="topic name to publish diagnostics"/>
+  <arg name="ld_preload" default="$(env LD_PRELOAD '')" description="LD_PRELOAD for the node process; set to the Agnocast heaphook when ENABLE_AGNOCAST=1"/>
 
-  <node pkg="autoware_topic_state_monitor" exec="autoware_topic_state_monitor_node" name="topic_state_monitor_$(var node_name_suffix)" output="screen">
+  <node pkg="autoware_topic_state_monitor" exec="autoware_topic_state_monitor_node" name="topic_state_monitor_$(var node_name_suffix)" namespace="" output="screen">
+    <env name="LD_PRELOAD" value="$(var ld_preload)"/>
     <remap from="/diagnostics" to="$(var pub_topic_name)"/>
     <param name="topic" value="$(var topic)"/>
     <param name="topic_type" value="$(var topic_type)"/>

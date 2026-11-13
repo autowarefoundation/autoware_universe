@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "collision.hpp"
 #include "parameters.hpp"
 #include "types.hpp"
 
@@ -42,7 +43,6 @@
 
 namespace autoware::motion_velocity_planner::run_out
 {
-
 namespace
 {
 bool is_same_direction(const TimeOverlapInterval & ego, const Parameters & params)
@@ -117,7 +117,7 @@ FootprintIntersection calculate_footprint_intersection(
 std::pair<autoware_planning_msgs::msg::TrajectoryPoint, double>
 calculate_closest_interpolated_point_and_arc_length(
   const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & trajectory,
-  const universe_utils::Point2d & p, const double longitudinal_offset = 0.0)
+  const universe_utils::Point2d & p, const double longitudinal_offset)
 {
   autoware_planning_msgs::msg::TrajectoryPoint trajectory_point;
   geometry_msgs::msg::Point pt;
@@ -228,17 +228,6 @@ std::vector<FootprintIntersection> calculate_intersections(
   return intersections;
 }
 
-struct TimeOverlapIntervalPair
-{
-  TimeOverlapInterval ego;
-  TimeOverlapInterval object;
-
-  TimeOverlapIntervalPair(TimeOverlapInterval e, TimeOverlapInterval o)
-  : ego(std::move(e)), object(std::move(o))
-  {
-  }
-};
-
 void create_overlap(
   std::vector<TimeOverlapIntervalPair> & overlap_intervals,
   const std::vector<FootprintIntersection> & intersections, const size_t entering_id,
@@ -336,25 +325,42 @@ void calculate_overlapping_collision(
          << "]/ego_vel[" << ego.first_intersection.ego_vel << "]";
       c.explanation = ss.str();
     }
-  } else if (is_opposite_direction(ego, params)) {
-    // predict time when collision would occur by finding time when arc lengths are equal
-    const auto overlap_length =
-      ego.last_intersection.arc_length - ego.first_intersection.arc_length;
-    const auto ego_overlap_duration =
-      ego.last_intersection.ego_time - ego.first_intersection.ego_time;
-    const auto object_overlap_duration =
-      object.last_intersection.object_time - object.first_intersection.object_time;
-    const auto ego_vel = overlap_length / ego_overlap_duration;
-    const auto obj_vel = overlap_length / object_overlap_duration;
-    const auto lon_buffer = std::min(overlap_length, 4.0);
-    const auto collision_time_within_overlap = (overlap_length - lon_buffer) / (ego_vel + obj_vel);
-    // TODO(Maxime): we need to correctly account for the agents' longitudinal offsets
-    c.ego_collision_time += collision_time_within_overlap;
+    return;
+  }
+
+  // keeping original behavior
+  if (!is_opposite_direction(ego, params)) {
+    return;
+  }
+
+  // predict time when collision would occur by finding time when arc lengths are equal
+  const auto overlap_length = ego.last_intersection.arc_length - ego.first_intersection.arc_length;
+  const auto ego_overlap_duration =
+    ego.last_intersection.ego_time - ego.first_intersection.ego_time;
+  const auto object_overlap_duration =
+    object.last_intersection.object_time - object.first_intersection.object_time;
+
+  // degenerate (point-like) overlap: no length or no duration to estimate velocities from
+  if (
+    std::abs(overlap_length) < 1e-3 || std::abs(ego_overlap_duration) < 1e-3 ||
+    std::abs(object_overlap_duration) < 1e-3) {
     std::stringstream ss;
     ss << std::setprecision(2) << "coll_t = ego_enter_time[" << ego.first_intersection.ego_time
-       << "]+coll_t_within_overlap[" << collision_time_within_overlap << "]";
+       << "]";
     c.explanation = ss.str();
+    return;  // keep the ego enter time set above; the code below would divide by zero -> NaN
   }
+
+  const auto ego_vel = overlap_length / ego_overlap_duration;
+  const auto obj_vel = overlap_length / object_overlap_duration;
+  const auto lon_buffer = std::min(overlap_length, 4.0);
+  const auto collision_time_within_overlap = (overlap_length - lon_buffer) / (ego_vel + obj_vel);
+  // TODO(Maxime): we need to correctly account for the agents' longitudinal offsets
+  c.ego_collision_time += collision_time_within_overlap;
+  std::stringstream ss;
+  ss << std::setprecision(2) << "coll_t = ego_enter_time[" << ego.first_intersection.ego_time
+     << "]+coll_t_within_overlap[" << collision_time_within_overlap << "]";
+  c.explanation = ss.str();
 }
 
 Collision calculate_collision(

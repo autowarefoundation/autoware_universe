@@ -2,6 +2,110 @@
 Changelog for package autoware_diffusion_planner
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* docs(autoware_diffusion_planner): fix arXiv link of reference paper (`#13417 <https://github.com/autowarefoundation/autoware_universe/issues/13417>`_)
+* feat(autoware_diffusion_planner): remap unsupported objects to pedestrian (`#13352 <https://github.com/autowarefoundation/autoware_universe/issues/13352>`_)
+  * feat(autoware_diffusion_planner): treat HAZARD objects as pedestrians
+  Remap HAZARD classification to PEDESTRIAN when updating agent histories
+  so that hazard objects are considered as planner inputs. If a hazard
+  object has a non-BOX shape, emit a warning and replace the shape with
+  a 0.5 m bounding box.
+  Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
+  * feat(autoware_diffusion_planner): gate object remapping behind a parameter and extend it to UNKNOWN
+  * fix(tier4_dummy_object_rviz_plugin): emit a footprint for dummy unknown objects
+  * refactor(autoware_diffusion_planner): derive the unsupported-label set from the model labels
+  ---------
+  Co-authored-by: Yukihito Saito <yukky.saito@gmail.com>
+  Co-authored-by: Claude Fable 5 <noreply@anthropic.com>
+  Co-authored-by: Max-Bin <vborisw@gmail.com>
+* feat(diffusion_planner): ego snap to prev trajectory (`#13234 <https://github.com/autowarefoundation/autoware_universe/issues/13234>`_)
+  * Implemented `ego_snap_to_prev_trajectory`
+  * Removed `all_close`
+  * Applied `pre-commit run -a`
+  * Merge main
+  * Fixed README.md
+  * Fixed parameters
+  * Added `max_search_segment_count`
+  * Fixed to false
+  * Fixed to false
+  * Fixed unknown words
+  ---------
+* feat(diffusion_planner): resample neighbor agent histories onto a constant grid (motion compensation) (`#12979 <https://github.com/autowarefoundation/autoware_universe/issues/12979>`_)
+  * feat: Implement agent history alignment for improved neighbor agent tracking
+  - Added HistoryAlignmentParams struct to configure neighbor-agent history time-alignment.
+  - Introduced propagate_motion and interpolate_yaw functions for motion state propagation and yaw interpolation.
+  - Updated DiffusionPlannerParams to include object_history parameters.
+  - Enhanced AgentData to support history updates with alignment parameters.
+  - Implemented resampling and transformation of agent histories based on alignment parameters.
+  - Added tests for agent history alignment functionality, including propagation and lifecycle management.
+  - Updated parameter handling in DiffusionPlanner to support new object history settings.
+  * Refactor agent history alignment to resampling
+  - Replaced agent history alignment with a new agent history resampler.
+  - Updated CMakeLists.txt to include new source and test files.
+  - Removed agent_history_alignment.hpp and agent_history_alignment.cpp.
+  - Introduced agent_history_resampler.hpp and agent_history_resampler.cpp.
+  - Updated AgentData to use resampling parameters instead of alignment parameters.
+  - Modified tests to reflect changes in history resampling logic.
+  * feat: Remove prune grace parameter and update agent history handling for immediate erasure of disappeared agents
+  * feat: Rename object_history to object_motion_resampling and update related parameters for clarity
+  * feat: Remove yaw rate threshold from object motion resampling parameters and update related logic
+  * retain agent history of temporal absent
+  format fix
+  * object_motion_resampling parameter to read-only
+  * fix velocity handling
+  * chore(autoware_diffusion_planner): schema entry, spell exceptions, include cleanup
+  - add object_motion_resampling to the parameter schema
+  - file-scoped cspell exceptions for CTRV/dedup/tmpl
+  - prune unused includes from agent.hpp; direct includes in agent.cpp
+  - comment polish per codebase comment policy
+  Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
+  * fix agent flip history
+  * style(pre-commit): autofix
+  * add using headers
+  ---------
+  Co-authored-by: Claude Fable 5 <noreply@anthropic.com>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* refactor(planning): move node design files into each package (`#13102 <https://github.com/autowarefoundation/autoware_universe/issues/13102>`_)
+  Co-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>
+* feat(diffusion_planner): resolve model paths from base_model_directory (`#13148 <https://github.com/autowarefoundation/autoware_universe/issues/13148>`_)
+  * feat(diffusion_planner): resolve model paths from base_model_directory
+  Replace per-file ONNX and args path parameters with a single
+  base_model_directory parameter. Model file paths are derived at load
+  time via resolve_model_paths(), simplifying configuration and
+  parameter updates.
+  Co-authored-by: Cursor <cursoragent@cursor.com>
+  * feat(diffusion_planner): add configurable model filenames
+  Keep base_model_directory for per-vehicle path overrides while exposing
+  separate filename parameters for args and ONNX models. Paths are still
+  resolved at load time via resolve_model_paths().
+  Co-authored-by: Cursor <cursoragent@cursor.com>
+  ---------
+  Co-authored-by: Cursor <cursoragent@cursor.com>
+* feat(diffusion_planner,trajectory_ranker,trajectory_adapter): populate turn_indicator field on CandidateTrajectory (`#12922 <https://github.com/autowarefoundation/autoware_universe/issues/12922>`_)
+  * add turn_indicator into cantidate trajectory
+  * rename field
+  * fix rebase misstake
+  * changes for turn_indicator topic publisher from adapter
+  * fix turn_indicators_command timestamp
+  ---------
+* chore: add maintainer Yukinari Hisaki to package.xml (`#12960 <https://github.com/autowarefoundation/autoware_universe/issues/12960>`_)
+* feat(diffusion planner): change the classes to ignore (`#12900 <https://github.com/autowarefoundation/autoware_universe/issues/12900>`_)
+  * Removed `ignore_unknown_neighbors`
+  * Added `AgentLabel::IGNORE`
+  * Fixed test SetUp
+  * Added
+  ```
+  if (object.shape.type == autoware_perception_msgs::msg::Shape::POLYGON) {
+  continue;
+  }
+  ```
+  ---------
+* fix(diffusion_planner, trajectory ranker): remove builder pattern (`#12944 <https://github.com/autowarefoundation/autoware_universe/issues/12944>`_)
+  remove builder pattern
+* Contributors: He Hsun Sun, Kotakku, Minglu Zhao, Ryohsuke Mitsudome, SakodaShintaro, Taekjin LEE, Yukinari Hisaki, Yuxuan Liu
+
 0.52.0 (2026-06-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

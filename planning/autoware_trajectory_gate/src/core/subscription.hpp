@@ -17,6 +17,7 @@
 
 #include "interface.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <string>
@@ -27,11 +28,11 @@ namespace autoware::trajectory_gate
 class TrajectorySubscription : public TrajectorySender
 {
 public:
-  TrajectorySubscription(const std::string & name, rclcpp::Node & node);
+  TrajectorySubscription(const std::string & name, autoware::agnocast_wrapper::Node & node);
 
 private:
   void on_msg(const Trajectory & msg);
-  rclcpp::Subscription<Trajectory>::SharedPtr sub_trajectory_;
+  AUTOWARE_SUBSCRIPTION_PTR(Trajectory) sub_trajectory_;
 };
 
 }  // namespace autoware::trajectory_gate

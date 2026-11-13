@@ -1,0 +1,41 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: DummyDiagPublisher.node
+
+package:
+  name: autoware_dummy_diag_publisher
+  provider: autoware
+
+launch:
+  plugin: autoware::dummy_diag_publisher::DummyDiagPublisher
+  executable: autoware_dummy_diag_publisher_node
+  node_output: screen
+
+# interfaces
+subscribers: []
+
+publishers:
+  - name: diagnostics
+    message_type: diagnostic_msgs/msg/DiagnosticArray
+    global: /diagnostics
+
+# parameters
+# the required diagnostics come from the system-side parameter files; the package defaults are empty.
+param_files:
+  - name: param_file
+    default: config/_empty.param.yaml
+  - name: extra_param_file
+    default: config/_empty.param.yaml
+
+param_values:
+  - name: update_rate
+    default: 10.0
+
+# processes
+processes:
+  - name: publish
+    trigger_conditions:
+      - on_timer: true
+    outcomes:
+      - to_output: diagnostics

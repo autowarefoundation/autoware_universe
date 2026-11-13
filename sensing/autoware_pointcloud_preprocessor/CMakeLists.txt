@@ -26,10 +26,25 @@ include_directories(
   ${OpenCV_INCLUDE_DIRS}
 )
 
-add_library(pointcloud_preprocessor_filter_base SHARED
-  src/filter.cpp
+# Point layout checks (utility/memory.hpp), free of rclcpp for distortion_corrector_core.
+add_library(pointcloud_preprocessor_memory_utils SHARED
   src/utility/memory.cpp
 )
+target_include_directories(pointcloud_preprocessor_memory_utils PUBLIC
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+  "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>"
+)
+target_include_directories(pointcloud_preprocessor_memory_utils SYSTEM PUBLIC
+  ${autoware_point_types_INCLUDE_DIRS}
+)
+target_link_libraries(pointcloud_preprocessor_memory_utils PUBLIC
+  ${sensor_msgs_TARGETS}
+)
+
+add_library(pointcloud_preprocessor_filter_base SHARED
+  src/filter.cpp
+)
+target_link_libraries(pointcloud_preprocessor_filter_base pointcloud_preprocessor_memory_utils)
 
 target_include_directories(pointcloud_preprocessor_filter_base PUBLIC
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
@@ -48,7 +63,10 @@ ament_target_dependencies(pointcloud_preprocessor_filter_base
   pcl_ros
   autoware_point_types
   managed_transform_buffer
+  autoware_agnocast_wrapper
 )
+
+autoware_agnocast_wrapper_setup(pointcloud_preprocessor_filter_base)
 
 add_library(faster_voxel_grid_downsample_filter SHARED
   src/downsample_filter/faster_voxel_grid_downsample_filter.cpp
@@ -66,19 +84,46 @@ ament_target_dependencies(faster_voxel_grid_downsample_filter
   sensor_msgs
 )
 
-add_library(concatenate_data SHARED
-  src/concatenate_data/combine_cloud_handler_base.cpp
+# ROS-runtime-free core (no rclcpp/tf/pcl_ros). Links message targets directly to keep it that way.
+add_library(concatenate_core SHARED
   src/concatenate_data/combine_cloud_handler.cpp
-  src/concatenate_data/cloud_collector.cpp
-  src/concatenate_data/collector_matcher.cpp
+  src/concatenate_data/combine_cloud_handler_base.cpp
+  src/concatenate_data/concatenation_diagnostics.cpp
+  src/concatenate_data/cloud_concatenator.cpp
   src/concatenate_data/matching_policy.cpp
+)
+target_include_directories(concatenate_core PUBLIC
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+  "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>"
+)
+# Header-only dependencies (tf2 is used for LinearMath only).
+target_include_directories(concatenate_core SYSTEM PUBLIC
+  ${autoware_utils_INCLUDE_DIRS}
+  ${autoware_point_types_INCLUDE_DIRS}
+  ${point_cloud_msg_wrapper_INCLUDE_DIRS}
+  ${tf2_INCLUDE_DIRS}
+)
+target_link_libraries(concatenate_core PUBLIC
+  ${sensor_msgs_TARGETS}
+  ${geometry_msgs_TARGETS}
+  ${nav_msgs_TARGETS}
+  ${autoware_sensing_msgs_TARGETS}
+  ${builtin_interfaces_TARGETS}
+  ${diagnostic_msgs_TARGETS}
+)
+
+add_library(concatenate_data SHARED
   src/concatenate_data/concatenate_pointclouds.cpp
 )
+target_link_libraries(concatenate_data concatenate_core)
 
 target_include_directories(concatenate_data PUBLIC
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
   "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>"
 )
+
+# concatenate_data uses utils::is_data_layout_compatible_* from filter_base
+target_link_libraries(concatenate_data pointcloud_preprocessor_filter_base)
 
 ament_target_dependencies(concatenate_data
   SYSTEM
@@ -92,6 +137,29 @@ ament_target_dependencies(concatenate_data
   rclcpp
   sensor_msgs
   tf2_ros
+)
+
+# Distortion corrector core, without rclcpp or tf.
+find_package(autoware_utils_math REQUIRED)
+add_library(distortion_corrector_core SHARED
+  src/distortion_corrector/distortion_corrector.cpp
+)
+target_include_directories(distortion_corrector_core PUBLIC
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+  "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>"
+)
+# Header-only dependencies (tf2 is used for LinearMath only).
+target_include_directories(distortion_corrector_core SYSTEM PUBLIC
+  ${autoware_utils_INCLUDE_DIRS}
+  ${autoware_point_types_INCLUDE_DIRS}
+  ${tf2_INCLUDE_DIRS}
+)
+target_link_libraries(distortion_corrector_core PUBLIC
+  ${sensor_msgs_TARGETS}
+  ${geometry_msgs_TARGETS}
+  ${autoware_utils_math_LIBRARIES}
+  tl_expected::tl_expected
+  pointcloud_preprocessor_memory_utils
 )
 
 ament_auto_add_library(pointcloud_preprocessor_filter SHARED
@@ -113,7 +181,6 @@ ament_auto_add_library(pointcloud_preprocessor_filter SHARED
   src/passthrough_filter/passthrough_uint16.cpp
   src/pointcloud_accumulator/pointcloud_accumulator_node.cpp
   src/vector_map_filter/lanelet2_map_filter_node.cpp
-  src/distortion_corrector/distortion_corrector.cpp
   src/distortion_corrector/distortion_corrector_node.cpp
   src/blockage_diag/blockage_detection.cpp
   src/blockage_diag/blockage_diag.cpp
@@ -139,6 +206,14 @@ target_link_libraries(pointcloud_preprocessor_filter
   ${tf2_sensor_msgs_LIBRARIES}
 )
 
+target_include_directories(pointcloud_preprocessor_filter PRIVATE
+  ${agnocastlib_INCLUDE_DIRS}
+  ${autoware_agnocast_wrapper_INCLUDE_DIRS}
+)
+ament_target_dependencies(pointcloud_preprocessor_filter
+  autoware_agnocast_wrapper
+)
+
 # ========== Time synchronizer ==========
 rclcpp_components_register_node(pointcloud_preprocessor_filter
   PLUGIN "autoware::pointcloud_preprocessor::PointCloudDataSynchronizerComponent"
@@ -155,15 +230,21 @@ rclcpp_components_register_node(pointcloud_preprocessor_filter
   EXECUTABLE concatenate_and_time_sync_node)
 
 # ========== CropBox ==========
-rclcpp_components_register_node(pointcloud_preprocessor_filter
+autoware_agnocast_wrapper_register_node(pointcloud_preprocessor_filter
   PLUGIN "autoware::pointcloud_preprocessor::CropBoxFilterComponent"
-  EXECUTABLE crop_box_filter_node)
+  EXECUTABLE crop_box_filter_node
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
+  ROS2_EXECUTOR SingleThreadedExecutor
+)
 
 # ========== Down Sampler Filter ==========
 # -- Voxel Grid Downsample Filter --
-rclcpp_components_register_node(pointcloud_preprocessor_filter
+autoware_agnocast_wrapper_register_node(pointcloud_preprocessor_filter
   PLUGIN "autoware::pointcloud_preprocessor::VoxelGridDownsampleFilterComponent"
-  EXECUTABLE voxel_grid_downsample_filter_node)
+  EXECUTABLE voxel_grid_downsample_filter_node
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
+  ROS2_EXECUTOR SingleThreadedExecutor
+)
 
 # -- Pickup Based Voxel Grid Downsample Filter --
 rclcpp_components_register_node(pointcloud_preprocessor_filter
@@ -171,9 +252,12 @@ rclcpp_components_register_node(pointcloud_preprocessor_filter
   EXECUTABLE pickup_based_voxel_grid_downsample_filter_node)
 
 # -- Random Downsample Filter --
-rclcpp_components_register_node(pointcloud_preprocessor_filter
+autoware_agnocast_wrapper_register_node(pointcloud_preprocessor_filter
   PLUGIN "autoware::pointcloud_preprocessor::RandomDownsampleFilterComponent"
-  EXECUTABLE random_downsample_filter_node)
+  EXECUTABLE random_downsample_filter_node
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
+  ROS2_EXECUTOR SingleThreadedExecutor
+)
 
 rclcpp_components_register_node(pointcloud_preprocessor_filter
   PLUGIN "autoware::pointcloud_preprocessor::ApproximateDownsampleFilterComponent"
@@ -194,7 +278,7 @@ rclcpp_components_register_node(pointcloud_preprocessor_filter
 autoware_agnocast_wrapper_register_node(pointcloud_preprocessor_filter
   PLUGIN "autoware::pointcloud_preprocessor::PolarVoxelOutlierFilterComponent"
   EXECUTABLE polar_voxel_outlier_filter_node
-  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
   ROS2_EXECUTOR SingleThreadedExecutor
 )
 
@@ -235,22 +319,16 @@ rclcpp_components_register_node(pointcloud_preprocessor_filter
   EXECUTABLE vector_map_filter_node)
 
 # ========== Distortion Corrector ==========
+target_link_libraries(pointcloud_preprocessor_filter distortion_corrector_core)
 rclcpp_components_register_node(pointcloud_preprocessor_filter
   PLUGIN "autoware::pointcloud_preprocessor::DistortionCorrectorComponent"
   EXECUTABLE distortion_corrector_node)
 
 # ========== Blockage Diagnostics ===========
-target_include_directories(pointcloud_preprocessor_filter PRIVATE
-  ${agnocastlib_INCLUDE_DIRS}
-  ${autoware_agnocast_wrapper_INCLUDE_DIRS}
-)
-ament_target_dependencies(pointcloud_preprocessor_filter
-  autoware_agnocast_wrapper
-)
 autoware_agnocast_wrapper_register_node(pointcloud_preprocessor_filter
   PLUGIN "autoware::pointcloud_preprocessor::BlockageDiagComponent"
   EXECUTABLE blockage_diag_node
-  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
   ROS2_EXECUTOR SingleThreadedExecutor
 )
 
@@ -279,7 +357,15 @@ install(DIRECTORY
 )
 
 install(
-  TARGETS pointcloud_preprocessor_filter_base EXPORT export_${PROJECT_NAME}
+  TARGETS pointcloud_preprocessor_memory_utils pointcloud_preprocessor_filter_base
+  EXPORT export_${PROJECT_NAME}
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+)
+
+install(
+  TARGETS distortion_corrector_core EXPORT export_${PROJECT_NAME}
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
@@ -293,7 +379,7 @@ install(
 )
 
 install(
-  TARGETS concatenate_data EXPORT export_${PROJECT_NAME}
+  TARGETS concatenate_core concatenate_data EXPORT export_${PROJECT_NAME}
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
@@ -305,6 +391,38 @@ install(
 )
 
 ament_export_targets(export_${PROJECT_NAME})
+
+# Off by default so release builds don't pay for it: enable with -DBUILD_EXAMPLES=ON.
+option(BUILD_EXAMPLES "Build the examples for this package" OFF)
+
+if(BUILD_EXAMPLES)
+  # Shows the core concatenating clouds with no node and no executor. Links concatenate_core only,
+  # so a stray rclcpp dependency creeping back into the core breaks this build.
+  add_executable(concatenate_without_ros_node
+    examples/concatenate_without_ros_node.cpp
+  )
+  target_link_libraries(concatenate_without_ros_node concatenate_core)
+endif()
+
+# Python bindings of the concatenation and distortion corrector cores, for offline use. Messages
+# cross the boundary as CDR bytes, so only these modules link rclcpp (for rclcpp::Serialization);
+# the cores do not.
+find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
+find_package(pybind11_vendor REQUIRED)
+find_package(pybind11 REQUIRED)
+pybind11_add_module(_concatenate_pointclouds_pybind
+  src/concatenate_data/concatenate_pointclouds_pybind.cpp
+)
+target_link_libraries(_concatenate_pointclouds_pybind PRIVATE concatenate_core rclcpp::rclcpp)
+pybind11_add_module(_distortion_corrector_pybind
+  src/distortion_corrector/distortion_corrector_pybind.cpp
+)
+target_link_libraries(_distortion_corrector_pybind PRIVATE distortion_corrector_core rclcpp::rclcpp)
+ament_get_python_install_dir(python_install_dir)
+install(TARGETS _concatenate_pointclouds_pybind _distortion_corrector_pybind
+  DESTINATION "${python_install_dir}/${PROJECT_NAME}"
+)
+ament_python_install_package(${PROJECT_NAME} PACKAGE_DIR python/${PROJECT_NAME})
 
 ament_auto_package(INSTALL_TO_SHARE
   launch
@@ -325,6 +443,18 @@ if(BUILD_TESTING)
     test/test_distortion_corrector_node.cpp
   )
 
+  # Black-box characterization test used as a refactoring safety net for the
+  # distortion_corrector module. See the comment at the top of the test for details.
+  ament_add_gtest(test_distortion_corrector_node_characterization
+    test/test_distortion_corrector_node_characterization.cpp
+    TIMEOUT 180
+  )
+
+  find_package(ament_cmake_pytest REQUIRED)
+  ament_add_pytest_test(test_distortion_corrector_py
+    test/test_distortion_corrector_py.py
+  )
+
   ament_add_gtest(test_concatenate_node_unit
     test/test_concatenate_node_unit.cpp
   )
@@ -339,9 +469,15 @@ if(BUILD_TESTING)
 
   ament_add_gtest(test_matching_policy
     test/test_matching_policy.cpp
-    src/concatenate_data/matching_policy.cpp
   )
-  target_include_directories(test_matching_policy PRIVATE include)
+
+  ament_add_gtest(test_concatenation_diagnostics
+    test/test_concatenation_diagnostics.cpp
+  )
+
+  ament_add_gtest(test_cloud_concatenator
+    test/test_cloud_concatenator.cpp
+  )
 
   ament_add_gtest(test_polar_voxel_noise_filter_node
     test/test_polar_voxel_noise_filter_node.cpp
@@ -356,6 +492,11 @@ if(BUILD_TESTING)
       test/test_polar_voxel_outlier_filter_node.cpp
     )
     target_link_libraries(test_polar_voxel_outlier_filter_node pointcloud_preprocessor_filter)
+
+    ament_add_gtest(test_ring_outlier_filter_node
+      test/test_ring_outlier_filter_node.cpp
+    )
+    target_link_libraries(test_ring_outlier_filter_node pointcloud_preprocessor_filter)
 
     ament_add_gtest(test_blockage_diag_node
       test/blockage_diag/test_blockage_diag_node.cpp
@@ -381,9 +522,14 @@ if(BUILD_TESTING)
 
   target_link_libraries(test_utilities pointcloud_preprocessor_filter)
   target_link_libraries(test_distortion_corrector_node pointcloud_preprocessor_filter)
+  target_link_libraries(test_distortion_corrector_node_characterization pointcloud_preprocessor_filter)
+  ament_target_dependencies(test_distortion_corrector_node_characterization rclcpp_components tf2_ros)
   target_link_libraries(test_concatenate_node_unit pointcloud_preprocessor_filter)
   target_link_libraries(test_pickup_based_voxel_grid_downsample_filter_node pointcloud_preprocessor_filter)
   target_link_libraries(test_concatenation_info concatenate_data)
+  target_link_libraries(test_matching_policy concatenate_core)
+  target_link_libraries(test_concatenation_diagnostics concatenate_core)
+  target_link_libraries(test_cloud_concatenator concatenate_core)
   target_link_libraries(test_polar_voxel_noise_filter_node pointcloud_preprocessor_filter)
   target_link_libraries(test_blockage_diag pointcloud_preprocessor_filter)
   target_link_libraries(test_pointcloud2_to_depth_image pointcloud_preprocessor_filter)
@@ -394,6 +540,22 @@ if(BUILD_TESTING)
   add_ros_test(
     test/test_concatenate_node_component.py
     TIMEOUT "50"
+  )
+
+  # Black-box characterization test used as a refactoring safety net for the
+  # concatenate_data module. See the comment at the top of the test for details.
+  ament_add_gtest(test_concatenate_node_characterization
+    test/test_concatenate_node_characterization.cpp
+    TIMEOUT 180
+  )
+  find_package(rosgraph_msgs REQUIRED)
+  target_link_libraries(test_concatenate_node_characterization pointcloud_preprocessor_filter)
+  ament_target_dependencies(
+    test_concatenate_node_characterization rclcpp_components rosgraph_msgs tf2_ros)
+
+  find_package(ament_cmake_pytest REQUIRED)
+  ament_add_pytest_test(test_concatenate_pointclouds_py
+    test/test_concatenate_pointclouds_py.py
   )
 
 endif()

@@ -15,6 +15,7 @@
 #include "autoware/probabilistic_occupancy_grid_map/updater/binary_bayes_filter_updater.hpp"
 
 #include "autoware/probabilistic_occupancy_grid_map/cost_value/cost_value.hpp"
+#include "autoware/probabilistic_occupancy_grid_map/utils/utils.hpp"
 
 #ifdef USE_CUDA
 #include "autoware/probabilistic_occupancy_grid_map/updater/binary_bayes_filter_updater_kernel.hpp"
@@ -35,17 +36,18 @@ OccupancyGridMapBBFUpdater::OccupancyGridMapBBFUpdater(
 {
 }
 
-void OccupancyGridMapBBFUpdater::initRosParam(rclcpp::Node & node)
+void OccupancyGridMapBBFUpdater::initRosParam(
+  rclcpp::node_interfaces::NodeParametersInterface & parameters)
 {
   probability_matrix_(Index::OCCUPIED, Index::OCCUPIED) =
-    node.declare_parameter<double>("probability_matrix.occupied_to_occupied");
+    utils::declareParameter<double>(parameters, "probability_matrix.occupied_to_occupied");
   probability_matrix_(Index::FREE, Index::OCCUPIED) =
-    node.declare_parameter<double>("probability_matrix.occupied_to_free");
+    utils::declareParameter<double>(parameters, "probability_matrix.occupied_to_free");
   probability_matrix_(Index::FREE, Index::FREE) =
-    node.declare_parameter<double>("probability_matrix.free_to_free");
+    utils::declareParameter<double>(parameters, "probability_matrix.free_to_free");
   probability_matrix_(Index::OCCUPIED, Index::FREE) =
-    node.declare_parameter<double>("probability_matrix.free_to_occupied");
-  v_ratio_ = node.declare_parameter<double>("v_ratio");
+    utils::declareParameter<double>(parameters, "probability_matrix.free_to_occupied");
+  v_ratio_ = utils::declareParameter<double>(parameters, "v_ratio");
 
 #ifdef USE_CUDA
   if (use_cuda_) {

@@ -1,0 +1,314 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parameters for Trajectory Ranker",
+  "type": "object",
+  "definitions": {
+    "decay_weight": {
+      "type": "array",
+      "description": "Temporal decay weights applied per resampled trajectory point",
+      "default": [
+        1.0, 0.8, 0.64, 0.51, 0.41, 0.33, 0.26, 0.21, 0.17, 0.13, 0.1, 0.08, 0.067, 0.053, 0.043,
+        0.034
+      ],
+      "items": {
+        "type": "number"
+      },
+      "minItems": 16,
+      "maxItems": 16
+    },
+    "trajectory_ranker": {
+      "type": "object",
+      "properties": {
+        "safety": {
+          "type": "object",
+          "description": "Safety (validator risk-level) ranking term",
+          "properties": {
+            "enable": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enable safety evaluation"
+            },
+            "levels": {
+              "type": "array",
+              "description": "List of safety levels",
+              "default": ["safe", "low_caution", "high_caution", "danger", "fatal"],
+              "items": {
+                "type": "string"
+              }
+            },
+            "penalty": {
+              "type": "array",
+              "description": "List of safety penalties",
+              "default": [0.0, 0.1, 0.4, 1.0, 1.0],
+              "items": {
+                "type": "number"
+              }
+            },
+            "scale": {
+              "type": "number",
+              "default": 20.0,
+              "description": "Safety scale"
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        },
+        "source": {
+          "type": "object",
+          "description": "Source (trajectory generator) ranking term",
+          "properties": {
+            "enable": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enable source evaluation"
+            },
+            "levels": {
+              "type": "array",
+              "description": "List of source levels",
+              "default": ["diffusion_planner", "backup_planner_go", "backup_planner_stop"],
+              "items": {
+                "type": "string"
+              }
+            },
+            "penalty": {
+              "type": "array",
+              "description": "List of source penalties",
+              "default": [0.0, 0.45, 0.5],
+              "items": {
+                "type": "number"
+              }
+            },
+            "scale": {
+              "type": "number",
+              "default": 5.0,
+              "description": "Source scale"
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        },
+        "evaluation": {
+          "type": "object",
+          "description": "Optional quality evaluation via metric plugins",
+          "properties": {
+            "enable": {
+              "type": "boolean",
+              "default": false,
+              "description": "Enable evaluation by metrics"
+            },
+            "plugin_names": {
+              "type": "array",
+              "description": "List of evaluation plugin names",
+              "default": [
+                "autoware::trajectory_ranker::metrics::LateralAcceleration",
+                "autoware::trajectory_ranker::metrics::LongitudinalJerk",
+                "autoware::trajectory_ranker::metrics::TravelDistance",
+                "autoware::trajectory_ranker::metrics::LateralDeviation",
+                "autoware::trajectory_ranker::metrics::SteeringConsistency",
+                "autoware::trajectory_ranker::metrics::TrajectoryConsistency"
+              ],
+              "items": {
+                "type": "string"
+              }
+            },
+            "scale": {
+              "type": "number",
+              "default": 1.0,
+              "description": "Evaluation scale"
+            },
+            "sampling_number": {
+              "type": "integer",
+              "default": 16,
+              "description": "Sampling number"
+            },
+            "sampling_resolution": {
+              "type": "number",
+              "default": 0.5,
+              "description": "Sampling resolution"
+            },
+            "trajectory_history_size": {
+              "type": "integer",
+              "default": 10,
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Trajectory history size"
+            },
+            "lateral_acceleration": {
+              "type": "object",
+              "properties": {
+                "enable": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "Enable lateral acceleration"
+                },
+                "weight": {
+                  "type": "number",
+                  "default": 0.1,
+                  "description": "Lateral acceleration weight"
+                },
+                "maximum": {
+                  "type": "number",
+                  "default": 5.0,
+                  "description": "Lateral acceleration maximum"
+                },
+                "decay_weight": {
+                  "$ref": "#/definitions/decay_weight"
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            },
+            "longitudinal_jerk": {
+              "type": "object",
+              "properties": {
+                "enable": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "Enable longitudinal jerk"
+                },
+                "weight": {
+                  "type": "number",
+                  "default": 0.1,
+                  "description": "Longitudinal jerk weight"
+                },
+                "maximum": {
+                  "type": "number",
+                  "default": 10.0,
+                  "description": "Longitudinal jerk maximum"
+                },
+                "decay_weight": {
+                  "$ref": "#/definitions/decay_weight"
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            },
+            "travel_distance": {
+              "type": "object",
+              "properties": {
+                "enable": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "Enable travel distance"
+                },
+                "weight": {
+                  "type": "number",
+                  "default": 0.3,
+                  "description": "Travel distance weight"
+                },
+                "maximum": {
+                  "type": "number",
+                  "default": 500.0,
+                  "description": "Travel distance maximum"
+                },
+                "decay_weight": {
+                  "$ref": "#/definitions/decay_weight"
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            },
+            "lateral_deviation": {
+              "type": "object",
+              "properties": {
+                "enable": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "Enable lateral deviation"
+                },
+                "weight": {
+                  "type": "number",
+                  "default": 0.3,
+                  "description": "Lateral deviation weight"
+                },
+                "maximum": {
+                  "type": "number",
+                  "default": 10.0,
+                  "description": "Lateral deviation maximum"
+                },
+                "decay_weight": {
+                  "$ref": "#/definitions/decay_weight"
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            },
+            "steering_consistency": {
+              "type": "object",
+              "properties": {
+                "enable": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "Enable steering consistency"
+                },
+                "weight": {
+                  "type": "number",
+                  "default": 0.3,
+                  "description": "Steering consistency weight"
+                },
+                "maximum": {
+                  "type": "number",
+                  "default": 0.1,
+                  "description": "Steering consistency maximum"
+                },
+                "decay_weight": {
+                  "$ref": "#/definitions/decay_weight"
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            },
+            "trajectory_consistency": {
+              "type": "object",
+              "properties": {
+                "enable": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "Enable trajectory consistency"
+                },
+                "weight": {
+                  "type": "number",
+                  "default": 0.2,
+                  "description": "Trajectory consistency weight"
+                },
+                "time_horizon": {
+                  "type": "number",
+                  "default": 2.0,
+                  "description": "Trajectory consistency time horizon"
+                },
+                "maximum": {
+                  "type": "number",
+                  "default": 1.0,
+                  "description": "Trajectory consistency maximum"
+                },
+                "decay_weight": {
+                  "$ref": "#/definitions/decay_weight"
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/trajectory_ranker"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}

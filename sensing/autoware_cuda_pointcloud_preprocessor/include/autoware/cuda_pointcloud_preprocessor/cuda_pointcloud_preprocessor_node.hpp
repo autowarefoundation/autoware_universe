@@ -54,7 +54,6 @@ namespace autoware::cuda_pointcloud_preprocessor
 {
 
 static_assert(sizeof(InputPointType) == sizeof(autoware::point_types::PointXYZIRCAEDT));
-static_assert(sizeof(OutputPointType) == sizeof(autoware::point_types::PointXYZIRC));
 
 CHECK_OFFSET(InputPointType, autoware::point_types::PointXYZIRCAEDT, x);
 CHECK_OFFSET(InputPointType, autoware::point_types::PointXYZIRCAEDT, y);
@@ -66,13 +65,6 @@ CHECK_OFFSET(InputPointType, autoware::point_types::PointXYZIRCAEDT, azimuth);
 CHECK_OFFSET(InputPointType, autoware::point_types::PointXYZIRCAEDT, elevation);
 CHECK_OFFSET(InputPointType, autoware::point_types::PointXYZIRCAEDT, distance);
 CHECK_OFFSET(InputPointType, autoware::point_types::PointXYZIRCAEDT, time_stamp);
-
-CHECK_OFFSET(OutputPointType, autoware::point_types::PointXYZIRCAEDT, x);
-CHECK_OFFSET(OutputPointType, autoware::point_types::PointXYZIRCAEDT, y);
-CHECK_OFFSET(OutputPointType, autoware::point_types::PointXYZIRCAEDT, z);
-CHECK_OFFSET(OutputPointType, autoware::point_types::PointXYZIRCAEDT, intensity);
-CHECK_OFFSET(OutputPointType, autoware::point_types::PointXYZIRCAEDT, return_type);
-CHECK_OFFSET(OutputPointType, autoware::point_types::PointXYZIRCAEDT, channel);
 
 struct InputBoundsParams
 {
@@ -101,11 +93,10 @@ private:
     const std::string & target_frame, const std::string & source_frame,
     tf2::Transform * tf2_transform_ptr);
 
-  // Callback
   void pointcloudCallback(AUTOWARE_MESSAGE_UNIQUE_PTR(sensor_msgs::msg::PointCloud2)
                             input_pointcloud_msg_ptr);
-  void twistCallback(const geometry_msgs::msg::TwistWithCovarianceStamped & twist_msg);
-  void imuCallback(const sensor_msgs::msg::Imu & imu_msg);
+  void insertTwistMessage(const geometry_msgs::msg::TwistWithCovarianceStamped & twist_msg);
+  void insertImuMessage(const sensor_msgs::msg::Imu & imu_msg);
 
   // Helper Functions
   [[nodiscard]] bool validatePointcloudLayout(
@@ -115,8 +106,6 @@ private:
 
   void updateTwistQueue(std::uint64_t first_point_stamp);
   void updateImuQueue(std::uint64_t first_point_stamp);
-  void boundTwistQueue();
-  void boundImuQueue();
   std::optional<geometry_msgs::msg::TransformStamped> lookupTransformToBase(
     const std::string & source_frame);
   std::unique_ptr<cuda_blackboard::CudaPointCloud2> processPointcloud(

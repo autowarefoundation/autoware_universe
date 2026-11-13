@@ -19,7 +19,8 @@
 namespace autoware::trajectory_gate
 {
 
-TrajectorySubscription::TrajectorySubscription(const std::string & name, rclcpp::Node & node)
+TrajectorySubscription::TrajectorySubscription(
+  const std::string & name, autoware::agnocast_wrapper::Node & node)
 {
   using std::placeholders::_1;
 

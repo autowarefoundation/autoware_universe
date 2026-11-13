@@ -34,20 +34,19 @@ public:
 
   /**
    * @brief Calculate the predicted steering based on the given vehicle model.
+   * @param now The time of this computation.
    * @return The predicted steering angle.
    */
-  double calcSteerPrediction();
+  double calcSteerPrediction(const rclcpp::Time & now);
 
   /**
    * @brief Store the steering command in the buffer.
    * @param steer The steering command to be stored.
+   * @param now The time the command is sent.
    */
-  void storeSteerCmd(const double steer);
+  void storeSteerCmd(const double steer, const rclcpp::Time & now);
 
 private:
-  rclcpp::Logger m_logger = rclcpp::get_logger("mpc_steer_predictor");
-  rclcpp::Clock::SharedPtr m_clock = std::make_shared<rclcpp::Clock>(RCL_ROS_TIME);
-
   // The previously predicted steering value.
   double m_steer_prediction_prev = 0.0;
 

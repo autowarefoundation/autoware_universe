@@ -32,7 +32,7 @@ Converter::Converter(const rclcpp::NodeOptions & options) : Node("converter", op
 
   if (declare_parameter<bool>("use_external_emergency_holding")) {
     sub_emergency_holding_ =
-      autoware_utils_rclcpp::InterProcessPollingSubscriber<EmergencyHolding>::create_subscription(
+      autoware::agnocast_wrapper::polling::create_polling_subscriber<EmergencyHolding>(
         this, "~/input/emergency_holding");
   }
 
@@ -112,7 +112,7 @@ void Converter::on_update(DiagGraph::ConstSharedPtr graph)
   // Calculate hazard level from unit level and root level.
   auto max_hazard_level = HazardStatus::NO_FAULT;
   auto max_hazard_latch = HazardStatus::NO_FAULT;
-  HazardStatusStamped hazard;
+  auto hazard = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_hazard_);
   for (const auto & unit : graph->units()) {
     const bool is_auto_tree = auto_mode_tree_.count(unit);
     const auto root_level = is_auto_tree ? auto_mode_root_->level() : DiagnosticStatus::OK;
@@ -127,22 +127,22 @@ void Converter::on_update(DiagGraph::ConstSharedPtr graph)
     }
 
     if (!unit->path_or_name().empty()) {
-      if (auto diags = get_hazards_vector(hazard.status, hazard_level)) {
+      if (auto diags = get_hazards_vector(hazard->status, hazard_level)) {
         diags->push_back(unit->create_diagnostic_status());
       }
     }
   }
-  hazard.stamp = graph->updated_stamp();
-  hazard.status.level = max_hazard_level;
-  hazard.status.emergency = max_hazard_level >= emergency_threshold_;
-  hazard.status.emergency_holding = max_hazard_latch >= emergency_threshold_;
+  hazard->stamp = graph->updated_stamp();
+  hazard->status.level = max_hazard_level;
+  hazard->status.emergency = max_hazard_level >= emergency_threshold_;
+  hazard->status.emergency_holding = max_hazard_latch >= emergency_threshold_;
 
   if (sub_emergency_holding_) {
     const auto ptr = sub_emergency_holding_->take_data();
-    hazard.status.emergency_holding = ptr ? ptr->is_holding : false;
+    hazard->status.emergency_holding = ptr ? ptr->is_holding : false;
   }
 
-  pub_hazard_->publish(hazard);
+  pub_hazard_->publish(std::move(hazard));
 }
 
 }  // namespace autoware::hazard_status_converter

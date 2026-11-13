@@ -18,6 +18,10 @@
 
 #include <gtest/gtest.h>
 
+#include <memory>
+#include <stdexcept>
+#include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace autoware::ptv3
@@ -62,6 +66,57 @@ TEST(RosUtilsTest, ConvertsUnknownBoxLabelWithoutTwist)
   ASSERT_EQ(object.classification.size(), 1U);
   EXPECT_EQ(object.classification.front().label, ObjectClassification::UNKNOWN);
   EXPECT_FALSE(object.kinematics.has_twist);
+}
+
+class ClassificationMappingTest : public ::testing::Test
+{
+protected:
+  static void SetUpTestSuite() { rclcpp::init(0, nullptr); }
+  static void TearDownTestSuite() { rclcpp::shutdown(); }
+
+  static rclcpp::Node::SharedPtr makeNode(const std::vector<rclcpp::Parameter> & overrides)
+  {
+    rclcpp::NodeOptions options;
+    options.parameter_overrides(overrides);
+    return std::make_shared<rclcpp::Node>("class_mapping_test_node", options);
+  }
+};
+
+TEST_F(ClassificationMappingTest, ResolvesMappingKeyedByClassName)
+{
+  const auto node = makeNode(
+    {{"segmentation3d.class_mapping.car", "CAR"},
+     {"segmentation3d.class_mapping.traffic_cone", "HAZARD"}});
+
+  const auto class_mapping = declare_class_mapping(
+    *node, {"car", "traffic_cone"}, rcl_interfaces::msg::ParameterDescriptor{});
+
+  ASSERT_EQ(class_mapping.size(), 2U);
+  EXPECT_EQ(class_mapping.at("car"), "CAR");
+  EXPECT_EQ(class_mapping.at("traffic_cone"), "HAZARD");
+}
+
+TEST_F(ClassificationMappingTest, SkipsMappingEntriesNotInClassNames)
+{
+  const auto node = makeNode(
+    {{"segmentation3d.class_mapping.car", "CAR"},
+     {"segmentation3d.class_mapping.vegetation", "VEGETATION"}});
+
+  const auto class_mapping =
+    declare_class_mapping(*node, {"car"}, rcl_interfaces::msg::ParameterDescriptor{});
+
+  ASSERT_EQ(class_mapping.size(), 1U);
+  EXPECT_EQ(class_mapping.at("car"), "CAR");
+  EXPECT_EQ(class_mapping.count("vegetation"), 0U);
+}
+
+TEST_F(ClassificationMappingTest, ThrowsWhenClassIsNotMapped)
+{
+  const auto node = makeNode({{"segmentation3d.class_mapping.car", "CAR"}});
+
+  EXPECT_THROW(
+    declare_class_mapping(*node, {"car", "truck"}, rcl_interfaces::msg::ParameterDescriptor{}),
+    std::runtime_error);
 }
 
 }  // namespace test

@@ -8,7 +8,6 @@ package:
   provider: autoware
 
 launch:
-  plugin: autoware::vehicle_door_simulator::DummyDoors
   executable: autoware_vehicle_door_simulator_node
   node_output: screen
 

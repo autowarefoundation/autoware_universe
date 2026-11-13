@@ -271,9 +271,9 @@ struct DynamicObject
   // object kinematics (pose and twist)
   ObjectKinematics kinematics;
   geometry_msgs::msg::Pose pose;
-  std::array<double, 36> pose_covariance;
+  std::array<double, 36> pose_covariance{};
   geometry_msgs::msg::Twist twist;
-  std::array<double, 36> twist_covariance;
+  std::array<double, 36> twist_covariance{};
 
   // object extension (size and shape)
   autoware_perception_msgs::msg::Shape shape;

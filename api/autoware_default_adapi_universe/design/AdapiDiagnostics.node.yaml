@@ -1,0 +1,71 @@
+autoware_system_design_format: 0.4.0
+
+# node information
+name: AdapiDiagnostics.node
+
+description: Relays the internal diagnostics graph structure and status to the API and forwards graph reset requests while the MRM state allows it.
+
+package:
+  name: autoware_default_adapi_universe
+  provider: autoware
+
+launch:
+  plugin: autoware::default_adapi::DiagnosticsNode
+  node_output: screen
+
+# interfaces
+subscribers:
+  - name: struct
+    message_type: tier4_system_msgs/msg/DiagGraphStruct
+    description: Diagnostics graph structure from the aggregator.
+    remap_target: /diagnostics_graph/struct
+  - name: status
+    message_type: tier4_system_msgs/msg/DiagGraphStatus
+    description: Diagnostics graph status from the aggregator.
+    remap_target: /diagnostics_graph/status
+  - name: mrm_state
+    message_type: autoware_adapi_v1_msgs/msg/MrmState
+    description: MRM state from the API, gates the graph reset.
+    remap_target: /api/fail_safe/mrm_state
+
+publishers:
+  - name: struct
+    message_type: autoware_adapi_v1_msgs/msg/DiagGraphStruct
+    description: Diagnostics graph structure for the API.
+    remap_target: /api/system/diagnostics/struct
+  - name: status
+    message_type: autoware_adapi_v1_msgs/msg/DiagGraphStatus
+    description: Diagnostics graph status for the API.
+    remap_target: /api/system/diagnostics/status
+
+servers:
+  - name: reset
+    message_type: autoware_adapi_v1_msgs/srv/ResetDiagGraph
+    description: Diagnostics graph reset request from the API.
+    remap_target: /api/system/diagnostics/reset
+
+clients:
+  - name: reset
+    message_type: tier4_system_msgs/srv/ResetDiagGraph
+    description: Diagnostics graph reset of the aggregator.
+    remap_target: /diagnostics_graph/reset
+
+# parameters
+param_files: []
+
+param_values: []
+
+# processes
+processes:
+  - name: relay_struct
+    description: Converts the internal graph structure to the API message.
+    trigger_conditions:
+      - on_input: struct
+    outcomes:
+      - to_output: struct
+  - name: relay_status
+    description: Converts the internal graph status to the API message.
+    trigger_conditions:
+      - on_input: status
+    outcomes:
+      - to_output: status

@@ -8,7 +8,6 @@ package:
   provider: autoware
 
 launch:
-  plugin: autoware::accel_brake_map_calibrator::AccelBrakeMapCalibrator
   executable: accel_brake_map_calibrator
   node_output: screen
 

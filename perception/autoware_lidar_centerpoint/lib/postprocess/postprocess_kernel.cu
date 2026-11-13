@@ -161,7 +161,7 @@ __global__ void generateBoxes3D_kernel(
     const float vel_y_variance = out_vel[down_grid_size * 3 + idx];
 
     det_boxes3d[idx].x_variance = voxel_size_x * downsample_factor * expf(offset_x_variance);
-    det_boxes3d[idx].y_variance = voxel_size_x * downsample_factor * expf(offset_y_variance);
+    det_boxes3d[idx].y_variance = voxel_size_y * downsample_factor * expf(offset_y_variance);
     det_boxes3d[idx].z_variance = expf(z_variance);
     det_boxes3d[idx].length_variance = expf(l_variance);
     det_boxes3d[idx].width_variance = expf(w_variance);

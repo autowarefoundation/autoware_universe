@@ -12,8 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "../src/signal_validator.hpp"
-#include "../src/types.hpp"
+#include "autoware/traffic_light_multi_camera_fusion/detail/signal_validator.hpp"
 
 #include <gtest/gtest.h>
 

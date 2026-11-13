@@ -1,0 +1,58 @@
+/**:
+  ros__parameters:
+    safety:
+      enable: true
+      levels: ["safe", "low_caution", "high_caution", "danger", "fatal"]
+      penalty: [0.0, 0.1, 0.4, 1.0, 1.0]
+      scale: 20.0
+
+    source:
+      enable: true
+      levels: ["diffusion_planner", "backup_planner_go", "backup_planner_stop"]
+      penalty: [0.0, 0.45, 0.5]
+      scale: 5.0
+
+    evaluation:
+      enable: false
+      plugin_names:
+        - "autoware::trajectory_ranker::metrics::LateralAcceleration"
+        - "autoware::trajectory_ranker::metrics::LongitudinalJerk"
+        - "autoware::trajectory_ranker::metrics::TravelDistance"
+        - "autoware::trajectory_ranker::metrics::LateralDeviation"
+        - "autoware::trajectory_ranker::metrics::SteeringConsistency"
+        - "autoware::trajectory_ranker::metrics::TrajectoryConsistency"
+      scale: 1.0
+      sampling_number: 16
+      sampling_resolution: 0.5
+      trajectory_history_size: 10
+      lateral_acceleration:
+        enable: true
+        weight: 0.1
+        maximum: 5.0
+        decay_weight: [1.0, 0.8, 0.64, 0.51, 0.41, 0.33, 0.26, 0.21, 0.17, 0.13, 0.10, 0.08, 0.067, 0.053, 0.043, 0.034]
+      longitudinal_jerk:
+        enable: true
+        weight: 0.1
+        maximum: 10.0
+        decay_weight: [1.0, 0.8, 0.64, 0.51, 0.41, 0.33, 0.26, 0.21, 0.17, 0.13, 0.10, 0.08, 0.067, 0.053, 0.043, 0.034]
+      travel_distance:
+        enable: true
+        weight: 0.3
+        maximum: 500.0
+        decay_weight: [1.0, 0.8, 0.64, 0.51, 0.41, 0.33, 0.26, 0.21, 0.17, 0.13, 0.10, 0.08, 0.067, 0.053, 0.043, 0.034]
+      lateral_deviation:
+        enable: true
+        weight: 0.3
+        maximum: 10.0
+        decay_weight: [1.0, 0.8, 0.64, 0.51, 0.41, 0.33, 0.26, 0.21, 0.17, 0.13, 0.10, 0.08, 0.067, 0.053, 0.043, 0.034]
+      steering_consistency:
+        enable: true
+        weight: 0.3
+        maximum: 0.1
+        decay_weight: [1.0, 0.8, 0.64, 0.51, 0.41, 0.33, 0.26, 0.21, 0.17, 0.13, 0.10, 0.08, 0.067, 0.053, 0.043, 0.034]
+      trajectory_consistency:
+        enable: true
+        weight: 0.2
+        maximum: 1.0
+        time_horizon: 2.0
+        decay_weight: [1.0, 0.8, 0.64, 0.51, 0.41, 0.33, 0.26, 0.21, 0.17, 0.13, 0.10, 0.08, 0.067, 0.053, 0.043, 0.034]

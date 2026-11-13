@@ -23,7 +23,7 @@ subscribers:
     message_type: autoware_internal_planning_msgs/msg/Scenario
   - name: planning_velocity
     message_type: autoware_internal_planning_msgs/msg/VelocityLimit
-    global: /planning/scenario_planning/current_max_velocity
+    remap_target: /planning/scenario_planning/current_max_velocity
 
 publishers:
   - name: mission_remaining_distance_time

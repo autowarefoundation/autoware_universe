@@ -15,8 +15,22 @@
 #pragma once
 
 #include "concatenation_info_manager.hpp"
-#include "traits.hpp"
+#include "matching_strategy_type.hpp"
 
+#include <Eigen/Core>
+#include <autoware/point_types/memory.hpp>
+#include <autoware/point_types/types.hpp>
+#include <builtin_interfaces/msg/time.hpp>
+
+#include <autoware_sensing_msgs/msg/concatenated_point_cloud_info.hpp>
+#include <geometry_msgs/msg/transform_stamped.hpp>
+#include <geometry_msgs/msg/twist_stamped.hpp>
+#include <geometry_msgs/msg/twist_with_covariance_stamped.hpp>
+#include <nav_msgs/msg/odometry.hpp>
+#include <sensor_msgs/msg/point_cloud2.hpp>
+#include <sensor_msgs/msg/point_field.hpp>
+
+#include <cstdint>
 #include <deque>
 #include <memory>
 #include <optional>
@@ -24,66 +38,102 @@
 #include <unordered_map>
 #include <vector>
 
-// ROS includes
-#include <managed_transform_buffer/managed_transform_buffer.hpp>
-
-#include <autoware_sensing_msgs/msg/concatenated_point_cloud_info.hpp>
-#include <geometry_msgs/msg/twist_stamped.hpp>
-#include <geometry_msgs/msg/twist_with_covariance_stamped.hpp>
-#include <nav_msgs/msg/odometry.hpp>
-
 namespace autoware::pointcloud_preprocessor
 {
 
-template <typename MsgTraits>
+/// Point type of the published clouds. XYZIRCT keeps each point's time_stamp, rebased onto the
+/// concatenated cloud's header stamp.
+enum class PointFormat { XYZIRC, XYZIRCT };
+
+enum class MotionCompensationStatus {
+  kValid = 0,
+  kNoTwistAvailable,
+  kTwistTimeGapTooLarge,
+};
+
+/// A source cloud that arrived but was left out of the concatenated cloud.
+struct DroppedSource
+{
+  /// Input topic, used to mark the source as not concatenated in the diagnostics.
+  std::string topic;
+  /// Sensor frame, which is what the operator has to fix in the TF tree.
+  std::string frame_id;
+};
+
+template <typename PointCloudMsgT>
 struct ConcatenatedCloudResult
 {
-  typename MsgTraits::PointCloudMessage::UniquePtr concatenate_cloud_ptr{nullptr};
+  typename PointCloudMsgT::UniquePtr concatenate_cloud_ptr{nullptr};
   autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo::UniquePtr concatenation_info_ptr;
-  std::optional<std::unordered_map<std::string, typename MsgTraits::PointCloudMessage::UniquePtr>>
+  std::optional<std::unordered_map<std::string, typename PointCloudMsgT::UniquePtr>>
     topic_to_transformed_cloud_map;
   std::unordered_map<std::string, double> topic_to_original_stamp_map;
+  MotionCompensationStatus motion_compensation_status{MotionCompensationStatus::kValid};
+  std::vector<DroppedSource> dropped_sources_missing_transform;
 };
 
 class CombineCloudHandlerBase
 {
 public:
   CombineCloudHandlerBase(
-    rclcpp::Node & node, const std::vector<std::string> & input_topics, std::string output_frame,
-    bool is_motion_compensated, bool publish_synchronized_pointcloud,
-    bool keep_input_frame_in_synchronized_pointcloud)
-  : node_(node),
-    input_topics_(input_topics),
+    const std::vector<std::string> & input_topics, std::string output_frame,
+    PointFormat output_point_format, bool is_motion_compensated,
+    bool publish_synchronized_pointcloud, bool keep_input_frame_in_synchronized_pointcloud,
+    MatchingStrategyType matching_strategy)
+  : input_topics_(input_topics),
     output_frame_(output_frame),
     is_motion_compensated_(is_motion_compensated),
     publish_synchronized_pointcloud_(publish_synchronized_pointcloud),
     keep_input_frame_in_synchronized_pointcloud_(keep_input_frame_in_synchronized_pointcloud),
-    managed_tf_buffer_(std::make_unique<managed_transform_buffer::ManagedTransformBuffer>()),
-    concatenation_info_manager_(
-      node.get_parameter("matching_strategy.type").as_string(), input_topics)
+    output_point_format_(output_point_format),
+    output_fields_(
+      output_point_format == PointFormat::XYZIRCT
+        ? autoware::point_types::create_fields_point_xyzirct()
+        : autoware::point_types::create_fields_point_xyzirc()),
+    output_point_step_(
+      output_point_format == PointFormat::XYZIRCT ? sizeof(autoware::point_types::PointXYZIRCT)
+                                                  : sizeof(autoware::point_types::PointXYZIRC)),
+    concatenation_info_manager_(matching_strategy, input_topics)
   {
   }
+
+  virtual ~CombineCloudHandlerBase() = default;
+
+  /// Cache the transform from a sensor frame into the output frame.
+  /// @return false, caching nothing, if the transform does not end at the output frame or carries
+  /// no child frame. The stamp is deliberately not checked: the cache keeps the latest transform
+  /// per sensor frame, which assumes the sensor extrinsics are static.
+  [[nodiscard]] bool set_transform(
+    const geometry_msgs::msg::TransformStamped & sensor_to_output_frame);
 
   void process_twist(
     const geometry_msgs::msg::TwistWithCovarianceStamped::ConstSharedPtr & twist_msg);
 
   void process_odometry(const nav_msgs::msg::Odometry::ConstSharedPtr & input);
 
-  std::deque<geometry_msgs::msg::TwistStamped> get_twist_queue();
-
-  Eigen::Matrix4f compute_transform_to_adjust_for_old_timestamp(
-    const rclcpp::Time & old_stamp, const rclcpp::Time & new_stamp);
-
   virtual void allocate_pointclouds() = 0;
 
+  /// Whether `cloud` can be consumed for the configured output point type. Checked per input
+  /// message before it enters a collector.
+  virtual bool is_input_layout_supported(const sensor_msgs::msg::PointCloud2 & cloud) const = 0;
+
 protected:
-  rclcpp::Node & node_;
+  Eigen::Matrix4f compute_transform_to_adjust_for_old_timestamp(
+    const builtin_interfaces::msg::Time & old_stamp,
+    const builtin_interfaces::msg::Time & new_stamp, MotionCompensationStatus * status = nullptr);
+
+  [[nodiscard]] std::optional<Eigen::Matrix4f> get_transform_to_output_frame(
+    const std::string & frame_id) const;
+
   std::vector<std::string> input_topics_;
   std::string output_frame_;
   bool is_motion_compensated_;
   bool publish_synchronized_pointcloud_;
   bool keep_input_frame_in_synchronized_pointcloud_;
-  std::unique_ptr<managed_transform_buffer::ManagedTransformBuffer> managed_tf_buffer_{nullptr};
+  PointFormat output_point_format_;
+  std::vector<sensor_msgs::msg::PointField> output_fields_;
+  std::uint32_t output_point_step_;
+  std::unordered_map<std::string, Eigen::Matrix4f> sensor_to_output_transforms_;
   ConcatenationInfoManager concatenation_info_manager_;
 
   std::deque<geometry_msgs::msg::TwistStamped> twist_queue_;

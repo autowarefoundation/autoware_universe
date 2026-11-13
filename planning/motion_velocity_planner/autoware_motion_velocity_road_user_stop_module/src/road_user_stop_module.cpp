@@ -17,7 +17,7 @@
 #include "types.hpp"
 #include "utils.hpp"
 
-#include <autoware/lanelet2_utils/intersection.hpp>
+#include <Eigen/Core>
 #include <autoware/motion_utils/distance/distance.hpp>
 #include <autoware/motion_utils/marker/marker_helper.hpp>
 #include <autoware/motion_utils/marker/virtual_wall_marker_creator.hpp>
@@ -30,7 +30,6 @@
 #include <autoware_utils_geometry/geometry.hpp>
 #include <autoware_utils_math/normalization.hpp>
 #include <autoware_utils_rclcpp/parameter.hpp>
-#include <autoware_utils_system/stop_watch.hpp>
 #include <autoware_utils_uuid/uuid_helper.hpp>
 #include <autoware_utils_visualization/marker_helper.hpp>
 #include <pluginlib/class_list_macros.hpp>

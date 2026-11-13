@@ -15,7 +15,7 @@
 #ifndef NODE_HPP_
 #define NODE_HPP_
 
-#include "crosswalk_traffic_light_estimator.hpp"
+#include "autoware/crosswalk_traffic_light_estimator/crosswalk_traffic_light_estimator.hpp"
 
 #include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware_utils/system/stop_watch.hpp>

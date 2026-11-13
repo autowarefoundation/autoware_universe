@@ -152,7 +152,7 @@ To download the latest model, follow [Download artifacts](https://github.com/aut
 
 - [Diffusion Planner (original repo)](https://github.com/ZhengYinan-AIR/Diffusion-Planner)
 - [Diffusion planner (our fork of the previous repo, used to train the model)](https://github.com/tier4/Diffusion-Planner)
-- ["Diffusion-Based Planning for Autonomous Driving with Flexible Guidance"](https://arxiv.org/abs/2309.00615)
+- ["Diffusion-Based Planning for Autonomous Driving with Flexible Guidance"](https://arxiv.org/abs/2501.15564)
 
 ---
 

@@ -42,4 +42,5 @@ In addition to the individual algorithms previously mentioned, this node uses th
 ## Assumptions / Known limits
 
 - The CUDA implementations, while following the original CPU ones, will not offer the same numerical results, and small approximations were needed to maximize GPU usage.
-- This node expects that the input pointcloud follows the `autoware::point_types::PointXYZIRCAEDT` layout and the output pointcloud will use the `autoware::point_types::PointXYZIRC` layout defined in the `autoware_point_types` package.
+- This node expects that the input pointcloud follows the `autoware::point_types::PointXYZIRCAEDT` layout. The output pointcloud uses the `autoware::point_types::PointXYZIRC` layout, or `autoware::point_types::PointXYZIRCT` when `output_point_type` is `XYZIRCT`; both are defined in the `autoware_point_types` package. The `time_stamp` of `PointXYZIRCT` is copied from the input, i.e. relative to the cloud's header stamp.
+- Downstream nodes must accept 20-byte `PointXYZIRCT` points before `XYZIRCT` is enabled: the concatenation nodes only do so from [autowarefoundation/autoware_universe#13324](https://github.com/autowarefoundation/autoware_universe/pull/13324) on.

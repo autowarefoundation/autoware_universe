@@ -70,11 +70,32 @@ double calcStopDistance(
   const auto stop_idx_opt = autoware::motion_utils::searchZeroVelocityIndex(traj.points);
 
   const size_t end_idx = stop_idx_opt ? *stop_idx_opt : traj.points.size() - 1;
-  const size_t seg_idx = autoware::motion_utils::findFirstNearestSegmentIndexWithSoftConstraints(
+  const size_t nearest_idx = autoware::motion_utils::findFirstNearestIndexWithSoftConstraints(
     traj.points, current_pose, max_dist, max_yaw);
+  // Repeated terminal poses have no outgoing segment. Project from the last
+  // distinct incoming segment to preserve remaining distance and overshoot.
+  size_t last_distinct_idx = traj.points.size() - 1;
+  while (last_distinct_idx > 0) {
+    const auto & previous = traj.points.at(last_distinct_idx - 1).pose.position;
+    const auto & terminal = traj.points.at(last_distinct_idx).pose.position;
+    if (
+      std::abs(previous.x - terminal.x) >= 1.0e-8 || std::abs(previous.y - terminal.y) >= 1.0e-8) {
+      break;
+    }
+    --last_distinct_idx;
+  }
+  if (last_distinct_idx == 0) {
+    return 0.0;
+  }
+  const size_t seg_idx =
+    nearest_idx >= last_distinct_idx
+      ? last_distinct_idx - 1
+      : autoware::motion_utils::findFirstNearestSegmentIndexWithSoftConstraints(
+          traj.points, current_pose, max_dist, max_yaw);
+  // The destination is an existing knot; projecting onto its outgoing segment
+  // becomes undefined when temporal trajectories repeat the stopped pose.
   const double signed_length_on_traj = autoware::motion_utils::calcSignedArcLength(
-    traj.points, current_pose.position, seg_idx, traj.points.at(end_idx).pose.position,
-    std::min(end_idx, traj.points.size() - 2));
+    traj.points, current_pose.position, seg_idx, end_idx);
 
   if (std::isnan(signed_length_on_traj)) {
     return 0.0;

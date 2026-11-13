@@ -15,6 +15,7 @@
 #include "autonomous_mode_transition_flag_node.hpp"
 
 #include <memory>
+#include <string>
 
 namespace autoware::operation_mode_transition_manager
 {
@@ -30,6 +31,12 @@ AutonomousModeTransitionFlagNode::AutonomousModeTransitionFlagNode(
     create_publisher<ModeChangeAvailable>("/system/command_mode/transition/available", 1);
   pub_transition_completed_ =
     create_publisher<ModeChangeAvailable>("/system/command_mode/transition/completed", 1);
+
+  pub_driving_mode_available_ = create_publisher<DiagnosticArray>("/diagnostics", 1);
+  pub_driving_mode_stable_ = create_publisher<DrivingModeFlag>("/system/driving_mode/stable", 1);
+  sub_driving_mode_info_ = create_subscription<DrivingModeInfo>(
+    "/system/driving_mode/info", rclcpp::QoS(1).transient_local(),
+    [this](const DrivingModeInfo & msg) { on_driving_mode_info(msg); });
 
   pub_debug_ = create_publisher<ModeChangeBase::DebugInfo>("~/debug_info", 1);
 
@@ -53,6 +60,8 @@ void AutonomousModeTransitionFlagNode::on_timer()
   const auto stamp = get_clock()->now();
   publish(pub_transition_available_, stamp, is_available);
   publish(pub_transition_completed_, stamp, is_completed);
+  publish_driving_mode_available(is_available);
+  publish_driving_mode_stable(is_completed);
 
   ModeChangeBase::DebugInfo debug = autonomous_mode_->getDebugInfo();
   debug.stamp = stamp;
@@ -84,6 +93,46 @@ InputData AutonomousModeTransitionFlagNode::take_data()
   }
 
   return data;
+}
+
+void AutonomousModeTransitionFlagNode::on_driving_mode_info(const DrivingModeInfo & msg)
+{
+  for (const auto & item : msg.items) {
+    if (item.name == "autonomous") {
+      driving_mode_id_ = item.mode;
+      break;
+    }
+  }
+}
+
+void AutonomousModeTransitionFlagNode::publish_driving_mode_stable(bool flag) const
+{
+  if (!driving_mode_id_) {
+    return;
+  }
+
+  tier4_system_msgs::msg::DrivingModeFlagItem item;
+  item.mode = driving_mode_id_.value();
+  item.flag = flag;
+
+  DrivingModeFlag msg;
+  msg.stamp = now();
+  msg.items = {item};
+  pub_driving_mode_stable_->publish(msg);
+}
+
+void AutonomousModeTransitionFlagNode::publish_driving_mode_available(bool flag) const
+{
+  using diagnostic_msgs::msg::DiagnosticStatus;
+
+  DiagnosticStatus status;
+  status.level = flag ? DiagnosticStatus::OK : DiagnosticStatus::ERROR;
+  status.name = std::string(get_name()) + ": mode_change_available";
+
+  DiagnosticArray msg;
+  msg.header.stamp = now();
+  msg.status = {status};
+  pub_driving_mode_available_->publish(msg);
 }
 
 }  // namespace autoware::operation_mode_transition_manager

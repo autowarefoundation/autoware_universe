@@ -2,14 +2,14 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_behavior_velocity_speed_bump_module</name>
-  <version>0.52.0</version>
+  <version>0.53.0</version>
   <description>The autoware_behavior_velocity_speed_bump_module package</description>
 
   <maintainer email="tomoya.kimura@tier4.jp">Tomoya Kimura</maintainer>
   <maintainer email="shumpei.wakabayashi@tier4.jp">Shumpei Wakabayashi</maintainer>
-  <maintainer email="mdogru@leodrive.ai">Mehmet Dogru</maintainer>
 
   <license>Apache License 2.0</license>
+  <author email="mdogru@leodrive.ai">Mehmet Dogru</author>
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
   <buildtool_depend>autoware_cmake</buildtool_depend>

@@ -81,6 +81,10 @@ protected:
     setPlannerData(planner_data_);
   }
 
+  // Without this, the default context is shut down by its static destructor at exit, which can
+  // segfault.
+  void TearDown() override { rclcpp::shutdown(); }
+
   rclcpp::NodeOptions get_node_options()
   {
     rclcpp::NodeOptions options;

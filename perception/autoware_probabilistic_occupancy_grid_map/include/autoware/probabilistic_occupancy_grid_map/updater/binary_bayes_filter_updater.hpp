@@ -36,7 +36,7 @@ public:
     const bool use_cuda, const unsigned int cells_size_x, const unsigned int cells_size_y,
     const float resolution);
   bool update(const OccupancyGridMapInterface & single_frame_occupancy_grid_map) override;
-  void initRosParam(rclcpp::Node & node) override;
+  void initRosParam(rclcpp::node_interfaces::NodeParametersInterface & parameters) override;
 
 private:
   inline unsigned char applyBBF(const unsigned char & z, const unsigned char & o);

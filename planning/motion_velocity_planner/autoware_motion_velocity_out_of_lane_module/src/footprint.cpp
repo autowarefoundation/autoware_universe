@@ -30,6 +30,7 @@
 
 #include <lanelet2_core/geometry/Polygon.h>
 
+#include <cmath>
 #include <vector>
 
 namespace autoware::motion_velocity_planner::out_of_lane
@@ -43,16 +44,14 @@ autoware_utils::Polygon2d make_base_footprint(const PlannerParam & p, const bool
   const auto left_offset = ignore_offset ? 0.0 : p.extra_left_offset;
 
   autoware::vehicle_info_utils::VehicleInfo vehicle_info;
-  vehicle_info.rear_overhang_m = p.rear_offset;
   vehicle_info.front_overhang_m = p.front_offset;
+  vehicle_info.rear_overhang_m = std::abs(p.rear_offset);
   vehicle_info.wheel_base_m = 0.0;
-  vehicle_info.left_overhang_m = p.left_offset;
-  vehicle_info.right_overhang_m = p.right_offset;
+  vehicle_info.left_overhang_m = p.left_offset + left_offset;
+  vehicle_info.right_overhang_m = std::abs(p.right_offset) + right_offset;
   vehicle_info.wheel_tread_m = 0.0;
 
-  auto lat_margin = (right_offset + left_offset) / 2;
-  auto ring_footprint =
-    vehicle_info.createFootprint(lat_margin, lat_margin, lat_margin, front_offset, rear_offset);
+  auto ring_footprint = vehicle_info.createFootprint(0.0, 0.0, 0.0, front_offset, rear_offset);
   // remove center point
   ring_footprint.erase(ring_footprint.begin() + 5);
   ring_footprint.erase(ring_footprint.begin() + 2);

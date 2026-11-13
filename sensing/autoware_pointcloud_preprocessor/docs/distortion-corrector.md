@@ -59,6 +59,42 @@ ros2 launch autoware_pointcloud_preprocessor distortion_corrector.launch.xml
 | :---------------------------------------------------------: | :---------------------------------------------------: |
 |               **Velodyne azimuth coordinate**               |             **Hesai azimuth coordinate**              |
 
+## Offline use from Python
+
+The correction core (`DistortionCorrector2D` / `DistortionCorrector3D`, which the node runs) can be used from Python through `autoware_pointcloud_preprocessor.distortion_corrector`. It is built and installed with the package. It takes and returns rclpy messages and needs no ROS node: no `rclpy.init()`, no executor and no TF listener, so the result depends only on the inputs.
+
+```python
+from autoware_pointcloud_preprocessor.distortion_corrector import DistortionCorrector, PointcloudValidity
+from geometry_msgs.msg import TransformStamped, TwistWithCovarianceStamped
+from sensor_msgs.msg import Imu, PointCloud2
+
+# Inputs, e.g. read from a rosbag.
+twists: list[TwistWithCovarianceStamped]
+imus: list[Imu]
+cloud: PointCloud2
+imu_to_base_link: TransformStamped
+lidar_to_base_link: TransformStamped
+
+corrector = DistortionCorrector(use_3d_distortion_correction=False)
+corrector.set_imu_transform(imu_to_base_link)  # only needed with use_imu=True
+
+# Feed twist and IMU messages in timestamp order, then undistort each cloud.
+for twist in twists:
+    corrector.insert_twist(twist)
+for imu in imus:
+    corrector.insert_imu(imu)
+undistorted, status = corrector.undistort_pointcloud(
+    cloud, lidar_to_base_link, use_imu=True, update_azimuth_and_distance=False
+)
+if status.validity is not PointcloudValidity.VALID:
+    ...  # the cloud was returned unchanged; see status.validity
+```
+
+- Transforms have `header.frame_id` = base frame and `child_frame_id` = sensor frame, as TF provides them.
+- The twist and IMU queues follow the node's rules: a sample older than the queue front clears the queue, and samples older than the newest one by more than 1 s are dropped.
+- `status` also carries `twist_queue_empty`, `twist_timestamp_too_late`, `imu_timestamp_too_late`, `timestamp_mismatch_count`, `timestamp_mismatch_fraction` and `angle_conversion_error`, the conditions the node logs or reports as diagnostics. `angle_conversion_error` is set when `update_azimuth_and_distance=True` but the azimuth conversion could not be computed from this cloud, in which case azimuth and distance are left unchanged.
+- A message of the wrong type raises `TypeError`, and `insert_imu` before `set_imu_transform` raises `RuntimeError`.
+
 ## References/External links
 
 <https://docs.opencv.org/3.4/db/de0/group__core__utils.html#ga7b356498dd314380a0c386b059852270>

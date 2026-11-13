@@ -2,6 +2,92 @@
 Changelog for package autoware_trajectory_selector
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* fix(planning): fix ENABLE_AGNOCAST=1 build and startup of trajectory_selector (`#13364 <https://github.com/autowarefoundation/autoware_universe/issues/13364>`_)
+  * fix(trajectory_selector): fix ENABLE_AGNOCAST=1 build
+  * build(trajectory_ranker): add autoware_agnocast_wrapper_setup to the library target
+  ---------
+* refactor(trajectory_adapter): integrate trajectory adapter into selector node (`#13355 <https://github.com/autowarefoundation/autoware_universe/issues/13355>`_)
+  * feat(trajectory_adapter): integrate trajectory adapter into selector node (`#3312 <https://github.com/autowarefoundation/autoware_universe/issues/3312>`_)
+  integrate trajectory adapter into selector node
+  - Extract TrajectoryAdapter and TrajectoryAdapterWrapper from the standalone adapter node
+  - Integrate adapter into the selector pipeline after trajectory ranking
+  - Publish planning trajectory and turn indicators from trajectory_selector_node
+  - Keep latency debug publishing in TrajectoryAdapterWrapper
+  - Convert autoware_trajectory_adapter from a standalone node into a shared library
+  - Remove the standalone trajectory adapter node and its launch file
+  - Add autoware_trajectory_adapter, autoware_planning_msgs, and autoware_vehicle_msgs dependencies to the selector package
+  - Update trajectory_selector.launch.xml with trajectory and turn-indicator output remaps
+  * apply pre-commit checks
+  * add missing include
+  ---------
+* feat(trajectory_ranker): implement and integrate ranker into selector node (`#13353 <https://github.com/autowarefoundation/autoware_universe/issues/13353>`_)
+  * feat(trajectory_ranker): implement new ranker module and integrate into selector component (`#3208 <https://github.com/autowarefoundation/autoware_universe/issues/3208>`_)
+  * add trajectory_ranker_wrapper framework
+  * refactor trajectory ranker parameter handling
+  * implement trajectory_ranker class framework
+  * implement core ranker logic
+  - add logic to evaluate trajectories based on risk level
+  - add logic to evaluate trajectories based on source
+  - use existing metrics based evaluation to evaluate trajectory quality
+  * integrate new ranker into trajectory_selector_node
+  * refactor code
+  * remove obsolete ranker node
+  * refactor for debugging
+  * add flag to enable/disable ranker within selectory node
+  * fix parameter update logic, cleanup code
+  * update launch files
+  * disable quality evaluation by default
+  * fix topic name
+  * minor refactor
+  * output debug to console when best trajectory has low score
+  * support new backup planner dual go/stop trajectories
+  * populate generator info of ScoredCandidateTrajectories
+  * filter out shadow mode metrics before assigning combined trajectory risk level
+  * update source penalties
+  * add integration tests for trajectory ranker
+  * add ranker parameters schema, update readme
+  * remove simple_trajectory_ranker_node
+  * remove launch prefix
+  * pass active_filter_names to validator from wrapper
+  * add missing includes
+  ---------
+  * replace rclcpp::Node usage by agnocast_wrapper::Node
+  * fix selector node tests
+  * add missing selector config file
+  ---------
+* fix(trajectory_selector, trajectory_validator): sync changes to the (`#13344 <https://github.com/autowarefoundation/autoware_universe/issues/13344>`_)
+  * fix(trajectory_selector): pass route to validator context and expose validation report
+  * feat(trajectory_validator): publish planning factors from validator filters
+  ---------
+* refactor(planning): move node design files into each package (`#13102 <https://github.com/autowarefoundation/autoware_universe/issues/13102>`_)
+  Co-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>
+* feat(trajectory_selector): apply `agnocast_wrapper::Node` to `autoware_trajectory_selector` (`#12920 <https://github.com/autowarefoundation/autoware_universe/issues/12920>`_)
+  * apply agnocast_wrapper::Node
+  * apply agnocast_wrapper::Node
+  * fix trajectory_concatenator_wrapper
+  * style(pre-commit): autofix
+  * fix to not use template
+  * style(pre-commit): autofix
+  * fix: move bug
+  * fix: use {} for agnocast message_ptr null
+  * fix: wrap test context assignments in agnocast msg_ptr
+  * fix: executor
+  * fix: polling
+  * refactor: subscriber
+  * refactor: skip test in cmake
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+  Co-authored-by: kobayu858 <yutaro.kobayashi.2@tier4.jp>
+* fix(trajectory_validator): replace is feasible input from trajectory points to candidate trajectory (`#12985 <https://github.com/autowarefoundation/autoware_universe/issues/12985>`_)
+  fix(trajectory_validator): replace is feasible input from trajectory points to candidate trajectory (`#3101 <https://github.com/autowarefoundation/autoware_universe/issues/3101>`_)
+  * fix(trajectory_validator): replace is feasible input from trajectory points to candidate trajectory
+  * fix: update trajectory selector test
+  ---------
+* Contributors: Koichi Imai, Ryohsuke Mitsudome, Taekjin LEE, Yutaro Kobayashi, Zulfaqar Azmi, mkquda
+
 0.52.0 (2026-06-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

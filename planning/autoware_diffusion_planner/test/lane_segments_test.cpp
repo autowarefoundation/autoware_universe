@@ -29,6 +29,7 @@
 #include <gtest/gtest.h>
 
 #include <algorithm>
+#include <cmath>
 #include <map>
 #include <memory>
 #include <stdexcept>
@@ -60,12 +61,13 @@ TEST_F(LaneSegmentsTest, LaneSegmentContextFunctionality)
   const double center_x = 10.0;  // Middle point along the lanelet
   const double center_y = 0.0;   // Center of the lane
   const double center_z = 0.0;   // Ground level
+  const double center_yaw = 0.0;
 
   /////////
   // Act //
   /////////
   const std::vector<int64_t> segment_indices = context.select_route_segment_indices(
-    route, center_x, center_y, center_z, NUM_SEGMENTS_IN_ROUTE);
+    route, center_x, center_y, center_z, center_yaw, NUM_SEGMENTS_IN_ROUTE);
   const std::pair<std::vector<float>, std::vector<float>> result =
     context.create_tensor_data_from_indices(
       transform_matrix, traffic_light_id_map, segment_indices, NUM_SEGMENTS_IN_ROUTE);
@@ -104,14 +106,92 @@ TEST_F(LaneSegmentsTest, GetFirstTrafficLightOnRoute_NoTrafficLightOnRoute)
   const double center_x = 10.0;
   const double center_y = 0.0;
   const double center_z = 0.0;
+  const double center_yaw = 0.0;
   std::map<lanelet::Id, preprocess::TrafficSignalStamped> traffic_light_id_map;
 
   const auto result = context.get_first_traffic_light_on_route(
-    route, center_x, center_y, center_z, traffic_light_id_map);
+    route, center_x, center_y, center_z, center_yaw, traffic_light_id_map);
 
   EXPECT_EQ(result.traffic_light_group_id, 0)
     << "Should return empty when no traffic light on route";
   EXPECT_TRUE(result.elements.empty()) << "Elements should be empty when no traffic light on route";
+}
+
+TEST_F(LaneSegmentsTest, SelectRouteSegmentIndices_SelfCrossingRoute_SelectsSegmentAlignedWithEgo)
+{
+  const auto crossing_lanelet = add_crossing_lanelet();
+  preprocess::LaneSegmentContext context(lanelet_map_);
+
+  // The route goes east on the test lanelet, and later comes back north on the crossing lanelet
+  autoware_planning_msgs::msg::LaneletRoute route;
+  route.segments.resize(2);
+  route.segments[0].preferred_primitive.id = test_lanelet_.id();
+  route.segments[1].preferred_primitive.id = crossing_lanelet.id();
+
+  // The ego heads east at the crossing point, where it is on both lanelets
+  const double center_x = 10.0;
+  const double center_y = 0.3;
+  const double center_z = 0.0;
+  const double center_yaw = 0.0;
+
+  const std::vector<int64_t> segment_indices = context.select_route_segment_indices(
+    route, center_x, center_y, center_z, center_yaw, NUM_SEGMENTS_IN_ROUTE);
+
+  const auto & lanelet_id_to_array_index = context.get_lanelet_id_to_array_index();
+  ASSERT_EQ(segment_indices.size(), 2u) << "Should select both route segments";
+  EXPECT_EQ(segment_indices[0], lanelet_id_to_array_index.at(test_lanelet_.id()))
+    << "Should start from the segment aligned with the ego yaw";
+  EXPECT_EQ(segment_indices[1], lanelet_id_to_array_index.at(crossing_lanelet.id()));
+}
+
+TEST_F(LaneSegmentsTest, SelectRouteSegmentIndices_SelfCrossingRoute_SelectsCrossingSegment)
+{
+  const auto crossing_lanelet = add_crossing_lanelet();
+  preprocess::LaneSegmentContext context(lanelet_map_);
+
+  autoware_planning_msgs::msg::LaneletRoute route;
+  route.segments.resize(2);
+  route.segments[0].preferred_primitive.id = test_lanelet_.id();
+  route.segments[1].preferred_primitive.id = crossing_lanelet.id();
+
+  // The ego heads north at the crossing point
+  const double center_x = 10.3;
+  const double center_y = 0.0;
+  const double center_z = 0.0;
+  const double center_yaw = M_PI / 2.0;
+
+  const std::vector<int64_t> segment_indices = context.select_route_segment_indices(
+    route, center_x, center_y, center_z, center_yaw, NUM_SEGMENTS_IN_ROUTE);
+
+  const auto & lanelet_id_to_array_index = context.get_lanelet_id_to_array_index();
+  ASSERT_EQ(segment_indices.size(), 1u) << "Should select only the crossing segment";
+  EXPECT_EQ(segment_indices[0], lanelet_id_to_array_index.at(crossing_lanelet.id()))
+    << "Should start from the segment aligned with the ego yaw";
+}
+
+TEST_F(LaneSegmentsTest, SelectRouteSegmentIndices_NoAlignedSegment_SelectsClosestSegment)
+{
+  const auto crossing_lanelet = add_crossing_lanelet();
+  preprocess::LaneSegmentContext context(lanelet_map_);
+
+  autoware_planning_msgs::msg::LaneletRoute route;
+  route.segments.resize(2);
+  route.segments[0].preferred_primitive.id = test_lanelet_.id();
+  route.segments[1].preferred_primitive.id = crossing_lanelet.id();
+
+  // The ego heads west, which matches neither lanelet, and is only on the crossing lanelet
+  const double center_x = 10.0;
+  const double center_y = 3.0;
+  const double center_z = 0.0;
+  const double center_yaw = M_PI;
+
+  const std::vector<int64_t> segment_indices = context.select_route_segment_indices(
+    route, center_x, center_y, center_z, center_yaw, NUM_SEGMENTS_IN_ROUTE);
+
+  const auto & lanelet_id_to_array_index = context.get_lanelet_id_to_array_index();
+  ASSERT_EQ(segment_indices.size(), 1u) << "Should select only the crossing segment";
+  EXPECT_EQ(segment_indices[0], lanelet_id_to_array_index.at(crossing_lanelet.id()))
+    << "Should fall back to the closest segment";
 }
 
 class GetFirstTrafficLightOnRouteTest : public ::testing::Test
@@ -134,6 +214,9 @@ protected:
         center_x_ = seg.centerline.front().x();
         center_y_ = seg.centerline.front().y();
         center_z_ = seg.centerline.front().z();
+        center_yaw_ = std::atan2(
+          seg.centerline.at(1).y() - seg.centerline.front().y(),
+          seg.centerline.at(1).x() - seg.centerline.front().x());
         break;
       }
     }
@@ -145,6 +228,7 @@ protected:
   double center_x_{0.0};
   double center_y_{0.0};
   double center_z_{0.0};
+  double center_yaw_{0.0};
 };
 
 TEST_F(GetFirstTrafficLightOnRouteTest, TrafficLightNotInMap_ReturnsUnknown)
@@ -161,7 +245,7 @@ TEST_F(GetFirstTrafficLightOnRouteTest, TrafficLightNotInMap_ReturnsUnknown)
   std::map<lanelet::Id, preprocess::TrafficSignalStamped> traffic_light_id_map;
 
   const auto result = context.get_first_traffic_light_on_route(
-    route, center_x_, center_y_, center_z_, traffic_light_id_map);
+    route, center_x_, center_y_, center_z_, center_yaw_, traffic_light_id_map);
 
   EXPECT_EQ(result.traffic_light_group_id, traffic_light_id_)
     << "Should return the traffic light ID when not in perception map";
@@ -194,7 +278,7 @@ TEST_F(GetFirstTrafficLightOnRouteTest, TrafficLightPresentInMap_ReturnsCachedSi
   traffic_light_id_map[static_cast<lanelet::Id>(traffic_light_id_)] = stamped;
 
   const auto result = context.get_first_traffic_light_on_route(
-    route, center_x_, center_y_, center_z_, traffic_light_id_map);
+    route, center_x_, center_y_, center_z_, center_yaw_, traffic_light_id_map);
 
   EXPECT_EQ(result.traffic_light_group_id, traffic_light_id_)
     << "Should return cached traffic light group ID";

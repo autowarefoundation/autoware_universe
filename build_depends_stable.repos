@@ -1,12 +1,26 @@
 # Do not add core (core/*) dependency repositories here.
 # Core packages are provided pre-built by the CI Docker image, and their versions
 # are defined by the image tag. Adding them here would cause redundant rebuilds.
+# The exceptions are the core/cuda/* repositories below, because the CPU-only CI images do not contain them.
 repositories:
+  # core
+  core/cuda/autoware_cuda:
+    type: git
+    url: https://github.com/autowarefoundation/autoware_cuda.git
+    version: 1.0.0
+  core/cuda/cuda_blackboard:
+    type: git
+    url: https://github.com/autowarefoundation/cuda_blackboard.git
+    version: 0.5.0
+  core/cuda/negotiated:
+    type: git
+    url: https://github.com/osrf/negotiated.git
+    version: eac198b55dcd052af5988f0f174902913c5f20e7
   # universe
   universe/external/tier4_autoware_msgs:
     type: git
     url: https://github.com/tier4/tier4_autoware_msgs.git
-    version: v0.58.0
+    version: 1.0.0-alpha
   # Fix the version not to merge https://github.com/MORAI-Autonomous/MORAI-ROS2_morai_msgs/pull/9
   universe/external/morai_msgs:
     type: git
@@ -20,18 +34,10 @@ repositories:
     type: git
     url: https://github.com/tier4/glog.git
     version: ea36766fdc2ac8e8c8e3ac988ae69acd6d09bb30
-  universe/external/cuda_blackboard:
-    type: git
-    url: https://github.com/autowarefoundation/cuda_blackboard.git
-    version: 0.4.0
-  universe/external/negotiated:
-    type: git
-    url: https://github.com/osrf/negotiated.git
-    version: eac198b55dcd052af5988f0f174902913c5f20e7
   universe/external/managed_transform_buffer:
     type: git
     url: https://github.com/autowarefoundation/managed_transform_buffer.git
-    version: 0.2.0
+    version: 0.3.0
   # middleware
   # TODO(TIER IV): During the transition period of Agnocast introduction,
   # the Agnocast ROS packages are provided as a source build.
@@ -39,9 +45,9 @@ repositories:
   # Issue: https://github.com/autowarefoundation/autoware/issues/5968
   middleware/external/agnocast:
     type: git
-    url: https://github.com/tier4/agnocast.git
-    version: backport-jazzy-support-v2.1.2
+    url: https://github.com/autowarefoundation/agnocast.git
+    version: 2.4.1
   universe/external/bevdet_vendor:
     type: git
     url: https://github.com/autowarefoundation/bevdet_vendor.git
-    version: 0.1.0
+    version: 0.2.1

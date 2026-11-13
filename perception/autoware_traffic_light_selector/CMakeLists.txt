@@ -8,11 +8,18 @@ autoware_package()
 # Targets
 ament_auto_add_library(${PROJECT_NAME} SHARED
   src/traffic_light_selector.cpp
-  src/traffic_light_selector_node.cpp
   src/traffic_light_selector_utils.cpp
 )
 
-rclcpp_components_register_node(${PROJECT_NAME}
+ament_auto_add_library(${PROJECT_NAME}_node SHARED
+  src/traffic_light_selector_node.cpp
+)
+
+target_link_libraries(${PROJECT_NAME}_node
+  ${PROJECT_NAME}
+)
+
+rclcpp_components_register_node(${PROJECT_NAME}_node
   PLUGIN "autoware::traffic_light::TrafficLightSelectorNode"
   EXECUTABLE traffic_light_selector_node)
 
@@ -21,11 +28,20 @@ if(BUILD_TESTING)
   ament_auto_add_gtest(${PROJECT_NAME}_test
     test/test_utils.cpp
   )
+  target_link_libraries(${PROJECT_NAME}_test
+    ${PROJECT_NAME}
+  )
   ament_auto_add_gtest(${PROJECT_NAME}_selector_test
     test/test_traffic_light_selector.cpp
   )
+  target_link_libraries(${PROJECT_NAME}_selector_test
+    ${PROJECT_NAME}
+  )
   ament_auto_add_gtest(${PROJECT_NAME}_node_test
     test/test_traffic_light_selector_node.cpp
+  )
+  target_link_libraries(${PROJECT_NAME}_node_test
+    ${PROJECT_NAME}_node
   )
 endif()
 

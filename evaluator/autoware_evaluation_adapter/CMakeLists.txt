@@ -9,9 +9,18 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   src/velocity_limit.cpp
 )
 
-rclcpp_components_register_nodes(${PROJECT_NAME}
-  "autoware::evaluation_adapter::AutowareEngage"
-  "autoware::evaluation_adapter::VelocityLimit"
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
+  PLUGIN "autoware::evaluation_adapter::AutowareEngage"
+  EXECUTABLE autoware_engage_node
+  ROS2_EXECUTOR MultiThreadedExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
+)
+
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
+  PLUGIN "autoware::evaluation_adapter::VelocityLimit"
+  EXECUTABLE velocity_limit_node
+  ROS2_EXECUTOR SingleThreadedExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
 )
 
 ament_auto_package(INSTALL_TO_SHARE launch)

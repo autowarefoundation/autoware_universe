@@ -2,6 +2,33 @@
 Changelog for package autoware_collision_detector
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* fix(autoware_collision_detector): declare the operation mode state input as a remap target (`#13312 <https://github.com/autowarefoundation/autoware_universe/issues/13312>`_)
+* refactor(control): move node design files into each package (`#13100 <https://github.com/autowarefoundation/autoware_universe/issues/13100>`_)
+  Co-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>
+* refactor(autoware_collision_detector): migrate to polling:: API (`#13032 <https://github.com/autowarefoundation/autoware_universe/issues/13032>`_)
+* chore(collision_detector): change maintainer (`#13020 <https://github.com/autowarefoundation/autoware_universe/issues/13020>`_)
+  * add maintainer
+  * Apply suggestion from @go-sakayori
+  Co-authored-by: Go Sakayori <go-sakayori@users.noreply.github.com>
+  ---------
+  Co-authored-by: Go Sakayori <go-sakayori@users.noreply.github.com>
+* fix: use highest probability classification (`#3173 <https://github.com/autowarefoundation/autoware_universe/issues/3173>`_) (`#12997 <https://github.com/autowarefoundation/autoware_universe/issues/12997>`_)
+  * fix: use highest probability trajectory modifier classification
+  * fix: use highest probability collision detector classification
+  * fix: handle empty object classifications explicitly
+* feat(collision_detector): apply `agnocast_wrapper::Node` to `collision_detector` (`#12953 <https://github.com/autowarefoundation/autoware_universe/issues/12953>`_)
+  apply agnocast_wrapper::Node
+* feat: support new object classification labels (`#12956 <https://github.com/autowarefoundation/autoware_universe/issues/12956>`_)
+  * fix(obstacle_proximity_checker): support new object classification labels
+  * feat(collision_detector): support new object classification labels
+  * feat(surround_obstacle_checker): support new object classification labels
+  * fix: apply pre-commit
+  ---------
+* Contributors: Koichi Imai, Ryohsuke Mitsudome, Satoshi OTA, Sugar-98, Taekjin LEE
+
 0.52.0 (2026-06-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

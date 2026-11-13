@@ -17,12 +17,15 @@
 
 // Core
 #include <memory>
+#include <optional>
+#include <string>
 #include <vector>
 
 // Autoware
 #include <autoware_internal_planning_msgs/msg/velocity_limit.hpp>
 #include <autoware_internal_planning_msgs/msg/velocity_limit_clear_command.hpp>
 #include <autoware_internal_planning_msgs/msg/velocity_limit_constraints.hpp>
+#include <tier4_system_msgs/msg/driving_mode_flag.hpp>
 #include <tier4_system_msgs/msg/driving_mode_info.hpp>
 #include <tier4_system_msgs/msg/driving_mode_mrm_state.hpp>
 #include <tier4_system_msgs/msg/driving_mode_request.hpp>
@@ -36,6 +39,8 @@
 namespace autoware::mrm_comfortable_stop_operator
 {
 
+using autoware_internal_planning_msgs::msg::VelocityLimit;
+using tier4_system_msgs::msg::DrivingModeFlag;
 using tier4_system_msgs::msg::DrivingModeInfo;
 using tier4_system_msgs::msg::DrivingModeMrmState;
 using tier4_system_msgs::msg::DrivingModeRequest;
@@ -78,6 +83,10 @@ private:
   void publishVelocityLimit() const;
   void publishVelocityLimitClearCommand() const;
 
+  // Subscriber
+  AUTOWARE_SUBSCRIPTION_PTR(VelocityLimit) sub_current_velocity_limit_;
+  void onCurrentVelocityLimit(const VelocityLimit & msg);
+
   // Timer
   AUTOWARE_TIMER_PTR timer_;
 
@@ -85,6 +94,8 @@ private:
 
   // States
   tier4_system_msgs::msg::MrmBehaviorStatus status_;
+  std::string current_velocity_limit_sender_;
+  static inline const std::string sender_name_ = "mrm_comfortable_stop_operator";
 
   // Parameter callback
   rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr set_param_res_;
@@ -92,9 +103,11 @@ private:
   // Driving mode interface
   AUTOWARE_SUBSCRIPTION_PTR(DrivingModeRequest) sub_driving_mode_request_;
   AUTOWARE_SUBSCRIPTION_PTR(DrivingModeInfo) sub_driving_mode_info_;
+  AUTOWARE_PUBLISHER_PTR(DrivingModeFlag) pub_driving_mode_active_;
   AUTOWARE_PUBLISHER_PTR(DrivingModeMrmState) pub_mrm_state_;
   void onDrivingModeRequest(const DrivingModeRequest & msg);
   void onDrivingModeInfo(const DrivingModeInfo & msg);
+  void publishDrivingModeActive() const;
   void publishMrmState() const;
   std::optional<uint32_t> driving_mode_id_;  // Refer to the driving_mode_manager for this ID.
 };

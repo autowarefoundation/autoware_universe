@@ -1,0 +1,40 @@
+autoware_system_design_format: 0.4.0
+
+# node information
+name: AdapiVehicleInfo.node
+
+description: Serves the vehicle dimensions and footprint composed from the vehicle info parameters.
+
+package:
+  name: autoware_default_adapi_universe
+  provider: autoware
+
+launch:
+  plugin: autoware::default_adapi::VehicleInfoNode
+  node_output: screen
+
+# interfaces
+subscribers: []
+
+publishers: []
+
+servers:
+  - name: dimensions
+    message_type: autoware_adapi_v1_msgs/srv/GetVehicleDimensions
+    description: Vehicle dimensions request from the API.
+    remap_target: /api/vehicle/dimensions
+
+# parameters
+param_files:
+  - name: vehicle_param
+    default: $(find-pkg-share autoware_vehicle_info_utils)/config/vehicle_info.param.yaml
+    description: Vehicle dimensions served through the API.
+
+param_values: []
+
+# processes
+processes:
+  - name: get_dimensions
+    description: Responds to dimension requests with the values loaded from the vehicle info parameters.
+    trigger_conditions: []
+    outcomes: []

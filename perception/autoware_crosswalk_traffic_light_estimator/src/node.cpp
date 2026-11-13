@@ -79,7 +79,7 @@ void CrosswalkTrafficLightEstimatorNode::on_traffic_light_array(
   }
 
   auto output_ptr = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_traffic_light_array_);
-  *output_ptr = estimator_.estimate(*msg, get_clock()->now());
+  *output_ptr = estimator_.estimate(*msg);
 
   pub_traffic_light_array_->publish(std::move(output_ptr));
   pub_processing_time_->publish<Float64Stamped>("processing_time_ms", stop_watch_.toc("Total"));

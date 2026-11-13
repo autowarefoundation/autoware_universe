@@ -105,7 +105,14 @@ void PidLongitudinalController::setConfig(const PidLongitudinalControllerConfig 
   m_smooth_stop->setParams(config.smooth_stop_params);
 }
 
-PidLongitudinalControllerResult PidLongitudinalController::run(
+tl::expected<trajectory_follower::LongitudinalOutput, std::string> PidLongitudinalController::run(
+  const trajectory_follower::InputData & input_data, const rclcpp::Time & stamp,
+  const trajectory_follower::LateralSyncData & lateral_sync_data)
+{
+  return runDetailed(input_data, stamp, lateral_sync_data.is_steer_converged).output;
+}
+
+PidLongitudinalControllerResult PidLongitudinalController::runDetailed(
   const trajectory_follower::InputData & input_data, const rclcpp::Time & current_time,
   const bool is_steer_converged)
 {
@@ -286,8 +293,11 @@ PidLongitudinalController::ControlData PidLongitudinalController::getControlData
   // ../media/slope_definition.drawio.svg while getPitchByPose() is not, so `raw_pitch` is reversed
   const double raw_pitch = (-1.0) * longitudinal_utils::getPitchByPose(current_pose.orientation);
   m_lpf_pitch->filter(raw_pitch);
-  const double traj_pitch = longitudinal_utils::getPitchByTraj(
-    control_data.interpolated_traj, control_data.target_idx, config.wheel_base);
+
+  const double shift_sign = (control_data.shift == Shift::Forward) ? 1.0 : -1.0;
+  const double traj_pitch =
+    shift_sign * longitudinal_utils::getPitchByTraj(
+                   control_data.interpolated_traj, control_data.target_idx, config.wheel_base);
 
   if (config.slope_source == PidLongitudinalControllerConfig::SlopeSource::RAW_PITCH) {
     control_data.slope_angle = m_lpf_pitch->getValue();

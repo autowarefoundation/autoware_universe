@@ -75,8 +75,8 @@ TEST(NaiveMatchingPolicy, NoCollectorsReturnsNullopt)
 TEST(AdvancedMatchingPolicy, ConstructorValidatesSizes)
 {
   const std::vector<std::string> topics = {"a", "b"};
-  EXPECT_THROW(AdvancedMatchingPolicy(topics, {0.0}, {0.0, 0.0}), std::runtime_error);
-  EXPECT_THROW(AdvancedMatchingPolicy(topics, {0.0, 0.0}, {0.0}), std::runtime_error);
+  EXPECT_THROW(AdvancedMatchingPolicy(topics, {0.0}, {0.0, 0.0}), std::invalid_argument);
+  EXPECT_THROW(AdvancedMatchingPolicy(topics, {0.0, 0.0}, {0.0}), std::invalid_argument);
   EXPECT_NO_THROW(AdvancedMatchingPolicy(topics, {0.0, 0.04}, {0.01, 0.01}));
 }
 

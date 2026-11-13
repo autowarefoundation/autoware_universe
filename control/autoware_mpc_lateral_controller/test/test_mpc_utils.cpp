@@ -27,6 +27,7 @@
 namespace
 {
 namespace MPCUtils = autoware::motion::control::mpc_lateral_controller::MPCUtils;
+using autoware::motion::control::mpc_lateral_controller::NullLogWriter;
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 
@@ -153,7 +154,7 @@ TEST(TestMPC, TemporalYawAndCurvatureStayStableForShortSegments)
   traj.push_back(0.02, 0.0, 0.0, 0.3, 0.0, 0.0, 0.0, 0.2);
   traj.push_back(1.0, 0.0, 0.0, 0.3, 1.0, 0.0, 0.0, 0.3);
 
-  MPCUtils::calcTrajectoryYawFromXY(traj, true, true);
+  MPCUtils::calcTrajectoryYawFromXY(NullLogWriter{}, traj, true, true);
   MPCUtils::calcTrajectoryCurvature(1, 1, traj, true);
 
   EXPECT_NEAR(traj.yaw.at(0), 0.3, 1e-6);

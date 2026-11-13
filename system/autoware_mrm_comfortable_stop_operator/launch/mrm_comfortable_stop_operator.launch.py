@@ -41,8 +41,13 @@ def launch_setup(context, *args, **kwargs):
             ("~/output/mrm/comfortable_stop/status", "/system/mrm/comfortable_stop/status"),
             ("~/output/velocity_limit", "/planning/scenario_planning/max_velocity_candidates"),
             ("~/output/velocity_limit/clear", "/planning/scenario_planning/clear_velocity_limit"),
+            (
+                "~/input/current_velocity_limit",
+                "/planning/scenario_planning/current_max_velocity",
+            ),
             ("~/input/driving_mode_request", "/system/driving_mode/request"),
             ("~/input/driving_mode_info", "/system/driving_mode/info"),
+            ("~/output/driving_mode_active", "/system/driving_mode/active"),
             ("~/output/mrm_state", "/system/driving_mode/mrm_state"),
         ],
         additional_env={"LD_PRELOAD": LaunchConfiguration("ld_preload_value")},

@@ -15,15 +15,18 @@
 #ifndef AUTOWARE__PTV3__PTV3_CONFIG_HPP_
 #define AUTOWARE__PTV3__PTV3_CONFIG_HPP_
 
+#include <autoware/point_types/types.hpp>
+
 #include <algorithm>
 #include <array>
+#include <cctype>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include <limits>
 #include <stdexcept>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace autoware::ptv3
@@ -40,9 +43,13 @@ class PTv3Config
 public:
   PTv3Config(
     const bool use_seg3d_head, const bool use_det3d_head, const std::string & plugins_path,
-    const std::int64_t cloud_capacity, const std::vector<std::int64_t> & voxels_num,
+    const std::int64_t cloud_capacity, const std::string & densification_world_frame_id,
+    const std::int64_t densification_num_past_frames, const std::vector<std::int64_t> & voxels_num,
+    const std::vector<std::int64_t> & pooled_voxels_num_max,
     const std::vector<float> & point_cloud_range, const std::vector<float> & voxel_size,
+    const std::int64_t max_points_per_voxel,
     const std::vector<std::string> & segmentation_class_names = {},
+    const std::unordered_map<std::string, std::string> & segmentation_class_mapping = {},
     const std::vector<std::string> & serialization_orders = {},
     const std::vector<std::int64_t> & pooling_strides = {},
     const std::vector<std::int64_t> & enc_channels = {},
@@ -68,6 +75,16 @@ public:
         "At least one of segmentation3d.use_head or detection3d.use_head must be true.");
     }
 
+    if (densification_world_frame_id.empty()) {
+      throw std::runtime_error("densification_world_frame_id must not be empty.");
+    }
+    if (densification_num_past_frames < 0) {
+      throw std::runtime_error("densification_num_past_frames must be non-negative.");
+    }
+    densification_world_frame_id_ = densification_world_frame_id;
+    densification_num_past_frames_ = densification_num_past_frames;
+    densified_cloud_capacity_ = cloud_capacity_ * (densification_num_past_frames_ + 1);
+
     if (voxels_num.size() == 3) {
       min_num_voxels_ = voxels_num[0];
       max_num_voxels_ = voxels_num[2];
@@ -89,14 +106,23 @@ public:
       voxel_y_size_ = voxel_size[1];
       voxel_z_size_ = voxel_size[2];
     }
+    if (max_points_per_voxel <= 0) {
+      throw std::runtime_error("max_points_per_voxel must be positive.");
+    }
+    max_points_per_voxel_ = max_points_per_voxel;
 
+    // Cells the device grid mapping (see gridCoord) can emit per axis - one more than
+    // round(extent / size) when a range border is not voxel-aligned. The largest coordinate comes
+    // from the largest float below max_range: the crop is strict and float division is monotonic.
     const auto grid_cells = [](const float min_range, const float max_range, const float size) {
-      return static_cast<std::int64_t>(std::round((max_range - min_range) / size));
+      const float min_coord = std::floor(min_range / size);
+      const float max_coord = std::floor(std::nextafter(max_range, min_range) / size);
+      return static_cast<std::int64_t>(max_coord - min_coord) + 1;
     };
     grid_x_size_ = grid_cells(min_x_range_, max_x_range_, voxel_x_size_);
     grid_y_size_ = grid_cells(min_y_range_, max_y_range_, voxel_y_size_);
     grid_z_size_ = grid_cells(min_z_range_, max_z_range_, voxel_z_size_);
-    auto max_grid_size = std::max({grid_x_size_, grid_y_size_, grid_z_size_});
+    const auto max_grid_size = std::max({grid_x_size_, grid_y_size_, grid_z_size_});
     serialization_depth_ =
       static_cast<std::int32_t>(std::ceil(std::log2(static_cast<float>(max_grid_size))));
     auto max_voxels_depth =
@@ -105,16 +131,17 @@ public:
       throw std::runtime_error("Serialization depth is too large");
     }
 
-    use_64bit_hash_ =
-      grid_x_size_ * grid_y_size_ * grid_z_size_ > std::numeric_limits<std::uint32_t>::max();
-
     serialization_orders_ = validate_serialization_orders(serialization_orders);
     pooling_strides_ = validate_pooling_strides(pooling_strides);
+    pooled_voxels_num_max_ = validate_pooled_voxels_num_max(
+      pooled_voxels_num_max, max_num_voxels_, pooling_strides_.size());
     enc_channels_ = validate_enc_channels(enc_channels, pooling_strides_.size() + 1);
 
     if (use_seg3d_head_) {
       segmentation_class_names_ = segmentation_class_names;
       colors_rgb_ = make_palette(segmentation_class_names_, palette);
+      class_id_to_classification_ =
+        make_class_id_to_classification(segmentation_class_names_, segmentation_class_mapping);
       for (auto & class_name : segmentation_class_names_) {
         std::transform(
           class_name.begin(), class_name.end(), class_name.begin(),
@@ -274,6 +301,35 @@ public:
     return indices;
   }
 
+  /**
+   * @brief Build the lookup table from model class id (index into class_names) to
+   * PointCloudClassification.
+   * @details The model output label index is determined by the class_names order, so the table is
+   * built by looking each class name up in class_mapping. Entries in class_mapping whose key is not
+   * in class_names are ignored, so the map may cover more classes than the loaded model outputs.
+   * @param class_names Segmentation class names, indexed by model output label.
+   * @param class_mapping Class name to PointCloudClassification name.
+   * @return Lookup table with one entry per class name.
+   * @throws std::runtime_error If a class name has no entry in class_mapping.
+   * @throws std::invalid_argument If a mapped value is not a PointCloudClassification name.
+   */
+  static std::vector<std::uint8_t> make_class_id_to_classification(
+    const std::vector<std::string> & class_names,
+    const std::unordered_map<std::string, std::string> & class_mapping)
+  {
+    std::vector<std::uint8_t> lut;
+    lut.reserve(class_names.size());
+    for (const auto & class_name : class_names) {
+      const auto it = class_mapping.find(class_name);
+      if (it == class_mapping.end()) {
+        throw std::runtime_error("class_mapping has no entry for class name '" + class_name + "'.");
+      }
+      lut.push_back(
+        static_cast<std::uint8_t>(autoware::point_types::to_pointcloud_classification(it->second)));
+    }
+    return lut;
+  }
+
   static std::vector<float> make_palette(
     const std::vector<std::string> & class_names, const std::vector<std::int64_t> & palette)
   {
@@ -349,9 +405,32 @@ public:
     return enc_channels;
   }
 
-  // Hard geometric voxel-count bound for one encoder stage: a stage cannot hold more voxels
-  // than the sparse grid has cells at its cumulative pooling depth, and pooling never grows
-  // the voxel count, so min(max_num_voxels_, grid cells) is safe for any input.
+  // One entry per pooled stage, positive and non-increasing from the input level's maximum.
+  static std::vector<std::int64_t> validate_pooled_voxels_num_max(
+    const std::vector<std::int64_t> & pooled_voxels_num_max, const std::int64_t max_num_voxels,
+    const std::size_t num_pooling_stages)
+  {
+    if (pooled_voxels_num_max.size() != num_pooling_stages) {
+      throw std::runtime_error(
+        "pooled_voxels_num_max must contain one entry per pooling stage (pooling_strides size = " +
+        std::to_string(num_pooling_stages) + "), got " +
+        std::to_string(pooled_voxels_num_max.size()) + ".");
+    }
+    auto previous = max_num_voxels;
+    for (const auto max : pooled_voxels_num_max) {
+      if (max < 1 || max > previous) {
+        throw std::runtime_error(
+          "Each pooled_voxels_num_max entry must be positive and at most the previous stage's "
+          "maximum (" +
+          std::to_string(previous) + "), got " + std::to_string(max) + ".");
+      }
+      previous = max;
+    }
+    return pooled_voxels_num_max;
+  }
+
+  // Voxel-count bound of one encoder stage: the smaller of its configured maximum (voxels_num[2],
+  // then pooled_voxels_num_max) and its grid cell count. Sizes buffers and profiles.
   [[nodiscard]] std::int64_t stage_voxel_capacity(const std::size_t stage_index) const
   {
     std::int64_t cumulative_depth = 0;
@@ -365,7 +444,21 @@ public:
     };
     const auto grid_cells =
       ceil_shift(grid_x_size_) * ceil_shift(grid_y_size_) * ceil_shift(grid_z_size_);
-    return std::min(max_num_voxels_, grid_cells);
+    const auto configured_max =
+      stage_index == 0 ? max_num_voxels_ : pooled_voxels_num_max_.at(stage_index - 1);
+    return std::min(configured_max, grid_cells);
+  }
+
+  // [min, opt, max] TensorRT profile of one encoder stage: voxels_num for the input level; pooled
+  // levels use min 1, opt halved per stage, and the stage capacity as max.
+  [[nodiscard]] std::array<std::int64_t, 3> stage_profile_counts(
+    const std::size_t stage_index) const
+  {
+    const std::int64_t max_count = stage_voxel_capacity(stage_index);
+    const std::int64_t min_count =
+      std::min(stage_index == 0 ? min_num_voxels_ : std::int64_t{1}, max_count);
+    const std::int64_t opt_count = std::clamp(voxels_num_[1] >> stage_index, min_count, max_count);
+    return {min_count, opt_count, max_count};
   }
 
   // CUDA parameters
@@ -379,7 +472,6 @@ public:
   bool use_det3d_head_;
 
   // Preprocess parameters
-  bool use_64bit_hash_{};
   std::int32_t serialization_depth_{};
 
   ///// NETWORK PARAMETERS /////
@@ -393,6 +485,8 @@ public:
   // Segmentation head
   std::vector<std::int64_t> dec_depths_;  // decoder block counts per stage
   std::vector<float> colors_rgb_;
+  // class id (index into segmentation_class_names_) -> PointCloudClassification
+  std::vector<std::uint8_t> class_id_to_classification_;
   std::vector<std::uint32_t> filter_class_indices_;
   std::string filter_output_format_;
   bool filter_apply_to_segmentation_{};
@@ -412,10 +506,19 @@ public:
   std::size_t det_grid_y_size_{};
 
   // Common network parameters
-  std::int64_t cloud_capacity_{};
+  std::int64_t cloud_capacity_{};            // capacity of one lidar frame
+  std::int64_t densified_cloud_capacity_{};  // capacity of the multi-frame network input
   std::int64_t min_num_voxels_{};
   std::int64_t max_num_voxels_{};
-  const std::int64_t num_point_feature_size_{4};  // x, y, z, intensity
+  std::int64_t max_points_per_voxel_{};  // padded voxel slots, matches the training voxelizer
+  const std::int64_t num_point_feature_size_{5};  // x, y, z, intensity, time_lag
+
+  // Densification parameters
+  std::string densification_world_frame_id_;
+  std::int64_t densification_num_past_frames_{};
+  // Sweep points inside the |x|,|y| box of this half width around the sweep's own origin
+  // are ego ghosts; the box and the value mirror the training loader's remove_close.
+  const float sweep_close_radius_{1.0F};
 
   // Pointcloud range in meters
   float min_x_range_{};
@@ -430,13 +533,14 @@ public:
   float voxel_y_size_{};
   float voxel_z_size_{};
 
-  // Grid size
+  // Grid size (cells the device grid mapping can emit, see the constructor)
   std::int64_t grid_x_size_{};
   std::int64_t grid_y_size_{};
   std::int64_t grid_z_size_{};
 
   ///// RUNTIME DIMENSIONS /////
   std::array<std::int64_t, 3> voxels_num_{};
+  std::vector<std::int64_t> pooled_voxels_num_max_;  // one per pooling stage
 };
 
 }  // namespace autoware::ptv3

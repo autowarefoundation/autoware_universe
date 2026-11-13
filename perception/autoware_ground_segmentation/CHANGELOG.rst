@@ -2,6 +2,23 @@
 Changelog for package autoware_ground_segmentation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* feat(autoware_ground_segmentation): apply agnocast_wrapper::Node to scan_ground_filter (`#13385 <https://github.com/autowarefoundation/autoware_universe/issues/13385>`_)
+  Derive ScanGroundFilterComponent from AgnocastFilter, the
+  FilterBase<autoware::agnocast_wrapper::Node> instantiation, and register it
+  through autoware_agnocast_wrapper_register_node on an agnocast-only
+  callback-isolated executor.
+  Both launch files start the standalone executable with the heaphook
+  preloaded when ENABLE_AGNOCAST=1: scan_ground_filter.launch.xml already
+  launched it as a node, and scan_ground_filter.launch.py now stops loading
+  the component into an rclcpp container, where its agnocast callbacks would
+  never be spun.
+* refactor(perception): move node design files into each package (`#13104 <https://github.com/autowarefoundation/autoware_universe/issues/13104>`_)
+  Co-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>
+* Contributors: Koichi Imai, Ryohsuke Mitsudome, Taekjin LEE
+
 0.52.0 (2026-06-30)
 -------------------
 

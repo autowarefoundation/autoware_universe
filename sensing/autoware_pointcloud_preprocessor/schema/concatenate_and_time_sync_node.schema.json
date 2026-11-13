@@ -47,7 +47,7 @@
         "publish_previous_but_late_pointcloud": {
           "type": "boolean",
           "default": false,
-          "description": "Flag to indicate if a concatenated point cloud should be published if its timestamp is earlier than the previous published concatenated point cloud."
+          "description": "Flag to indicate if a concatenated point cloud should be published if its timestamp is earlier than the previous published concatenated point cloud. When false, an input cloud that arrives after its frame was already published is reported and dropped on arrival instead of waiting out a new collector."
         },
         "synchronized_pointcloud_postfix": {
           "type": "string",
@@ -75,6 +75,12 @@
           "default": "base_link",
           "minLength": 1,
           "description": "Output frame."
+        },
+        "output_point_type": {
+          "type": "string",
+          "enum": ["XYZIRC", "XYZIRCT"],
+          "default": "XYZIRC",
+          "description": "Point type of the published clouds. XYZIRCT additionally carries each point's time_stamp in nanoseconds relative to the published header stamp and requires every input cloud to provide a time_stamp field. Inputs that cannot be converted are dropped."
         },
         "matching_strategy": {
           "type": "object",
@@ -138,6 +144,7 @@
         "input_twist_topic_type",
         "input_topics",
         "output_frame",
+        "output_point_type",
         "matching_strategy"
       ]
     }

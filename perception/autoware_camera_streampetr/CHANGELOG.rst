@@ -2,6 +2,174 @@
 Changelog for package autoware_camera_streampetr
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* fix(design): align the perception node designs with the packages they describe (`#13339 <https://github.com/autowarefoundation/autoware_universe/issues/13339>`_)
+  The lanelet filter components register under the lanelet_filter:: namespace,
+  and the apollo instance segmentation and transfusion nodes are built with the
+  autoware\_ prefix on the executable name.
+  BEVFusion, StreamPetr and LidarFRNet name param file defaults that resolve to
+  nothing: the first two are missing the config/ prefix, and the three files
+  LidarFRNet names are called frnet.param.yaml, ml_package_frnet_ot128.param.yaml
+  and diagnostics_frnet.param.yaml.
+  ElevationMapLoader pins its map_hash input with global:, which keeps the port
+  out of the design graph: link_manager skips any connection whose target is a
+  global input port and the exporter emits no remap. remap_target: keeps the same
+  fixed topic name while letting the port take part in the graph.
+* refactor(camera-streampetr): replace NMS with perception_utils::IouBevNms (`#13179 <https://github.com/autowarefoundation/autoware_universe/issues/13179>`_)
+  refactor: replace NMS with perception_utils::IouBevNms
+* fix(autoware_camera_streampetr): report the preprocess time with sub-millisecond precision (`#13212 <https://github.com/autowarefoundation/autoware_universe/issues/13212>`_)
+  * fix(autoware_camera_streampetr): report the preprocess time with sub-millisecond precision
+  The per-image preprocessing takes about 2 ms, but the data store truncated
+  it through duration_cast<milliseconds> to whole milliseconds, quantizing
+  away most of the signal before it reached the latency/preprocess debug
+  topic and the diagnostics. Measure it as a double in milliseconds instead.
+  * chore: clean up comment
+  * feat(autoware_camera_streampetr): report per-camera input status diagnostics
+  The node consumes five cameras but nothing outside its own log reported
+  whether they are actually usable: a camera that never arrives, publishes
+  an encoding the preprocessing rejects, or silently stops publishing
+  mid-run leaves /diagnostics empty while the node stops inferring. The
+  motivating incident was a subscription that failed to be created at all:
+  every camera published normally and the sensing-side diagnostics stayed
+  green, but the node received nothing -- only a consumer-side status can
+  report that class of failure.
+  Publish a timer-driven camera_status (period
+  diagnostics.validation_callback_interval_ms) so the reporting survives
+  the cameras dying. Each camera collapses into one state,
+  most-specific-cause first: rejected (ERROR, dropped by input validation),
+  waiting_camera_info / waiting_image (WARN, normal during start-up),
+  stale (ERROR, newest frame older than diagnostics.max_image_age_ms) and
+  active. Per camera it also carries the resolved input topic (the model
+  index and the physical camera differ per deployment) and the image age;
+  summary keys (num_waiting/num_stale/num_rejected, stalest camera,
+  inter-camera stamp spread) make the worst offender readable without
+  per-camera digging. Ages are clamped at zero so a rosbag loop does not
+  read as a stall, and printed as fixed-point strings so epoch-sized values
+  do not degrade to scientific notation.
+  * feat(autoware_camera_streampetr): add a processing-time watchdog with per-stage breakdown
+  Add a processing_time_status task to the diagnostics updater, mirroring
+  the lidar detectors: WARN once a cycle exceeds
+  diagnostics.max_allowed_processing_time_ms, escalating to ERROR when it
+  stays over budget for longer than
+  diagnostics.max_acceptable_consecutive_delay_ms. Timer driven, so a node
+  that has stopped inferring altogether keeps reporting -- exactly when the
+  per-cycle path stops running -- and 'waiting' is reported until the first
+  inference completes. The stopwatch becomes a plain always-on member: the
+  watchdog needs the per-cycle total even with the debug topics disabled,
+  which makes every null check on it dead code.
+  Beyond the thresholds shared with the other detectors, the status carries:
+  - preprocess/inference/postprocess_time_ms: the same cycle's per-stage
+  breakdown, latched together with the total, so an over-budget cycle can
+  be localized without enabling debug_mode. Not-yet-inferred cycles
+  report 'n/a' rather than 0.0, which would read as a 0 ms cycle.
+  - last_frame_timestamp / last_published_timestamp: the newest published
+  detection under both clocks (sensing instant vs node clock), plus their
+  difference output_latency_ms (end-to-end latency including camera
+  transport and decode queueing, which processing_time_ms cannot see) and
+  time_since_last_publish_ms (how long since the node last produced
+  objects). Observational only; the level is decided by the thresholds.
+  Timestamps are fixed-point strings: the epoch-sized values degrade to
+  scientific notation through the double overload.
+  * refactor(autoware_camera_streampetr): split postprocessing out of the inference call
+  inference_detector() ran the model and then decoded the detections inside
+  the same call, so the postprocess stage was timed inside the inference
+  window: the reported stage times invited computing
+  total - preprocess - inference - postprocess, which goes negative. The
+  postprocess Duration was also fragile -- its CUDA events are recorded on
+  the stream, but bbox conversion and NMS are host work, so the number was
+  only correct while the stream happened to be idle there.
+  Split the network API into inference_detector() (model only, stream
+  synchronized before returning) and postprocess() (bbox decode + NMS).
+  The node times each with its own stopwatch window, so
+  latency/inference and the new latency/postprocess topic -- previously
+  the nested latency/inference/postprocess -- are disjoint, and the
+  per-cycle results travel as a named InferenceResult struct instead of a
+  tuple with two adjacent doubles. Since postprocess() only reads the
+  head's output bindings, the camera store is unfrozen before it: the
+  cameras resume as soon as the forward pass ends instead of staying
+  blocked through the decode.
+  Note for plots and analysis scripts: the debug topic
+  latency/inference/postprocess is renamed to latency/postprocess.
+  * refactor(autoware_camera_streampetr): replace the forward-time vector with named subnetwork timings
+  * refactor(autoware_camera_streampetr): rename functions to snake_case
+  The package was ported with Google-style camelCase and PascalCase
+  function names mixed into otherwise snake_case code. The Autoware C++
+  guidelines follow the ROS 2 developer guide: CamelCase for types,
+  snake_case for functions, methods and variables. Rename every function
+  this package owns accordingly (network helpers, Duration and Memory
+  methods, ego-mask helpers, CUDA kernels and launchers, NMS and utility
+  functions), plus the camelCase local variables in cuda_utils and the
+  constant kMaxCameraMaskId, which becomes ALL_CAPS per the same guide.
+  Purely mechanical; no behavior change. Left as-is deliberately:
+  SubNetwork methods that forward 1:1 to same-named TensorRT APIs
+  (enqueueV3, getNbIOTensors, getTensorShape, setTensorAddress, ...) so
+  they stay greppable against the TensorRT documentation, and
+  Profiler::reportLayerTime, which overrides nvinfer1::IProfiler.
+  * style(pre-commit): autofix
+  * refactor(autoware_camera_streampetr): address camera-status diagnostics review comments
+  Rename the stalest\_* diagnostics to oldest_image\_* (clearer wording, same
+  meaning: the camera that has gone longest without a new frame) and hoist
+  the per-camera state strings into named constants, since external
+  monitors match on them.
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* fix(autoware_camera_streampetr): fix online offline difference (`#13167 <https://github.com/autowarefoundation/autoware_universe/issues/13167>`_)
+  * fix(autoware_camera_streampetr): feed the model RGB and validate image input
+  The preprocessing kernel wrote the source channels straight to the model
+  input with BGR mean/std, so an rgb8 camera was fed BGR. The kernel now
+  takes swap_rb and maps source channel i to model channel (swap_rb ? 2-i : i)
+  while writing the planar output, which is free because that write is
+  scattered per channel anyway. mean/std are stored in RGB order and indexed
+  by the model channel.
+  update_camera_image() resolves the channel order from the message encoding
+  and drops frames it cannot consume: encodings other than rgb8/bgr8, padded
+  row strides, and truncated buffers all misread the densely packed upload.
+  The errors are throttled since a misconfigured camera hits them every frame.
+  Compressed input no longer goes through image_transport. Its compressed
+  plugin calls substr(node_namespace.size()) on the unresolved base topic, so
+  "~/input/cameraN/image" (21 chars) under a longer node namespace such as
+  "/perception/object_recognition/detection" (40 chars) throws
+  std::out_of_range and kills the node at construction (reproduced against
+  ros-humble-compressed-image-transport 2.5.5). Both branches subscribe
+  plainly instead; the compressed path decodes to bgr8, which is what
+  cv::imdecode already produces, and lets the GPU do the R/B swap. The
+  subscribed topics are unchanged, so the launch remaps still apply.
+  Also report which cameras are missing in the sync warning, instead of only
+  saying that something is.
+  * chore: clean code
+  * chore: fix
+  * chore: update maintainer list
+  * chore: change func naming
+  * chore: fix image transport
+  * chore: gpu color conversion
+  * chore: clean code
+  ---------
+* docs: replace retired model hosting URLs with Hugging Face links (`#13204 <https://github.com/autowarefoundation/autoware_universe/issues/13204>`_)
+  * docs: replace retired model hosting URLs with Hugging Face links
+  The model artifacts moved from awf.ml.dev.web.auto and the
+  autoware-files S3 bucket to Hugging Face repositories under the
+  AutowareFoundation org (`autowarefoundation/autoware#7223 <https://github.com/autowarefoundation/autoware/issues/7223>`_). The READMEs
+  still pointed manual downloads at the old hosts, and the yabloc README
+  still gave wget instructions for the retired archive.
+  The two dataset links on the S3 bucket stay: the bucket keeps serving
+  datasets, maps and rosbags. Only the model objects are retired.
+  The centerpoint v0 and v1 files were never migrated and stop being
+  distributed, so their changelog rows lose the download links.
+  * docs: name the ML package configs in the model download notes
+  The launch files read transfusion_ml_package.param.yaml and
+  ml_package_camera_streampetr.param.yaml from the model directory. The
+  download notes did not name them, so a manual download missed two
+  required files.
+  ---------
+* refactor(autoware_universe): use autoware_ament_auto_package in perception DNN packages (`#12277 <https://github.com/autowarefoundation/autoware_universe/issues/12277>`_)
+  Co-authored-by: github-actions <github-actions@github.com>
+  Co-authored-by: Taekjin LEE <taekjin.lee@tier4.jp>
+* refactor(perception): move node design files into each package (`#13104 <https://github.com/autowarefoundation/autoware_universe/issues/13104>`_)
+  Co-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>
+* Contributors: Kotaro Uetake, Mete Fatih Cırıt, Ryohsuke Mitsudome, Taekjin LEE, Vishal Chauhan, Yi-Hsiang Fang (Vivid)
+
 0.52.0 (2026-06-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

@@ -2,13 +2,13 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>tier4_control_mode_rviz_plugin</name>
-  <version>0.52.0</version>
+  <version>0.53.0</version>
   <description>RViz plugin for displaying control mode</description>
   <maintainer email="kyoichi.sugahara@tier4.jp">Kyoichi Sugahara</maintainer>
   <maintainer email="yukinari.hisaki.2@tier4.jp">Yukinari Hisaki</maintainer>
-  <maintainer email="shohei.sakai@tier4.jp">Shohei Sakai</maintainer>
   <maintainer email="naoto.hiramatsu@tier4.jp">Naoto Hiramatsu</maintainer>
   <license>Apache License 2.0</license>
+  <author email="shohei.sakai@tier4.jp">Shohei Sakai</author>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
   <buildtool_depend>ament_cmake_auto</buildtool_depend>

@@ -182,9 +182,16 @@ void RRTStar::extend()
     reached_nodes_.push_back(node_new);
   }
 
-  if (isSolutionFound()) {
-    // This cannot be inside if(is_reached){...} because we must update this anytime after rewiring
-    // takes place
+  updateGoalLink(node_new, is_reached, node_reconnect != nullptr);
+}
+
+// Refresh the goal's best parent. A reconnect can rewire the cost of any
+// reached node, so it requires the full rescan; otherwise only the newly
+// reached node can improve on the current best.
+void RRTStar::updateGoalLink(
+  const NodeSharedPtr & node_new, const bool is_reached, const bool did_reconnect)
+{
+  if (isSolutionFound() && did_reconnect) {
     double cost_min = inf;
     NodeSharedPtr reached_node_best_parent;
     for (const auto & node : reached_nodes_) {
@@ -197,6 +204,16 @@ void RRTStar::extend()
     node_goal_->cost_from_start = cost_min;
     node_goal_->parent = reached_node_best_parent;
     node_goal_->cost_to_parent = reached_node_best_parent->cost_to_goal;
+    return;
+  }
+  if (!is_reached) {
+    return;
+  }
+  const double cost = *node_new->cost_from_start + *node_new->cost_to_goal;
+  if (!node_goal_->cost_from_start || cost < *node_goal_->cost_from_start) {
+    node_goal_->cost_from_start = cost;
+    node_goal_->parent = node_new;
+    node_goal_->cost_to_parent = node_new->cost_to_goal;
   }
 }
 

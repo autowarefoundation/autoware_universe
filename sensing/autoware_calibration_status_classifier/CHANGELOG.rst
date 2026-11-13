@@ -2,6 +2,17 @@
 Changelog for package autoware_calibration_status_classifier
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* fix(design): align the sensing node designs with the packages they describe (`#13337 <https://github.com/autowarefoundation/autoware_universe/issues/13337>`_)
+  CalibrationStatusClassifier declares a preview_image publisher on a hardcoded
+  per-camera topic that the node no longer creates, and names it as the outcome
+  of the classify process.
+  The point cloud concatenation component is built as concatenate_pointclouds_node.
+* refactor(sensing): move node design files into each package (`#13105 <https://github.com/autowarefoundation/autoware_universe/issues/13105>`_)
+* Contributors: Ryohsuke Mitsudome, Taekjin LEE
+
 0.52.0 (2026-06-30)
 -------------------
 

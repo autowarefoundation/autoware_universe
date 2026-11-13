@@ -2,6 +2,45 @@
 Changelog for package autoware_lidar_transfusion
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* fix(design): align the perception node designs with the packages they describe (`#13339 <https://github.com/autowarefoundation/autoware_universe/issues/13339>`_)
+  The lanelet filter components register under the lanelet_filter:: namespace,
+  and the apollo instance segmentation and transfusion nodes are built with the
+  autoware\_ prefix on the executable name.
+  BEVFusion, StreamPetr and LidarFRNet name param file defaults that resolve to
+  nothing: the first two are missing the config/ prefix, and the three files
+  LidarFRNet names are called frnet.param.yaml, ml_package_frnet_ot128.param.yaml
+  and diagnostics_frnet.param.yaml.
+  ElevationMapLoader pins its map_hash input with global:, which keeps the port
+  out of the design graph: link_manager skips any connection whose target is a
+  global input port and the exporter emits no remap. remap_target: keeps the same
+  fixed topic name while letting the port take part in the graph.
+* refactor(lidar-transfusion): replace NMS with perception_utils::IouBevNms (`#13176 <https://github.com/autowarefoundation/autoware_universe/issues/13176>`_)
+  refactor: replace NMS with perception_utils::IouBevNms
+* docs: replace retired model hosting URLs with Hugging Face links (`#13204 <https://github.com/autowarefoundation/autoware_universe/issues/13204>`_)
+  * docs: replace retired model hosting URLs with Hugging Face links
+  The model artifacts moved from awf.ml.dev.web.auto and the
+  autoware-files S3 bucket to Hugging Face repositories under the
+  AutowareFoundation org (`autowarefoundation/autoware#7223 <https://github.com/autowarefoundation/autoware/issues/7223>`_). The READMEs
+  still pointed manual downloads at the old hosts, and the yabloc README
+  still gave wget instructions for the retired archive.
+  The two dataset links on the S3 bucket stay: the bucket keeps serving
+  datasets, maps and rosbags. Only the model objects are retired.
+  The centerpoint v0 and v1 files were never migrated and stop being
+  distributed, so their changelog rows lose the download links.
+  * docs: name the ML package configs in the model download notes
+  The launch files read transfusion_ml_package.param.yaml and
+  ml_package_camera_streampetr.param.yaml from the model directory. The
+  download notes did not name them, so a manual download missed two
+  required files.
+  ---------
+* refactor(autoware_universe): use autoware_ament_auto_package in perception DNN packages (`#12277 <https://github.com/autowarefoundation/autoware_universe/issues/12277>`_)
+  Co-authored-by: github-actions <github-actions@github.com>
+  Co-authored-by: Taekjin LEE <taekjin.lee@tier4.jp>
+* Contributors: Kotaro Uetake, Mete Fatih Cırıt, Ryohsuke Mitsudome, Taekjin LEE, Vishal Chauhan
+
 0.52.0 (2026-06-30)
 -------------------
 

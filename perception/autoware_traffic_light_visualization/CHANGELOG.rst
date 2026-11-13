@@ -2,6 +2,52 @@
 Changelog for package autoware_traffic_light_visualization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* test(autoware_traffic_light_visualization): add characterization test for TrafficLightRoiVisualizerNode (`#13392 <https://github.com/autowarefoundation/autoware_universe/issues/13392>`_)
+  * test(autoware_traffic_light_visualization): add characterization test for TrafficLightRoiVisualizerNode
+  Pin the observable behavior of TrafficLightRoiVisualizerNode before its
+  logic is separated from rclcpp::Node. The node is driven through its real
+  topics and the drawing is checked by reading pixels out of the published
+  image, so a regression that stops the drawing from running is caught.
+  No production code is touched: the change adds a test file and its own
+  test target next to the existing ones.
+  Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+  * test(autoware_traffic_light_visualization): cover the remaining branches of the visualizer
+  Two paths were left untested by the characterization suite:
+  - the image_transport publish inside imageRoughRoiCallback, because the
+  image transport case ran the other callback
+  - strToColor()'s red and yellow, because only green and the fallback were
+  pinned, although the README documents all three
+  Line coverage of node.cpp goes 93.7% -> 94.4% and of node.hpp 92.6% ->
+  100%. What is left in node.cpp is the two cv_bridge catch blocks, which
+  cannot be tested without taking the test binary down.
+  Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+  * test(autoware_traffic_light_visualization): make the pixel checks say what they check
+  Review feedback: the assertions did not make it clear what each test was
+  looking for.
+  Every pixel read now goes through a named variable, and the read sits
+  next to the assertion it belongs to, under a line saying what the two of
+  them establish. Where a test makes several claims, each claim is its own
+  group. The coordinates behind the label box are explained once, on the
+  two helpers that return them, instead of in each test.
+  The tests for a ROI with and without a signal now read the same two
+  points, so the label box is the only difference between them.
+  The three known signal colors get a case each instead of a loop, which
+  also drops the SCOPED_TRACE and the output\_ reset the loop needed.
+  Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+  ---------
+  Co-authored-by: Claude Opus 5 <noreply@anthropic.com>
+* refactor(perception): move node design files into each package (`#13104 <https://github.com/autowarefoundation/autoware_universe/issues/13104>`_)
+  Co-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>
+* feat(traffic_light_visualization): apply `agnocast_wrapper::Node` to `traffic_light_visualization` (`#12930 <https://github.com/autowarefoundation/autoware_universe/issues/12930>`_)
+  * apply agnocast_wrapper::Node
+  * fix cpplint
+  * disable tests when agnocast enabled
+  ---------
+* Contributors: Kentaro Nagatomo, Koichi Imai, Ryohsuke Mitsudome, Taekjin LEE
+
 0.52.0 (2026-06-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

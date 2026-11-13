@@ -45,6 +45,11 @@ MrmComfortableStopOperator::MrmComfortableStopOperator(const rclcpp::NodeOptions
     create_publisher<autoware_internal_planning_msgs::msg::VelocityLimitClearCommand>(
       "~/output/velocity_limit/clear", rclcpp::QoS{1}.transient_local());
 
+  // Subscriber
+  sub_current_velocity_limit_ = create_subscription<VelocityLimit>(
+    "~/input/current_velocity_limit", rclcpp::QoS{1}.transient_local(),
+    std::bind(&MrmComfortableStopOperator::onCurrentVelocityLimit, this, std::placeholders::_1));
+
   // Timer
   const auto update_period_ns = rclcpp::Rate(params_.update_rate).period();
   timer_ = autoware::agnocast_wrapper::create_timer(
@@ -59,6 +64,7 @@ MrmComfortableStopOperator::MrmComfortableStopOperator(const rclcpp::NodeOptions
 
   // Driving mode interface
   pub_mrm_state_ = create_publisher<DrivingModeMrmState>("~/output/mrm_state", 1);
+  pub_driving_mode_active_ = create_publisher<DrivingModeFlag>("~/output/driving_mode_active", 1);
   sub_driving_mode_request_ = create_subscription<DrivingModeRequest>(
     "~/input/driving_mode_request", 1,
     std::bind(&MrmComfortableStopOperator::onDrivingModeRequest, this, std::placeholders::_1));
@@ -93,6 +99,11 @@ void MrmComfortableStopOperator::onDrivingModeRequest(const DrivingModeRequest &
   }
 }
 
+void MrmComfortableStopOperator::onCurrentVelocityLimit(const VelocityLimit & msg)
+{
+  current_velocity_limit_sender_ = msg.sender;
+}
+
 void MrmComfortableStopOperator::onDrivingModeInfo(const DrivingModeInfo & msg)
 {
   for (const auto & item : msg.items) {
@@ -101,6 +112,22 @@ void MrmComfortableStopOperator::onDrivingModeInfo(const DrivingModeInfo & msg)
       break;
     }
   }
+}
+
+void MrmComfortableStopOperator::publishDrivingModeActive() const
+{
+  if (!driving_mode_id_) {
+    return;
+  }
+
+  tier4_system_msgs::msg::DrivingModeFlagItem item;
+  item.mode = driving_mode_id_.value();
+  item.flag = (status_.state == MrmBehaviorStatus::OPERATING);
+
+  DrivingModeFlag msg;
+  msg.stamp = this->now();
+  msg.items = {item};
+  pub_driving_mode_active_->publish(msg);
 }
 
 void MrmComfortableStopOperator::publishMrmState() const
@@ -161,18 +188,23 @@ void MrmComfortableStopOperator::publishVelocityLimit() const
   velocity_limit->constraints.min_acceleration = static_cast<float>(params_.min_acceleration);
   velocity_limit->constraints.max_jerk = static_cast<float>(params_.max_jerk);
   velocity_limit->constraints.min_jerk = static_cast<float>(params_.min_jerk);
-  velocity_limit->sender = "mrm_comfortable_stop_operator";
+  velocity_limit->sender = sender_name_;
 
   pub_velocity_limit_->publish(std::move(velocity_limit));
 }
 
 void MrmComfortableStopOperator::publishVelocityLimitClearCommand() const
 {
+  // Clear the velocity limit only if it is currently set by this node.
+  if (current_velocity_limit_sender_ != sender_name_) {
+    return;
+  }
+
   auto velocity_limit_clear_command =
     ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_velocity_limit_clear_command_);
   velocity_limit_clear_command->stamp = this->now();
   velocity_limit_clear_command->command = true;
-  velocity_limit_clear_command->sender = "mrm_comfortable_stop_operator";
+  velocity_limit_clear_command->sender = sender_name_;
 
   pub_velocity_limit_clear_command_->publish(std::move(velocity_limit_clear_command));
 }
@@ -180,6 +212,7 @@ void MrmComfortableStopOperator::publishVelocityLimitClearCommand() const
 void MrmComfortableStopOperator::onTimer() const
 {
   publishStatus();
+  publishDrivingModeActive();
   publishMrmState();
 }
 

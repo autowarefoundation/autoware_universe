@@ -22,10 +22,10 @@ SteeringPredictor::SteeringPredictor(const double steer_tau, const double steer_
 {
 }
 
-double SteeringPredictor::calcSteerPrediction()
+double SteeringPredictor::calcSteerPrediction(const rclcpp::Time & now)
 {
   auto t_start = m_time_prev;
-  auto t_end = m_clock->now();
+  auto t_end = now;
   m_time_prev = t_end;
 
   const double duration = (t_end - t_start).seconds();
@@ -44,9 +44,9 @@ double SteeringPredictor::calcSteerPrediction()
   return predicted_steering;
 }
 
-void SteeringPredictor::storeSteerCmd(const double steer)
+void SteeringPredictor::storeSteerCmd(const double steer, const rclcpp::Time & now)
 {
-  const auto time_delayed = m_clock->now() + rclcpp::Duration::from_seconds(m_input_delay);
+  const auto time_delayed = now + rclcpp::Duration::from_seconds(m_input_delay);
   Lateral cmd;
   cmd.stamp = time_delayed;
   cmd.steering_tire_angle = static_cast<float>(steer);

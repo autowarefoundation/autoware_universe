@@ -20,14 +20,18 @@
 #include "autoware_test_utils/autoware_test_utils.hpp"
 #include "autoware_utils/math/unit_conversion.hpp"
 
+#include <ament_index_cpp/get_package_share_directory.hpp>
+
 #include <autoware_perception_msgs/msg/object_classification.hpp>
 #include <autoware_perception_msgs/msg/shape.hpp>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include <cmath>
 #include <limits>
 #include <memory>
+#include <set>
 
 namespace autoware::behavior_path_planner::utils::static_obstacle_avoidance
 {
@@ -1583,5 +1587,66 @@ TEST(TestUtils, calcErrorEclipseLongRadius)
        0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0});
 
   EXPECT_DOUBLE_EQ(calcErrorEclipseLongRadius(pose_with_covariance), 3.0);
+}
+
+TEST(TestUtils, getExtendLanesTerminatesOnLoopingMap)
+{
+  // Regression test for getExtendLanes() extending lanes forever on a road
+  // network that loops back on itself. The fixture map (test_data/loop_map.osm)
+  // is a four-lanelet ring 1010 -> 1013 -> 1016 -> 1019 -> 1010, so walking
+  // getNextLanelets() eventually returns a lanelet that is already in the
+  // sequence. Without the guard the walk keeps re-appending the ring, so the
+  // returned sequence is longer than the loop and full of duplicates (and, for
+  // an ego that projects onto a later lap, never terminates at all).
+
+  // getExtendLanes() spins in a while (rclcpp::ok()) loop, so the context must
+  // be up for the walk to run. Shut it back down at the end if we brought it up,
+  // otherwise the node tests that run afterwards throw "context is already
+  // initialized" when they call rclcpp::init() themselves. The scope guard makes
+  // the shutdown failure-safe: it runs even if an assertion or exception unwinds
+  // the test early.
+  const bool initialized_context = !rclcpp::ok();
+  if (initialized_context) {
+    rclcpp::init(0, nullptr);
+  }
+  const auto context_guard = std::shared_ptr<void>(nullptr, [initialized_context](void *) {
+    if (initialized_context) {
+      rclcpp::shutdown();
+    }
+  });
+
+  const auto map_path = ament_index_cpp::get_package_share_directory(
+                          "autoware_behavior_path_static_obstacle_avoidance_module") +
+                        "/test_data/loop_map.osm";
+  const auto map_bin = autoware::test_utils::make_map_bin_msg(map_path);
+
+  auto planner_data = std::make_shared<PlannerData>();
+  planner_data->route_handler->setMap(map_bin);
+  // Longer than the 80 m ring, so the walk has to loop back on itself to reach it.
+  planner_data->parameters.forward_path_length = 200.0;
+  planner_data->parameters.backward_path_length = 5.0;
+
+  const auto start_lane = planner_data->route_handler->getLaneletsFromId(1010);
+  // Place the ego at the start of the ring, derived from the loaded geometry so
+  // the test is independent of the map projection.
+  const auto centerline = start_lane.centerline2d();
+  const auto & p0 = centerline.front();
+  const auto & p1 = centerline[1];
+  const double yaw = std::atan2(p1.y() - p0.y(), p1.x() - p0.x());
+  const auto ego_pose = geometry_msgs::build<geometry_msgs::msg::Pose>()
+                          .position(create_point(p0.x(), p0.y(), 0.0))
+                          .orientation(create_quaternion_from_rpy(0.0, 0.0, yaw));
+
+  const auto extend_lanelets = getExtendLanes({start_lane}, ego_pose, planner_data);
+
+  // The walk terminates without revisiting a lanelet ...
+  std::set<lanelet::Id> seen_ids;
+  for (const auto & lane : extend_lanelets) {
+    EXPECT_TRUE(seen_ids.insert(lane.id()).second)
+      << "lanelet " << lane.id() << " appears more than once in the extended sequence";
+  }
+  // ... and cannot return more lanelets than the single loop contains.
+  EXPECT_FALSE(extend_lanelets.empty());
+  EXPECT_LE(extend_lanelets.size(), 4U);
 }
 }  // namespace autoware::behavior_path_planner::utils::static_obstacle_avoidance

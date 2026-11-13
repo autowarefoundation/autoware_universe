@@ -2,6 +2,433 @@
 Changelog for package autoware_carla_interface
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* feat(autoware_carla_interface): allow cameras to publish bgr8 (`#13411 <https://github.com/autowarefoundation/autoware_universe/issues/13411>`_)
+  CARLA renders BGRA and fills the alpha channel with 255. Nothing
+  downstream reads it, so publishing bgra8 spends a quarter of every camera
+  message on a constant.
+  Accept bgr8 as an image_encoding alongside bgra8 and mono8: it drops the
+  alpha channel and nothing else, so a consumer that wants colour gets the
+  same picture for three quarters of the bytes -- 4,320,000 instead of
+  5,760,000 for a 1600x900 frame. Unlike mono8 it costs no information, so
+  it is the cheaper default for any colour consumer. The default stays
+  bgra8.
+  Claude-Session: https://claude.ai/code/session_011TMdPd8VUDxUrFtckxg2AQ
+  Co-authored-by: Masaya Kataoka <ms.kataoka@gmail.com>
+* fix(autoware_carla_interface): stamp each sensor measurement with the frame it was captured on (`#13408 <https://github.com/autowarefoundation/autoware_universe/issues/13408>`_)
+* feat(autoware_carla_interface): let a sensor mapping set the CARLA capture rate (`#13407 <https://github.com/autowarefoundation/autoware_universe/issues/13407>`_)
+* feat(autoware_carla_interface): publish CARLA vehicles as ground truth detections (`#13321 <https://github.com/autowarefoundation/autoware_universe/issues/13321>`_)
+  * feat(autoware_carla_interface): publish CARLA vehicles as ground truth detections
+  Adds an opt-in parameter, publish_ground_truth_objects (default: false, no
+  behavior change), that publishes every CARLA vehicle except the ego to
+  /perception/object_recognition/detection/objects.
+  This feeds the perception stack from simulator truth instead of from sensor
+  data, so tracking and prediction keep running on the real Autoware nodes
+  downstream. It is useful when the vehicles come from an external traffic
+  simulator that the sensor pipeline cannot see reliably, and when the goal is to
+  exercise planning rather than detection.
+  Publishing happens on a world.on_tick() callback, so the objects follow CARLA's
+  cadence rather than the sensor loop, which only turns once every sensor has
+  delivered its frame. The poses come out of the tick snapshot, so a tick costs no
+  round trip to the server and every object in a message belongs to one frame. A
+  snapshot carries only ids and poses, so what never changes about an actor -
+  whether it is a vehicle to report, its class and its size - is looked up the
+  first time that id appears and kept; in steady state a tick asks the server for
+  nothing.
+  Messages carry the bridge's clock rather than snapshot.timestamp. The two count
+  from different starts, and stamping from the snapshot puts the objects far
+  enough ahead of /clock that the tracker's output rate collapses.
+  Classification comes from the CARLA blueprint base_type attribute, so the
+  mapping needs no hand maintained table of blueprint ids. Velocity is left to the
+  tracker: publishing it would need a world to object frame rotation that is easy
+  to get wrong, and a wrong twist is worse for prediction than no twist.
+  Pedestrians are not covered yet.
+  * chore(autoware_carla_interface): keep the ground truth publisher's comments in the file's style
+  Shorten the docstrings to one line each, replace the multi-line rationale
+  comments with one-liners and drop a noqa the repository's flake8 does not need.
+  No behavior change; the rationale stays in the pull request.
+  * feat(autoware_carla_interface): apply the review suggestions to the ground truth publisher
+  Add the bus label (CARLA spells the base_type "Bus") and publish the bounding
+  box center instead of the actor origin, as suggested in review. The suggestions
+  were applied through the review UI without a sign-off, so they are folded into
+  this signed commit; the content is unchanged.
+  Co-authored-by: Mete Fatih Cırıt <mfc@autoware.org>
+  Co-authored-by: Masaya Kataoka <ms.kataoka@gmail.com>
+  ---------
+  Co-authored-by: Mete Fatih Cırıt <mfc@autoware.org>
+  Co-authored-by: Masaya Kataoka <ms.kataoka@gmail.com>
+* feat(autoware_carla_interface): add a tick follower mode for co-simul… (`#13286 <https://github.com/autowarefoundation/autoware_universe/issues/13286>`_)
+* feat(autoware_carla_interface): publish CARLA traffic-light states, matched to the map by position (`#13327 <https://github.com/autowarefoundation/autoware_universe/issues/13327>`_)
+  * feat(autoware_carla_interface): publish CARLA traffic-light states, matched to the map by position
+  Bridge the CARLA server's traffic-light states into Autoware's perception
+  output so a CARLA closed loop can run without camera-based recognition.
+  The key problem is associating a CARLA traffic light with an Autoware
+  `traffic_light_group_id` (a `traffic_light` regulatory-element id in the
+  lanelet2 map). Instead of assuming the CARLA OpenDRIVE signal id equals the
+  regulatory-element id (true only for maps auto-generated from the same
+  OpenDRIVE) or hand-writing an id table, the bridge discovers the mapping
+  geometrically: each CARLA light head is matched to the nearest lanelet2 light
+  head and its state is published under every regulatory element that references
+  that head. This works for hand-authored / Vector Map Builder maps too.
+  - New `modules/traffic_light_matcher.py`: parses the lanelet2 `.osm` directly
+  (reads `local_x`/`local_y`, i.e. the map frame; no lanelet2/projector
+  dependency), keys physical heads by their `refers` way, and matches CARLA
+  heads conservatively (distance threshold + a disjoint-group ambiguity ratio),
+  dropping and logging ambiguous / too-far lights rather than guessing.
+  - `carla_ros.py`: publishes `TrafficLightGroupArray` on
+  /perception/traffic_light_recognition/traffic_signals, aggregated per group.
+  - `carla_autoware.py`: `force_green` freezes all lights green for camera-less
+  runs.
+  - Parameters grouped under the `traffic_light.` namespace; resolution order is
+  id-map override -> position match -> OpenDRIVE-id fallback.
+  - Unit tests for the matcher; README documents the feature.
+  Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+  * fix(autoware_carla_interface): address Codex review on traffic-light matching
+  - Use the resolved map origin (`_current_map_origin()`) instead of the raw
+  `map_origin_x/y` parameters when placing CARLA light heads in the map frame,
+  so georeferenced maps (origin derived from the OpenDRIVE geoReference in
+  `on_world_ready`, parameters left at zero) match correctly instead of falling
+  outside the distance threshold and publishing nothing. (P1)
+  - Treat a candidate head as a genuine alternative for the ambiguity test unless
+  its group set is exactly equal to the winner's, replacing the `isdisjoint`
+  check. Overlapping-but-unequal sets (e.g. {500, 501} vs {501}) would otherwise
+  be accepted by arbitrary ranking and publish a missing or spurious group. Adds
+  a regression test. (P2)
+  Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+  ---------
+  Co-authored-by: Masaya Kataoka <cld-masaya.kataoka@tier4.jp>
+  Co-authored-by: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+* fix(autoware_carla_interface): synthesize the steering report when CARLA reports no wheel angle (`#13276 <https://github.com/autowarefoundation/autoware_universe/issues/13276>`_)
+  * fix(autoware_carla_interface): synthesize the steering report when CARLA reports no wheel angle
+  CARLA 0.10 (Chaos physics) always returns 0 from get_wheel_steer_angle(),
+  so /vehicle/status/steering_status reported a constant 0 rad steering angle
+  regardless of the applied control. Controllers that consume the steering
+  state (e.g. the MPC lateral controller) then operate on a vehicle model
+  whose steering never responds.
+  When the reported wheel angle is exactly 0, fall back to synthesizing the
+  steering report from the applied VehicleControl.steer scaled by the max
+  wheel steer angle. On CARLA 0.9.x, where the API works, the measured wheel
+  angle keeps taking precedence.
+  Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
+  * fix(autoware_carla_interface): fold the steering curve into the synthesized report
+  The CARLA 0.10 fallback synthesized the steering report from
+  get_control().steer * max wheel angle, but that fraction is the value
+  requested BEFORE the server applies the vehicle's speed-based
+  steering_curve. Whenever the curve attenuates steering at speed the
+  report overstated the wheel angle CARLA actually produced, feeding
+  controllers (e.g. the MPC lateral controller) an inconsistent state.
+  Fold the same steering_curve back into the synthesized value so the
+  report tracks the produced angle. With flatten_steering_curve the cached
+  curve is the identity curve, so the factor is ~1.0 and the report is
+  unchanged.
+  Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+  * refactor(autoware_carla_interface): dispatch the steering report on the CARLA version
+  Select the measured vs. synthesized steering report from the CARLA server
+  version instead of treating a reported 0 wheel angle as the trigger. The
+  server version is read once at world load (set_carla_version): CARLA 0.10+
+  (Chaos) synthesizes from the applied control, 0.9.x uses the measured wheel
+  angle. This avoids mistaking a genuinely centered wheel on 0.9.x for the
+  broken 0.10 API, and an unparsable version keeps the 0.9.x behavior.
+  Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+  ---------
+  Co-authored-by: Masaya Kataoka <cld-masaya.kataoka@tier4.jp>
+  Co-authored-by: Claude Fable 5 <noreply@anthropic.com>
+* feat(autoware_carla_interface): allow overriding the wheel max steer angle for steer calibration (`#13278 <https://github.com/autowarefoundation/autoware_universe/issues/13278>`_)
+  * feat(autoware_carla_interface): allow overriding the wheel max steer angle for steer calibration
+  CARLA 0.10 (Chaos) reports max_steer_angle = 70 deg for the front wheels but
+  only achieves roughly a third of it: with a sustained steer input of 0.33-0.41
+  the yaw-rate-derived tire angle saturates around 0.11-0.16 rad, i.e. an
+  effective full-steer angle of about 22 deg. The normalized steer command and
+  the synthesized steering report both use the reported 70 deg, so the command
+  is 3x weaker than intended and the reported steering is 3x larger than what
+  the vehicle actually does.
+  Add a max_wheel_steer_angle_deg parameter (default 0 = use the physics value)
+  that overrides the angle used for both conversions, so it can be calibrated
+  to the measured full-steer angle of the simulated vehicle.
+  Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
+  * fix(autoware_carla_interface): scale the steering report by the calibrated max wheel angle
+  Apply max_wheel_steer_angle_deg to the steering feedback as well, not just
+  the command normalization. ego_status() published the raw CARLA
+  get_wheel_steer_angle() on the physics full-steer scale, so an override left
+  the reported tire angle ~3x larger than the command convention and preserved
+  the command/report mismatch the parameter is meant to remove.
+  Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+  ---------
+  Co-authored-by: Masaya Kataoka <cld-masaya.kataoka@tier4.jp>
+  Co-authored-by: Claude Fable 5 <noreply@anthropic.com>
+  Co-authored-by: Max-Bin <vborisw@gmail.com>
+* docs(autoware_carla_interface): document CARLA 0.10 opt-in launch parameters (`#13222 <https://github.com/autowarefoundation/autoware_universe/issues/13222>`_)
+  * docs(autoware_carla_interface): document CARLA 0.10 opt-in launch parameters
+  Add the opt-in CARLA 0.10 launch parameters to the "Configurable Parameters
+  for World Loading" table (carla_map, no_rendering_mode, force_load_world,
+  map_origin_x/y, spawn_point_ground_snap, spawn_point_ground_offset_z,
+  initial_pose_ground_offset_z), and add a "Ground snapping" subsection that
+  explains the neighborhood ground-projection sampling (9-point cross probe,
+  highest-hit selection) and the has_attribute fallback.
+  Documentation only; each parameter defaults to the current behavior.
+  Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
+  * style(pre-commit): autofix
+  * docs(autoware_carla_interface): correct no_rendering and ground-snap wording
+  Address review feedback on the documented behavior:
+  - no_rendering_mode is applied unconditionally on world load, so the
+  default False (re-)enables rendering rather than leaving an existing
+  headless server unchanged.
+  - Ground snapping only logs a warning on the spawn-point fallback; the
+  RViz initial-pose fallback is silent, and the default random spawn does
+  not exercise the spawn-point path at all.
+  Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: Claude Opus 4.8 <noreply@anthropic.com>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+  Co-authored-by: Masaya Kataoka <cld-masaya.kataoka@tier4.jp>
+* fix(autoware_carla_interface): derive the map origin from the OpenDRIVE geoReference (`#13303 <https://github.com/autowarefoundation/autoware_universe/issues/13303>`_)
+  * fix(autoware_carla_interface): derive the map origin from the OpenDRIVE geoReference
+  The GNSS pose and RViz initialpose paths convert between the CARLA world
+  frame and the Autoware map frame with the hand-set map_origin_x/y
+  parameters. For georeferenced maps (e.g. converted from lanelet2) such
+  hand-maintained constants can silently disagree with the map's own
+  OpenDRIVE geoReference by sub-metre amounts (observed: 0.44 m on a real
+  map), shifting GNSS/initialpose against everything that derives its
+  offset from the map itself.
+  Resolve the origin from a single source of truth instead: an explicit
+  non-zero parameter still wins, otherwise the offset is derived once from
+  the OpenDRIVE <geoReference> +lat_0/+lon_0 as the origin's in-cell MGRS
+  coordinates. Stock CARLA towns (no usable geoReference, or lat_0/lon_0 at
+  0/0) keep the plain 0/0 behavior.
+  Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: Masaya Kataoka <cld-masaya.kataoka@tier4.jp>
+  Co-authored-by: Claude Fable 5 <noreply@anthropic.com>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* fix(autoware_carla_interface): wake the sleeping physics body when launching from standstill (`#13305 <https://github.com/autowarefoundation/autoware_universe/issues/13305>`_)
+  * fix(autoware_carla_interface): wake the sleeping physics body when launching from standstill
+  CARLA 0.10 (UE5/Chaos) puts a stationary vehicle's physics body to sleep,
+  and VehicleControl throttle does not wake it. A vehicle that has been
+  stopped for a while (waiting for a route, holding at an intersection,
+  pausing mid-mission) can then never launch again: the commanded throttle
+  is applied (verified via get_control(): throttle > 0, brake 0, first
+  gear) but velocity stays exactly 0 until an external set_target_velocity
+  kick wakes the body.
+  Nudge the body awake with a small forward set_target_velocity whenever
+  the stack is trying to pull away from a standstill (throttle commanded,
+  no brake, speed < 0.05 m/s). Once the vehicle is rolling this no-ops.
+  Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
+  * fix(autoware_carla_interface): gate the standstill wake nudge behind a parameter
+  The wake nudge fired on every launch from standstill (throttle > 0, no
+  brake, speed < 0.05 m/s), so on the supported CARLA 0.9.15 environment —
+  whose physics bodies never sleep — it would inject a 0.3 m/s
+  set_target_velocity at every ordinary start and override the throttle-
+  driven launch dynamics.
+  Gate it behind a new wake_sleeping_physics parameter (default false),
+  matching the opt-in pattern used for the other CARLA 0.10 workarounds
+  (flatten_steering_curve). 0.9.15 is now unaffected; 0.10 users enable it
+  explicitly.
+  Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: Masaya Kataoka <cld-masaya.kataoka@tier4.jp>
+  Co-authored-by: Claude Fable 5 <noreply@anthropic.com>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+  Co-authored-by: Max-Bin <vborisw@gmail.com>
+* fix(autoware_carla_interface): publish the E2E kinematic state directly from the CARLA ground truth (`#13280 <https://github.com/autowarefoundation/autoware_universe/issues/13280>`_)
+  * fix(autoware_carla_interface): publish the E2E kinematic state directly from the CARLA ground truth
+  The E2E planning group synthesized /localization/kinematic_state and the
+  map->base_link TF through a GNSS round-trip: the interface published the GT
+  GNSS pose, vehicle_velocity_converter turned the velocity report into a
+  twist, and carla_state_publisher merged the two back into an Odometry. Apart
+  from the extra hops and latency, the twist leg carried the heading-rate unit
+  bug fixed in `#13274 <https://github.com/autowarefoundation/autoware_universe/issues/13274>`_, and any other consumer stack publishing localization
+  topics alongside it ends up with duplicate publishers.
+  Publish the kinematic state and TF directly from the ego ground-truth
+  transform in the interface node (opt-in publish_ground_truth_localization
+  parameter, enabled by the E2E launch group), drop carla_state_publisher and
+  vehicle_velocity_converter from the launch, and feed twist2accel from the
+  ground-truth odometry (use_odom) instead of the converter twist.
+  Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
+  * fix(autoware_carla_interface): rotate the angular velocity into the odometry child frame
+  get_angular_velocity() is expressed in CARLA's world frame, while
+  Odometry.twist must be expressed in child_frame_id (base_link). Negating
+  only the world-frame z component misstates the yaw rate on slopes or
+  banked roads and discards the body-frame x/y rates. Rotate the vector
+  with the inverse ego rotation, as already done for the linear velocity,
+  then apply the deg/s left-handed to rad/s right-handed conversion with
+  the axis signs used by the official ros-bridge (x, -y, -z).
+  Addresses the Codex P2 review comment on the PR.
+  Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
+  * refactor(autoware_carla_interface): extract the per-sensor dispatch out of run_step
+  CodeScene flagged run_step for rising cyclomatic complexity (10 -> 11,
+  threshold 9) after the ground-truth localization branch was added. Move
+  the enable check into _publish_ground_truth_odometry as a guard clause
+  and extract the sensor-type dispatch into _publish_sensor_data, which
+  brings run_step down to complexity 2 and keeps every touched method
+  under the threshold.
+  Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
+  ---------
+  Co-authored-by: Masaya Kataoka <cld-masaya.kataoka@tier4.jp>
+  Co-authored-by: Claude Fable 5 <noreply@anthropic.com>
+  Co-authored-by: Max-Bin <vborisw@gmail.com>
+* feat(autoware_carla_interface): optionally flatten the corrupt CARLA 0.10 steering curve (`#13277 <https://github.com/autowarefoundation/autoware_universe/issues/13277>`_)
+  * feat(autoware_carla_interface): optionally flatten the corrupt CARLA 0.10 steering curve
+  CARLA 0.10 ships corrupt per-vehicle steering-curve data (duplicated,
+  unsorted points such as (10 m/s, 0.5)), and the simulator applies that curve
+  internally, attenuating the achievable wheel angle at driving speeds. Add an
+  opt-in flatten_steering_curve parameter (default false) that writes an
+  identity curve back with apply_physics_control() right after the ego spawn,
+  so the commanded steer fraction maps directly to the wheel angle.
+  Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: Masaya Kataoka <cld-masaya.kataoka@tier4.jp>
+  Co-authored-by: Claude Fable 5 <noreply@anthropic.com>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* feat(autoware_carla_interface): tolerate maps without parseable OpenDRIVE metadata (`#13233 <https://github.com/autowarefoundation/autoware_universe/issues/13233>`_)
+* fix(autoware_carla_interface): normalize the steer command by the wheel max steer angle (`#13275 <https://github.com/autowarefoundation/autoware_universe/issues/13275>`_)
+  * fix(autoware_carla_interface): normalize the steer command by the wheel max steer angle
+  The steer command from raw_vehicle_cmd_converter (convert_steer_cmd: false)
+  is a tire angle in radians, but it was written to VehicleControl.steer as-is,
+  which CARLA interprets as a fraction of the wheel's max steer angle. On top
+  of that it was multiplied by the physics steering_curve, which the simulator
+  already applies internally — and which CARLA 0.10 returns as corrupt data
+  (duplicated, unsorted points such as (10 m/s, 0.5), halving the steering
+  around 36 km/h).
+  Normalize the commanded tire angle by the max wheel steer angle from the
+  vehicle physics (radians(max(wheels[].max_steer_angle))), clamp to [-1, 1],
+  and drop the steering-curve multiplication so the speed-based limit is only
+  applied once, inside the simulator.
+  Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: Masaya Kataoka <cld-masaya.kataoka@tier4.jp>
+  Co-authored-by: Claude Fable 5 <noreply@anthropic.com>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* feat(autoware_carla_interface): make world loading version-tolerant with force_load_world (`#13262 <https://github.com/autowarefoundation/autoware_universe/issues/13262>`_)
+* fix(autoware_carla_interface): convert the heading rate to rad/s with a right-handed sign (`#13274 <https://github.com/autowarefoundation/autoware_universe/issues/13274>`_)
+  VelocityReport.heading_rate forwarded CARLA's angular velocity unchanged,
+  but carla.Actor.get_angular_velocity() returns deg/s with a left-handed
+  (CW-positive) convention, while the report expects rad/s CCW-positive. Every
+  consumer of the heading rate (e.g. vehicle_velocity_converter feeding the
+  E2E localization) therefore received a value ~57x too large with an inverted
+  sign, which was measured to destabilize the lateral control loop in a
+  closed-loop CARLA run.
+  Co-authored-by: Masaya Kataoka <cld-masaya.kataoka@tier4.jp>
+  Co-authored-by: Claude Fable 5 <noreply@anthropic.com>
+* feat(autoware_carla_interface): add min_positive_throttle for standstill starts (`#13263 <https://github.com/autowarefoundation/autoware_universe/issues/13263>`_)
+  Heavy CARLA vehicles (e.g. vehicle.taxi.ford) do not creep and never
+  start moving on the small throttle the actuation map yields at low
+  target accelerations, so the ego gets stuck at standstill.
+  Add a min_positive_throttle parameter (default 0.0 = disabled) that
+  enforces a lower bound on the commanded throttle while accelerating
+  from (near) standstill: it applies only when the command is positive,
+  no brake is requested, and the current speed is below
+  min_positive_throttle_speed_threshold (default 0.8 m/s; negative =
+  always).
+  Also pin the vehicle to first gear with manual shifting in the control
+  command so heavy vehicles respond to throttle immediately instead of
+  idling in neutral.
+  With the default parameters the throttle floor is disabled and the
+  commanded throttle passes through unchanged.
+  Co-authored-by: Claude Opus 4.8 <noreply@anthropic.com>
+  Co-authored-by: Masaya Kataoka <cld-masaya.kataoka@tier4.jp>
+  Co-authored-by: Max-Bin <vborisw@gmail.com>
+* fix(autoware_carla_interface): raise a descriptive error when the ego vehicle fails to spawn (`#13264 <https://github.com/autowarefoundation/autoware_universe/issues/13264>`_)
+* feat(autoware_carla_interface): optionally snap spawn and initial pose to ground (`#13232 <https://github.com/autowarefoundation/autoware_universe/issues/13232>`_)
+  Add an opt-in `spawn_point_ground_snap` mode that snaps the ego spawn
+  point and the RViz "2D Pose Estimate" initial pose onto the CARLA map
+  geometry using `world.ground_projection` (sampling a few nearby points
+  and taking the highest ground hit). The Z offset above the projected
+  ground is configurable via `spawn_point_ground_offset_z` (0.5) and
+  `initial_pose_ground_offset_z` (1.0).
+  This is useful on maps where the map-frame z does not match the terrain
+  (e.g. some CARLA 0.10 levels), where a fixed z offset can spawn the
+  vehicle significantly above/below the road surface.
+  The feature is gated behind `spawn_point_ground_snap` (default False) and
+  `ground_projection` is guarded with `hasattr`, so behavior is unchanged
+  on CARLA 0.9.x and older APIs.
+  This is one of a series of small enabler PRs toward CARLA 0.10.0 support.
+  Co-authored-by: Claude Opus 4.8 <noreply@anthropic.com>
+* feat(autoware_carla_interface): add optional no_rendering_mode world setting (`#13210 <https://github.com/autowarefoundation/autoware_universe/issues/13210>`_)
+* feat(autoware_carla_interface): sort steering curve before interpolation (`#13195 <https://github.com/autowarefoundation/autoware_universe/issues/13195>`_)
+  `control_callback` feeds the vehicle's `steering_curve` into
+  `numpy.interp`, which requires the sample x-coordinates to be
+  monotonically increasing. CARLA 0.10 can return the steering-curve
+  points out of order, producing an incorrect steer ratio.
+  Sort the curve points by x before interpolating. On CARLA 0.9.x the
+  curve is already sorted, so this is a behavioral no-op.
+  Co-authored-by: Claude Opus 4.8 <noreply@anthropic.com>
+* feat(autoware_carla_interface): guard sensor blueprint attributes with has_attribute (`#13196 <https://github.com/autowarefoundation/autoware_universe/issues/13196>`_)
+  Camera and LiDAR blueprint configuration called `set_attribute`
+  unconditionally. CARLA sensor blueprints expose different attribute
+  sets across versions (e.g. 0.9.15 vs 0.10), so an absent attribute
+  raised during sensor setup.
+  Add a `_set_attribute_if_supported` helper that checks `has_attribute`
+  before setting, mirroring the existing `_set_noise_attribute` guard used
+  for GNSS/IMU, and route the camera and LiDAR attributes through it.
+  On CARLA 0.9.x these attributes are all present, so behavior is
+  unchanged.
+  Co-authored-by: Claude Opus 4.8 <noreply@anthropic.com>
+* feat(autoware_carla_interface): allow explicit carla_map override in launch (`#13193 <https://github.com/autowarefoundation/autoware_universe/issues/13193>`_)
+* feat(autoware_carla_interface): add map_origin_x/y offset between CARLA and map frame (`#13198 <https://github.com/autowarefoundation/autoware_universe/issues/13198>`_)
+  Add optional `map_origin_x` / `map_origin_y` parameters that translate
+  between CARLA's local world origin and the Autoware map frame origin.
+  The offset is applied in `carla_location_to_ros_point` (CARLA -> ROS)
+  and its inverse `ros_pose_to_carla_transform` (ROS -> CARLA), and is
+  threaded through from the ego `pose()` publisher and the
+  `initialpose_callback`.
+  This is needed for CARLA levels authored with their own local origin
+  instead of matching the lanelet2/PCD map frame (e.g. a
+  real-world-georeferenced custom map). Stock CARLA towns are natively
+  aligned, so the offsets default to 0.0.
+  With the default 0.0 offsets the arithmetic is the identity, so the
+  published pose and the applied initial pose are byte-for-byte identical
+  to the previous behavior.
+  Co-authored-by: Claude Opus 4.8 <noreply@anthropic.com>
+  Co-authored-by: Max-Bin <vborisw@gmail.com>
+* fix(autoware_carla_interface): stop dropping frames when the publish rate matches the sensor rate (`#13149 <https://github.com/autowarefoundation/autoware_universe/issues/13149>`_)
+  should_publish compared the elapsed time against the period exactly.
+  A sensor whose sensor_tick equals the configured publish period lands
+  on time_diff values that fall a float rounding step short of it, so
+  those frames are dropped and the next one only arrives a whole period
+  later. The sensor then publishes at a fraction of the rate it was
+  configured for.
+  Counting publications over 200 source frames, with the timestamps
+  accumulated the way a simulation clock accumulates them:
+  fixed_delta_seconds  frequency_hz  before  after
+  0.05                 20               134    200
+  0.1                  10               134    200
+  0.02                 50               193    200
+  1/30                 30               115    200
+  Compare against the period less a tolerance far below any simulation
+  step, which cannot admit a genuinely early frame.
+* feat: relay CAMERA_FRONT to traffic_light namespace regardless of use_light_weight_sensor_mapping options (`#13166 <https://github.com/autowarefoundation/autoware_universe/issues/13166>`_)
+  * feat: relay CAMERA_FRONT to traffic_light namespace regardless of use_light_weight_sensor_mapping options
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: Ryohsuke Mitsudome <ryoshuke.mitsudome@tier4.jp>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* feat(autoware_carla_interface): make IMU and GNSS noise configurable (`#13154 <https://github.com/autowarefoundation/autoware_universe/issues/13154>`_)
+  Both sensors were spawned with every noise attribute pinned to zero and
+  no way to change it. Noise-free measurements are the right default for
+  reproducing a run, but they are not what any hardware produces, and a
+  localisation or odometry stack scored against a perfect gyro reports an
+  accuracy it will not reach on a vehicle.
+  Take the noise attributes from the sensor's parameters in the sensor
+  mapping, keeping zero as the default so an existing configuration
+  behaves exactly as before. The IMU also gains the gyro bias attributes,
+  which were never set at all, and each attribute is checked against the
+  blueprint before it is written so a CARLA version that lacks one is not
+  a failure.
+* feat(autoware_carla_interface): allow cameras to publish mono8 (`#13151 <https://github.com/autowarefoundation/autoware_universe/issues/13151>`_)
+* chore(carla_interface): add Bin Wang as maintainer (`#13063 <https://github.com/autowarefoundation/autoware_universe/issues/13063>`_)
+* feat(carla_interface): launch shift_decider as standalone node when agnocast (`#13015 <https://github.com/autowarefoundation/autoware_universe/issues/13015>`_)
+  * refactor: apply_agnocast
+  * refactor: revert comment
+  ---------
+* Contributors: Masaya Kataoka, Maxime CLEMENT, Ryohsuke Mitsudome, Yutaro Kobayashi, inf, 張 智輝
+
 0.52.0 (2026-06-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

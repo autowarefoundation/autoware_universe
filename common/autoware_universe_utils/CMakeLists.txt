@@ -40,7 +40,7 @@ if(BUILD_TESTING)
 
   file(GLOB_RECURSE test_files test/**/*.cpp)
 
-  ament_add_ros_isolated_gtest(test_autoware_universe_utils ${test_files})
+  ament_add_ros_isolated_gtest(test_autoware_universe_utils ${test_files} TIMEOUT 120)
 
   target_link_libraries(test_autoware_universe_utils
     autoware_universe_utils

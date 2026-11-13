@@ -2,6 +2,78 @@
 Changelog for package autoware_freespace_planning_algorithms
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* perf(autoware_freespace_planning_algorithms): update the RRT* goal link incrementally when no rewire occurs (`#13245 <https://github.com/autowarefoundation/autoware_universe/issues/13245>`_)
+  * perf(autoware_freespace_planning_algorithms): update the RRT* goal link incrementally when no rewire occurs
+  extend() rescans every reached node after each extension once a solution
+  exists, but the scan can only change the answer when a reconnect rewired
+  the tree or a new node reached the goal. Keep the full rescan for the
+  reconnect case and otherwise compare just the newly reached node against
+  the current best.
+  Deterministic traces at 100, 600, and 2,000 extensions are bit-identical
+  to the baseline (tree hashes and solution costs equal) on two platforms,
+  including reconnect-heavy runs. Goal-cost evaluations drop 500,001 -> 1
+  in a 500k-reached-node scaling fixture (~100x on that phase).
+  Co-authored-by: Maxim Kern <maximkern@college.harvard.edu>
+  * test(autoware_freespace_planning_algorithms): verify the RRT* goal cost against all reached nodes
+  Address review feedback: the informed test self-seeds from
+  std::random_device and never checks the solution cost, so a broken
+  goal link would produce a feasible but suboptimal path undetected.
+  Add a seed hook to CSpace so tests can make the sampling sequence
+  deterministic, and a test that runs 3,000 seeded extensions with
+  periodic branch-and-bound pruning, asserting after every extension
+  that the maintained goal cost equals the best cost among the nodes
+  that reached the goal. The reference is computed from the public
+  node list, so no internals are exposed.
+  The test passes with the incremental goal update and on the baseline
+  implementation, and fails when the incremental comparison is
+  deliberately broken to skip improvements from newly reached nodes.
+  Co-authored-by: Maxim Kern <maximkern@college.harvard.edu>
+  ---------
+  Co-authored-by: Maxim Kern <maximkern@college.harvard.edu>
+* perf(autoware_freespace_planning_algorithms): reset only graph nodes touched by the preceding search (`#13230 <https://github.com/autowarefoundation/autoware_universe/issues/13230>`_)
+  * perf(autoware_freespace_planning_algorithms): reset only graph nodes touched by the preceding search
+  Track the node ids that transition out of the default state during a
+  search and, when the map dimensions are unchanged, reset exactly those
+  nodes instead of reassigning the entire graph vector on every plan.
+  A dimension change still takes the full-reassignment path.
+  An 8-plan interaction trace (repeated goals, multi-goal, blocked-map
+  failure and recovery, same-size map replacement, dimension change)
+  produces hash-identical waypoints on two platforms. In a focused
+  benchmark (150x150 map, 8 headings, one touched node) the reset path
+  median drops from 497 ms to 2.9 ms per 1,000 repetitions.
+  Co-authored-by: Maxim Kern <maximkern@college.harvard.edu>
+  * test(autoware_freespace_planning_algorithms): assert repeated plans on one instance are identical
+  Address review feedback: the suite never compared a plan against a
+  reference, so a leak of search state between plans would keep the
+  tests green. Plan goal A, then goal B, then goal A again on a single
+  instance and require the two A results to be identical, waypoint by
+  waypoint. Any node the touched-node reset failed to restore would
+  change the second result.
+  The test passes on this branch and on the baseline implementation,
+  and fails when the touched-node recording in expandNodes is
+  deliberately removed.
+  Co-authored-by: Maxim Kern <maximkern@college.harvard.edu>
+  ---------
+  Co-authored-by: Maxim Kern <maximkern@college.harvard.edu>
+* perf(autoware_freespace_planning_algorithms): skip equal-distance duplicate pushes in the collision-free distance map (`#13241 <https://github.com/autowarefoundation/autoware_universe/issues/13241>`_)
+  Only push a neighbor when its tentative distance strictly improves the
+  stored value. Equal-distance re-pushes reprocess identical entries
+  without changing any output of the Dijkstra pass.
+  Every output equals the independently derived octile metric on an open
+  grid, and full-map output checksums are unchanged. Heap pushes on a
+  101x101 open grid drop from 1,801,700 to 1,045,700 and the isolated
+  phase median improves ~38%.
+  Co-authored-by: Maxim Kern <maximkern@college.harvard.edu>
+  Co-authored-by: Kosuke Takeuchi <kosuke.tnp@gmail.com>
+* chore(pre-commit): update clang-format to v22.1.5 (`#13126 <https://github.com/autowarefoundation/autoware_universe/issues/13126>`_)
+  * chore(pre-commit): update clang-format to v22.1.5
+  * style(pre-commit): autofix
+  ---------
+* Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome, owenbales
+
 0.52.0 (2026-06-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

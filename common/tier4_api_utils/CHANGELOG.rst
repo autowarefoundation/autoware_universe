@@ -2,6 +2,21 @@
 Changelog for package tier4_api_utils
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* feat(tier4_api_utils): let non-rclcpp node types supply the service and client handles (`#13380 <https://github.com/autowarefoundation/autoware_universe/issues/13380>`_)
+  Service and Client fixed their handles to rclcpp::Service and rclcpp::Client, so a node
+  that is not an rclcpp::Node could not use the proxy even though ServiceProxyNodeInterface
+  was already templated on the node type. Both now take the node type as a second parameter
+  and deduce the handle from the create call, and the client's response type follows the
+  handle rather than being spelled out.
+  Callers are unchanged: the node type defaults to rclcpp::Node, and the constructor deduces
+  its argument separately so that `ServiceProxyNodeInterface proxy(this)` on a derived node
+  keeps the default instead of deducing the derived type.
+  Co-authored-by: Koichi Imai <cld-koichi.imai.2@tier4.jp>
+* Contributors: Koichi Imai, Ryohsuke Mitsudome
+
 0.52.0 (2026-06-30)
 -------------------
 

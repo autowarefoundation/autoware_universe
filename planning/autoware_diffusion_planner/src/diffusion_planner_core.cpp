@@ -377,11 +377,14 @@ std::optional<FrameContext> DiffusionPlannerCore::create_frame_context(
   // frame time); otherwise the legacy buffered histories are used directly.
   std::vector<AgentHistory> processed_neighbor_histories;
   if (params_.object_motion_resampling.enable) {
-    agent_data_.update_histories(*effective_objects, params_.object_motion_resampling);
+    agent_data_.update_histories(
+      *effective_objects, params_.object_motion_resampling,
+      params_.remap_unsupported_objects_to_pedestrian);
     processed_neighbor_histories = agent_data_.resampled_transformed_and_trimmed_histories(
       frame_time, map_to_ego_transform, NEIGHBOR_SHAPE[1], params_.object_motion_resampling);
   } else {
-    agent_data_.update_histories(*effective_objects);
+    agent_data_.update_histories(
+      *effective_objects, params_.remap_unsupported_objects_to_pedestrian);
     processed_neighbor_histories =
       agent_data_.transformed_and_trimmed_histories(map_to_ego_transform, NEIGHBOR_SHAPE[1]);
   }
@@ -427,6 +430,7 @@ InputDataMap DiffusionPlannerCore::create_input_data(const FrameContext & frame_
   const auto & center_x = static_cast<float>(pose_center.position.x);
   const auto & center_y = static_cast<float>(pose_center.position.y);
   const auto & center_z = static_cast<float>(pose_center.position.z);
+  const double center_yaw = utils::yaw_from_quaternion(pose_center.orientation);
 
   // random sample trajectories
   int64_t delay_step = 0;
@@ -512,7 +516,7 @@ InputDataMap DiffusionPlannerCore::create_input_data(const FrameContext & frame_
   {
     const std::vector<int64_t> segment_indices =
       lane_segment_context_->select_route_segment_indices(
-        *route_ptr_, center_x, center_y, center_z, NUM_SEGMENTS_IN_ROUTE);
+        *route_ptr_, center_x, center_y, center_z, center_yaw, NUM_SEGMENTS_IN_ROUTE);
     const auto [route_lanes, route_lanes_speed_limit] =
       lane_segment_context_->create_tensor_data_from_indices(
         map_to_ego_transform, traffic_light_id_map_, segment_indices, NUM_SEGMENTS_IN_ROUTE);
@@ -706,9 +710,10 @@ DiffusionPlannerCore::get_first_traffic_light_on_route(const FrameContext & fram
   const double center_x = pose_center.position.x;
   const double center_y = pose_center.position.y;
   const double center_z = pose_center.position.z;
+  const double center_yaw = utils::yaw_from_quaternion(pose_center.orientation);
 
   return lane_segment_context_->get_first_traffic_light_on_route(
-    *route_ptr_, center_x, center_y, center_z, traffic_light_id_map_);
+    *route_ptr_, center_x, center_y, center_z, center_yaw, traffic_light_id_map_);
 }
 
 int64_t DiffusionPlannerCore::count_valid_elements(

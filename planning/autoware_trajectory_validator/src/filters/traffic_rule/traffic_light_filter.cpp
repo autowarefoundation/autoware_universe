@@ -82,16 +82,21 @@ autoware::traffic_light_compliance_checker::Parameters to_checker_params(
   p.crossing_time_limit = params.crossing_time_limit;
   p.treat_amber_light_as_red_light = params.treat_amber_light_as_red_light;
   p.treat_unknown_light_as_red_light = params.treat_unknown_light_as_red_light;
+  p.enable_arrow_aware_amber_passing = params.enable_arrow_aware_amber_passing;
   p.stop_overshoot_margin = params.stop_overshoot_margin;
   p.allow_if_cannot_stop_distance = params.allow_if_cannot_stop_distance;
-  p.stable_duration_threshold_red = params.stable_duration_threshold_red;
-  p.stable_duration_threshold_amber = params.stable_duration_threshold_amber;
-  p.stable_duration_threshold_unknown = params.stable_duration_threshold_unknown;
-  p.amber_rejection_hysteresis_duration = params.amber_rejection_hysteresis_duration;
+  p.min_lookahead_distance = params.min_lookahead_distance;
+  p.status_tracker_parameters.stable_duration_threshold_red = params.stable_duration_threshold_red;
+  p.status_tracker_parameters.stable_duration_threshold_amber =
+    params.stable_duration_threshold_amber;
+  p.status_tracker_parameters.stable_duration_threshold_unknown =
+    params.stable_duration_threshold_unknown;
   p.ego_stopped_velocity_threshold = params.ego_stopped_velocity_threshold;
   p.checked_trajectory_length.deceleration_limit =
     params.checked_trajectory_length.deceleration_limit;
   p.checked_trajectory_length.jerk_limit = params.checked_trajectory_length.jerk_limit;
+  p.amber_rejection.hysteresis_duration = params.amber_rejection.hysteresis_duration;
+  p.amber_rejection.reject_if_stop_detected = params.amber_rejection.reject_if_stop_detected;
   return p;
 }
 }  // namespace

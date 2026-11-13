@@ -21,8 +21,6 @@
 
 #include <boost/geometry/algorithms/envelope.hpp>
 
-#include <lanelet2_core/geometry/Polygon.h>
-
 #include <utility>
 #include <vector>
 

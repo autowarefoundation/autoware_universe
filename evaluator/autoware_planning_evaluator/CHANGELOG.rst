@@ -2,6 +2,55 @@
 Changelog for package autoware_planning_evaluator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* fix(design): align the evaluator node designs with the packages they describe (`#13341 <https://github.com/autowarefoundation/autoware_universe/issues/13341>`_)
+  The fixed-name ports of the evaluation adapters, the online perception
+  evaluator and the metric converter are pinned with global:, which keeps them
+  out of the design graph: link_manager skips any connection whose target is a
+  global input port and the exporter emits no remap. remap_target: keeps the same
+  topic and service names while letting the ports take part in the graph.
+  /diagnostics stays global:.
+  ControlEvaluator names a plugin class in the wrong namespace, publishes
+  tier4_metric_msgs/MetricArray rather than the non-existent
+  autoware_control_msgs/ControlEvaluation, and subscribes to eleven planning
+  factor topics under /planning/planning_factors, two of which were missing.
+  PlanningEvaluator publishes the same metric type.
+  The evaluation adapter nodes are components with no executable of their own.
+* fix(autoware_planning_evaluator): fix out-of-bounds read in calc_lookahead_trajectory_distance (`#13272 <https://github.com/autowarefoundation/autoware_universe/issues/13272>`_)
+* fix(evaluator): declare the dependencies these packages use (`#13218 <https://github.com/autowarefoundation/autoware_universe/issues/13218>`_)
+  Six packages use headers or symbols of packages that they never declare. Add the 26 missing entries: 25 <depend> and 1 <test_depend>.
+  A per-package sweep of the first commit found four more missing entries.
+  autoware_kinematic_evaluator and autoware_localization_evaluator call find_package(ament_cmake_ros REQUIRED) under BUILD_TESTING and declare it nowhere. Both get <test_depend>ament_cmake_ros</test_depend>.
+  autoware_planning_evaluator uses lanelet::ConstLanelet in the library code, and the header arrives only through autoware_lanelet2_utils. It gets <depend>lanelet2_core</depend>. Its test loads two parameter files from the share directory of autoware_test_utils, so it gets <test_depend>autoware_test_utils</test_depend>.
+* refactor(evaluator): move node design files into each package (`#13099 <https://github.com/autowarefoundation/autoware_universe/issues/13099>`_)
+  Co-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>
+* fix(autoware_planning_evaluator): use Newest polling policy for route/vector_map (`#13055 <https://github.com/autowarefoundation/autoware_universe/issues/13055>`_)
+* refactor(autoware_planning_evaluator): migrate to polling:: API (`#13035 <https://github.com/autowarefoundation/autoware_universe/issues/13035>`_)
+* feat(planning_evaluator): apply `agnocast_wrapper::Node` to `planning_evaluator` (`#12966 <https://github.com/autowarefoundation/autoware_universe/issues/12966>`_)
+  * apply agnocast_wrapper::Node
+  * fix
+  * use agnocast_wrapper tf2
+  * refactor(autoware_planning_evaluator): minimize diff from origin/main
+  - Restore the plain '// ROS subscribers' comment
+  - Drop explicit QoS on subscribers that had no explicit QoS in origin/main
+  (keep transient_local QoS only on route/vector_map)
+  - Remove the allow_same_message explanatory comments
+  * refactor(autoware_planning_evaluator): drop explicit QoS on planning_factors sub
+  origin/main created this subscriber with no explicit QoS.
+  * style(pre-commit): autofix
+  * fix: remove arg
+  * fix: cpplint
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+  Co-authored-by: kobayu858 <yutaro.kobayashi.2@tier4.jp>
+* fix(planning_evaluator): guard degenerate curvature samples in trajectory metrics (`#12906 <https://github.com/autowarefoundation/autoware_universe/issues/12906>`_)
+  Skip curvature calculation when the triangle edge-length product is near
+  zero to avoid NaN/Inf values polluting trajectory curvature statistics.
+  Co-authored-by: Cursor <cursoragent@cursor.com>
+* Contributors: Koichi Imai, Mete Fatih Cırıt, Ryohsuke Mitsudome, Taekjin LEE, Yuxuan Liu
+
 0.52.0 (2026-06-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

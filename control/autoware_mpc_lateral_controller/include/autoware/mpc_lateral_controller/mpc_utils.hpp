@@ -15,6 +15,7 @@
 #ifndef AUTOWARE__MPC_LATERAL_CONTROLLER__MPC_UTILS_HPP_
 #define AUTOWARE__MPC_LATERAL_CONTROLLER__MPC_UTILS_HPP_
 
+#include "autoware/mpc_lateral_controller/log_writer.hpp"
 #include "autoware/mpc_lateral_controller/mpc_trajectory.hpp"
 #include "rclcpp/rclcpp.hpp"
 
@@ -149,7 +150,7 @@ void dynamicSmoothingVelocity(
  * segments
  */
 void calcTrajectoryYawFromXY(
-  MPCTrajectory & traj, const bool is_forward_shift,
+  const LogWriter & writer, MPCTrajectory & traj, const bool is_forward_shift,
   const bool use_input_yaw_for_short_segment = false);
 
 /**

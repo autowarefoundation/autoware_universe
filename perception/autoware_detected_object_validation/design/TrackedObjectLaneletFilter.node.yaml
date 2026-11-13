@@ -9,7 +9,7 @@ package:
 
 launch:
   package: autoware_detected_object_validation
-  plugin: autoware::detected_object_validation::TrackedObjectLaneletFilterNode
+  plugin: autoware::detected_object_validation::lanelet_filter::TrackedObjectLaneletFilterNode
   executable: tracked_object_lanelet_filter_node
   node_output: screen
 

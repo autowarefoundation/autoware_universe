@@ -73,6 +73,7 @@ mot::types::DynamicObject makeBaseObject(
   obj.kinematics.orientation_availability = mot::types::OrientationAvailability::AVAILABLE;
   obj.existence_probability = 0.9;
   obj.channel_index = 0;
+  obj.trust_extension = true;
   return obj;
 }
 

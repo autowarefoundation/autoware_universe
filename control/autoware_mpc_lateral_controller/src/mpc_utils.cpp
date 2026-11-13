@@ -214,13 +214,14 @@ bool linearInterpMPCTrajectory(
 }
 
 void calcTrajectoryYawFromXY(
-  MPCTrajectory & traj, const bool is_forward_shift, const bool use_input_yaw_for_short_segment)
+  const LogWriter & writer, MPCTrajectory & traj, const bool is_forward_shift,
+  const bool use_input_yaw_for_short_segment)
 {
   if (traj.yaw.size() < 3) {  // at least 3 points are required to calculate yaw
     return;
   }
   if (traj.yaw.size() != traj.vx.size()) {
-    RCLCPP_ERROR(rclcpp::get_logger("mpc_utils"), "trajectory size has no consistency.");
+    AW_MPC_ERROR(writer, "trajectory size has no consistency.");
     return;
   }
 
@@ -544,12 +545,6 @@ bool calcNearestPoseInterp(
   }
 
   const auto autoware_traj = convertToAutowareTrajectory(traj);
-  if (autoware_traj.points.empty()) {
-    const auto logger = rclcpp::get_logger("mpc_util");
-    auto clock = rclcpp::Clock(RCL_ROS_TIME);
-    RCLCPP_WARN_THROTTLE(logger, clock, 5000, "[calcNearestPoseInterp] input trajectory is empty");
-    return false;
-  }
 
   *nearest_index = autoware::motion_utils::findFirstNearestIndexWithSoftConstraints(
     autoware_traj.points, self_pose, max_dist, max_yaw);

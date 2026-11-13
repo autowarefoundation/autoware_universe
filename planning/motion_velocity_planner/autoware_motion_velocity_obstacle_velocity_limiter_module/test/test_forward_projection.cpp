@@ -99,6 +99,73 @@ TEST(TestForwardProjection, forwardSimulatedSegment)
   check_vector(-5.0 + params.extra_length);
 }
 
+TEST(TestForwardProjection, bicycleProjectionLineStraight)
+{
+  using autoware::motion_velocity_planner::obstacle_velocity_limiter::bicycleProjectionLine;
+  using autoware::motion_velocity_planner::obstacle_velocity_limiter::ProjectionParameters;
+
+  geometry_msgs::msg::Point origin;
+  origin.x = 1.0;
+  origin.y = 2.0;
+  ProjectionParameters params;
+  params.model = ProjectionParameters::BICYCLE;
+  params.wheel_base = 2.79;
+  params.velocity = 5.0;
+  params.duration = 2.0;
+  params.extra_length = 4.0;
+  params.heading = M_PI_2;
+  params.points_per_projection = 5;
+
+  const auto line = bicycleProjectionLine(origin, params, 0.0);
+  ASSERT_EQ(line.size(), 5ul);
+  EXPECT_DOUBLE_EQ(line[0].x(), origin.x);
+  EXPECT_DOUBLE_EQ(line[0].y(), origin.y);
+  for (size_t i = 1; i < line.size(); ++i) {
+    const auto t = static_cast<double>(i) * params.duration / 4.0;
+    EXPECT_NEAR(line[i].x(), origin.x, EPS_APPROX) << "index: " << i;
+    EXPECT_NEAR(line[i].y(), origin.y + params.velocity * t + params.extra_length, EPS_APPROX)
+      << "index: " << i;
+  }
+}
+
+// The projected points must follow the arc of the turning circle of the rear axle center,
+// shifted by the extra length along the heading reached at that point.
+TEST(TestForwardProjection, bicycleProjectionLineArc)
+{
+  using autoware::motion_velocity_planner::obstacle_velocity_limiter::bicycleProjectionLine;
+  using autoware::motion_velocity_planner::obstacle_velocity_limiter::ProjectionParameters;
+
+  geometry_msgs::msg::Point origin;
+  origin.x = 0.0;
+  origin.y = 0.0;
+  ProjectionParameters params;
+  params.model = ProjectionParameters::BICYCLE;
+  params.wheel_base = 2.79;
+  params.velocity = 5.0;
+  params.duration = 3.0;
+  params.extra_length = 4.0;
+  params.heading = 0.0;
+  params.points_per_projection = 7;
+
+  for (const auto steering_angle : {0.2, -0.2}) {
+    const auto line = bicycleProjectionLine(origin, params, steering_angle);
+    ASSERT_EQ(line.size(), 7ul);
+    // turning circle centered at (0, radius), radius is negative when turning right
+    const auto radius = params.wheel_base / std::tan(steering_angle);
+    for (size_t i = 1; i < line.size(); ++i) {
+      const auto t = static_cast<double>(i) * params.duration / 6.0;
+      const auto heading = params.velocity * t / radius;
+      const auto expected_x = radius * std::sin(heading) + params.extra_length * std::cos(heading);
+      const auto expected_y =
+        radius * (1.0 - std::cos(heading)) + params.extra_length * std::sin(heading);
+      EXPECT_NEAR(line[i].x(), expected_x, EPS_APPROX)
+        << "steering: " << steering_angle << ", index: " << i;
+      EXPECT_NEAR(line[i].y(), expected_y, EPS_APPROX)
+        << "steering: " << steering_angle << ", index: " << i;
+    }
+  }
+}
+
 const auto point_in_polygon = [](const auto x, const auto y, const auto & polygon) {
   return std::find_if(polygon.outer().begin(), polygon.outer().end(), [=](const auto & pt) {
            return pt.x() == x && pt.y() == y;

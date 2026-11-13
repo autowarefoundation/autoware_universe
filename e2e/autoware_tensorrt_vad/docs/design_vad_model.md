@@ -125,7 +125,7 @@ flowchart TD
 #### Network Architecture
 
 - Each ONNX file corresponds to one `Net` class
-- `Net` class uses [`autoware_tensorrt_common`](../../../perception/autoware_tensorrt_common/README.md) to build and execute TensorRT engines
+- `Net` class uses [`autoware_tensorrt_common`](https://github.com/autowarefoundation/autoware_cuda/blob/1.0.0/autoware_tensorrt_common/README.md) to build and execute TensorRT engines
 - Three network types:
   1. **Backbone**: Processes multi-camera images and extracts features
   2. **Head_no_prev**: First-frame head without previous BEV features
@@ -179,7 +179,7 @@ flowchart TD
     click NetEnqueue "https://github.com/autowarefoundation/autoware_universe/tree/main/e2e/autoware_tensorrt_vad/src/networks/net.hpp" "Net class implementation"
     click NetSetInputTensor "https://github.com/autowarefoundation/autoware_universe/tree/main/e2e/autoware_tensorrt_vad/src/networks/net.hpp" "Net class implementation"
     click NetConstructor "https://github.com/autowarefoundation/autoware_universe/tree/main/e2e/autoware_tensorrt_vad/src/networks/net.hpp" "Net class implementation"
-    click EnqueueV3 "https://github.com/autowarefoundation/autoware_universe/blob/main/perception/autoware_tensorrt_common/src/tensorrt_common.cpp" "enqueueV3 implementation"
+    click EnqueueV3 "https://github.com/autowarefoundation/autoware_cuda/blob/1.0.0/autoware_tensorrt_common/src/tensorrt_common.cpp" "enqueueV3 implementation"
     click VadModelInit "https://github.com/autowarefoundation/autoware_universe/tree/main/e2e/autoware_tensorrt_vad/src/vad_model.hpp" "VadModel implementation"
     click VadModelEnqueue "https://github.com/autowarefoundation/autoware_universe/tree/main/e2e/autoware_tensorrt_vad/src/vad_model.hpp" "VadModel implementation"
     click InitTensorRT "https://github.com/autowarefoundation/autoware_universe/tree/main/e2e/autoware_tensorrt_vad/src/networks/net.hpp" "Net class implementation"
@@ -194,8 +194,8 @@ flowchart TD
   - **setup_network_io**: Implemented differently in [`Backbone`](../src/networks/backbone.hpp) and [`Head`](../src/networks/head.hpp)
     - Defines input/output tensor names, shapes, and data types
   - **build_engine**: Creates TensorRT engine
-    - Instantiates [`TrtCommon`](../../../perception/autoware_tensorrt_common/include/autoware/tensorrt_common/tensorrt_common.hpp) for engine management
-    - Instantiates [`NetworkIO`](../../../perception/autoware_tensorrt_common/include/autoware/tensorrt_common/utils.hpp) for I/O configuration
+    - Instantiates [`TrtCommon`](https://github.com/autowarefoundation/autoware_cuda/blob/1.0.0/autoware_tensorrt_common/include/autoware/tensorrt_common/tensorrt_common.hpp) for engine management
+    - Instantiates [`NetworkIO`](https://github.com/autowarefoundation/autoware_cuda/blob/1.0.0/autoware_tensorrt_common/include/autoware/tensorrt_common/utils.hpp) for I/O configuration
     - Builds engine from ONNX file or loads from cache
 
 - **set_input_tensor**: Called from `VadModel::init_engines` and `VadModel::load_head`
@@ -204,7 +204,7 @@ flowchart TD
   - Sets up memory sharing for external inputs (avoids redundant copies)
 
 - **enqueue**: Called from `VadModel::enqueue`
-  - Executes TensorRT inference via [`TrtCommon::enqueueV3`](../../../perception/autoware_tensorrt_common/include/autoware/tensorrt_common/tensorrt_common.hpp)
+  - Executes TensorRT inference via [`TrtCommon::enqueueV3`](https://github.com/autowarefoundation/autoware_cuda/blob/1.0.0/autoware_tensorrt_common/include/autoware/tensorrt_common/tensorrt_common.hpp)
   - Runs asynchronously on CUDA stream
   - Note: Uses `enqueueV3` for current TensorRT version; update if TensorRT API changes
 

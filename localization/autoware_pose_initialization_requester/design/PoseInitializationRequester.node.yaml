@@ -1,0 +1,40 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: PoseInitializationRequester.node
+
+package:
+  name: autoware_pose_initialization_requester
+  provider: autoware
+
+launch:
+  plugin: autoware::pose_initialization_requester::PoseInitializationRequester
+  executable: autoware_pose_initialization_requester_node
+  node_output: screen
+
+# interfaces
+# For GNSS: watches the localization initialization state and, while uninitialized,
+# calls the localization Initialize service. interfaces come via component-interface specs.
+subscribers:
+  - name: initialization_state
+    message_type: autoware_adapi_v1_msgs/msg/LocalizationInitializationState
+    remap_target: /localization/initialization_state
+
+publishers: []
+
+clients:
+  - name: initialize
+    message_type: autoware_localization_msgs/srv/InitializeLocalization
+    remap_target: /localization/initialize
+
+# parameters
+param_files: []
+
+param_values: []
+
+# processes
+processes:
+  - name: initialize
+    trigger_conditions:
+      - on_input: initialization_state
+    outcomes: []

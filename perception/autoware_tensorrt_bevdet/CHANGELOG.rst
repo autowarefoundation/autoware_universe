@@ -2,6 +2,16 @@
 Changelog for package autoware_tensorrt_bevdet
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* refactor(autoware_universe): use autoware_ament_auto_package in perception DNN packages (`#12277 <https://github.com/autowarefoundation/autoware_universe/issues/12277>`_)
+  Co-authored-by: github-actions <github-actions@github.com>
+  Co-authored-by: Taekjin LEE <taekjin.lee@tier4.jp>
+* refactor(perception): move node design files into each package (`#13104 <https://github.com/autowarefoundation/autoware_universe/issues/13104>`_)
+  Co-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>
+* Contributors: Ryohsuke Mitsudome, Taekjin LEE, Vishal Chauhan
+
 0.52.0 (2026-06-30)
 -------------------
 

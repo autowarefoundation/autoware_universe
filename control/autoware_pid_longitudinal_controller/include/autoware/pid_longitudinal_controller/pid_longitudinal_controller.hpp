@@ -20,7 +20,7 @@
 #include "autoware/pid_longitudinal_controller/lowpass_filter.hpp"
 #include "autoware/pid_longitudinal_controller/pid.hpp"
 #include "autoware/pid_longitudinal_controller/smooth_stop.hpp"
-#include "autoware/trajectory_follower_base/longitudinal_controller_base.hpp"
+#include "autoware/trajectory_follower_base/longitudinal_controller_interface.hpp"
 #include "rclcpp/duration.hpp"
 #include "rclcpp/time.hpp"
 
@@ -186,7 +186,7 @@ struct PidLongitudinalControllerResult
 /// \class PidLongitudinalController
 /// \brief generates longitudinal control commands (velocity/acceleration) from a trajectory and
 /// the current vehicle state; no dependency on rclcpp::Node/rclcpp::Logger
-class PidLongitudinalController
+class PidLongitudinalController : public trajectory_follower::LongitudinalControllerInterface
 {
 public:
   explicit PidLongitudinalController(const PidLongitudinalControllerConfig & config);
@@ -200,9 +200,18 @@ public:
   /// mode
   /// \param [in] current_time time captured once per control cycle by the caller
   /// \param [in] is_steer_converged whether the lateral controller has converged its steering
-  PidLongitudinalControllerResult run(
+  PidLongitudinalControllerResult runDetailed(
     const trajectory_follower::InputData & input_data, const rclcpp::Time & current_time,
     const bool is_steer_converged);
+
+  /// \brief compute the control command for this cycle; the debug data is dropped
+  /// \param [in] input_data input data containing current odometry, acceleration, and operation
+  /// mode
+  /// \param [in] stamp time captured once per control cycle by the caller
+  /// \param [in] lateral_sync_data result of the lateral controller in the previous cycle
+  tl::expected<trajectory_follower::LongitudinalOutput, std::string> run(
+    const trajectory_follower::InputData & input_data, const rclcpp::Time & stamp,
+    const trajectory_follower::LateralSyncData & lateral_sync_data) override;
 
 private:
   struct Motion

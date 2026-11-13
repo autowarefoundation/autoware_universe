@@ -1,0 +1,79 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MRM Steering Hold Stop Operator",
+  "type": "object",
+  "definitions": {
+    "deceleration_targets": {
+      "type": "object",
+      "properties": {
+        "target_acceleration": {
+          "type": "number",
+          "description": "Target acceleration of the constant-jerk deceleration [m/s^2]",
+          "maximum": 0.0
+        },
+        "target_jerk": {
+          "type": "number",
+          "description": "Target jerk of the constant-jerk deceleration [m/s^3]",
+          "maximum": 0.0
+        }
+      },
+      "required": ["target_acceleration", "target_jerk"],
+      "additionalProperties": false
+    },
+    "mrm_steering_hold_stop_operator": {
+      "type": "object",
+      "properties": {
+        "update_rate": {
+          "type": "number",
+          "description": "Output period of the control command [Hz]",
+          "default": 33.3,
+          "exclusiveMinimum": 0.0
+        },
+        "input_freshness_timeout": {
+          "type": "number",
+          "description": "Allowed age of steering_status / kinematic_state / acceleration [s]",
+          "default": 0.5,
+          "exclusiveMinimum": 0.0
+        },
+        "low_speed_threshold": {
+          "type": "number",
+          "description": "Below this speed the acceleration measurement is not used and the deceleration starts directly at target_acceleration [m/s]",
+          "default": 1.0,
+          "minimum": 0.0
+        },
+        "profiles": {
+          "type": "object",
+          "description": "Deceleration constraints per InLaneStopTrigger profile",
+          "properties": {
+            "moderate": {
+              "$ref": "#/definitions/deceleration_targets",
+              "description": "Used for InLaneStopTrigger::PROFILE_MODERATE and as the fallback for an unknown profile"
+            },
+            "emergency": {
+              "$ref": "#/definitions/deceleration_targets",
+              "description": "Used for InLaneStopTrigger::PROFILE_EMERGENCY"
+            }
+          },
+          "required": ["moderate", "emergency"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["update_rate", "input_freshness_timeout", "low_speed_threshold", "profiles"],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/mrm_steering_hold_stop_operator"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}

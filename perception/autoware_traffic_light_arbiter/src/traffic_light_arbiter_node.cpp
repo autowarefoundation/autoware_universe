@@ -30,20 +30,16 @@ TrafficLightArbiterNode::TrafficLightArbiterNode(const rclcpp::NodeOptions & opt
   const auto perception_time_tolerance =
     this->declare_parameter<double>("perception_time_tolerance");
 
-  // Parse source priority parameter
-  SourcePriority source_priority;
-  const std::string priority_str = this->declare_parameter<std::string>("source_priority");
-  if (priority_str == "external") {
-    source_priority = SourcePriority::EXTERNAL;
-  } else if (priority_str == "perception") {
-    source_priority = SourcePriority::PERCEPTION;
-  } else if (priority_str == "confidence") {
-    source_priority = SourcePriority::CONFIDENCE;
-  } else {
+  // Parse source priority parameter. Any value other than "external"/"perception"/"confidence" is
+  // normalized to "confidence" here so TrafficLightArbiter never has to guard against a typo.
+  std::string source_priority = this->declare_parameter<std::string>("source_priority");
+  if (
+    source_priority != "external" && source_priority != "perception" &&
+    source_priority != "confidence") {
     RCLCPP_WARN(
       get_logger(), "Unknown source_priority '%s', defaulting to 'confidence'",
-      priority_str.c_str());
-    source_priority = SourcePriority::CONFIDENCE;
+      source_priority.c_str());
+    source_priority = "confidence";
   }
 
   const bool enable_signal_matching = this->declare_parameter<bool>("enable_signal_matching");

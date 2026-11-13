@@ -1,0 +1,36 @@
+autoware_system_design_format: 0.4.0
+
+# node information
+name: AdapiHeartbeat.node
+
+description: Publishes the API heartbeat with a sequence number at 10 Hz.
+
+package:
+  name: autoware_default_adapi_universe
+  provider: autoware
+
+launch:
+  plugin: autoware::default_adapi::HeartbeatNode
+  node_output: screen
+
+# interfaces
+subscribers: []
+
+publishers:
+  - name: heartbeat
+    message_type: autoware_adapi_v1_msgs/msg/Heartbeat
+    description: Heartbeat with a wrapping sequence number.
+    remap_target: /api/system/heartbeat
+
+# parameters
+param_files: []
+
+param_values: []
+
+# processes
+processes:
+  - name: publish_heartbeat
+    description: Periodically publishes the stamped heartbeat.
+    trigger_conditions: []
+    outcomes:
+      - to_output: heartbeat

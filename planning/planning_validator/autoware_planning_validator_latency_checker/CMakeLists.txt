@@ -17,4 +17,6 @@ target_link_libraries(${PROJECT_NAME}
   ${autoware_planning_validator_LIBRARIES}
 )
 
+autoware_agnocast_wrapper_setup(${PROJECT_NAME})
+
 ament_auto_package(INSTALL_TO_SHARE config)

@@ -6,13 +6,18 @@
     "traffic_light_roi_visualizer": {
       "type": "object",
       "properties": {
+        "use_high_accuracy_detection": {
+          "type": "boolean",
+          "description": "whether to also subscribe to the rough detection ROIs and draw them together with the fine detection ROIs; when false only the fine detection ROIs are drawn",
+          "default": "true"
+        },
         "use_image_transport": {
           "type": "boolean",
           "description": "whether to apply image transport to compress the output debugging image in the traffic light fine detection",
           "default": "true"
         }
       },
-      "required": ["use_image_transport"]
+      "required": ["use_high_accuracy_detection", "use_image_transport"]
     }
   },
   "properties": {

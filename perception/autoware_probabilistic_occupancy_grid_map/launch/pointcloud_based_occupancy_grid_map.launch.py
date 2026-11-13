@@ -14,17 +14,36 @@
 
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
+from launch.actions import GroupAction
+from launch.actions import IncludeLaunchDescription
 from launch.actions import OpaqueFunction
-from launch.actions import SetLaunchConfiguration
+from launch.actions import SetEnvironmentVariable
 from launch.conditions import IfCondition
 from launch.conditions import UnlessCondition
+from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch.substitutions import PathJoinSubstitution
 from launch_ros.actions import ComposableNodeContainer
 from launch_ros.actions import LoadComposableNodes
+from launch_ros.actions import Node
 from launch_ros.descriptions import ComposableNode
 from launch_ros.substitutions import FindPackageShare
 import yaml
+
+
+def get_agnocast_env():
+    return IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            PathJoinSubstitution(
+                [
+                    FindPackageShare("autoware_agnocast_wrapper"),
+                    "launch",
+                    "agnocast_env.launch.py",
+                ]
+            )
+        ),
+        launch_arguments={"use_multithread": LaunchConfiguration("use_multithread")}.items(),
+    )
 
 
 def get_downsample_filter_node(setting: dict) -> ComposableNode:
@@ -94,43 +113,66 @@ def launch_setup(context, *args, **kwargs):
         downsample_preprocess_nodes = get_downsample_preprocess_nodes(voxel_grid_size)
         composable_nodes.extend(downsample_preprocess_nodes)
 
-    composable_nodes.append(
-        ComposableNode(
-            package="autoware_probabilistic_occupancy_grid_map",
-            plugin="autoware::occupancy_grid_map::PointcloudBasedOccupancyGridMapNode",
-            name="occupancy_grid_map_node",
-            remappings=[
-                (
-                    "~/input/obstacle_pointcloud",
-                    (
-                        LaunchConfiguration("input/obstacle_pointcloud")
-                        if not downsample_input_pointcloud
-                        else "obstacle/downsample/pointcloud"
-                    ),
-                ),
-                (
-                    "~/input/raw_pointcloud",
-                    (
-                        LaunchConfiguration("input/raw_pointcloud")
-                        if not downsample_input_pointcloud
-                        else "raw/downsample/pointcloud"
-                    ),
-                ),
-                ("~/output/occupancy_grid_map", LaunchConfiguration("output")),
-            ],
-            parameters=[
-                pointcloud_based_occupancy_grid_map_node_params,
-                occupancy_grid_map_updater_params,
-                {"updater_type": LaunchConfiguration("updater_type")},
-            ],
-            extra_arguments=[{"use_intra_process_comms": LaunchConfiguration("use_intra_process")}],
+    occupancy_grid_map_remappings = [
+        (
+            "~/input/obstacle_pointcloud",
+            (
+                LaunchConfiguration("input/obstacle_pointcloud")
+                if not downsample_input_pointcloud
+                else "obstacle/downsample/pointcloud"
+            ),
+        ),
+        (
+            "~/input/raw_pointcloud",
+            (
+                LaunchConfiguration("input/raw_pointcloud")
+                if not downsample_input_pointcloud
+                else "raw/downsample/pointcloud"
+            ),
+        ),
+        ("~/output/occupancy_grid_map", LaunchConfiguration("output")),
+    ]
+    occupancy_grid_map_parameters = [
+        pointcloud_based_occupancy_grid_map_node_params,
+        occupancy_grid_map_updater_params,
+        {"updater_type": LaunchConfiguration("updater_type")},
+    ]
+
+    standalone_nodes = []
+    if context.perform_substitution(LaunchConfiguration("use_agnocast")) == "1":
+        # The node runs as a standalone process when Agnocast is enabled.
+        standalone_nodes.append(
+            Node(
+                package="autoware_probabilistic_occupancy_grid_map",
+                executable="pointcloud_based_occupancy_grid_map_node",
+                name="occupancy_grid_map_node",
+                remappings=occupancy_grid_map_remappings,
+                parameters=occupancy_grid_map_parameters,
+                additional_env={"LD_PRELOAD": LaunchConfiguration("ld_preload_value")},
+                output="screen",
+            )
         )
-    )
+    else:
+        composable_nodes.append(
+            ComposableNode(
+                package="autoware_probabilistic_occupancy_grid_map",
+                plugin="autoware::occupancy_grid_map::PointcloudBasedOccupancyGridMapNode",
+                name="occupancy_grid_map_node",
+                remappings=occupancy_grid_map_remappings,
+                parameters=occupancy_grid_map_parameters,
+                extra_arguments=[
+                    {"use_intra_process_comms": LaunchConfiguration("use_intra_process")}
+                ],
+            )
+        )
+
+    if not composable_nodes:
+        return standalone_nodes
 
     occupancy_grid_map_container = ComposableNodeContainer(
         name=LaunchConfiguration("individual_container_name"),
         namespace="",
-        package="rclcpp_components",
+        package=LaunchConfiguration("container_package"),
         executable=LaunchConfiguration("container_executable"),
         composable_node_descriptions=composable_nodes,
         condition=UnlessCondition(LaunchConfiguration("use_pointcloud_container")),
@@ -143,24 +185,24 @@ def launch_setup(context, *args, **kwargs):
         condition=IfCondition(LaunchConfiguration("use_pointcloud_container")),
     )
 
-    return [occupancy_grid_map_container, load_composable_nodes]
+    return standalone_nodes + [
+        GroupAction(
+            [
+                SetEnvironmentVariable(
+                    name="LD_PRELOAD",
+                    value=LaunchConfiguration("ld_preload_value"),
+                    condition=IfCondition(LaunchConfiguration("use_agnocast")),
+                ),
+                occupancy_grid_map_container,
+            ]
+        ),
+        load_composable_nodes,
+    ]
 
 
 def generate_launch_description():
     def add_launch_arg(name: str, default_value=None):
         return DeclareLaunchArgument(name, default_value=default_value)
-
-    set_container_executable = SetLaunchConfiguration(
-        "container_executable",
-        "component_container",
-        condition=UnlessCondition(LaunchConfiguration("use_multithread")),
-    )
-
-    set_container_mt_executable = SetLaunchConfiguration(
-        "container_executable",
-        "component_container_mt",
-        condition=IfCondition(LaunchConfiguration("use_multithread")),
-    )
 
     return LaunchDescription(
         [
@@ -193,8 +235,7 @@ def generate_launch_description():
                     ]
                 ),
             ),
-            set_container_executable,
-            set_container_mt_executable,
+            get_agnocast_env(),
         ]
         + [OpaqueFunction(function=launch_setup)]
     )

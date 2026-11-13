@@ -37,6 +37,10 @@
     no_crossing_intention_duration: 1.0 # [s] Minimum duration that lack of crossing intention must continuously persist to be judged as false
 
     # parameters for lc prediction
+    lane_change_path_suppression:
+      enable: true
+      keep_when_lane_ends: true
+      lane_end_rescue_time_horizon: 5.0
     lane_change_detection:
       method: "lat_diff_distance" # choose from "lat_diff_distance" or "time_to_change_lane"
       time_to_change_lane:

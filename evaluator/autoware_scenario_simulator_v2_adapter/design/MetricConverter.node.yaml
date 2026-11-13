@@ -19,20 +19,20 @@ launch:
 subscribers:
   - name: planning_evaluator_metrics
     message_type: tier4_metric_msgs/msg/MetricArray
-    global: /planning/planning_evaluator/metrics
+    remap_target: /planning/planning_evaluator/metrics
   - name: control_evaluator_metrics
     message_type: tier4_metric_msgs/msg/MetricArray
-    global: /control/control_evaluator/metrics
+    remap_target: /control/control_evaluator/metrics
   - name: processing_time_checker_metrics
     message_type: tier4_metric_msgs/msg/MetricArray
-    global: /system/processing_time_checker/metrics
+    remap_target: /system/processing_time_checker/metrics
   - name: diagnostics
     message_type: diagnostic_msgs/msg/DiagnosticArray
     global: /diagnostics
 publishers:
   - name: overall_diagnostics
     message_type: tier4_simulation_msgs/msg/UserDefinedValue
-    global: /diagnostics/scenario_simulator_v2_adapter/overall_diagnostics
+    remap_target: /diagnostics/scenario_simulator_v2_adapter/overall_diagnostics
 # parameters
 param_files:
   - name: scenario_simulator_v2_adapter_param

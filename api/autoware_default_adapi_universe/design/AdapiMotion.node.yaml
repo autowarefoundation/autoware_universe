@@ -1,0 +1,70 @@
+autoware_system_design_format: 0.4.0
+
+# node information
+name: AdapiMotion.node
+
+description: Publishes the motion state derived from the vehicle stop check and the vehicle command gate pause states, and controls the pause to hold the vehicle until a start is accepted.
+
+package:
+  name: autoware_default_adapi_universe
+  provider: autoware
+
+launch:
+  plugin: autoware::default_adapi::MotionNode
+  node_output: screen
+
+# interfaces
+subscribers:
+  - name: kinematic_state
+    message_type: nav_msgs/msg/Odometry
+    description: Ego odometry for the vehicle stop check.
+    remap_target: /localization/kinematic_state
+  - name: is_paused
+    message_type: tier4_control_msgs/msg/IsPaused
+    description: Pause state of the vehicle command gate.
+    remap_target: /control/vehicle_cmd_gate/is_paused
+  - name: is_start_requested
+    message_type: tier4_control_msgs/msg/IsStartRequested
+    description: Start request state of the vehicle command gate.
+    remap_target: /control/vehicle_cmd_gate/is_start_requested
+
+publishers:
+  - name: state
+    message_type: autoware_adapi_v1_msgs/msg/MotionState
+    description: Motion state for the API.
+    remap_target: /api/motion/state
+
+servers:
+  - name: accept_start
+    message_type: autoware_adapi_v1_msgs/srv/AcceptStart
+    description: Accepts the vehicle start in the starting state.
+    remap_target: /api/motion/accept_start
+
+clients:
+  - name: set_pause
+    message_type: tier4_control_msgs/srv/SetPause
+    description: Sets the pause of the vehicle command gate.
+    remap_target: /control/vehicle_cmd_gate/set_pause
+
+# parameters
+param_files: []
+
+param_values:
+  - name: require_accept_start
+    type: bool
+    default: false
+    description: If true, the accept start service is required to leave the starting state.
+  - name: stop_check_duration
+    type: double
+    default: 1.0
+    description: The duration used for the stop check [s].
+
+# processes
+processes:
+  - name: update_state
+    description: Updates the motion state from the pause and stop check states, publishes it on change, and requests the gate pause on the pausing and resuming transitions.
+    trigger_conditions:
+      - on_input: is_paused
+      - on_input: is_start_requested
+    outcomes:
+      - to_output: state

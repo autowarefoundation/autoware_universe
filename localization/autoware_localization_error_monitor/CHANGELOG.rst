@@ -2,6 +2,19 @@
 Changelog for package autoware_localization_error_monitor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* refactor(localization): move node design files into each package (`#13101 <https://github.com/autowarefoundation/autoware_universe/issues/13101>`_)
+  Co-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>
+* feat(localization_error_monitor): apply agnocast_wrapper::Node to localization_error_monitor (`#12768 <https://github.com/autowarefoundation/autoware_universe/issues/12768>`_)
+  * apply agnocast_wrapper::Node
+  * style(pre-commit): autofix
+  * fix loggerlevelconfigure
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Koichi Imai, Ryohsuke Mitsudome, Taekjin LEE
+
 0.52.0 (2026-06-30)
 -------------------
 

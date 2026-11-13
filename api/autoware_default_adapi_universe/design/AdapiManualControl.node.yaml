@@ -1,0 +1,119 @@
+autoware_system_design_format: 0.4.0
+
+# node information
+name: AdapiManualControl.node
+
+description: Bridges manual control commands from the API to the external command topics for the selected operation mode, and monitors the operator heartbeat.
+
+package:
+  name: autoware_default_adapi_universe
+  provider: autoware
+
+launch:
+  plugin: autoware::default_adapi::ManualControlNode
+  node_output: screen
+
+# interfaces
+subscribers:
+  - name: operation_mode_state
+    message_type: autoware_adapi_v1_msgs/msg/OperationModeState
+    description: Operation mode state, blocks mode selection during operation.
+    remap_target: /api/operation_mode/state
+  - name: operator_heartbeat
+    message_type: autoware_adapi_v1_msgs/msg/ManualOperatorHeartbeat
+    description: Operator heartbeat from the API; the topic derives from the mode parameter.
+  - name: pedals
+    message_type: autoware_adapi_v1_msgs/msg/PedalsCommand
+    description: Pedals command from the API; the topic derives from the mode parameter.
+  - name: steering
+    message_type: autoware_adapi_v1_msgs/msg/SteeringCommand
+    description: Steering command from the API; the topic derives from the mode parameter.
+  - name: gear
+    message_type: autoware_adapi_v1_msgs/msg/GearCommand
+    description: Gear command from the API; the topic derives from the mode parameter.
+  - name: turn_indicators
+    message_type: autoware_adapi_v1_msgs/msg/TurnIndicatorsCommand
+    description: Turn indicators command from the API; the topic derives from the mode parameter.
+  - name: hazard_lights
+    message_type: autoware_adapi_v1_msgs/msg/HazardLightsCommand
+    description: Hazard lights command from the API; the topic derives from the mode parameter.
+
+publishers:
+  - name: control_mode_status
+    message_type: autoware_adapi_v1_msgs/msg/ManualControlModeStatus
+    description: Current manual control mode; the topic derives from the mode parameter.
+  - name: heartbeat
+    message_type: autoware_adapi_v1_msgs/msg/ManualOperatorHeartbeat
+    description: Operator heartbeat relayed to the external interface; the topic derives from the mode parameter.
+  - name: pedals_cmd
+    message_type: autoware_adapi_v1_msgs/msg/PedalsCommand
+    description: Pedals command relayed to the external interface; the topic derives from the mode parameter.
+  - name: steering_cmd
+    message_type: autoware_adapi_v1_msgs/msg/SteeringCommand
+    description: Steering command relayed to the external interface; the topic derives from the mode parameter.
+  - name: gear_cmd
+    message_type: autoware_vehicle_msgs/msg/GearCommand
+    description: Gear command converted to the vehicle message; the topic derives from the mode parameter.
+  - name: turn_indicators_cmd
+    message_type: autoware_vehicle_msgs/msg/TurnIndicatorsCommand
+    description: Turn indicators command converted to the vehicle message; the topic derives from the mode parameter.
+  - name: hazard_lights_cmd
+    message_type: autoware_vehicle_msgs/msg/HazardLightsCommand
+    description: Hazard lights command converted to the vehicle message; the topic derives from the mode parameter.
+
+servers:
+  - name: control_mode_list
+    message_type: autoware_adapi_v1_msgs/srv/ListManualControlMode
+    description: Lists the supported manual control modes; the service name derives from the mode parameter.
+  - name: control_mode_select
+    message_type: autoware_adapi_v1_msgs/srv/SelectManualControlMode
+    description: Selects the manual control mode and enables its command interfaces; the service name derives from the mode parameter.
+
+# parameters
+param_files: []
+
+param_values:
+  - name: mode
+    type: string
+    default: local
+    description: Target operation mode of the manual control, local or remote.
+  - name: diag_timeout_warn_duration
+    type: double
+    default: 1.0
+    description: Operator heartbeat timeout for the diagnostics warning [s].
+  - name: diag_timeout_error_duration
+    type: double
+    default: 2.0
+    description: Operator heartbeat timeout for the diagnostics error [s].
+  - name: diagnostic_updater.period
+    type: double
+    default: 1.0
+    description: Diagnostic updater publish period [s].
+  - name: diagnostic_updater.use_fqn
+    type: bool
+    default: true
+    description: Uses the fully-qualified node name for diagnostic hardware ID.
+
+# processes
+processes:
+  - name: select_control_mode
+    description: Handles a mode selection request; enables the command interfaces of the selected mode and publishes the mode status.
+    trigger_conditions: []
+    outcomes:
+      - to_output: control_mode_status
+  - name: relay_commands
+    description: Relays the operator heartbeat and manual commands of the enabled mode to the external interface, converting the gear and lights commands to vehicle messages.
+    trigger_conditions:
+      - on_input: operator_heartbeat
+      - on_input: pedals
+      - on_input: steering
+      - on_input: gear
+      - on_input: turn_indicators
+      - on_input: hazard_lights
+    outcomes:
+      - to_output: heartbeat
+      - to_output: pedals_cmd
+      - to_output: steering_cmd
+      - to_output: gear_cmd
+      - to_output: turn_indicators_cmd
+      - to_output: hazard_lights_cmd

@@ -31,15 +31,10 @@
 namespace autoware::trajectory_ranker::metrics
 {
 
-void TrajectoryConsistency::setup_parameters()
+void TrajectoryConsistency::setup_parameters(
+  const trajectory_ranker_params::Params::Evaluation & params)
 {
-  if (node()) {
-    try {
-      time_horizon_ = node()->declare_parameter<double>("trajectory_consistency.time_horizon", 2.0);
-    } catch (const rclcpp::exceptions::ParameterAlreadyDeclaredException &) {
-      time_horizon_ = node()->get_parameter("trajectory_consistency.time_horizon").as_double();
-    }
-  }
+  params_ = params.trajectory_consistency;
 }
 
 namespace
@@ -136,8 +131,7 @@ double calculate_variance(const std::vector<double> & coords)
 }  // namespace
 
 void TrajectoryConsistency::evaluate(
-  const std::shared_ptr<autoware::trajectory_ranker::DataInterface> & result,
-  const float max_value) const
+  const std::shared_ptr<autoware::trajectory_ranker::DataInterface> & result) const
 {
   if (!result->points() || result->points()->size() < 2) {
     std::vector<float> zero_metric(result->points() ? result->points()->size() : 1, 0.0f);
@@ -146,7 +140,7 @@ void TrajectoryConsistency::evaluate(
   }
 
   constexpr float epsilon = 1.0e-6f;
-  if (max_value < epsilon) {
+  if (params_.maximum < epsilon) {
     std::vector<float> zero_metric(result->points()->size(), 0.0f);
     result->set_metric(index(), zero_metric);
     return;
@@ -156,7 +150,7 @@ void TrajectoryConsistency::evaluate(
   const auto & ego_pose = result->points()->front().pose;
 
   // Time offset to extract point for consistency comparison
-  const double time_offset_from_now = time_horizon_;
+  const double time_offset_from_now = params_.time_horizon;
   // We want to compare where each trajectory predicted the vehicle would be
   // at a common future time. For each historical trajectory, we find the point that was predicted
   // for time T when that trajectory was generated. This allows us to measure consistency between
@@ -218,7 +212,8 @@ void TrajectoryConsistency::evaluate(
 
   // Normalize variance to [0, 1] range using max_value as reference
   // Convert variance (m^2) to metric score
-  const float normalized_variance = std::min(1.0f, static_cast<float>(total_variance) / max_value);
+  const float normalized_variance =
+    std::min(1.0f, static_cast<float>(total_variance / params_.maximum));
 
   // Apply this metric value to all points in the trajectory
   // (consistency is a trajectory-level metric, not point-wise)

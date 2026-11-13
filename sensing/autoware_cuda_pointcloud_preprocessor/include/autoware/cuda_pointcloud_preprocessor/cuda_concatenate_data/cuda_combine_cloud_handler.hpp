@@ -26,7 +26,7 @@ namespace autoware::pointcloud_preprocessor
 {
 
 template <>
-class CombineCloudHandler<CudaPointCloud2Traits> : public CombineCloudHandlerBase
+class CombineCloudHandler<cuda_blackboard::CudaPointCloud2> : public CombineCloudHandlerBase
 {
 protected:
   struct CudaConcatStruct
@@ -43,17 +43,20 @@ protected:
 
 public:
   CombineCloudHandler(
-    rclcpp::Node & node, const std::vector<std::string> & input_topics, std::string output_frame,
-    bool is_motion_compensated, bool publish_synchronized_pointcloud,
-    bool keep_input_frame_in_synchronized_pointcloud);
+    const std::vector<std::string> & input_topics, std::string output_frame,
+    PointFormat output_point_format, bool is_motion_compensated,
+    bool publish_synchronized_pointcloud, bool keep_input_frame_in_synchronized_pointcloud,
+    MatchingStrategyType matching_strategy);
 
-  ConcatenatedCloudResult<CudaPointCloud2Traits> combine_pointclouds(
+  ConcatenatedCloudResult<cuda_blackboard::CudaPointCloud2> combine_pointclouds(
     std::unordered_map<
       std::string, typename CudaPointCloud2Traits::PointCloudMessage::ConstSharedPtr> &
       topic_to_cloud_map,
     const std::shared_ptr<CollectorInfoBase> & collector_info);
 
   void allocate_pointclouds() override;
+
+  bool is_input_layout_supported(const sensor_msgs::msg::PointCloud2 & cloud) const override;
 
   /// Returns the per-topic CUDA stream used while consuming that topic's cloud.
   /// Enables stream-ordered producer/consumer lifetime handling.

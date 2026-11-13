@@ -16,7 +16,7 @@
 // source image encoding and requested encoding. Rows marked "KNOWN DEFECT" hand the consumer
 // something other than what the camera produced.
 
-#include "../src/image_transport_decompressor.hpp"
+#include "autoware/image_transport_decompressor/image_transport_decompressor.hpp"
 
 #include <opencv2/core.hpp>
 #include <opencv2/imgcodecs.hpp>

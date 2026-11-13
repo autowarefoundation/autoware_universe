@@ -2,6 +2,22 @@
 Changelog for package autoware_detected_object_feature_remover
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* fix(perception): complete node design files for label-based euclidean cluster and PTv3 (`#13253 <https://github.com/autowarefoundation/autoware_universe/issues/13253>`_)
+  * refactor(ptv3.node.yaml): update parameter definitions and add new model paths
+  * feat(LabelBasedEuclideanCluster): add new node configuration for label-based clustering
+  * fix(DetectedObjectFeatureRemover): correct plugin name in node configuration
+  ---------
+* feat(detected_object_feature_remover): apply `agnocast_wrapper::Node` (`#12661 <https://github.com/autowarefoundation/autoware_universe/issues/12661>`_)
+  * apply agnocast_wrapper::Node
+  * use AgnocastOnlyExecutor
+  * use explicit member function
+  * fix cpplint
+  ---------
+* Contributors: Koichi Imai, Ryohsuke Mitsudome, Taekjin LEE
+
 0.52.0 (2026-06-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

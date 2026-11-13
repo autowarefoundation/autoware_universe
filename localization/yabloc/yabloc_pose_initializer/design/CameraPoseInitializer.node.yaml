@@ -13,6 +13,8 @@ subscribers:
     message_type: autoware_map_msgs/msg/LaneletMapBin
   - name: image_raw
     message_type: sensor_msgs/msg/Image
+  - name: camera_info
+    message_type: sensor_msgs/msg/CameraInfo
 publishers:
   - name: init_candidates
     message_type: visualization_msgs/msg/MarkerArray
@@ -20,7 +22,7 @@ publishers:
 servers:
   - name: yabloc_align_srv
     message_type: autoware_internal_localization_msgs/srv/PoseWithCovarianceStamped
-    remap_target: ~/service/yabloc_align_srv
+    remap_target: ~/yabloc_align_srv
 # parameters
 param_files:
   - name: camera_pose_initializer_param

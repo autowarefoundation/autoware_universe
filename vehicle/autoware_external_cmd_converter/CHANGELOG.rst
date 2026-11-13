@@ -2,6 +2,36 @@
 Changelog for package autoware_external_cmd_converter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* feat(external_cmd_converter): apply agnocast_wrapper::Node to external_cmd_converter (`#13014 <https://github.com/autowarefoundation/autoware_universe/issues/13014>`_)
+  * feat(external_cmd_converter): apply agnocast_wrapper::Node to external_cmd_converter
+  Co-authored-by: Koichi Imai <koichi.imai.2@tier4.jp>
+  * fix: cppcheck
+  * refactor: revert comment
+  * refactor: revert comment
+  * refactor: remove qos
+  * refactor: migrate to polling AIP
+  * style(pre-commit): autofix
+  * fix: clang format
+  * refactor: subscriber
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: Koichi Imai <koichi.imai.2@tier4.jp>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* fix(vehicle): declare the dependencies these packages use (`#13208 <https://github.com/autowarefoundation/autoware_universe/issues/13208>`_)
+  * fix(vehicle): declare the dependencies these packages use
+  Four packages use headers or symbols of packages that they never declare. Add the 10 missing entries: 8 <depend> and 2 <test_depend>.
+  * fix(vehicle): declare the script runtime dependencies and tf2
+  The review of the first commit found nine more missing entries.
+  autoware_steer_offset_estimator uses tf2::Quaternion and tf2::Vector3 in an installed header and in the library code, so it gets <depend>tf2</depend>.
+  The installed Python scripts of autoware_accel_brake_map_calibrator import rclpy, ament_index_python, numpy, and yaml, and its launch file starts rviz2. The installed plot script of autoware_raw_vehicle_cmd_converter imports ament_index_python, matplotlib, and numpy. These get <exec_depend> entries.
+  ---------
+* refactor(vehicle): move node design files into each package (`#13098 <https://github.com/autowarefoundation/autoware_universe/issues/13098>`_)
+  Co-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>
+* Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome, Taekjin LEE, Yutaro Kobayashi
+
 0.52.0 (2026-06-30)
 -------------------
 

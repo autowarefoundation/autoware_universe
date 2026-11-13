@@ -20,8 +20,8 @@ namespace autoware::motion::control::mpc_lateral_controller
 {
 DynamicsBicycleModel::DynamicsBicycleModel(
   const double wheelbase, const double mass_fl, const double mass_fr, const double mass_rl,
-  const double mass_rr, const double cf, const double cr)
-: VehicleModelInterface(/* dim_x */ 4, /* dim_u */ 1, /* dim_y */ 2, wheelbase)
+  const double mass_rr, const double cf, const double cr, const LogWriter & writer)
+: VehicleModelInterface(/* dim_x */ 4, /* dim_u */ 1, /* dim_y */ 2, wheelbase), m_writer(writer)
 {
   const double mass_front = mass_fl + mass_fr;
   const double mass_rear = mass_rl + mass_rr;
@@ -93,8 +93,8 @@ MPCTrajectory DynamicsBicycleModel::calculatePredictedTrajectoryInWorldCoordinat
   const Eigen::MatrixXd & x0, const Eigen::MatrixXd & Uex,
   const MPCTrajectory & reference_trajectory, [[maybe_unused]] const double dt) const
 {
-  RCLCPP_ERROR(
-    rclcpp::get_logger("control.trajectory_follower.lateral_controller"),
+  AW_MPC_ERROR(
+    m_writer,
     "Predicted trajectory calculation in world coordinate is not supported in dynamic model. "
     "Calculate in the Frenet coordinate instead.");
   return calculatePredictedTrajectoryInFrenetCoordinate(

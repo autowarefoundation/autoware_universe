@@ -17,6 +17,7 @@
 
 #include "autoware/diagnostic_graph_utils/subscription.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_internal_debug_msgs/msg/string_stamped.hpp>
@@ -27,7 +28,7 @@
 namespace autoware::diagnostic_graph_utils
 {
 
-class LoggingNode : public rclcpp::Node
+class LoggingNode : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit LoggingNode(const rclcpp::NodeOptions & options);
@@ -40,15 +41,15 @@ private:
   void dump_unit(DiagNode * node, int depth, const std::string & indent);
 
   DiagGraphSubscription sub_graph_;
-  rclcpp::Publisher<StringStamped>::SharedPtr pub_error_graph_text_;
-  rclcpp::TimerBase::SharedPtr timer_;
+  AUTOWARE_PUBLISHER_PTR(StringStamped) pub_error_graph_text_;
+  AUTOWARE_TIMER_PTR timer_;
 
   std::string root_path_;
   int max_depth_;
   bool enable_terminal_log_;
   bool ignore_dependent_error_;
 
-  DiagNode * root_node_;
+  DiagNode * root_node_{nullptr};
   std::ostringstream dump_text_;
   std::string prev_error_graph_text_;
 };

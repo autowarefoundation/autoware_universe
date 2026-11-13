@@ -22,12 +22,6 @@ struct LateralSyncData
   bool is_steer_converged{false};
 };
 
-struct LongitudinalSyncData
-{
-  // NOTE: This variable is not used for now
-  // bool is_velocity_converged{false};
-};
-
 }  // namespace autoware::motion::control::trajectory_follower
 
 #endif  // AUTOWARE__TRAJECTORY_FOLLOWER_BASE__SYNC_DATA_HPP_

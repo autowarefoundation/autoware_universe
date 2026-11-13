@@ -27,6 +27,8 @@ Returns 0 if OK; non-zero otherwise.
 The 'hdd_reader' accesses minimal data enough to get Model number, Serial number, HDD temperature, and life of HDD.<br>
 This is an approach to limit its functionality, however, the functionality can be expanded for further improvements and considerations in the future.<br><br>
 
+The 'hdd_reader' communicates with its client via a UNIX socket with a permission (mode) of 0660 . Therefore, the executors of 'hdd_reader' and its client must belong to the same group.
+
 ### [ATA]
 
 | Purpose                      | Name                 | Length               |

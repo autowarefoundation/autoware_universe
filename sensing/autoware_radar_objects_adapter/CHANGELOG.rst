@@ -2,6 +2,53 @@
 Changelog for package autoware_radar_objects_adapter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* test(autoware_radar_objects_adapter): add characterization test for RadarObjectsAdapter startup and radar info gate (`#13405 <https://github.com/autowarefoundation/autoware_universe/issues/13405>`_)
+  * test(autoware_radar_objects_adapter): add a characterization test harness for RadarObjectsAdapter
+  Phase 1 of the node/logic separation of radar_objects_adapter: a gtest
+  that drives the node over its real topics from a peer node, pumped from
+  the test thread. This first part pins how the node starts: the six
+  default\_* parameters are required, the classification_remap.* ones are
+  not. The topic names, message types and the QoS the node subscribes
+  with are exercised by the peer's endpoints in every case that feeds the
+  node, so they get no case of their own. The behavior of the conversion
+  follows in later commits.
+  The test is added as an isolated ROS gtest and is skipped when
+  ENABLE_AGNOCAST=1, like the other ROS-based tests in this repository.
+  No production code is changed.
+  Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+  * test(autoware_radar_objects_adapter): pin the radar info gate of RadarObjectsAdapter
+  Radar objects are converted only after a radar info message has
+  declared all eight required fields; until then they are dropped and not
+  replayed once the radar info arrives. These tests pin that gate as it
+  is today.
+  The builders for radar info and radar objects messages, and the fixture
+  helpers that send them, come in with this commit because these are the
+  first tests that feed the node.
+  Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+  * test(autoware_radar_objects_adapter): say what the incomplete radar info case tells apart
+  The comment on Gate_RadarInfoMissingRequiredField_ObjectsDropped now
+  states what the case distinguishes (a gate that reads the radar info
+  from one that opens on any) and what it does not observe (whether the
+  message was rejected or ignored, and which fields are required), as
+  discussed in review. Comment only.
+  Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+  ---------
+  Co-authored-by: Claude Fable 5.1 <noreply@anthropic.com>
+* feat(radar_objects_adapter): apply `agnocast_wrapper::Node` to `radar_objects_adapter` (`#12876 <https://github.com/autowarefoundation/autoware_universe/issues/12876>`_)
+  * apply agnocast_wrapper::Node
+  * keep const reference subscription callbacks
+  * refactor(radar_objects_adapter): read the input topic name from the subscription
+  * fix(cuda_utils): guard the CHECK_CUDA_ERROR macro against redefinition
+  * Revert "fix(cuda_utils): guard the CHECK_CUDA_ERROR macro against redefinition"
+  This reverts commit d469313341c666d0e9e5401696bc86363f5e712c.
+  ---------
+  Co-authored-by: kobayu858 <yutaro.kobayashi.2@tier4.jp>
+* refactor(sensing): move node design files into each package (`#13105 <https://github.com/autowarefoundation/autoware_universe/issues/13105>`_)
+* Contributors: Kentaro Nagatomo, Koichi Imai, Ryohsuke Mitsudome, Taekjin LEE
+
 0.52.0 (2026-06-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

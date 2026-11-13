@@ -12,6 +12,13 @@ units:
       - { type: link, link: /functions/pose_estimation }
       - { type: link, link: /functions/obstacle_detection }
 
+  - path: /autoware/modes/autonomous/available
+    type: and
+    list:
+      # The available flag typically consists of the continuable flag and additional conditions.
+      # You can configure additional checks for mode transition by listing conditions here.
+      - { type: link, link: /autoware/modes/autonomous }
+
   - path: /autoware/modes/local
     type: and
     list:

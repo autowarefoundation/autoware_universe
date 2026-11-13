@@ -13,6 +13,8 @@
 // limitations under the License.
 
 #pragma once
+#include "autoware/pointcloud_preprocessor/concatenate_data/matching_strategy_type.hpp"
+
 #include <builtin_interfaces/msg/time.hpp>
 
 #include <autoware_sensing_msgs/msg/concatenated_point_cloud_info.hpp>
@@ -128,18 +130,6 @@ struct StrategyAdvancedConfig : public StrategyConfig
 };
 
 /**
- * @brief Mapping from strategy name strings to strategy enumeration values.
- *
- * Supported strategies:
- * - "naive": Basic concatenation without temporal constraints
- * - "advanced": Time-window based concatenation with temporal constraints
- */
-const std::unordered_map<std::string, uint8_t> matching_strategy_name_map = {
-  {"naive", autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo::STRATEGY_NAIVE},
-  {"advanced", autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo::STRATEGY_ADVANCED},
-};
-
-/**
  * @brief Manages concatenation information for point cloud preprocessing.
  *
  * This class provides functionality for tracking and managing the concatenation
@@ -155,14 +145,13 @@ public:
   /**
    * @brief Construct concatenation info manager.
    *
-   * @param matching_strategy_name Name of the matching strategy ("naive" or "advanced")
+   * @param matching_strategy Matching strategy to record in the info message
    * @param input_topics List of input topic names to track for concatenation
-   * @throws std::invalid_argument if matching_strategy_name is not recognized
    */
   ConcatenationInfoManager(
-    const std::string & matching_strategy_name, const std::vector<std::string> & input_topics)
+    MatchingStrategyType matching_strategy, const std::vector<std::string> & input_topics)
   : concatenated_point_cloud_info_base_msg_(
-      create_concatenation_info_base(matching_strategy_name, input_topics)),
+      create_concatenation_info_base(matching_strategy, input_topics)),
     num_expected_sources_(concatenated_point_cloud_info_base_msg_.source_info.size())
   {
   }
@@ -359,21 +348,16 @@ private:
    * strategy and input topics. All source info structures are initialized with
    * default values and TIMEOUT status.
    *
-   * @param matching_strategy_name Name of the matching strategy to use
+   * @param matching_strategy Matching strategy to record in the info message
    * @param input_topics List of input topic names to initialize
    * @return Initialized ConcatenatedPointCloudInfo message
-   * @throws std::invalid_argument if strategy name is not recognized
    */
   [[nodiscard]] autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo
   create_concatenation_info_base(
-    const std::string & matching_strategy_name, const std::vector<std::string> & input_topics) const
+    MatchingStrategyType matching_strategy, const std::vector<std::string> & input_topics) const
   {
     autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo concatenated_point_cloud_info_base;
-    auto strategy_it = matching_strategy_name_map.find(matching_strategy_name);
-    if (strategy_it == matching_strategy_name_map.end()) {
-      throw std::invalid_argument("Unknown matching strategy: '" + matching_strategy_name + "'");
-    }
-    concatenated_point_cloud_info_base.matching_strategy = strategy_it->second;
+    concatenated_point_cloud_info_base.matching_strategy = static_cast<uint8_t>(matching_strategy);
     concatenated_point_cloud_info_base.source_info.reserve(input_topics.size());
     for (const auto & topic : input_topics) {
       autoware_sensing_msgs::msg::SourcePointCloudInfo info;

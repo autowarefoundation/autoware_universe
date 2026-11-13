@@ -2,6 +2,20 @@
 Changelog for package autoware_autonomous_emergency_braking
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.53.0 (2026-09-29)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.53.0-changelog
+* refactor(control): move node design files into each package (`#13100 <https://github.com/autowarefoundation/autoware_universe/issues/13100>`_)
+  Co-authored-by: Claude Opus 5 (1M context) <noreply@anthropic.com>
+* feat(autonomous_emergency_braking): apply `agnocast_wrapper::Node` to `autonomous_emergency_braking` (`#12939 <https://github.com/autowarefoundation/autoware_universe/issues/12939>`_)
+  * apply agnocast_wrapper::Node
+  * style(pre-commit): autofix
+  * fix CmakeLists
+  * refactor(autonomous_emergency_braking): migrate to polling:: API
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Koichi Imai, Ryohsuke Mitsudome, Taekjin LEE
+
 0.52.0 (2026-06-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

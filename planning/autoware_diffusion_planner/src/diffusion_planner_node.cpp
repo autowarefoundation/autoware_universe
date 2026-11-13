@@ -144,8 +144,6 @@ DiffusionPlanner::DiffusionPlanner(const rclcpp::NodeOptions & options)
     }
   } catch (const std::exception & e) {
     RCLCPP_ERROR_STREAM(get_logger(), e.what() << ". Inference will be disabled.");
-    diagnostics_inference_->update_level_and_message(DiagnosticStatus::ERROR, e.what());
-    diagnostics_inference_->publish(get_clock()->now());
     if (params_.build_only) {
       RCLCPP_ERROR(get_logger(), "Build only mode: exiting due to model load failure.");
       std::exit(EXIT_FAILURE);
@@ -193,6 +191,8 @@ void DiffusionPlanner::set_up_params()
   params_.build_only = this->declare_parameter<bool>("build_only", false);
   params_.planning_frequency_hz = this->declare_parameter<double>("planning_frequency_hz", 10.0);
   params_.ignore_neighbors = this->declare_parameter<bool>("ignore_neighbors", false);
+  params_.remap_unsupported_objects_to_pedestrian =
+    this->declare_parameter<bool>("remap_unsupported_objects_to_pedestrian", false);
   params_.traffic_light_group_msg_timeout_seconds =
     this->declare_parameter<double>("traffic_light_group_msg_timeout_seconds", 0.2);
   params_.batch_size = this->declare_parameter<int>("batch_size", 1);
@@ -254,14 +254,54 @@ void DiffusionPlanner::set_up_params()
     this->declare_parameter<bool>("debug_params.publish_debug_linestrings", true);
 }
 
+void DiffusionPlanner::fill_model_key_values()
+{
+  diagnostics_inference_->add_key_value("backend", params_.backend);
+  diagnostics_inference_->add_key_value("model_type", params_.model_type);
+  diagnostics_inference_->add_key_value("model_loaded", core_->is_model_loaded());
+  diagnostics_inference_->add_key_value("base_model_directory", params_.base_model_directory);
+  if (!params_.args_path.empty()) {
+    diagnostics_inference_->add_key_value("args_path", params_.args_path);
+  }
+  if (params_.model_type == "multi_step") {
+    if (!params_.encoder_model_path.empty()) {
+      diagnostics_inference_->add_key_value("encoder_model_path", params_.encoder_model_path);
+    }
+    if (!params_.decoder_model_path.empty()) {
+      diagnostics_inference_->add_key_value("decoder_model_path", params_.decoder_model_path);
+    }
+    if (!params_.turn_indicator_model_path.empty()) {
+      diagnostics_inference_->add_key_value(
+        "turn_indicator_model_path", params_.turn_indicator_model_path);
+    }
+  } else if (!params_.single_step_model_path.empty()) {
+    diagnostics_inference_->add_key_value("onnx_model_path", params_.single_step_model_path);
+  }
+}
+
+void DiffusionPlanner::publish_inference_status(const int8_t level, const std::string & message)
+{
+  diagnostics_inference_->clear();
+  fill_model_key_values();
+  if (level > DiagnosticStatus::OK) {
+    diagnostics_inference_->update_level_and_message(level, message);
+  }
+  diagnostics_inference_->publish(get_clock()->now());
+}
+
 void DiffusionPlanner::load_model()
 {
-  diagnostics_inference_->update_level_and_message(DiagnosticStatus::WARN, "Loading model");
-  diagnostics_inference_->publish(get_clock()->now());
-  core_->resolve_model_paths();
-  core_->load_model();
-  diagnostics_inference_->update_level_and_message(DiagnosticStatus::OK, "Model loaded");
-  diagnostics_inference_->publish(get_clock()->now());
+  publish_inference_status(DiagnosticStatus::WARN, "Loading model");
+  try {
+    core_->resolve_model_paths();
+    core_->load_model();
+  } catch (const std::exception & e) {
+    model_load_error_ = e.what();
+    publish_inference_status(DiagnosticStatus::ERROR, *model_load_error_);
+    throw;
+  }
+  model_load_error_.reset();
+  publish_inference_status(DiagnosticStatus::OK);
 
   if (params_.model_type == "single_step") {
     RCLCPP_INFO_STREAM(
@@ -327,6 +367,9 @@ SetParametersResult DiffusionPlanner::on_parameter(
     update_param<std::string>(parameters, "model.precision", temp_params.trt_precision);
     update_param<bool>(parameters, "model.use_cuda_graph", temp_params.use_cuda_graph);
     update_param<bool>(parameters, "ignore_neighbors", temp_params.ignore_neighbors);
+    update_param<bool>(
+      parameters, "remap_unsupported_objects_to_pedestrian",
+      temp_params.remap_unsupported_objects_to_pedestrian);
     update_param<double>(
       parameters, "traffic_light_group_msg_timeout_seconds",
       temp_params.traffic_light_group_msg_timeout_seconds);
@@ -548,14 +591,17 @@ void DiffusionPlanner::on_timer()
   stop_watch_ptr_ = std::make_unique<autoware_utils_system::StopWatch<std::chrono::milliseconds>>();
   stop_watch_ptr_->tic("processing_time");
 
-  diagnostics_inference_->clear();
-
   const rclcpp::Time current_time(get_clock()->now());
+
+  diagnostics_inference_->clear();
+  fill_model_key_values();
+
   if (!core_->is_model_loaded()) {
     RCLCPP_WARN_THROTTLE(
       get_logger(), *this->get_clock(), constants::LOG_THROTTLE_INTERVAL_MS,
       "Model not loaded. Inference is disabled. Check model.* parameters.");
-    diagnostics_inference_->update_level_and_message(DiagnosticStatus::ERROR, "Model not loaded");
+    diagnostics_inference_->update_level_and_message(
+      DiagnosticStatus::ERROR, model_load_error_.value_or("Model not loaded"));
     diagnostics_inference_->publish(current_time);
     return;
   }

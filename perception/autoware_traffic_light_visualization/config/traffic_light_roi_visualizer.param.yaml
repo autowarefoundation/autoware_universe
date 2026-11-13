@@ -1,3 +1,4 @@
 /**:
   ros__parameters:
+    use_high_accuracy_detection: true
     use_image_transport: true

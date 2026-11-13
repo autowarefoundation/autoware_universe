@@ -1,0 +1,48 @@
+<?xml version="1.0"?>
+<launch>
+  <!-- cspell: ignore semseg -->
+  <!-- Standalone launch for autoware_traffic_light_pipeline's front-end (single-camera). Intended
+       for single-node bring-up, build_only engine pre-building, and this package's own testing.
+       Composition into tier4_perception_launch's traffic_light_node_container.launch.py is out of
+       scope for this package. -->
+
+  <arg name="data_path" default="$(env HOME)/autoware_data" description="packages data and artifacts directory path"/>
+
+  <!-- Which camera this instance runs on. Only the four camera-specific topic defaults below
+       depend on it, so a second instance is `camera_name:=camera7`. The output names are the ones
+       traffic_light_multi_camera_fusion derives from its camera_namespaces parameter
+       (`<camera_ns>/detection/rois`, `<camera_ns>/classification/traffic_signals`), so the
+       defaults drop straight into production's topic graph. -->
+  <arg name="camera_name" default="camera6"/>
+
+  <arg name="input/image" default="/sensing/camera/$(var camera_name)/image_raw"/>
+  <arg name="input/camera_info" default="/sensing/camera/$(var camera_name)/camera_info"/>
+  <arg name="input/vector_map" default="/map/vector_map"/>
+  <arg name="input/route" default="/planning/mission_planning/route"/>
+
+  <arg name="output/traffic_signals" default="/perception/traffic_light_recognition/$(var camera_name)/classification/traffic_signals"/>
+  <arg name="output/rois" default="/perception/traffic_light_recognition/$(var camera_name)/detection/rois"/>
+
+  <arg name="config_path" default="$(find-pkg-share autoware_traffic_light_pipeline)/config/traffic_light_recognition.param.yaml"/>
+
+  <arg name="whole_image_detector/roi_remap_path" default="$(find-pkg-share autoware_tensorrt_yolox)/config/traffic_light_roi_label_remap.csv"/>
+
+  <arg name="build_only" default="false" description="exit after trt engine is built"/>
+
+  <node pkg="autoware_traffic_light_pipeline" exec="traffic_light_recognition_node" name="traffic_light_recognition" output="screen">
+    <param from="$(var config_path)"/>
+    <param name="build_only" value="$(var build_only)"/>
+
+    <!-- The model / label file names themselves live in the config file, relative to this. -->
+    <param name="ml_model_path" value="$(var data_path)"/>
+    <param name="whole_image_detector.roi_remap_path" value="$(var whole_image_detector/roi_remap_path)"/>
+
+    <remap from="~/input/image" to="$(var input/image)"/>
+    <remap from="~/input/camera_info" to="$(var input/camera_info)"/>
+    <remap from="~/input/vector_map" to="$(var input/vector_map)"/>
+    <remap from="~/input/route" to="$(var input/route)"/>
+
+    <remap from="~/output/traffic_signals" to="$(var output/traffic_signals)"/>
+    <remap from="~/output/rois" to="$(var output/rois)"/>
+  </node>
+</launch>
