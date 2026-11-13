@@ -38,19 +38,23 @@
 
 struct Memory
 {
-  int mem_len = 0;             // post_memory_length
-  int pre_len = 0;             // pre_memory_length
-  void * mem_buf = nullptr;    // temporal storage (size: mem_len)
-  float * pre_buf = nullptr;   // pre-memory timestamps [1, pre_len, 1]
-  float * post_buf = nullptr;  // post-memory timestamps [1, mem_len, 1]
+  int pre_len = 0;   // pre_memory_length
+  int post_len = 0;  // post_memory_length
+
+  // Owned. The memory timestamps kept between frames: step_post subtracts the frame stamp and
+  // step_pre adds the next frame's stamp back. [post_len]
+  float * stored_timestamps = nullptr;
+  // Not owned: they point at the pts_head bindings of the same name.
+  float * pre_timestamps = nullptr;   // pre_memory_timestamp [1, pre_len, 1]
+  float * post_timestamps = nullptr;  // post_memory_timestamp [1, post_len, 1]
 
   cudaStream_t mem_stream = nullptr;
 
-  // Allocates and zeroes mem_buf; step_pre reads it on the very first frame.
+  // Allocates and zeroes stored_timestamps; step_pre reads it on the very first frame.
   void init(cudaStream_t stream, const int pre_length, const int post_length);
   void release();
 
-  // Zeroes mem_buf; use whenever the temporal state has to be dropped.
+  // Zeroes stored_timestamps; use whenever the temporal state has to be dropped.
   void clear();
 
   void step_reset();

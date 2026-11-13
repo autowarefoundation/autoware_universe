@@ -185,8 +185,8 @@ void StreamPetrNetwork::setup_bindings()
 void StreamPetrNetwork::initialize_memory_and_profiling()
 {
   mem_.init(stream_, config_.pre_memory_length, config_.post_memory_length);
-  mem_.pre_buf = static_cast<float *>(pts_head_->bindings["pre_memory_timestamp"]->ptr);
-  mem_.post_buf = static_cast<float *>(pts_head_->bindings["post_memory_timestamp"]->ptr);
+  mem_.pre_timestamps = static_cast<float *>(pts_head_->bindings["pre_memory_timestamp"]->ptr);
+  mem_.post_timestamps = static_cast<float *>(pts_head_->bindings["post_memory_timestamp"]->ptr);
 
   wipe_memory();
 
@@ -218,7 +218,7 @@ void StreamPetrNetwork::wipe_memory()
   pts_head_->bindings["pre_memory_reference_point"]->initialize_to_zeros(stream_);
   pts_head_->bindings["pre_memory_egopose"]->initialize_to_zeros(stream_);
   pts_head_->bindings["pre_memory_velo"]->initialize_to_zeros(stream_);
-  // The timestamps in mem_buf are part of the same temporal state and must be dropped with it.
+  // The stored timestamps are part of the same temporal state and must be dropped with it.
   mem_.clear();
   mem_.step_reset();
 }
