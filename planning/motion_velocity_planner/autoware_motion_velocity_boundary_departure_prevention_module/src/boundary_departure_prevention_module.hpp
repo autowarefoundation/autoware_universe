@@ -19,7 +19,7 @@
 #include "slow_down_interpolator.hpp"
 
 #include <autoware/motion_velocity_planner_common/plugin_module_interface.hpp>
-#include <tl_expected/expected.hpp>
+#include <tl/expected.hpp>
 
 #include <fmt/format.h>
 

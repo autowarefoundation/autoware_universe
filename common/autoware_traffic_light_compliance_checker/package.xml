@@ -22,8 +22,8 @@
   <depend>autoware_vehicle_info_utils</depend>
   <depend>boost</depend>
   <depend>lanelet2_core</depend>
+  <depend>libexpected-dev</depend>
   <depend>rclcpp</depend>
-  <depend>tl_expected</depend>
 
   <test_depend>ament_cmake_ros</test_depend>
   <test_depend>ament_lint_auto</test_depend>

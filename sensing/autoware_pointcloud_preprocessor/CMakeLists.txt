@@ -158,7 +158,6 @@ target_link_libraries(distortion_corrector_core PUBLIC
   ${sensor_msgs_TARGETS}
   ${geometry_msgs_TARGETS}
   ${autoware_utils_math_LIBRARIES}
-  tl_expected::tl_expected
   pointcloud_preprocessor_memory_utils
 )
 
