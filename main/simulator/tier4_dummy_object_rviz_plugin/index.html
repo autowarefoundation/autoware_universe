@@ -23192,6 +23192,7 @@
 <p>The CarInitialPoseTool sends a topic for generating a dummy car.<br>
 The PedestrianInitialPoseTool sends a topic for generating a dummy pedestrian.<br>
 The UnknownInitialPoseTool sends a topic for generating a dummy obstacle.<br>
+The StaticInitialPoseTool sends a topic for generating dummy static-area point clouds with a <code>PointCloudClassification</code> label.<br>
 The DeleteAllObjectsTool deletes the dummy cars, pedestrians, and obstacles displayed by the above three tools.</p>
 <h2 id="inputs-outputs">Inputs / Outputs<a class="headerlink" href="#inputs-outputs" title="Permanent link">#</a></h2>
 <h3 id="output">Output<a class="headerlink" href="#output" title="Permanent link">#</a></h3>
@@ -23208,6 +23209,11 @@ The DeleteAllObjectsTool deletes the dummy cars, pedestrians, and obstacles disp
 <td><code>/simulation/dummy_perception_publisher/object_info</code></td>
 <td><code>autoware_simulation_msgs::msg::SimulatedObject</code></td>
 <td>The topic on which to publish dummy object info</td>
+</tr>
+<tr>
+<td><code>/simulation/dummy_perception_publisher/static_area</code></td>
+<td><code>autoware_simulation_msgs::msg::SimulatedObject</code></td>
+<td>The topic on which to publish dummy static area info</td>
 </tr>
 </tbody>
 </table>
@@ -23469,6 +23475,79 @@ The DeleteAllObjectsTool deletes the dummy cars, pedestrians, and obstacles disp
 </tr>
 </tbody>
 </table>
+<h4 id="staticpose">StaticPose<a class="headerlink" href="#staticpose" title="Permanent link">#</a></h4>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Default Value</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>topic_property_</code></td>
+<td>string</td>
+<td><code>/simulation/dummy_perception_publisher/static_area</code></td>
+<td>The topic on which to publish dummy static area info</td>
+</tr>
+<tr>
+<td><code>class_property_</code></td>
+<td>enum</td>
+<td><code>VEGETATION</code></td>
+<td>Point class defined by <code>autoware::point_types::PointCloudClassification</code></td>
+</tr>
+<tr>
+<td><code>std_dev_x_</code></td>
+<td>float</td>
+<td>0.03</td>
+<td>X standard deviation for initial pose [m]</td>
+</tr>
+<tr>
+<td><code>std_dev_y_</code></td>
+<td>float</td>
+<td>0.03</td>
+<td>Y standard deviation for initial pose [m]</td>
+</tr>
+<tr>
+<td><code>std_dev_z_</code></td>
+<td>float</td>
+<td>0.03</td>
+<td>Z standard deviation for initial pose [m]</td>
+</tr>
+<tr>
+<td><code>std_dev_theta_</code></td>
+<td>float</td>
+<td>5.0 * M_PI / 180.0</td>
+<td>Theta standard deviation for initial pose [rad]</td>
+</tr>
+<tr>
+<td><code>position_z_</code></td>
+<td>float</td>
+<td>0.0</td>
+<td>Z position for initial pose [m]</td>
+</tr>
+<tr>
+<td><code>length_</code></td>
+<td>float</td>
+<td>0.8</td>
+<td>Length of the static area [m]</td>
+</tr>
+<tr>
+<td><code>width_</code></td>
+<td>float</td>
+<td>0.8</td>
+<td>Width of the static area [m]</td>
+</tr>
+<tr>
+<td><code>height_</code></td>
+<td>float</td>
+<td>2.0</td>
+<td>Height of the static area [m]</td>
+</tr>
+</tbody>
+</table>
 <h4 id="deleteallobjects">DeleteAllObjects<a class="headerlink" href="#deleteallobjects" title="Permanent link">#</a></h4>
 <table>
 <thead>
@@ -23485,6 +23564,12 @@ The DeleteAllObjectsTool deletes the dummy cars, pedestrians, and obstacles disp
 <td>string</td>
 <td><code>/simulation/dummy_perception_publisher/object_info</code></td>
 <td>The topic on which to publish dummy object info</td>
+</tr>
+<tr>
+<td><code>static_area_topic_property_</code></td>
+<td>string</td>
+<td><code>/simulation/dummy_perception_publisher/static_area</code></td>
+<td>The topic on which to publish dummy static area info</td>
 </tr>
 </tbody>
 </table>
@@ -23523,7 +23608,7 @@ The DeleteAllObjectsTool deletes the dummy cars, pedestrians, and obstacles disp
 </tr>
 <tr>
 <td>MOVE</td>
-<td>Hold down Right Button + Drug and Drop</td>
+<td>Hold down Right Button + Drag and Drop</td>
 </tr>
 <tr>
 <td>DELETE</td>

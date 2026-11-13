@@ -23417,13 +23417,6 @@
 <td>N/A</td>
 </tr>
 <tr>
-<td>marker_<wbr>width</wbr></td>
-<td>float</td>
-<td>Width of a marker. This param is used for visualizing the detected marker pointcloud[m]</td>
-<td>0.8</td>
-<td>≥0.0</td>
-</tr>
-<tr>
 <td>enable_<wbr>save_<wbr>log</wbr></wbr></td>
 <td>boolean</td>
 <td></td>
@@ -23447,14 +23440,14 @@
 <tr>
 <td>save_<wbr>frame_<wbr>id</wbr></wbr></td>
 <td>string</td>
-<td></td>
+<td>Frame in which the detected marker pointcloud is published and saved</td>
 <td>velodyne_<wbr>top</wbr></td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>radius_<wbr>for_<wbr>extracting_<wbr>marker_<wbr>pointcloud</wbr></wbr></wbr></wbr></td>
 <td>float</td>
-<td>Only points closer than this value to the marker center on the xy plane are extracted as the “marker point cloud”. [m]</td>
+<td>Only points closer than this value to the marker center are extracted as the “marker point cloud” for the debug visualization and the saved log. The distance is measured on the xy plane, or on the xz plane in road_surface_mode. [m]</td>
 <td>0.4</td>
 <td>≥0.0</td>
 </tr>
