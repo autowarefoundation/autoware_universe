@@ -41,12 +41,9 @@ DetectionResult detect_landmarks(
     return result;
   }
 
-  // If lower_ring_id_init <= upper_ring_id_init, use only the rings in that range.
-  // Otherwise (e.g. the default 128 and 0), use all the rings in the points.
-  const bool use_ring_range = param.lower_ring_id_init <= param.upper_ring_id_init;
-  const auto is_in_ring_range = [&param, use_ring_range](const uint16_t ring_id) {
-    return !use_ring_range ||
-           (param.lower_ring_id_init <= ring_id && ring_id <= param.upper_ring_id_init);
+  // Use only the rings in [ring_id_min, ring_id_max]. The default [0, 65535] uses all the rings.
+  const auto is_in_ring_range = [&param](const uint16_t ring_id) {
+    return param.ring_id_min <= ring_id && ring_id <= param.ring_id_max;
   };
 
   // Find the range of the ring IDs and x of the points to be used

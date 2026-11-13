@@ -48,8 +48,8 @@ DetectionParam make_param()
   param.marker_to_vehicle_offset_y = 1.0;
   param.marker_height_from_ground = 0.5;
   param.reference_ring_number = 255;  // use all rings
-  param.lower_ring_id_init = 128;
-  param.upper_ring_id_init = 0;
+  param.ring_id_min = 0;
+  param.ring_id_max = 65535;  // use all rings
   return param;
 }
 
@@ -170,8 +170,8 @@ TEST(DetectLandmarks, RoadSurfaceGridIsCenteredOnOffset)
   EXPECT_NEAR(right_origin.orientation.w, 1.0, 1e-9);
 }
 
-// With the default lower_ring_id_init (128) > upper_ring_id_init (0), all the rings are used.
-TEST(DetectLandmarks, UseAllRingsWhenRingRangeIsInverted)
+// The default ring range [0, 65535] uses all the rings.
+TEST(DetectLandmarks, UseAllRingsByDefault)
 {
   const DetectionResult result =
     detect_landmarks(make_points(10, true, 2), make_header(), make_param());
@@ -186,8 +186,8 @@ TEST(DetectLandmarks, UseAllRingsWhenRingRangeIsInverted)
 TEST(DetectLandmarks, SkipRingsOutsideConfiguredRange)
 {
   DetectionParam param = make_param();
-  param.lower_ring_id_init = 1;
-  param.upper_ring_id_init = 2;
+  param.ring_id_min = 1;
+  param.ring_id_max = 2;
 
   const DetectionResult result = detect_landmarks(make_points(10, true), make_header(), param);
 
@@ -203,8 +203,8 @@ TEST(DetectLandmarks, SkipRingsOutsideConfiguredRange)
 TEST(DetectLandmarks, NarrowConfiguredRangeToActualRings)
 {
   DetectionParam param = make_param();
-  param.lower_ring_id_init = 0;
-  param.upper_ring_id_init = 10;
+  param.ring_id_min = 0;
+  param.ring_id_max = 10;
 
   const DetectionResult result = detect_landmarks(make_points(10, true, 2), make_header(), param);
 
@@ -222,8 +222,8 @@ TEST(DetectLandmarks, NarrowConfiguredRangeToActualRings)
 TEST(DetectLandmarks, EmptyRowForRingWithoutPoint)
 {
   DetectionParam param = make_param();
-  param.lower_ring_id_init = 0;
-  param.upper_ring_id_init = 10;
+  param.ring_id_min = 0;
+  param.ring_id_max = 10;
   pcl::PointCloud<PointT> points = make_points(10, true);
   points += make_points(10, true, 4);
 
@@ -247,8 +247,8 @@ TEST(DetectLandmarks, EmptyRowForRingWithoutPoint)
 TEST(DetectLandmarks, NoPointsInConfiguredRange)
 {
   DetectionParam param = make_param();
-  param.lower_ring_id_init = 5;
-  param.upper_ring_id_init = 6;
+  param.ring_id_min = 5;
+  param.ring_id_max = 6;
 
   const DetectionResult result = detect_landmarks(make_points(10, true), make_header(), param);
 
@@ -260,8 +260,8 @@ TEST(DetectLandmarks, NoPointsInConfiguredRange)
 TEST(DetectLandmarks, NoPointsInConfiguredRangeBetweenRings)
 {
   DetectionParam param = make_param();
-  param.lower_ring_id_init = 4;
-  param.upper_ring_id_init = 6;
+  param.ring_id_min = 4;
+  param.ring_id_max = 6;
   pcl::PointCloud<PointT> points = make_points(10, true);
   points += make_points(10, true, 10);
 
@@ -288,8 +288,8 @@ TEST(DetectLandmarks, NoMarkerWithReferenceRingOutsideConfiguredRange)
 {
   DetectionParam param = make_param();
   param.reference_ring_number = 0;
-  param.lower_ring_id_init = 1;
-  param.upper_ring_id_init = 2;
+  param.ring_id_min = 1;
+  param.ring_id_max = 2;
 
   const DetectionResult result = detect_landmarks(make_points(10, true), make_header(), param);
 
@@ -314,8 +314,7 @@ TEST(DetectLandmarks, DetectMarkerOnRoadSurfaceWithoutReferenceRing)
 namespace
 {
 rclcpp::NodeOptions make_node_options(
-  const int64_t lower_ring_id_init, const int64_t upper_ring_id_init,
-  const int64_t reference_ring_number)
+  const int64_t ring_id_min, const int64_t ring_id_max, const int64_t reference_ring_number)
 {
   rclcpp::NodeOptions node_options;
   node_options.parameter_overrides(
@@ -339,8 +338,8 @@ rclcpp::NodeOptions make_node_options(
      {"limit_distance_from_self_pose_to_nearest_marker_y", 1.0},
      {"limit_distance_from_self_pose_to_marker", 1.0},
      {"base_covariance", std::vector<double>(36, 0.0)},
-     {"lower_ring_id_init", lower_ring_id_init},
-     {"upper_ring_id_init", upper_ring_id_init},
+     {"ring_id_min", ring_id_min},
+     {"ring_id_max", ring_id_max},
      {"enable_save_log", false},
      {"save_file_directory_path", std::string("")},
      {"save_file_name", std::string("")},
@@ -356,7 +355,7 @@ TEST(LidarMarkerLocalizer, Initialization)
 {
   std::shared_ptr<LidarMarkerLocalizer> localizer;
   ASSERT_NO_THROW(
-    localizer = std::make_shared<LidarMarkerLocalizer>(make_node_options(128, 0, 255)));
+    localizer = std::make_shared<LidarMarkerLocalizer>(make_node_options(0, 65535, 255)));
   EXPECT_FALSE(localizer->get_parameter("road_surface_mode").as_bool());
 }
 
@@ -369,8 +368,8 @@ TEST(LidarMarkerLocalizer, RejectReferenceRingOutsideConfiguredRange)
     std::make_shared<LidarMarkerLocalizer>(make_node_options(1, 2, 3)), std::invalid_argument);
   // 255 uses all the rings
   EXPECT_NO_THROW(std::make_shared<LidarMarkerLocalizer>(make_node_options(1, 2, 255)));
-  // the default 128 > 0 uses all the rings in the point cloud
-  EXPECT_NO_THROW(std::make_shared<LidarMarkerLocalizer>(make_node_options(128, 0, 5)));
+  // the default [0, 65535] uses all the rings
+  EXPECT_NO_THROW(std::make_shared<LidarMarkerLocalizer>(make_node_options(0, 65535, 5)));
 }
 
 // Each ring votes at most once for a bin, so the configured range must have more rings than
@@ -380,6 +379,12 @@ TEST(LidarMarkerLocalizer, RejectRingRangeNotMoreThanVoteThreshold)
   EXPECT_THROW(
     std::make_shared<LidarMarkerLocalizer>(make_node_options(1, 1, 1)), std::invalid_argument);
   EXPECT_NO_THROW(std::make_shared<LidarMarkerLocalizer>(make_node_options(1, 2, 1)));
+}
+
+TEST(LidarMarkerLocalizer, RejectRingIdMinGreaterThanMax)
+{
+  EXPECT_THROW(
+    std::make_shared<LidarMarkerLocalizer>(make_node_options(128, 0, 255)), std::invalid_argument);
 }
 
 // The ring IDs are uint16_t.

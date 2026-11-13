@@ -42,8 +42,9 @@ struct DetectionParam
   double marker_to_vehicle_offset_y;
   double marker_height_from_ground;
   int64_t reference_ring_number;
-  int64_t lower_ring_id_init;
-  int64_t upper_ring_id_init;
+  // only the rings in [ring_id_min, ring_id_max] are used for the detection
+  int64_t ring_id_min;
+  int64_t ring_id_max;
 };
 
 enum class DetectionStatus { ok, no_points, no_points_in_ring_range, bin_num_too_small };

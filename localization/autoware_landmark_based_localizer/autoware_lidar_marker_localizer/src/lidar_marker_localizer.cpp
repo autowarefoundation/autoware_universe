@@ -48,8 +48,8 @@ void validate_ring_parameters(const DetectionParam & param)
 {
   constexpr int64_t max_ring_id = std::numeric_limits<uint16_t>::max();
   for (const auto & [name, value] :
-       {std::pair<const char *, int64_t>{"lower_ring_id_init", param.lower_ring_id_init},
-        std::pair<const char *, int64_t>{"upper_ring_id_init", param.upper_ring_id_init}}) {
+       {std::pair<const char *, int64_t>{"ring_id_min", param.ring_id_min},
+        std::pair<const char *, int64_t>{"ring_id_max", param.ring_id_max}}) {
     if (value < 0 || max_ring_id < value) {
       throw std::invalid_argument(
         std::string(name) + " (" + std::to_string(value) + ") must be in [0, " +
@@ -57,27 +57,25 @@ void validate_ring_parameters(const DetectionParam & param)
     }
   }
 
-  // The following checks are for the case where only the rings in the range are used
-  if (param.upper_ring_id_init < param.lower_ring_id_init) {
-    return;
+  const std::string range = "[ring_id_min, ring_id_max] = [" + std::to_string(param.ring_id_min) +
+                            ", " + std::to_string(param.ring_id_max) + "]";
+  if (param.ring_id_max < param.ring_id_min) {
+    throw std::invalid_argument("ring_id_min must not be greater than ring_id_max, but " + range);
   }
-  const std::string range = "[lower_ring_id_init, upper_ring_id_init] = [" +
-                            std::to_string(param.lower_ring_id_init) + ", " +
-                            std::to_string(param.upper_ring_id_init) + "]";
 
   // The marker y on a vertical surface is taken from the reference ring, so it must be in the
   // range unless all the rings are used (255)
   if (
     param.reference_ring_number != std::numeric_limits<uint8_t>::max() &&
-    (param.reference_ring_number < param.lower_ring_id_init ||
-     param.upper_ring_id_init < param.reference_ring_number)) {
+    (param.reference_ring_number < param.ring_id_min ||
+     param.ring_id_max < param.reference_ring_number)) {
     throw std::invalid_argument(
       "reference_ring_number (" + std::to_string(param.reference_ring_number) + ") must be in " +
       range + ", or 255 to use all the rings");
   }
 
   // Each ring votes at most once for a bin, so a marker needs more rings than the threshold
-  const int64_t ring_num = param.upper_ring_id_init - param.lower_ring_id_init + 1;
+  const int64_t ring_num = param.ring_id_max - param.ring_id_min + 1;
   if (ring_num <= param.vote_threshold_for_detect_marker) {
     throw std::invalid_argument(
       "The number of the rings in " + range + " (" + std::to_string(ring_num) +
@@ -115,8 +113,8 @@ LidarMarkerLocalizer::LidarMarkerLocalizer(const rclcpp::NodeOptions & node_opti
     this->declare_parameter<double>("marker_to_vehicle_offset_y");
   param_.detection.marker_height_from_ground =
     this->declare_parameter<double>("marker_height_from_ground");
-  param_.detection.lower_ring_id_init = this->declare_parameter<int64_t>("lower_ring_id_init");
-  param_.detection.upper_ring_id_init = this->declare_parameter<int64_t>("upper_ring_id_init");
+  param_.detection.ring_id_min = this->declare_parameter<int64_t>("ring_id_min");
+  param_.detection.ring_id_max = this->declare_parameter<int64_t>("ring_id_max");
   param_.self_pose_timeout_sec = this->declare_parameter<double>("self_pose_timeout_sec");
   param_.self_pose_distance_tolerance_m =
     this->declare_parameter<double>("self_pose_distance_tolerance_m");
@@ -466,8 +464,8 @@ std::vector<landmark_manager::Landmark> LidarMarkerLocalizer::detect_landmarks(
   if (result.status == DetectionStatus::no_points_in_ring_range) {
     RCLCPP_WARN_STREAM_THROTTLE(
       this->get_logger(), *this->get_clock(), 1000,
-      "No points in the configured ring range [" << param_.detection.lower_ring_id_init << ", "
-                                                 << param_.detection.upper_ring_id_init << "]!");
+      "No points in the configured ring range [" << param_.detection.ring_id_min << ", "
+                                                 << param_.detection.ring_id_max << "]!");
     return {};
   }
   if (result.status == DetectionStatus::bin_num_too_small) {
