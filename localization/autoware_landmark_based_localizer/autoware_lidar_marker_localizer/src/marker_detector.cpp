@@ -138,16 +138,17 @@ DetectionResult detect_landmarks(
   matched_grid_msg = center_intensity_grid_msg;
 
   // for each ring
+  // ring_array_index for grid positioning (0-based index in ring_points)
+  size_t ring_array_index = 0;
   for (const auto & one_ring : ring_points) {
     if (one_ring.empty()) {
+      ring_array_index++;
       continue;
     }
 
     std::vector<double> intensity_sum(bin_num, 0.0);
     std::vector<int> intensity_num(bin_num, 0);
     std::vector<double> average_intensity(bin_num, 0.0);
-    const size_t ring_id =
-      get_ring_id(one_ring.front()) - get_ring_id(ring_points.front().points.front());
 
     for (const auto & point : one_ring.points) {
       const int bin_index = static_cast<int>((point.x - min_x) / param.resolution);
@@ -215,7 +216,8 @@ DetectionResult detect_landmarks(
           // ignore param.intensity_pattern[j] == 0
         }
       }
-      const size_t bin_position = i + param.intensity_pattern.size() / 2 + ring_id * bin_num;
+      const size_t bin_position =
+        i + param.intensity_pattern.size() / 2 + ring_array_index * bin_num;
       center_intensity_grid_msg.data[bin_position] =
         std::min(static_cast<int>(center_intensity), max_vote_percentage);
       positive_grid_msg.data[bin_position] = std::min(
@@ -230,6 +232,7 @@ DetectionResult detect_landmarks(
         vote[i]++;
       }
     }
+    ring_array_index++;
   }
 
   std::vector<landmark_manager::Landmark> detected_landmarks;
