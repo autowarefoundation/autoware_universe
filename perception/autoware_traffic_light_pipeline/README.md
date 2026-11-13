@@ -22,9 +22,9 @@ Single-node composition of the traffic light recognition pipeline.
 
 ## Prerequisites
 
-The ML models used by this pipeline (traffic light detector / classifier) must be downloaded in advance to `~/autoware_data`. See [Manual downloading of artifacts](https://autowarefoundation.github.io/autoware-documentation/main/installation/autoware/source-installation/#manual-downloading-of-artifacts) for how to download them.
+The ML models used by this pipeline (traffic light detector / classifier) must be downloaded in advance to `~/autoware_data/ml_models`. See the [artifacts role README](https://github.com/autowarefoundation/autoware/tree/main/ansible/roles/artifacts#readme) for how to download them.
 
-The default `data_path` launch argument (see below) points to `~/autoware_data`, so no additional configuration is needed once the models are placed there.
+The default `data_path` launch argument (see below) points to `~/autoware_data/ml_models`, so no additional configuration is needed once the models are placed there.
 
 ## How to launch
 
@@ -34,11 +34,11 @@ ros2 launch autoware_traffic_light_pipeline traffic_light_recognition.launch.xml
 
 Useful launch arguments:
 
-| Argument      | Default                     | Description                                                        |
-| ------------- | --------------------------- | ------------------------------------------------------------------ |
-| `data_path`   | `$(env HOME)/autoware_data` | Directory containing the downloaded ML artifacts                   |
-| `camera_name` | `camera6`                   | Which camera namespace this instance subscribes to / publishes for |
-| `build_only`  | `false`                     | Exit after the TensorRT engine is built                            |
+| Argument      | Default                               | Description                                                        |
+| ------------- | ------------------------------------- | ------------------------------------------------------------------ |
+| `data_path`   | `$(env HOME)/autoware_data/ml_models` | Directory containing the downloaded ML artifacts                   |
+| `camera_name` | `camera6`                             | Which camera namespace this instance subscribes to / publishes for |
+| `build_only`  | `false`                               | Exit after the TensorRT engine is built                            |
 
 Example, running against a second camera:
 
@@ -54,4 +54,4 @@ colcon build --packages-select $PACKAGE_NAME
 colcon test --packages-select $PACKAGE_NAME --event-handlers console_cohesion+
 ```
 
-The unit/integration tests also require the ML models under `~/autoware_data`, since `test_traffic_light_recognition_node` brings up the node with the same `ml_model_path` default as the launch file above.
+The unit/integration tests also require the ML models under `~/autoware_data/ml_models`, since `test_traffic_light_recognition_node` brings up the node with the same `ml_model_path` default as the launch file above.

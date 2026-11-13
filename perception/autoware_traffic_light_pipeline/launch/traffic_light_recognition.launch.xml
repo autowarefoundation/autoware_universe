@@ -6,7 +6,7 @@
        Composition into tier4_perception_launch's traffic_light_node_container.launch.py is out of
        scope for this package. -->
 
-  <arg name="data_path" default="$(env HOME)/autoware_data" description="packages data and artifacts directory path"/>
+  <arg name="data_path" default="$(env HOME)/autoware_data/ml_models" description="packages data and artifacts directory path"/>
 
   <!-- Which camera this instance runs on. Only the four camera-specific topic defaults below
        depend on it, so a second instance is `camera_name:=camera7`. The output names are the ones
