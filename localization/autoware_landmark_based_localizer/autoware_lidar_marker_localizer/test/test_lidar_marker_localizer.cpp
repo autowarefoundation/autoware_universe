@@ -52,9 +52,11 @@ DetectionParam make_param()
   return param;
 }
 
-// Rings 0, 1 and 2 at y = 2.0, 2.5 and 3.0, with one point per bin at x = 0, 1, ..., x_num - 1.
+// Rings first_ring, first_ring + 1 and first_ring + 2 at y = 2.0, 2.5 and 3.0, with one point per
+// bin at x = 0, 1, ..., x_num - 1.
 // The points at x = 4 and 5 have the high intensity if with_marker is true.
-pcl::PointCloud<PointT> make_points(const int x_num, const bool with_marker)
+pcl::PointCloud<PointT> make_points(
+  const int x_num, const bool with_marker, const std::uint16_t first_ring = 0)
 {
   pcl::PointCloud<PointT> points;
   for (std::uint16_t ring = 0; ring < 3; ++ring) {
@@ -64,7 +66,7 @@ pcl::PointCloud<PointT> make_points(const int x_num, const bool with_marker)
       point.y = 2.0F + 0.5F * static_cast<float>(ring);
       point.z = 0.0F;
       point.intensity = (with_marker && (x == 4 || x == 5)) ? high_intensity : low_intensity;
-      point.channel = ring;
+      point.channel = static_cast<std::uint16_t>(first_ring + ring);
       points.push_back(point);
     }
   }
@@ -165,6 +167,103 @@ TEST(DetectLandmarks, RoadSurfaceGridIsCenteredOnOffset)
   EXPECT_DOUBLE_EQ(right_origin.position.z, 0.5);
   EXPECT_NEAR(right_origin.orientation.x, 0.0, 1e-9);
   EXPECT_NEAR(right_origin.orientation.w, 1.0, 1e-9);
+}
+
+// With the default lower_ring_id_init (128) > upper_ring_id_init (0), all the rings are used.
+TEST(DetectLandmarks, UseAllRingsWhenRingRangeIsInverted)
+{
+  const DetectionResult result =
+    detect_landmarks(make_points(10, true, 2), make_header(), make_param());
+
+  EXPECT_EQ(result.status, DetectionStatus::ok);
+  EXPECT_EQ(result.center_intensity_grid.info.height, 3U);
+  ASSERT_EQ(result.landmarks.size(), 1U);
+}
+
+// The configured range [1, 2] excludes ring 0, so the marker y is the y of ring 1.
+TEST(DetectLandmarks, SkipRingsOutsideConfiguredRange)
+{
+  DetectionParam param = make_param();
+  param.lower_ring_id_init = 1;
+  param.upper_ring_id_init = 2;
+
+  const DetectionResult result = detect_landmarks(make_points(10, true), make_header(), param);
+
+  EXPECT_EQ(result.status, DetectionStatus::ok);
+  EXPECT_EQ(result.center_intensity_grid.info.height, 2U);
+  ASSERT_EQ(result.landmarks.size(), 1U);
+  EXPECT_DOUBLE_EQ(result.landmarks.front().pose.position.y, 2.5);
+}
+
+// The configured range [0, 10] is wider than the rings of the points [2, 4], so it is narrowed to
+// [2, 4]. Every ring is then put on its own row of the grid.
+TEST(DetectLandmarks, NarrowConfiguredRangeToActualRings)
+{
+  DetectionParam param = make_param();
+  param.lower_ring_id_init = 0;
+  param.upper_ring_id_init = 10;
+
+  const DetectionResult result = detect_landmarks(make_points(10, true, 2), make_header(), param);
+
+  EXPECT_EQ(result.status, DetectionStatus::ok);
+  const auto & grid = result.center_intensity_grid;
+  ASSERT_EQ(grid.info.height, 3U);
+  ASSERT_EQ(result.landmarks.size(), 1U);
+  // the matched window starts at bin 3, so its center is bin 3 + intensity_pattern.size() / 2 = 5
+  for (std::uint32_t row = 0; row < grid.info.height; ++row) {
+    EXPECT_NE(grid.data.at(row * grid.info.width + 5), -1) << "row " << row;
+  }
+}
+
+// The points are on rings 0, 1, 2, 4, 5 and 6, and the configured range is [3, 6], so the lowest
+// ring 3 in the range has no point. Its row of the grid is left empty, and rings 4, 5 and 6 are
+// put on rows 1, 2 and 3.
+TEST(DetectLandmarks, LowestRingInRangeHasNoPoint)
+{
+  DetectionParam param = make_param();
+  param.lower_ring_id_init = 3;
+  param.upper_ring_id_init = 6;
+  pcl::PointCloud<PointT> points = make_points(10, true);
+  points += make_points(10, true, 4);
+
+  const DetectionResult result = detect_landmarks(points, make_header(), param);
+
+  EXPECT_EQ(result.status, DetectionStatus::ok);
+  const auto & grid = result.center_intensity_grid;
+  ASSERT_EQ(grid.info.height, 4U);
+  ASSERT_EQ(result.landmarks.size(), 1U);
+  EXPECT_EQ(grid.data.at(5), -1);
+  for (std::uint32_t row = 1; row < grid.info.height; ++row) {
+    EXPECT_NE(grid.data.at(row * grid.info.width + 5), -1) << "row " << row;
+  }
+}
+
+// The rings of the points [0, 2] and the configured range [5, 6] do not overlap.
+TEST(DetectLandmarks, NoPointsInConfiguredRange)
+{
+  DetectionParam param = make_param();
+  param.lower_ring_id_init = 5;
+  param.upper_ring_id_init = 6;
+
+  const DetectionResult result = detect_landmarks(make_points(10, true), make_header(), param);
+
+  EXPECT_EQ(result.status, DetectionStatus::no_points_in_ring_range);
+  EXPECT_TRUE(result.landmarks.empty());
+}
+
+// The rings of the points [0, 2] and [10, 12] surround the configured range [4, 6].
+TEST(DetectLandmarks, NoPointsInConfiguredRangeBetweenRings)
+{
+  DetectionParam param = make_param();
+  param.lower_ring_id_init = 4;
+  param.upper_ring_id_init = 6;
+  pcl::PointCloud<PointT> points = make_points(10, true);
+  points += make_points(10, true, 10);
+
+  const DetectionResult result = detect_landmarks(points, make_header(), param);
+
+  EXPECT_EQ(result.status, DetectionStatus::no_points_in_ring_range);
+  EXPECT_TRUE(result.landmarks.empty());
 }
 
 // The node declares all the parameters, including road_surface_mode.
