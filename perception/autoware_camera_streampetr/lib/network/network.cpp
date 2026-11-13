@@ -324,9 +324,7 @@ void StreamPetrNetwork::postprocess(
 StreamPetrNetwork::~StreamPetrNetwork()
 {
   if (stream_) {
-    cudaStreamSynchronize(stream_);
     mem_.release();
-    cudaStreamSynchronize(stream_);
     cudaStreamDestroy(stream_);
   }
 }

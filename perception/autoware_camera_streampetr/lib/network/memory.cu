@@ -36,6 +36,7 @@
 #include <stdio.h>
 
 #include <stdexcept>
+#include <string>
 
 namespace
 {
@@ -75,6 +76,12 @@ __global__ void apply_delta_to_mem(float delta, float * mem, float * buf, int n_
 
 void Memory::init(cudaStream_t stream, const int pre_length, const int post_length)
 {
+  // step_pre reads the first pre_length entries of mem_buf, which only holds post_length.
+  if (pre_length <= 0 || pre_length > post_length) {
+    throw std::invalid_argument(
+      "Memory::init: expected 0 < pre_memory_length <= post_memory_length, got " +
+      std::to_string(pre_length) + " and " + std::to_string(post_length) + ".");
+  }
   mem_len = post_length;
   pre_len = pre_length;
   mem_stream = stream;
