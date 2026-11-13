@@ -23442,8 +23442,8 @@
 </tbody>
 </table>
 <h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">#</a></h2>
-<p>The ML models used by this pipeline (traffic light detector / classifier) must be downloaded in advance to <code>~/autoware_data</code>. See <a href="https://autowarefoundation.github.io/autoware-documentation/main/installation/autoware/source-installation/#manual-downloading-of-artifacts">Manual downloading of artifacts</a> for how to download them.</p>
-<p>The default <code>data_path</code> launch argument (see below) points to <code>~/autoware_data</code>, so no additional configuration is needed once the models are placed there.</p>
+<p>The ML models used by this pipeline (traffic light detector / classifier) must be downloaded in advance to <code>~/autoware_data/ml_models</code>. See the <a href="https://github.com/autowarefoundation/autoware/tree/main/ansible/roles/artifacts#readme">artifacts role README</a> for how to download them.</p>
+<p>The default <code>data_path</code> launch argument (see below) points to <code>~/autoware_data/ml_models</code>, so no additional configuration is needed once the models are placed there.</p>
 <h2 id="how-to-launch">How to launch<a class="headerlink" href="#how-to-launch" title="Permanent link">#</a></h2>
 <div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>launch<span class="w"> </span>autoware_traffic_light_pipeline<span class="w"> </span>traffic_light_recognition.launch.xml
 </code></pre></div>
@@ -23459,7 +23459,7 @@
 <tbody>
 <tr>
 <td><code>data_path</code></td>
-<td><code>$(env HOME)/autoware_data</code></td>
+<td><code>$(env HOME)/autoware_data/ml_models</code></td>
 <td>Directory containing the downloaded ML artifacts</td>
 </tr>
 <tr>
@@ -23482,7 +23482,7 @@
 colcon<span class="w"> </span>build<span class="w"> </span>--packages-select<span class="w"> </span><span class="nv">$PACKAGE_NAME</span>
 colcon<span class="w"> </span><span class="nb">test</span><span class="w"> </span>--packages-select<span class="w"> </span><span class="nv">$PACKAGE_NAME</span><span class="w"> </span>--event-handlers<span class="w"> </span>console_cohesion+
 </code></pre></div>
-<p>The unit/integration tests also require the ML models under <code>~/autoware_data</code>, since <code>test_traffic_light_recognition_node</code> brings up the node with the same <code>ml_model_path</code> default as the launch file above.</p></div>
+<p>The unit/integration tests also require the ML models under <code>~/autoware_data/ml_models</code>, since <code>test_traffic_light_recognition_node</code> brings up the node with the same <code>ml_model_path</code> default as the launch file above.</p></div>
 
 
 
