@@ -254,7 +254,7 @@ std::vector<std::uint8_t> build_ego_mask_raster(
   }
 
   cv::Mat mask = cv::Mat::zeros(height, width, CV_8UC1);
-  // LINE_8, not LINE_AA: antialiased edges would dilate the mask.
+  // LINE_8, antialiased edges would dilate the mask.
   cv::fillPoly(mask, to_cv_polygons(polygons, width, height), cv::Scalar(255), cv::LINE_8);
 
   return copy_mask_to_raster(mask);
