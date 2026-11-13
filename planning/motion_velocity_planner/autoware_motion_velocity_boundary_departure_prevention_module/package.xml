@@ -26,10 +26,10 @@
   <depend>autoware_vehicle_info_utils</depend>
   <depend>fmt</depend>
   <depend>geometry_msgs</depend>
+  <depend>libexpected-dev</depend>
   <depend>pluginlib</depend>
   <depend>range-v3</depend>
   <depend>rclcpp</depend>
-  <depend>tl_expected</depend>
   <depend>visualization_msgs</depend>
 
   <test_depend>ament_cmake_ros</test_depend>

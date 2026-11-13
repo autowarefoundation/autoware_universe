@@ -15,7 +15,7 @@
 #ifndef AUTOWARE__TRAJECTORY_ADAPTER__TRAJECTORY_ADAPTER_HPP_
 #define AUTOWARE__TRAJECTORY_ADAPTER__TRAJECTORY_ADAPTER_HPP_
 
-#include <tl_expected/expected.hpp>
+#include <tl/expected.hpp>
 
 #include <autoware_internal_planning_msgs/msg/scored_candidate_trajectories.hpp>
 #include <autoware_planning_msgs/msg/trajectory.hpp>
