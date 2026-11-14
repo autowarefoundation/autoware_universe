@@ -20,7 +20,7 @@ from typing import Dict
 import numpy as np
 
 try:
-    import carla
+    from ..carla_backend import carla
 except ImportError:
     # CARLA not available - likely running in test environment
     # This module won't be functional but imports will succeed

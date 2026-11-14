@@ -34,7 +34,6 @@ from autoware_vehicle_msgs.msg import TurnIndicatorsCommand
 from autoware_vehicle_msgs.msg import TurnIndicatorsReport
 from autoware_vehicle_msgs.msg import VelocityReport
 from builtin_interfaces.msg import Time
-import carla
 import cv2
 from cv_bridge import CvBridge
 from geometry_msgs.msg import Pose
@@ -56,6 +55,8 @@ from tf2_msgs.msg import TFMessage
 from tier4_vehicle_msgs.msg import ActuationCommandStamped
 from tier4_vehicle_msgs.msg import ActuationStatusStamped
 from transforms3d.euler import euler2quat
+
+from .carla_backend import carla
 
 # New modular sensor infrastructure
 from .modules import ROSPublisherManager
