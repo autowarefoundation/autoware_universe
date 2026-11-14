@@ -46,7 +46,7 @@ repositories:
   middleware/external/agnocast:
     type: git
     url: https://github.com/autowarefoundation/agnocast.git
-    version: 2.4.1
+    version: 2.4.2
   universe/external/bevdet_vendor:
     type: git
     url: https://github.com/autowarefoundation/bevdet_vendor.git
