@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "autoware/mpc_lateral_controller/mpc_lateral_controller.hpp"
+#include "autoware/mpc_lateral_controller/stop_state_utils.hpp"
 
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
 #include "autoware/mpc_lateral_controller/qp_solver/qp_solver_osqp.hpp"
@@ -50,6 +51,7 @@ MpcLateralController::MpcLateralController(
 
   m_stop_state_entry_ego_speed = config.stop_state_entry_ego_speed;
   m_stop_state_entry_target_speed = config.stop_state_entry_target_speed;
+  m_stop_state_entry_distance = config.stop_state_entry_distance;
   m_converged_steer_rad = config.converged_steer_rad;
   m_keep_steer_control_until_converged = config.keep_steer_control_until_converged;
   m_new_traj_duration_time = config.new_traj_duration_time;
@@ -257,7 +259,11 @@ MpcLateralControllerResult MpcLateralController::runDetailed(
     }
     // Use previous command value as previous raw steer command
     m_mpc->m_raw_steer_cmd_prev = m_ctrl_cmd_prev.steering_tire_angle;
-    result.output = createLateralOutput(m_ctrl_cmd_prev, false, mpc_solved_status.ctrl_cmd_horizon);
+    // Do not advertise false solely because the controller holds a previous command.
+    // The ordinary convergence gate still requires a solved MPC, a stable command history,
+    // and measured steering matching the held command.
+    result.output = createLateralOutput(
+      m_ctrl_cmd_prev, mpc_solved_status.result, mpc_solved_status.ctrl_cmd_horizon);
     return result;
   }
 
@@ -383,21 +389,11 @@ bool MpcLateralController::isStoppedState() const
     m_current_trajectory.points, m_current_kinematic_state.pose.pose, m_ego_nearest_dist_threshold,
     m_ego_nearest_yaw_threshold);
 
-  // It is possible that stop is executed earlier than stop point, and velocity controller
-  // will not start when the distance from ego to stop point is less than 0.5 meter.
-  // So we use a distance margin to ensure we can detect stopped state.
-  static constexpr double distance_margin = 1.0;
-  const double target_vel = std::invoke([&]() -> double {
-    auto min_vel = m_current_trajectory.points.at(nearest).longitudinal_velocity_mps;
-    auto covered_distance = 0.0;
-    for (auto i = nearest + 1; i < m_current_trajectory.points.size(); ++i) {
-      min_vel = std::min(min_vel, m_current_trajectory.points.at(i).longitudinal_velocity_mps);
-      covered_distance += autoware_utils::calc_distance2d(
-        m_current_trajectory.points.at(i - 1).pose, m_current_trajectory.points.at(i).pose);
-      if (covered_distance > distance_margin) break;
-    }
-    return min_vel;
-  });
+  // Keep the lookahead consistent with PID's departure threshold (0.5 m by
+  // default). A point beyond the margin must not affect the stopped-state
+  // decision, even when the input trajectory is sparsely sampled.
+  const double target_vel = min_target_velocity_within_distance(
+    m_current_trajectory, nearest, m_stop_state_entry_distance);
 
   return std::fabs(target_vel) < m_stop_state_entry_target_speed;
 }
