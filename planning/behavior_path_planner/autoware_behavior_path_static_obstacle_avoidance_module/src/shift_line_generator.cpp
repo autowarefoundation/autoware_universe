@@ -127,7 +127,7 @@ AvoidOutlines ShiftLineGenerator::generateAvoidOutline(
       auto & object, const auto & desire_shift_length) -> std::optional<std::pair<double, double>> {
     // use each object param
     const auto object_type = utils::getHighestProbLabel(object.object.classification);
-    const auto object_parameter = parameters_->object_parameters.at(object_type);
+    const auto object_parameter = parameters_->getObjectParameter(object_type);
     const auto is_object_on_right = utils::static_obstacle_avoidance::isOnRight(object);
 
     // use absolute dist for return-to-center, relative dist from current for avoiding.
