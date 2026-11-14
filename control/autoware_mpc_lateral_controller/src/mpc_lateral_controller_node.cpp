@@ -65,7 +65,8 @@ MpcLateralControllerConfig MpcLateralControllerNode::createConfig(rclcpp::Node &
   /* stop state parameters */
   config.stop_state_entry_ego_speed = dp_double("stop_state_entry_ego_speed");
   config.stop_state_entry_target_speed = dp_double("stop_state_entry_target_speed");
-  config.stop_state_entry_distance = node.declare_parameter<double>("stop_state_entry_distance", 0.5);
+  config.stop_state_entry_distance =
+    node.declare_parameter<double>("stop_state_entry_distance", 0.5);
   config.converged_steer_rad = dp_double("converged_steer_rad");
   config.keep_steer_control_until_converged = dp_bool("keep_steer_control_until_converged");
   config.new_traj_duration_time = dp_double("new_traj_duration_time");            // [s]

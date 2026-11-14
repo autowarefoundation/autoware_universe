@@ -30,6 +30,8 @@
 
 namespace
 {
+using autoware::motion::control::mpc_lateral_controller::clamp_steering_to_vehicle_limit;
+using autoware::motion::control::mpc_lateral_controller::min_target_velocity_within_distance;
 using autoware::motion::control::mpc_lateral_controller::MpcLateralController;
 using autoware::motion::control::mpc_lateral_controller::MpcLateralControllerConfig;
 using autoware::motion::control::mpc_lateral_controller::no_log;
