@@ -23,20 +23,169 @@
 #include <autoware/cuda_utils/cuda_utils.hpp>
 #include <autoware/point_types/memory.hpp>
 #include <autoware_utils_math/constants.hpp>
+#include <nlohmann/json.hpp>
 
 #include <algorithm>
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
 #include <ctime>
+#include <fstream>
+#include <map>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
 namespace autoware::bevfusion
 {
+
+namespace
+{
+// Minimal protobuf field scanner: reads a varint from the stream.
+// Returns false on EOF or read error.
+bool read_varint(std::ifstream & f, std::uint64_t & out)
+{
+  out = 0;
+  int shift = 0;
+  std::uint8_t b;
+  do {
+    if (shift >= 64) {
+      return false;  // overlong varint (corrupt input) — avoid shift-overflow UB
+    }
+    if (!f.read(reinterpret_cast<char *>(&b), 1)) {
+      return false;
+    }
+    out |= static_cast<std::uint64_t>(b & 0x7FU) << shift;
+    shift += 7;
+  } while (b & 0x80U);
+  return true;
+}
+
+// Load the precomputed-rulebook contract from the ONNX metadata_props the exporter embedded:
+// "rulebook_stages" (the down-sample stages' geometry, JSON) and "rulebook_coors_permutation"
+// (the coordinate column order the graph was exported with, JSON [3]).
+//
+// Parses only the top-level protobuf fields of ModelProto, skipping the large graph field
+// (field 7) via seekg — total I/O is a few KB regardless of model size.
+// Returns empty stages if the path is empty, the file is missing, or the key is absent.
+RulebookMetadata load_rulebook_metadata(const std::string & onnx_path)
+{
+  RulebookMetadata metadata;
+  if (onnx_path.empty()) {
+    return metadata;
+  }
+  std::ifstream f(onnx_path, std::ios::binary);
+  if (!f.is_open()) {
+    return metadata;
+  }
+
+  // ONNX ModelProto (protobuf3) top-level field numbers:
+  //   1  ir_version       (varint)
+  //   7  graph            (length-delimited, large — skip via seekg)
+  //   8  opset_import     (length-delimited, repeated)
+  //   14 metadata_props   (length-delimited, repeated StringStringEntryProto)
+  //      └── 1 key (string), 2 value (string)
+  constexpr int kFieldMetadataProps = 14;
+  constexpr std::uint32_t kWireVarint = 0;
+  constexpr std::uint32_t kWireLenDelim = 2;
+  constexpr std::string_view kStagesKey = "rulebook_stages";
+  constexpr std::string_view kPermutationKey = "rulebook_coors_permutation";
+
+  std::map<std::string, std::string> props;
+  while (f.good()) {
+    std::uint64_t tag_u64;
+    if (!read_varint(f, tag_u64)) {
+      break;
+    }
+    const int field_num = static_cast<int>(tag_u64 >> 3U);
+    const std::uint32_t wire_type = static_cast<std::uint32_t>(tag_u64 & 0x7ULL);
+
+    if (wire_type == kWireVarint) {
+      std::uint64_t dummy;
+      if (!read_varint(f, dummy)) {
+        break;
+      }
+    } else if (wire_type == kWireLenDelim) {
+      std::uint64_t length;
+      if (!read_varint(f, length)) {
+        break;
+      }
+      if (field_num != kFieldMetadataProps) {
+        // Skip non-metadata fields (including the large graph) with a single seek.
+        f.seekg(static_cast<std::streamoff>(length), std::ios::cur);
+        continue;
+      }
+      // Parse StringStringEntryProto: field 1 = key, field 2 = value.
+      std::string key, value;
+      const std::streampos entry_start = f.tellg();
+      const std::streampos entry_end = entry_start + static_cast<std::streamoff>(length);
+      while (f.tellg() < entry_end) {
+        std::uint64_t sub_tag;
+        if (!read_varint(f, sub_tag)) {
+          break;
+        }
+        const int sub_field = static_cast<int>(sub_tag >> 3U);
+        const std::uint32_t sub_wire = static_cast<std::uint32_t>(sub_tag & 0x7ULL);
+        if (sub_wire != kWireLenDelim) {
+          break;
+        }
+        std::uint64_t sub_len;
+        if (!read_varint(f, sub_len)) {
+          break;
+        }
+        std::string buf(sub_len, '\0');
+        if (!f.read(buf.data(), static_cast<std::streamsize>(sub_len))) {
+          break;
+        }
+        if (sub_field == 1) {
+          key = std::move(buf);
+        } else if (sub_field == 2) {
+          value = std::move(buf);
+        }
+      }
+      f.seekg(entry_end);  // ensure we're at the correct position after the entry
+      props.emplace(std::move(key), std::move(value));
+    } else {
+      break;  // unexpected wire type — stop parsing
+    }
+  }
+
+  const auto stages_it = props.find(std::string(kStagesKey));
+  if (stages_it == props.end()) {
+    return metadata;
+  }
+  // A key that is present but not the expected JSON is surfaced rather than reported as
+  // "metadata absent, re-export".
+  try {
+    for (const auto & entry : nlohmann::json::parse(stages_it->second)) {
+      SparseDownsampleStage s;
+      s.onnx_base = entry.at("onnx_base").get<std::string>();
+      s.ksize = entry.at("ksize").get<std::vector<int>>();
+      s.stride = entry.at("stride").get<std::vector<int>>();
+      s.padding = entry.at("padding").get<std::vector<int>>();
+      s.dilation = entry.at("dilation").get<std::vector<int>>();
+      s.spatial_shape = entry.at("spatial_shape").get<std::vector<int>>();
+      metadata.stages.push_back(std::move(s));
+    }
+    const auto permutation_it = props.find(std::string(kPermutationKey));
+    if (permutation_it != props.end()) {
+      const auto columns = nlohmann::json::parse(permutation_it->second).get<std::vector<int>>();
+      if (columns.size() != 3) {
+        throw std::runtime_error("expected 3 entries in rulebook_coors_permutation");
+      }
+      metadata.coors_permutation = std::array<int, 3>{columns[0], columns[1], columns[2]};
+    }
+  } catch (const std::exception & e) {
+    throw std::runtime_error(
+      std::string("ONNX rulebook metadata is present but could not be parsed: ") + e.what());
+  }
+  return metadata;
+}
+}  // namespace
 
 BEVFusionTRT::BEVFusionTRT(
   const TrtBEVFusionConfig & trt_config, const DensificationParam & densification_param,
@@ -51,6 +200,28 @@ BEVFusionTRT::BEVFusionTRT(
   stop_watch_ptr_->tic("processing/inner");
 
   initPtr();
+
+  // trainStation/DDS removal: owns the stable rulebook buffers bound as engine inputs.
+  // Reads the stage geometry and the coordinate column order from the metadata_props the
+  // exporter embedded in the ONNX.
+  if (config_.sparse_remove_trainstation_) {
+    const std::string onnx_path = trt_config.common.onnx_path.string();
+    auto metadata = load_rulebook_metadata(onnx_path);
+    if (metadata.stages.empty()) {
+      throw std::runtime_error(
+        "sparse_remove_trainstation is enabled but the ONNX at '" + onnx_path +
+        "' has no 'rulebook_stages' metadata. Re-export the model with the down-sample "
+        "rulebooks precomputed (autoware-ml BEVFusion sparse stage / AWML "
+        "spconv_remove_trainstation=True).");
+    }
+    // Exports that predate the recorded column order were built on [x, y, z] coordinates, from
+    // a [z, y, x] graph input when sparse_coors_is_zyx is set.
+    rulebook_coors_permutation_ = metadata.coors_permutation.value_or(
+      config_.sparse_coors_is_zyx_ ? std::array<int, 3>{2, 1, 0} : std::array<int, 3>{0, 1, 2});
+    sparse_rulebook_ptr_ = std::make_unique<SparseRulebookPrecompute>(
+      static_cast<int>(config_.sparse_out_indices_num_limit_), std::move(metadata.stages), stream_);
+  }
+
   initTrt(trt_config);
 }
 
@@ -132,6 +303,9 @@ void BEVFusionTRT::initTrt(const TrtBEVFusionConfig & trt_config)
   // Camera branch (only for fusion mode)
   addCameraNetworkIO(network_io);
 
+  // trainStation/DDS removal: precomputed rulebook graph inputs (no-op unless enabled)
+  addSparseRulebookNetworkIO(network_io);
+
   // Outputs
   network_io.emplace_back(
     "bbox_pred", nvinfer1::Dims{2, {config_.num_box_values_, config_.num_proposals_}});
@@ -162,6 +336,9 @@ void BEVFusionTRT::initTrt(const TrtBEVFusionConfig & trt_config)
   // Camera branch (only for fusion mode)
   addCameraProfileDims(profile_dims);
 
+  // trainStation/DDS removal: profiles for the rulebook inputs (no-op unless enabled)
+  addSparseRulebookProfileDims(profile_dims);
+
   auto network_io_ptr =
     std::make_unique<std::vector<autoware::tensorrt_common::NetworkIO>>(network_io);
   auto profile_dims_ptr =
@@ -180,6 +357,9 @@ void BEVFusionTRT::initTrt(const TrtBEVFusionConfig & trt_config)
   network_trt_ptr_->setTensorAddress("coors", voxel_coords_d_.get());
 
   setSensorFusionTensorAddresses();
+
+  // trainStation/DDS removal: bind the stable rulebook buffers (no-op unless enabled)
+  bindSparseRulebookAddresses();
 
   network_trt_ptr_->setTensorAddress("label_pred", label_pred_output_d_.get());
   network_trt_ptr_->setTensorAddress("bbox_pred", bbox_pred_output_d_.get());
@@ -347,6 +527,89 @@ void BEVFusionTRT::setSensorFusionTensorAddresses()
   network_trt_ptr_->setTensorAddress("kept", kept_d_.get());
   network_trt_ptr_->setTensorAddress("ranks", ranks_d_.get());
   network_trt_ptr_->setTensorAddress("indices", indices_d_.get());
+}
+
+void BEVFusionTRT::addSparseRulebookNetworkIO(
+  std::vector<autoware::tensorrt_common::NetworkIO> & network_io)
+{
+  if (!sparse_rulebook_ptr_) {
+    return;
+  }
+  for (int i = 0; i < sparse_rulebook_ptr_->numStages(); ++i) {
+    const auto & s = sparse_rulebook_ptr_->stage(i);
+    const std::int64_t kv = s.kernel_volume;
+    network_io.emplace_back(
+      s.onnx_base + "/out_indices", nvinfer1::Dims{2, {-1, 4}});                      // out_indices
+    network_io.emplace_back(s.onnx_base + "/pair_fwd", nvinfer1::Dims{2, {kv, -1}});  // pair_fwd
+    network_io.emplace_back(s.onnx_base + "/pair_mask", nvinfer1::Dims{2, {-1, 1}});  // pair_mask
+    network_io.emplace_back(
+      s.onnx_base + "/mask_argsort", nvinfer1::Dims{1, {-1}});  // mask_argsort
+  }
+}
+
+void BEVFusionTRT::addSparseRulebookProfileDims(
+  std::vector<autoware::tensorrt_common::ProfileDims> & profile_dims)
+{
+  if (!sparse_rulebook_ptr_) {
+    return;
+  }
+  const std::int64_t n_min = 1;
+  const std::int64_t n_opt = config_.voxels_num_[1];
+  const std::int64_t n_max = config_.sparse_out_indices_num_limit_;
+  for (int i = 0; i < sparse_rulebook_ptr_->numStages(); ++i) {
+    const auto & s = sparse_rulebook_ptr_->stage(i);
+    const std::int64_t kv = s.kernel_volume;
+    profile_dims.emplace_back(
+      s.onnx_base + "/out_indices", nvinfer1::Dims{2, {n_min, 4}}, nvinfer1::Dims{2, {n_opt, 4}},
+      nvinfer1::Dims{2, {n_max, 4}});
+    profile_dims.emplace_back(
+      s.onnx_base + "/pair_fwd", nvinfer1::Dims{2, {kv, n_min}}, nvinfer1::Dims{2, {kv, n_opt}},
+      nvinfer1::Dims{2, {kv, n_max}});
+    profile_dims.emplace_back(
+      s.onnx_base + "/pair_mask", nvinfer1::Dims{2, {n_min, 1}}, nvinfer1::Dims{2, {n_opt, 1}},
+      nvinfer1::Dims{2, {n_max, 1}});
+    profile_dims.emplace_back(
+      s.onnx_base + "/mask_argsort", nvinfer1::Dims{1, {n_min}}, nvinfer1::Dims{1, {n_opt}},
+      nvinfer1::Dims{1, {n_max}});
+  }
+}
+
+void BEVFusionTRT::bindSparseRulebookAddresses()
+{
+  if (!sparse_rulebook_ptr_) {
+    return;
+  }
+  for (int i = 0; i < sparse_rulebook_ptr_->numStages(); ++i) {
+    const auto & s = sparse_rulebook_ptr_->stage(i);
+    network_trt_ptr_->setTensorAddress(
+      (s.onnx_base + "/out_indices").c_str(), sparse_rulebook_ptr_->outIndices(i));
+    network_trt_ptr_->setTensorAddress(
+      (s.onnx_base + "/pair_fwd").c_str(), sparse_rulebook_ptr_->pairFwd(i));
+    network_trt_ptr_->setTensorAddress(
+      (s.onnx_base + "/pair_mask").c_str(), sparse_rulebook_ptr_->pairMask(i));
+    network_trt_ptr_->setTensorAddress(
+      (s.onnx_base + "/mask_argsort").c_str(), sparse_rulebook_ptr_->maskArgsort(i));
+  }
+}
+
+void BEVFusionTRT::setSparseRulebookInputShapes()
+{
+  if (!sparse_rulebook_ptr_) {
+    return;
+  }
+  for (int i = 0; i < sparse_rulebook_ptr_->numStages(); ++i) {
+    const auto & s = sparse_rulebook_ptr_->stage(i);
+    const std::int64_t n = sparse_rulebook_ptr_->stageCount(i);
+    const std::int64_t kv = s.kernel_volume;
+    network_trt_ptr_->setInputShape(
+      (s.onnx_base + "/out_indices").c_str(), nvinfer1::Dims{2, {n, 4}});
+    network_trt_ptr_->setInputShape(
+      (s.onnx_base + "/pair_fwd").c_str(), nvinfer1::Dims{2, {kv, n}});
+    network_trt_ptr_->setInputShape(
+      (s.onnx_base + "/pair_mask").c_str(), nvinfer1::Dims{2, {n, 1}});
+    network_trt_ptr_->setInputShape(
+      (s.onnx_base + "/mask_argsort").c_str(), nvinfer1::Dims{1, {n}});
+  }
 }
 
 bool BEVFusionTRT::detect(
@@ -589,6 +852,9 @@ void BEVFusionTRT::configureTensorRTInputs(std::int64_t num_voxels, std::size_t 
   network_trt_ptr_->setInputShape(
     "coors", nvinfer1::Dims{2, {num_voxels, BEVFusionConfig::kNum3DCoords}});
 
+  // trainStation/DDS removal: set the rulebook input shapes from the precomputed per-stage counts.
+  setSparseRulebookInputShapes();
+
   if (!config_.sensor_fusion_) {
     return;
   }
@@ -672,6 +938,14 @@ bool BEVFusionTRT::preProcess(
     processPointCloudVoxelization(num_points, is_num_voxels_within_range);
   if (num_voxels < 0) {
     return false;
+  }
+
+  // trainStation/DDS removal: precompute the 4 down-sample rulebooks from the voxel coords on the
+  // GPU (one host sync per stage for its active-voxel count), so the engine has no in-graph DDS.
+  if (sparse_rulebook_ptr_) {
+    sparse_rulebook_ptr_->compute(
+      voxel_coords_d_.get(), static_cast<int>(num_voxels), BEVFusionConfig::kNum3DCoords,
+      rulebook_coors_permutation_);
   }
 
   configureTensorRTInputs(num_voxels, num_points);
