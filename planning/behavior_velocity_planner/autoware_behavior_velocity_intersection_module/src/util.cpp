@@ -74,7 +74,7 @@ std::optional<size_t> insertPointIndex(
 {
   const auto duplicate_idx_opt = getDuplicatedPointIdx(*inout_path, in_pose.position);
   if (duplicate_idx_opt) {
-    return duplicate_idx_opt.value();
+    return duplicate_idx_opt;
   }
 
   const size_t closest_idx = autoware::motion_utils::findFirstNearestIndexWithSoftConstraints(
