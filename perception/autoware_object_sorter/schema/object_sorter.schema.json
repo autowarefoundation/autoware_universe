@@ -26,6 +26,12 @@
             }
           }
         },
+        "range_thresholding_mode": {
+          "type": "string",
+          "enum": ["distance", "area"],
+          "description": "How range_threshold is applied. 'distance' uses min_distance and max_distance, 'area' uses min_x, max_x, min_y and max_y.",
+          "default": "distance"
+        },
         "sort_target": {
           "type": "object",
           "properties": {
@@ -542,7 +548,12 @@
           }
         }
       },
-      "required": ["range_calc_frame_id", "range_calc_offset", "sort_target"],
+      "required": [
+        "range_calc_frame_id",
+        "range_calc_offset",
+        "range_thresholding_mode",
+        "sort_target"
+      ],
       "additionalProperties": false
     }
   },
