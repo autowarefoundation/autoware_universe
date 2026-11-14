@@ -16,6 +16,8 @@
 
 #include "autoware/multi_object_tracker/tracker/trackers/polygon_tracker.hpp"
 
+#include "autoware/multi_object_tracker/tracker/motion_model/motion_model_math.hpp"
+
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include <autoware_utils_math/unit_conversion.hpp>
@@ -100,13 +102,13 @@ PolygonTracker::PolygonTracker(
       }
 
       // rotate twist covariance matrix, since it is in the vehicle coordinate system
-      Eigen::MatrixXd twist_cov_rotate(2, 2);
-      twist_cov_rotate(0, 0) = twist_cov[XYZRPY_COV_IDX::X_X];
-      twist_cov_rotate(0, 1) = twist_cov[XYZRPY_COV_IDX::X_Y];
-      twist_cov_rotate(1, 0) = twist_cov[XYZRPY_COV_IDX::Y_X];
-      twist_cov_rotate(1, 1) = twist_cov[XYZRPY_COV_IDX::Y_Y];
-      Eigen::MatrixXd R_yaw = Eigen::Rotation2Dd(-yaw).toRotationMatrix();
-      Eigen::MatrixXd twist_cov_rotated = R_yaw * twist_cov_rotate * R_yaw.transpose();
+      Eigen::Matrix2d twist_cov_mat;
+      twist_cov_mat(0, 0) = twist_cov[XYZRPY_COV_IDX::X_X];
+      twist_cov_mat(0, 1) = twist_cov[XYZRPY_COV_IDX::X_Y];
+      twist_cov_mat(1, 0) = twist_cov[XYZRPY_COV_IDX::Y_X];
+      twist_cov_mat(1, 1) = twist_cov[XYZRPY_COV_IDX::Y_Y];
+      const Eigen::Matrix2d twist_cov_rotated =
+        motion_model_math::rotateCov2D(twist_cov_mat, std::cos(yaw), std::sin(yaw));
       twist_cov[XYZRPY_COV_IDX::X_X] = twist_cov_rotated(0, 0);
       twist_cov[XYZRPY_COV_IDX::X_Y] = twist_cov_rotated(0, 1);
       twist_cov[XYZRPY_COV_IDX::Y_X] = twist_cov_rotated(1, 0);
