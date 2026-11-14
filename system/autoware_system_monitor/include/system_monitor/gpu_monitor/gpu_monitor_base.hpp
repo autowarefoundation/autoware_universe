@@ -28,6 +28,7 @@
 
 #include <climits>
 #include <map>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -133,6 +134,14 @@ protected:
    */
   void publishGPUStatus();
 
+  /**
+   * @brief Convert GPU usage to diagnostic level
+   * @param [in] index GPU index
+   * @param [in] usage GPU usage ratio (0.0-1.0)
+   * @return diagnostic level
+   */
+  int gpuUsageToLevel(size_t index, float usage);
+
   diagnostic_updater::Updater updater_;  //!< @brief Updater class which advertises to /diagnostics
 
   rclcpp::Publisher<tier4_external_api_msgs::msg::GpuStatus>::SharedPtr
@@ -142,12 +151,16 @@ protected:
 
   char hostname_[HOST_NAME_MAX + 1];  //!< @brief host name
 
-  float temp_warn_;           //!< @brief GPU temperature(DegC) to generate warning
-  float temp_error_;          //!< @brief GPU temperature(DegC) to generate error
-  float gpu_usage_warn_;      //!< @brief GPU usage(%) to generate warning
-  float gpu_usage_error_;     //!< @brief GPU usage(%) to generate error
-  float memory_usage_warn_;   //!< @brief GPU memory usage(%) to generate warning
-  float memory_usage_error_;  //!< @brief GPU memory usage(%) to generate error
+  float temp_warn_;               //!< @brief GPU temperature(DegC) to generate warning
+  float temp_error_;              //!< @brief GPU temperature(DegC) to generate error
+  float gpu_usage_warn_;          //!< @brief GPU usage(%) to generate warning
+  float gpu_usage_error_;         //!< @brief GPU usage(%) to generate error
+  int gpu_usage_error_duration_;  //!< @brief duration(sec) over gpu_usage_error_ to generate error
+  float memory_usage_warn_;       //!< @brief GPU memory usage(%) to generate warning
+  float memory_usage_error_;      //!< @brief GPU memory usage(%) to generate error
+
+  std::vector<std::optional<rclcpp::Time>>
+    gpu_usage_error_start_times_;  //!< @brief start time of high GPU usage per GPU
 
   /**
    * @brief GPU temperature status messages

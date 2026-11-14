@@ -4,5 +4,6 @@
     temp_error: 95.0
     gpu_usage_warn: 0.90
     gpu_usage_error: 1.00
+    gpu_usage_error_duration: 0
     memory_usage_warn: 0.95
     memory_usage_error: 0.99
