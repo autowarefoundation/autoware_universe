@@ -1,0 +1,1211 @@
+// Copyright 2025 TIER IV, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#include "autoware/candidate_bank/preprocessing/lane_segments.hpp"
+
+#include "autoware/candidate_bank/constants.hpp"
+#include "autoware/candidate_bank/dimensions.hpp"
+
+#include <autoware_lanelet2_extension/regulatory_elements/road_marking.hpp>  // for lanelet::autoware::RoadMarking
+
+#include <Eigen/src/Core/Matrix.h>
+#include <lanelet2_core/Forward.h>
+#include <lanelet2_core/primitives/BasicRegulatoryElements.h>
+
+#include <algorithm>
+#include <cmath>
+#include <deque>
+#include <iostream>
+#include <limits>
+#include <map>
+#include <memory>
+#include <queue>
+#include <set>
+#include <tuple>
+#include <utility>
+#include <vector>
+
+namespace autoware::candidate_bank::preprocess
+{
+
+// Internal functions declaration
+namespace
+{
+using autoware_perception_msgs::msg::TrafficLightElement;
+
+std::map<lanelet::Id, size_t> create_lane_id_to_array_index_map(
+  const std::vector<LaneSegment> & lane_segments);
+bool is_segment_inside(const LaneSegment & segment, const double center_x, const double center_y);
+uint8_t identify_current_light_status(
+  const int64_t turn_direction, const std::vector<TrafficLightElement> & traffic_light_elements);
+constexpr double kCurrentLaneInsideToleranceM = 0.08;
+constexpr double kCurrentLaneFallbackMaxDistanceM = 4.0;
+constexpr double kCurrentLaneMaxHeadingErrorRad = 75.0 * M_PI / 180.0;
+constexpr double kCurrentLanePreviousMaxHeadingErrorRad = 100.0 * M_PI / 180.0;
+
+double wrap_lane_angle(const double angle)
+{
+  return std::atan2(std::sin(angle), std::cos(angle));
+}
+
+double point_segment_distance_m(
+  const double px, const double py, const LanePoint & a, const LanePoint & b)
+{
+  const double dx = b.x() - a.x();
+  const double dy = b.y() - a.y();
+  const double len2 = dx * dx + dy * dy;
+  if (len2 <= 1.0e-12) {
+    return std::hypot(px - a.x(), py - a.y());
+  }
+  const double u = std::clamp(((px - a.x()) * dx + (py - a.y()) * dy) / len2, 0.0, 1.0);
+  const double qx = a.x() + u * dx;
+  const double qy = a.y() + u * dy;
+  return std::hypot(px - qx, py - qy);
+}
+
+struct LanePointMatch
+{
+  double centerline_distance_m{std::numeric_limits<double>::infinity()};
+  double heading_error_rad{std::numeric_limits<double>::infinity()};
+};
+
+LanePointMatch match_lane_centerline(
+  const LaneSegment & lane, const double px, const double py, const double ego_yaw)
+{
+  LanePointMatch match;
+  for (std::size_t i = 1; i < lane.centerline.size(); ++i) {
+    const auto & a = lane.centerline[i - 1];
+    const auto & b = lane.centerline[i];
+    const double dx = b.x() - a.x();
+    const double dy = b.y() - a.y();
+    if (std::hypot(dx, dy) <= 1.0e-6) {
+      continue;
+    }
+    const double distance = point_segment_distance_m(px, py, a, b);
+    if (distance < match.centerline_distance_m) {
+      match.centerline_distance_m = distance;
+      match.heading_error_rad = std::abs(wrap_lane_angle(ego_yaw - std::atan2(dy, dx)));
+    }
+  }
+  return match;
+}
+
+Polyline lane_polygon_points(const LaneSegment & lane)
+{
+  Polyline polygon;
+  polygon.reserve(lane.left_boundary.size() + lane.right_boundary.size());
+  polygon.insert(polygon.end(), lane.left_boundary.begin(), lane.left_boundary.end());
+  polygon.insert(polygon.end(), lane.right_boundary.rbegin(), lane.right_boundary.rend());
+  return polygon;
+}
+
+bool point_inside_lane_polygon(const LaneSegment & lane, const double px, const double py)
+{
+  const Polyline polygon = lane_polygon_points(lane);
+  if (polygon.size() < 3) {
+    return false;
+  }
+
+  // Boundary-inclusive test: points very close to an edge are treated as inside.  This is
+  // important during a lane change because the ego reference point can lie exactly on a shared
+  // lane boundary for several planning frames.
+  for (std::size_t i = 0; i < polygon.size(); ++i) {
+    const auto & a = polygon[i];
+    const auto & b = polygon[(i + 1) % polygon.size()];
+    if (point_segment_distance_m(px, py, a, b) <= kCurrentLaneInsideToleranceM) {
+      return true;
+    }
+  }
+
+  bool inside = false;
+  for (std::size_t i = 0, j = polygon.size() - 1; i < polygon.size(); j = i++) {
+    const double xi = polygon[i].x();
+    const double yi = polygon[i].y();
+    const double xj = polygon[j].x();
+    const double yj = polygon[j].y();
+    const bool crosses =
+      ((yi > py) != (yj > py)) && (px < (xj - xi) * (py - yi) / ((yj - yi) + 1.0e-15) + xi);
+    if (crosses) {
+      inside = !inside;
+    }
+  }
+  return inside;
+}
+
+std::map<lanelet::Id, std::vector<CurrentLaneBoundary>> create_shared_lane_boundary_map(
+  const std::shared_ptr<const lanelet::LaneletMap> & map_ptr,
+  const std::vector<LaneSegment> & lanes)
+{
+  std::map<lanelet::Id, std::vector<lanelet::Id>> boundary_lane_ids;
+  for (const auto & lane : lanes) {
+    const auto map_lanelet = map_ptr->laneletLayer.get(lane.id);
+    boundary_lane_ids[map_lanelet.leftBound().id()].push_back(lane.id);
+    boundary_lane_ids[map_lanelet.rightBound().id()].push_back(lane.id);
+  }
+
+  std::map<lanelet::Id, std::vector<CurrentLaneBoundary>> result;
+  for (const auto & lane : lanes) {
+    const auto map_lanelet = map_ptr->laneletLayer.get(lane.id);
+    auto append_if_shared = [&](const lanelet::Id boundary_id, const Polyline & points) {
+      const auto lanes_it = boundary_lane_ids.find(boundary_id);
+      if (lanes_it == boundary_lane_ids.end() || lanes_it->second.size() < 2 || points.size() < 2) {
+        return;
+      }
+      CurrentLaneBoundary boundary;
+      boundary.boundary_id = boundary_id;
+      const auto adjacent_it = std::find_if(
+        lanes_it->second.begin(), lanes_it->second.end(),
+        [&](const lanelet::Id id) { return id != lane.id; });
+      if (adjacent_it != lanes_it->second.end()) {
+        boundary.adjacent_lane_id = *adjacent_it;
+      }
+      boundary.points_map = points;
+      result[lane.id].push_back(std::move(boundary));
+    };
+    append_if_shared(map_lanelet.leftBound().id(), lane.left_boundary);
+    append_if_shared(map_lanelet.rightBound().id(), lane.right_boundary);
+  }
+  return result;
+}
+constexpr double kMapJoinToleranceM = 1.5;
+constexpr double kMinConflictAngleRad = 8.0 * M_PI / 180.0;
+constexpr double kMaxJoinHeadingErrorRad = 100.0 * M_PI / 180.0;
+
+double polyline_length_m(const Polyline & points)
+{
+  double length = 0.0;
+  for (std::size_t i = 1; i < points.size(); ++i) {
+    length += std::hypot(points[i].x() - points[i - 1].x(), points[i].y() - points[i - 1].y());
+  }
+  return length;
+}
+
+double wrap_angle(const double angle)
+{
+  return std::atan2(std::sin(angle), std::cos(angle));
+}
+
+std::optional<double> lane_start_heading(const LaneSegment & lane)
+{
+  for (std::size_t i = 1; i < lane.centerline.size(); ++i) {
+    const double dx = lane.centerline[i].x() - lane.centerline[i - 1].x();
+    const double dy = lane.centerline[i].y() - lane.centerline[i - 1].y();
+    if (std::hypot(dx, dy) > 1.0e-6) {
+      return std::atan2(dy, dx);
+    }
+  }
+  return std::nullopt;
+}
+
+std::optional<double> lane_end_heading(const LaneSegment & lane)
+{
+  if (lane.centerline.size() < 2) {
+    return std::nullopt;
+  }
+  for (std::size_t i = lane.centerline.size() - 1; i > 0; --i) {
+    const double dx = lane.centerline[i].x() - lane.centerline[i - 1].x();
+    const double dy = lane.centerline[i].y() - lane.centerline[i - 1].y();
+    if (std::hypot(dx, dy) > 1.0e-6) {
+      return std::atan2(dy, dx);
+    }
+  }
+  return std::nullopt;
+}
+
+std::map<lanelet::Id, std::vector<lanelet::Id>> create_predecessor_lane_map(
+  const std::vector<LaneSegment> & lanes)
+{
+  using Cell = std::pair<int64_t, int64_t>;
+  constexpr double kCellSizeM = kMapJoinToleranceM;
+  const auto cell_of = [=](const LanePoint & p) -> Cell {
+    return {
+      static_cast<int64_t>(std::floor(p.x() / kCellSizeM)),
+      static_cast<int64_t>(std::floor(p.y() / kCellSizeM))};
+  };
+
+  std::map<Cell, std::vector<std::size_t>> starts;
+  for (std::size_t i = 0; i < lanes.size(); ++i) {
+    if (!lanes[i].centerline.empty()) {
+      starts[cell_of(lanes[i].centerline.front())].push_back(i);
+    }
+  }
+
+  std::map<lanelet::Id, std::vector<lanelet::Id>> predecessors;
+  for (std::size_t pred_index = 0; pred_index < lanes.size(); ++pred_index) {
+    const auto & pred = lanes[pred_index];
+    if (pred.centerline.empty()) {
+      continue;
+    }
+    const Cell end_cell = cell_of(pred.centerline.back());
+    for (int64_t dx = -1; dx <= 1; ++dx) {
+      for (int64_t dy = -1; dy <= 1; ++dy) {
+        const auto bucket = starts.find({end_cell.first + dx, end_cell.second + dy});
+        if (bucket == starts.end()) {
+          continue;
+        }
+        for (const std::size_t next_index : bucket->second) {
+          if (next_index == pred_index) {
+            continue;
+          }
+          const auto & next = lanes[next_index];
+          const double endpoint_distance = std::hypot(
+            pred.centerline.back().x() - next.centerline.front().x(),
+            pred.centerline.back().y() - next.centerline.front().y());
+          if (endpoint_distance > kMapJoinToleranceM) {
+            continue;
+          }
+          const auto pred_heading = lane_end_heading(pred);
+          const auto next_heading = lane_start_heading(next);
+          if (pred_heading.has_value() && next_heading.has_value()) {
+            const double heading_error =
+              std::abs(wrap_angle(next_heading.value() - pred_heading.value()));
+            if (heading_error > kMaxJoinHeadingErrorRad) {
+              continue;
+            }
+          }
+          predecessors[next.id].push_back(pred.id);
+        }
+      }
+    }
+  }
+  return predecessors;
+}
+std::map<lanelet::Id, std::vector<lanelet::Id>> create_successor_lane_map(
+  const std::vector<LaneSegment> & lanes)
+{
+  const auto predecessors = create_predecessor_lane_map(lanes);
+  std::map<lanelet::Id, std::vector<lanelet::Id>> successors;
+  for (const auto & [next_id, pred_ids] : predecessors) {
+    for (const auto pred_id : pred_ids) {
+      successors[pred_id].push_back(next_id);
+    }
+  }
+  return successors;
+}
+
+struct CenterlineConflict
+{
+  geometry_msgs::msg::Point point;
+  double route_s_m{0.0};
+  double competing_s_m{0.0};
+};
+
+std::optional<CenterlineConflict> find_centerline_conflict(
+  const Polyline & route, const Polyline & competing)
+{
+  if (route.size() < 2 || competing.size() < 2) {
+    return std::nullopt;
+  }
+  double route_prefix = 0.0;
+  std::optional<CenterlineConflict> best;
+  for (std::size_t i = 1; i < route.size(); ++i) {
+    const double rx = route[i].x() - route[i - 1].x();
+    const double ry = route[i].y() - route[i - 1].y();
+    const double rnorm = std::hypot(rx, ry);
+    if (rnorm <= 1.0e-6) {
+      continue;
+    }
+    double competing_prefix = 0.0;
+    for (std::size_t j = 1; j < competing.size(); ++j) {
+      const double sx = competing[j].x() - competing[j - 1].x();
+      const double sy = competing[j].y() - competing[j - 1].y();
+      const double snorm = std::hypot(sx, sy);
+      if (snorm <= 1.0e-6) {
+        continue;
+      }
+      const double cross = rx * sy - ry * sx;
+      const double sin_angle = std::abs(cross) / (rnorm * snorm);
+      if (sin_angle < std::sin(kMinConflictAngleRad) || std::abs(cross) <= 1.0e-9) {
+        competing_prefix += snorm;
+        continue;
+      }
+      const double qpx = competing[j - 1].x() - route[i - 1].x();
+      const double qpy = competing[j - 1].y() - route[i - 1].y();
+      const double t = (qpx * sy - qpy * sx) / cross;
+      const double u = (qpx * ry - qpy * rx) / cross;
+      constexpr double kTol = 1.0e-6;
+      if (t >= -kTol && t <= 1.0 + kTol && u >= -kTol && u <= 1.0 + kTol) {
+        CenterlineConflict conflict;
+        conflict.point.x = route[i - 1].x() + std::clamp(t, 0.0, 1.0) * rx;
+        conflict.point.y = route[i - 1].y() + std::clamp(t, 0.0, 1.0) * ry;
+        conflict.point.z = route[i - 1].z();
+        conflict.route_s_m = route_prefix + std::clamp(t, 0.0, 1.0) * rnorm;
+        conflict.competing_s_m = competing_prefix + std::clamp(u, 0.0, 1.0) * snorm;
+        if (!best.has_value() || conflict.route_s_m < best->route_s_m) {
+          best = conflict;
+        }
+      }
+      competing_prefix += snorm;
+    }
+    route_prefix += rnorm;
+  }
+  return best;
+}
+
+CandidateMapLaneGeometry make_map_lane_geometry(
+  const LaneSegment & lane, const bool is_route_lane, const double route_s_start_m)
+{
+  CandidateMapLaneGeometry result;
+  result.lane_id = lane.id;
+  result.is_route_lane = is_route_lane;
+  result.route_s_start_m = route_s_start_m;
+  result.centerline_map.reserve(lane.centerline.size());
+  for (const auto & p : lane.centerline) {
+    geometry_msgs::msg::Point out;
+    out.x = p.x();
+    out.y = p.y();
+    out.z = p.z();
+    result.centerline_map.push_back(out);
+  }
+  return result;
+}
+}  // namespace
+
+// LaneSegmentContext implementation
+LaneSegmentContext::LaneSegmentContext(
+  const std::shared_ptr<const lanelet::LaneletMap> & lanelet_map_ptr,
+  const double line_string_max_step_m)
+: lanelet_map_ptr_(lanelet_map_ptr),
+  lanelet_map_(convert_to_internal_lanelet_map(lanelet_map_ptr, line_string_max_step_m)),
+  lanelet_id_to_array_index_(create_lane_id_to_array_index_map(lanelet_map_.lane_segments)),
+  shared_lane_boundaries_by_lane_id_(
+    create_shared_lane_boundary_map(lanelet_map_ptr, lanelet_map_.lane_segments)),
+  predecessor_lane_ids_(create_predecessor_lane_map(lanelet_map_.lane_segments)),
+  successor_lane_ids_(create_successor_lane_map(lanelet_map_.lane_segments))
+{
+  if (lanelet_map_.lane_segments.empty()) {
+    throw std::runtime_error("No lane segments found in the map");
+  }
+}
+
+std::vector<int64_t> LaneSegmentContext::select_route_segment_indices(
+  const LaneletRoute & route, const double center_x, const double center_y, const double center_z,
+  const int64_t max_segments) const
+{
+  std::vector<int64_t> array_indices;
+  double closest_distance = std::numeric_limits<double>::max();
+  size_t closest_index = 0;
+  for (size_t i = 0; i < route.segments.size(); ++i) {
+    // add index
+    const int64_t lanelet_id = route.segments[i].preferred_primitive.id;
+    if (lanelet_id_to_array_index_.count(lanelet_id) == 0) {
+      continue;
+    }
+    const int64_t array_index = lanelet_id_to_array_index_.at(lanelet_id);
+    array_indices.push_back(array_index);
+
+    // calculate closest index
+    const LaneSegment & route_segment = lanelet_map_.lane_segments[array_index];
+    double distance = std::numeric_limits<double>::max();
+    for (const LanePoint & point : route_segment.centerline) {
+      const double diff_x = point.x() - center_x;
+      const double diff_y = point.y() - center_y;
+      const double diff_z = point.z() - center_z;
+      const double curr_distance = std::sqrt(diff_x * diff_x + diff_y * diff_y + diff_z * diff_z);
+      distance = std::min(distance, curr_distance);
+    }
+    if (distance < closest_distance) {
+      closest_distance = distance;
+      closest_index = i;
+    }
+  }
+
+  std::vector<int64_t> selected_indices;
+  bool has_entered_valid_region = false;
+
+  // Select route segment indices
+  for (size_t i = closest_index; i < array_indices.size(); ++i) {
+    const int64_t segment_idx = array_indices[i];
+
+    if (!is_segment_inside(lanelet_map_.lane_segments[segment_idx], center_x, center_y)) {
+      if (has_entered_valid_region) {
+        break;
+      } else {
+        continue;
+      }
+    }
+
+    has_entered_valid_region = true;
+
+    selected_indices.push_back(segment_idx);
+    if (selected_indices.size() >= static_cast<size_t>(max_segments)) {
+      break;
+    }
+  }
+
+  return selected_indices;
+}
+
+autoware_perception_msgs::msg::TrafficLightGroup
+LaneSegmentContext::get_first_traffic_light_on_route(
+  const LaneletRoute & route, const double center_x, const double center_y, const double center_z,
+  const std::map<lanelet::Id, TrafficSignalStamped> & traffic_light_id_map) const
+{
+  autoware_perception_msgs::msg::TrafficLightGroup result;
+  result.traffic_light_group_id = 0;
+
+  const std::vector<int64_t> segment_indices =
+    select_route_segment_indices(route, center_x, center_y, center_z, NUM_SEGMENTS_IN_ROUTE);
+
+  for (const int64_t segment_idx : segment_indices) {
+    const LaneSegment & segment = lanelet_map_.lane_segments[segment_idx];
+    if (segment.traffic_light_id == LaneSegment::TRAFFIC_LIGHT_ID_NONE) {
+      continue;
+    }
+
+    const auto it = traffic_light_id_map.find(segment.traffic_light_id);
+    if (it != traffic_light_id_map.end()) {
+      result = it->second.signal;
+    } else {
+      result.traffic_light_group_id = static_cast<int64_t>(segment.traffic_light_id);
+      autoware_perception_msgs::msg::TrafficLightElement unknown_element;
+      unknown_element.color = TrafficLightElement::UNKNOWN;
+      unknown_element.shape = TrafficLightElement::UNKNOWN;
+      unknown_element.status = TrafficLightElement::UNKNOWN;
+      unknown_element.confidence = 0.0f;
+      result.elements = {unknown_element};
+    }
+    return result;
+  }
+
+  return result;
+}
+
+std::vector<RouteTrafficSignalStop> LaneSegmentContext::get_route_traffic_signal_stops(
+  const LaneletRoute & route, const double center_x, const double center_y, const double center_z,
+  const Eigen::Matrix4d & map_to_ego_transform,
+  const std::map<lanelet::Id, TrafficSignalStamped> & traffic_light_id_map) const
+{
+  std::vector<RouteTrafficSignalStop> result;
+  std::set<lanelet::Id> visited_traffic_lights;
+
+  const std::vector<int64_t> segment_indices =
+    select_route_segment_indices(route, center_x, center_y, center_z, NUM_SEGMENTS_IN_ROUTE);
+
+  for (const int64_t segment_idx : segment_indices) {
+    const LaneSegment & segment = lanelet_map_.lane_segments.at(static_cast<size_t>(segment_idx));
+    if (segment.traffic_light_id == LaneSegment::TRAFFIC_LIGHT_ID_NONE) {
+      continue;
+    }
+    if (!visited_traffic_lights.insert(segment.traffic_light_id).second) {
+      continue;
+    }
+
+    const lanelet::ConstLanelet map_lanelet = lanelet_map_ptr_->laneletLayer.get(segment.id);
+    const auto traffic_lights = map_lanelet.regulatoryElementsAs<const lanelet::TrafficLight>();
+    if (traffic_lights.empty()) {
+      continue;
+    }
+
+    const auto matching_regulatory_element = std::find_if(
+      traffic_lights.begin(), traffic_lights.end(),
+      [&](const auto & traffic_light) { return traffic_light->id() == segment.traffic_light_id; });
+    const auto & traffic_light = matching_regulatory_element != traffic_lights.end()
+                                   ? *matching_regulatory_element
+                                   : traffic_lights.front();
+    const auto stop_line = traffic_light->stopLine();
+    if (!stop_line || stop_line->empty()) {
+      continue;
+    }
+
+    Eigen::Vector4d stop_line_center_map = Eigen::Vector4d::Zero();
+    for (const auto & point : *stop_line) {
+      stop_line_center_map.x() += point.x();
+      stop_line_center_map.y() += point.y();
+      stop_line_center_map.z() += point.z();
+    }
+    stop_line_center_map /= static_cast<double>(stop_line->size());
+    stop_line_center_map.w() = 1.0;
+    const Eigen::Vector4d stop_line_center_ego = map_to_ego_transform * stop_line_center_map;
+
+    RouteTrafficSignalStop candidate;
+    candidate.traffic_light_id = segment.traffic_light_id;
+    candidate.stop_line_center_ego = stop_line_center_ego.head<3>();
+
+    const auto signal_it = traffic_light_id_map.find(segment.traffic_light_id);
+    if (signal_it != traffic_light_id_map.end()) {
+      candidate.signal_observed = true;
+      candidate.color =
+        identify_current_light_status(segment.turn_direction, signal_it->second.signal.elements);
+    }
+
+    result.push_back(candidate);
+  }
+
+  return result;
+}
+CurrentLaneRuleContext LaneSegmentContext::get_current_lane_rule_context(
+  const double center_x, const double center_y, const Eigen::Matrix4d & map_to_ego_transform,
+  const std::map<lanelet::Id, TrafficSignalStamped> & traffic_light_id_map,
+  const double adjacent_signal_search_distance_m) const
+{
+  CurrentLaneRuleContext context;
+  // For map->ego = R(-yaw), matrix(0,0)=cos(yaw), matrix(0,1)=sin(yaw).
+  const double ego_yaw = std::atan2(map_to_ego_transform(0, 1), map_to_ego_transform(0, 0));
+
+  auto acceptable_match =
+    [&](const LaneSegment & lane, const double max_heading_error) -> std::optional<LanePointMatch> {
+    const LanePointMatch match = match_lane_centerline(lane, center_x, center_y, ego_yaw);
+    if (
+      !std::isfinite(match.centerline_distance_m) || !std::isfinite(match.heading_error_rad) ||
+      match.heading_error_rad > max_heading_error) {
+      return std::nullopt;
+    }
+    return match;
+  };
+
+  std::optional<std::size_t> selected_index;
+  // Hysteresis: keep the prior lane while the ego point still belongs to that lane polygon.
+  if (candidate_current_lane_id_.has_value()) {
+    const auto previous = lanelet_id_to_array_index_.find(candidate_current_lane_id_.value());
+    if (previous != lanelet_id_to_array_index_.end()) {
+      const auto & lane = lanelet_map_.lane_segments.at(previous->second);
+      if (
+        point_inside_lane_polygon(lane, center_x, center_y) &&
+        acceptable_match(lane, kCurrentLanePreviousMaxHeadingErrorRad).has_value()) {
+        selected_index = previous->second;
+      }
+    }
+  }
+
+  // Otherwise choose the containing lane whose centerline/heading best matches ego.
+  if (!selected_index.has_value()) {
+    double best_distance = std::numeric_limits<double>::infinity();
+    for (std::size_t i = 0; i < lanelet_map_.lane_segments.size(); ++i) {
+      const auto & lane = lanelet_map_.lane_segments[i];
+      if (!point_inside_lane_polygon(lane, center_x, center_y)) {
+        continue;
+      }
+      const auto match = acceptable_match(lane, kCurrentLaneMaxHeadingErrorRad);
+      if (match.has_value() && match->centerline_distance_m < best_distance) {
+        best_distance = match->centerline_distance_m;
+        selected_index = i;
+      }
+    }
+  }
+
+  // Small fallback for map discretization gaps. Do not jump to a distant lane.
+  if (!selected_index.has_value()) {
+    double best_distance = kCurrentLaneFallbackMaxDistanceM;
+    for (std::size_t i = 0; i < lanelet_map_.lane_segments.size(); ++i) {
+      const auto match =
+        acceptable_match(lanelet_map_.lane_segments[i], kCurrentLaneMaxHeadingErrorRad);
+      if (match.has_value() && match->centerline_distance_m < best_distance) {
+        best_distance = match->centerline_distance_m;
+        selected_index = i;
+      }
+    }
+  }
+
+  if (!selected_index.has_value()) {
+    candidate_current_lane_id_.reset();
+    return context;
+  }
+
+  const LaneSegment & lane = lanelet_map_.lane_segments.at(selected_index.value());
+  candidate_current_lane_id_ = lane.id;
+  context.valid = true;
+  context.lane_id = lane.id;
+
+  const auto traffic_stops_for_lane = [&](const lanelet::Id lane_id) {
+    std::vector<RouteTrafficSignalStop> stops;
+    const auto index_it = lanelet_id_to_array_index_.find(lane_id);
+    if (index_it == lanelet_id_to_array_index_.end()) {
+      return stops;
+    }
+    const auto & internal_lane = lanelet_map_.lane_segments.at(index_it->second);
+    const auto map_lanelet = lanelet_map_ptr_->laneletLayer.get(lane_id);
+    const auto traffic_lights = map_lanelet.regulatoryElementsAs<const lanelet::TrafficLight>();
+    for (const auto & traffic_light : traffic_lights) {
+      const auto stop_line = traffic_light->stopLine();
+      if (!stop_line || stop_line->empty()) {
+        continue;
+      }
+      Eigen::Vector4d stop_line_center_map = Eigen::Vector4d::Zero();
+      for (const auto & point : *stop_line) {
+        stop_line_center_map.x() += point.x();
+        stop_line_center_map.y() += point.y();
+        stop_line_center_map.z() += point.z();
+      }
+      stop_line_center_map /= static_cast<double>(stop_line->size());
+      stop_line_center_map.w() = 1.0;
+      RouteTrafficSignalStop stop;
+      stop.traffic_light_id = traffic_light->id();
+      stop.stop_line_center_ego = (map_to_ego_transform * stop_line_center_map).head<3>();
+      const auto signal_it = traffic_light_id_map.find(stop.traffic_light_id);
+      if (signal_it != traffic_light_id_map.end()) {
+        stop.signal_observed = true;
+        stop.color = identify_current_light_status(
+          internal_lane.turn_direction, signal_it->second.signal.elements);
+      }
+      stops.push_back(stop);
+    }
+    return stops;
+  };
+  const auto traffic_stops_ahead_for_lane = [&](const lanelet::Id start_lane_id) {
+    std::vector<RouteTrafficSignalStop> stops;
+    if (start_lane_id == 0) return stops;
+    struct QueueEntry
+    {
+      lanelet::Id lane_id;
+      double distance_before_lane_m;
+    };
+    std::deque<QueueEntry> queue;
+    std::set<lanelet::Id> visited;
+    queue.push_back({start_lane_id, 0.0});
+    const double max_distance = std::max(0.0, adjacent_signal_search_distance_m);
+    while (!queue.empty()) {
+      const QueueEntry current = queue.front();
+      queue.pop_front();
+      if (
+        !visited.insert(current.lane_id).second || current.distance_before_lane_m > max_distance) {
+        continue;
+      }
+      const auto lane_stops = traffic_stops_for_lane(current.lane_id);
+      stops.insert(stops.end(), lane_stops.begin(), lane_stops.end());
+      const auto index_it = lanelet_id_to_array_index_.find(current.lane_id);
+      if (index_it == lanelet_id_to_array_index_.end()) continue;
+      const double next_distance =
+        current.distance_before_lane_m +
+        polyline_length_m(lanelet_map_.lane_segments.at(index_it->second).centerline);
+      if (next_distance > max_distance) continue;
+      const auto successors = successor_lane_ids_.find(current.lane_id);
+      if (successors == successor_lane_ids_.end()) continue;
+      for (const auto next_id : successors->second) {
+        queue.push_back({next_id, next_distance});
+      }
+    }
+    return stops;
+  };
+
+  const auto boundaries = shared_lane_boundaries_by_lane_id_.find(lane.id);
+  if (boundaries != shared_lane_boundaries_by_lane_id_.end()) {
+    context.shared_boundaries_map = boundaries->second;
+    for (auto & boundary : context.shared_boundaries_map) {
+      if (boundary.adjacent_lane_id != 0) {
+        boundary.adjacent_traffic_signal_stops =
+          traffic_stops_ahead_for_lane(boundary.adjacent_lane_id);
+      }
+    }
+  }
+
+  context.traffic_signal_stops = traffic_stops_for_lane(lane.id);
+  return context;
+}
+CandidateMapConflictContext LaneSegmentContext::create_candidate_map_conflict_context(
+  const LaneletRoute & route, const double center_x, const double center_y, const double center_z,
+  const double forward_search_distance_m, const double backtrace_distance_m) const
+{
+  CandidateMapConflictContext context;
+  const auto route_indices =
+    select_route_segment_indices(route, center_x, center_y, center_z, NUM_SEGMENTS_IN_ROUTE);
+  if (route_indices.empty()) {
+    return context;
+  }
+  context.valid = true;
+
+  std::set<lanelet::Id> route_ids;
+  std::map<lanelet::Id, std::size_t> context_lane_index;
+  auto ensure_context_lane =
+    [&](const LaneSegment & lane, const bool is_route, const double route_s_start_m) {
+      const auto found = context_lane_index.find(lane.id);
+      if (found == context_lane_index.end()) {
+        context_lane_index[lane.id] = context.lanes.size();
+        context.lanes.push_back(make_map_lane_geometry(lane, is_route, route_s_start_m));
+        return;
+      }
+      auto & existing = context.lanes[found->second];
+      if (is_route) {
+        existing.is_route_lane = true;
+        existing.route_s_start_m = route_s_start_m;
+      }
+    };
+
+  double route_s_start_m = 0.0;
+  std::vector<std::pair<std::size_t, double>> forward_route_lanes;
+  for (const auto route_index_raw : route_indices) {
+    const auto route_index = static_cast<std::size_t>(route_index_raw);
+    if (route_index >= lanelet_map_.lane_segments.size()) {
+      continue;
+    }
+    const auto & lane = lanelet_map_.lane_segments[route_index];
+    if (route_s_start_m > std::max(0.0, forward_search_distance_m)) {
+      break;
+    }
+    route_ids.insert(lane.id);
+    ensure_context_lane(lane, true, route_s_start_m);
+    forward_route_lanes.emplace_back(route_index, route_s_start_m);
+    route_s_start_m += polyline_length_m(lane.centerline);
+  }
+
+  std::set<std::pair<lanelet::Id, lanelet::Id>> visited_conflict_pairs;
+  for (const auto & [route_index, route_lane_s_start] : forward_route_lanes) {
+    const auto & route_lane = lanelet_map_.lane_segments[route_index];
+    for (const auto & competing_lane : lanelet_map_.lane_segments) {
+      if (competing_lane.id == route_lane.id || route_ids.count(competing_lane.id) != 0U) {
+        continue;
+      }
+      const auto conflict =
+        find_centerline_conflict(route_lane.centerline, competing_lane.centerline);
+      if (!conflict.has_value()) {
+        continue;
+      }
+      const double ego_route_distance_m = route_lane_s_start + conflict->route_s_m;
+      if (ego_route_distance_m > std::max(0.0, forward_search_distance_m)) {
+        continue;
+      }
+      if (!visited_conflict_pairs.emplace(route_lane.id, competing_lane.id).second) {
+        continue;
+      }
+
+      CandidateMapConflictPoint out;
+      out.ego_route_lane_id = route_lane.id;
+      out.competing_lane_id = competing_lane.id;
+      out.point_map = conflict->point;
+      out.ego_route_distance_m = ego_route_distance_m;
+
+      std::queue<std::pair<lanelet::Id, double>> queue;
+      std::set<lanelet::Id> visited_approaches;
+      queue.emplace(competing_lane.id, conflict->competing_s_m);
+      while (!queue.empty()) {
+        const auto [lane_id, distance_from_start_to_conflict] = queue.front();
+        queue.pop();
+        if (!visited_approaches.insert(lane_id).second) {
+          continue;
+        }
+        if (distance_from_start_to_conflict > std::max(0.0, backtrace_distance_m) + 1.0e-6) {
+          continue;
+        }
+        const auto lane_index_it = lanelet_id_to_array_index_.find(lane_id);
+        if (lane_index_it == lanelet_id_to_array_index_.end()) {
+          continue;
+        }
+        const auto & lane = lanelet_map_.lane_segments[lane_index_it->second];
+        ensure_context_lane(lane, route_ids.count(lane.id) != 0U, 0.0);
+
+        CandidateMapConflictApproach approach;
+        approach.lane_id = lane.id;
+        approach.distance_from_lane_start_to_conflict_m = distance_from_start_to_conflict;
+        out.approaches.push_back(approach);
+
+        const auto predecessors = predecessor_lane_ids_.find(lane.id);
+        if (predecessors == predecessor_lane_ids_.end()) {
+          continue;
+        }
+        for (const lanelet::Id predecessor_id : predecessors->second) {
+          // Route lanes are handled separately as longitudinal lead traffic.  Do not feed them
+          // back into a crossing-lane branch through an intersection connection.
+          if (route_ids.count(predecessor_id) != 0U) {
+            continue;
+          }
+          const auto predecessor_index_it = lanelet_id_to_array_index_.find(predecessor_id);
+          if (predecessor_index_it == lanelet_id_to_array_index_.end()) {
+            continue;
+          }
+          const auto & predecessor = lanelet_map_.lane_segments[predecessor_index_it->second];
+          const double predecessor_distance =
+            polyline_length_m(predecessor.centerline) + distance_from_start_to_conflict;
+          if (predecessor_distance <= std::max(0.0, backtrace_distance_m) + 1.0e-6) {
+            queue.emplace(predecessor_id, predecessor_distance);
+          }
+        }
+      }
+
+      if (!out.approaches.empty()) {
+        context.conflicts.push_back(std::move(out));
+      }
+    }
+  }
+
+  return context;
+}
+
+std::vector<int64_t> LaneSegmentContext::select_lane_segment_indices(
+  const Eigen::Matrix4d & transform_matrix, const double center_x, const double center_y,
+  const int64_t max_segments) const
+{
+  struct ColWithDistance
+  {
+    int64_t index;           //!< Column index in the input matrix.
+    float distance_squared;  //!< Squared distance from the center.
+  };
+
+  auto calc_distance = [&](const LanePoint & point) {
+    const Eigen::Vector4d transformed_point =
+      transform_matrix * Eigen::Vector4d(point.x(), point.y(), point.z(), 1.0);
+    const float diff_x = transformed_point.x();
+    const float diff_y = transformed_point.y();
+    return std::sqrt(diff_x * diff_x + diff_y * diff_y);
+  };
+
+  // Step 1: Compute distances
+  std::vector<ColWithDistance> distances;
+  distances.reserve(lanelet_map_.lane_segments.size());
+
+  for (size_t i = 0; i < lanelet_map_.lane_segments.size(); ++i) {
+    const LaneSegment & segment = lanelet_map_.lane_segments[i];
+
+    if (!is_segment_inside(segment, center_x, center_y)) {
+      continue;
+    }
+
+    const std::vector<LanePoint> & centerline = segment.centerline;
+
+    if (centerline.size() < 2) {
+      continue;
+    }
+
+    // Approximate distance using the closest of the first and last points
+    // Note: Because the last point (centerline.size() - 1) of the centerline is the same as the
+    // first point of the next segment, we use (centerline.size() - 2) to avoid obtaining the same
+    // distance for adjacent segments.
+    const float distance_squared =
+      std::min(calc_distance(centerline.front()), calc_distance(centerline[centerline.size() - 2]));
+    distances.push_back({static_cast<int64_t>(i), distance_squared});
+  }
+
+  // Step 2: Sort indices by distance
+  std::sort(distances.begin(), distances.end(), [](const auto & a, const auto & b) {
+    return a.distance_squared < b.distance_squared;
+  });
+
+  // Step 3: Select indices that are inside the mask
+  std::vector<int64_t> selected_indices;
+  for (const ColWithDistance & distance : distances) {
+    selected_indices.push_back(distance.index);
+    if (selected_indices.size() >= static_cast<size_t>(max_segments)) {
+      break;
+    }
+  }
+
+  return selected_indices;
+}
+
+std::pair<std::vector<float>, std::vector<float>>
+LaneSegmentContext::create_tensor_data_from_indices(
+  const Eigen::Matrix4d & transform_matrix,
+  const std::map<lanelet::Id, TrafficSignalStamped> & traffic_light_id_map,
+  const std::vector<int64_t> & segment_indices, const int64_t max_segments) const
+{
+  const auto total_points = max_segments * POINTS_PER_SEGMENT;
+  Eigen::MatrixXd output_matrix(SEGMENT_POINT_DIM, total_points);
+  output_matrix.setZero();
+
+  std::vector<float> speed_limit_vector(max_segments, 0.0f);
+
+  auto convert_to_vector4d = [](const LanePoint & point) {
+    return Eigen::Vector4d(point.x(), point.y(), point.z(), 1.0);
+  };
+
+  auto encode = [](const int64_t line_type) {
+    Eigen::Vector<double, LINE_TYPE_NUM> one_hot = Eigen::Vector<double, LINE_TYPE_NUM>::Zero();
+    if (line_type >= 0 && line_type < LINE_TYPE_NUM) {
+      one_hot[line_type] = 1.0;
+    }
+    return one_hot;
+  };
+
+  int64_t added_segments = 0;
+  for (const int64_t segment_idx : segment_indices) {
+    if (added_segments >= max_segments) {
+      break;
+    }
+
+    const LaneSegment & lane_segment = lanelet_map_.lane_segments[segment_idx];
+
+    // Check if segment has valid data
+    if (
+      lane_segment.centerline.empty() || lane_segment.left_boundary.empty() ||
+      lane_segment.right_boundary.empty()) {
+      continue;
+    }
+
+    const std::vector<LanePoint> & centerline = lane_segment.centerline;
+    const std::vector<LanePoint> & left_boundary = lane_segment.left_boundary;
+    const std::vector<LanePoint> & right_boundary = lane_segment.right_boundary;
+
+    if (
+      centerline.size() != POINTS_PER_SEGMENT || left_boundary.size() != POINTS_PER_SEGMENT ||
+      right_boundary.size() != POINTS_PER_SEGMENT) {
+      continue;
+    }
+
+    const Eigen::Vector<double, TRAFFIC_LIGHT_ONE_HOT_DIM> traffic_light_one_hot_encoding = [&]() {
+      Eigen::Vector<double, TRAFFIC_LIGHT_ONE_HOT_DIM> encoding =
+        Eigen::Vector<double, TRAFFIC_LIGHT_ONE_HOT_DIM>::Zero();
+      if (lane_segment.traffic_light_id == LaneSegment::TRAFFIC_LIGHT_ID_NONE) {
+        encoding[TRAFFIC_LIGHT_NO_TRAFFIC_LIGHT - TRAFFIC_LIGHT] = 1.0;
+        return encoding;
+      }
+
+      const auto traffic_light_stamped_info_itr =
+        traffic_light_id_map.find(lane_segment.traffic_light_id);
+      if (traffic_light_stamped_info_itr == traffic_light_id_map.end()) {
+        encoding[TRAFFIC_LIGHT_WHITE - TRAFFIC_LIGHT] = 1.0;
+        return encoding;
+      }
+
+      const auto & signal = traffic_light_stamped_info_itr->second.signal;
+      const uint8_t traffic_color =
+        identify_current_light_status(lane_segment.turn_direction, signal.elements);
+      return Eigen::Vector<double, TRAFFIC_LIGHT_ONE_HOT_DIM>{
+        static_cast<double>(traffic_color == TrafficLightElement::GREEN),    // 3
+        static_cast<double>(traffic_color == TrafficLightElement::AMBER),    // 2
+        static_cast<double>(traffic_color == TrafficLightElement::RED),      // 1
+        static_cast<double>(traffic_color == TrafficLightElement::UNKNOWN),  // 0
+        static_cast<double>(traffic_color == TrafficLightElement::WHITE)     // 4
+      };
+    }();
+
+    const Eigen::Vector<double, LINE_TYPE_NUM> lt_left = encode(lane_segment.left_line_type);
+    const Eigen::Vector<double, LINE_TYPE_NUM> lt_right = encode(lane_segment.right_line_type);
+
+    // Process each point in the segment
+    for (int64_t i = 0; i < POINTS_PER_SEGMENT; ++i) {
+      const int64_t col_idx = added_segments * POINTS_PER_SEGMENT + i;
+
+      // Center (0, 1)
+      const Eigen::Vector4d center = transform_matrix * convert_to_vector4d(centerline[i]);
+      output_matrix(X, col_idx) = center.x();
+      output_matrix(Y, col_idx) = center.y();
+
+      // Direction (2, 3)
+      if (i > 0) {
+        const int64_t col_idx_p = added_segments * POINTS_PER_SEGMENT + (i - 1);
+        output_matrix(dX, col_idx_p) = output_matrix(X, col_idx) - output_matrix(X, col_idx_p);
+        output_matrix(dY, col_idx_p) = output_matrix(Y, col_idx) - output_matrix(Y, col_idx_p);
+      }
+
+      // Left (4, 5)
+      const Eigen::Vector4d left = transform_matrix * convert_to_vector4d(left_boundary[i]);
+      output_matrix(LB_X, col_idx) = left.x() - center.x();
+      output_matrix(LB_Y, col_idx) = left.y() - center.y();
+
+      // Right (6, 7)
+      const Eigen::Vector4d right = transform_matrix * convert_to_vector4d(right_boundary[i]);
+      output_matrix(RB_X, col_idx) = right.x() - center.x();
+      output_matrix(RB_Y, col_idx) = right.y() - center.y();
+
+      // Traffic Light (8-13)
+      output_matrix.block<TRAFFIC_LIGHT_ONE_HOT_DIM, 1>(TRAFFIC_LIGHT, col_idx) =
+        traffic_light_one_hot_encoding;
+
+      // Left LineType (14-23)
+      output_matrix.block<LINE_TYPE_NUM, 1>(LINE_TYPE_LEFT_START, col_idx) = lt_left;
+
+      // Right LineType (24-33)
+      output_matrix.block<LINE_TYPE_NUM, 1>(LINE_TYPE_RIGHT_START, col_idx) = lt_right;
+    }
+
+    speed_limit_vector[added_segments] = lane_segment.speed_limit_mps.value_or(0.0f);
+    ++added_segments;
+  }
+
+  // Convert to float vector
+  const Eigen::MatrixXf output_matrix_f = output_matrix.cast<float>().eval();
+  std::vector<float> tensor_data(
+    output_matrix_f.data(), output_matrix_f.data() + output_matrix_f.size());
+
+  return {tensor_data, speed_limit_vector};
+}
+
+template <typename T>
+std::vector<float> LaneSegmentContext::create_line_tensor(
+  const std::vector<T> & elements, const Eigen::Matrix4d & transform_matrix, const double center_x,
+  const double center_y, const int64_t num_elements, const int64_t num_points,
+  const int64_t num_types) const
+{
+  using autoware::candidate_bank::constants::LANE_MASK_RANGE_M;
+
+  auto judge_inside = [&](const double x, const double y) -> bool {
+    return (
+      x > center_x - LANE_MASK_RANGE_M && x < center_x + LANE_MASK_RANGE_M &&
+      y > center_y - LANE_MASK_RANGE_M && y < center_y + LANE_MASK_RANGE_M);
+  };
+
+  struct ElementWithDistance
+  {
+    Polyline polyline;
+    int type;
+    double min_distance;
+  };
+
+  std::vector<ElementWithDistance> result_list;
+
+  for (const auto & element : elements) {
+    bool inside_at_least_one = false;
+    for (const auto & point : element.points) {
+      if (judge_inside(point.x(), point.y())) {
+        inside_at_least_one = true;
+        break;
+      }
+    }
+    if (!inside_at_least_one) {
+      continue;
+    }
+
+    std::vector<LanePoint> transformed_polyline;
+    for (const auto & point : element.points) {
+      const Eigen::Vector4d transformed_point =
+        transform_matrix * Eigen::Vector4d(point.x(), point.y(), point.z(), 1.0);
+      transformed_polyline.emplace_back(
+        transformed_point.x(), transformed_point.y(), transformed_point.z());
+    }
+
+    double min_distance = std::numeric_limits<double>::max();
+    for (const auto & point : transformed_polyline) {
+      const double distance = std::sqrt(point.x() * point.x() + point.y() * point.y());
+      min_distance = std::min(min_distance, distance);
+    }
+
+    result_list.push_back({transformed_polyline, static_cast<int>(element.type), min_distance});
+  }
+
+  std::sort(
+    result_list.begin(), result_list.end(),
+    [](const ElementWithDistance & a, const ElementWithDistance & b) {
+      return a.min_distance < b.min_distance;
+    });
+
+  // Create tensor data: [x, y, one_hot_type...]
+  const int64_t point_dim = 2 + num_types;
+  std::vector<float> tensor_data(num_elements * num_points * point_dim, 0.0f);
+  const size_t max_elements_size = std::min(static_cast<size_t>(num_elements), result_list.size());
+  for (size_t i = 0; i < max_elements_size; ++i) {
+    const auto & result = result_list[i];
+    const size_t max_points_size =
+      std::min(static_cast<size_t>(num_points), result.polyline.size());
+
+    for (size_t j = 0; j < max_points_size; ++j) {
+      const auto & point = result.polyline[j];
+      const size_t base_index = (i * num_points + j) * point_dim;
+      tensor_data[base_index + 0] = static_cast<float>(point.x());
+      tensor_data[base_index + 1] = static_cast<float>(point.y());
+      // one-hot type encoding
+      tensor_data[base_index + 2 + result.type] = 1.0f;
+    }
+  }
+
+  return tensor_data;
+}
+
+// Explicit template instantiations
+template std::vector<float> LaneSegmentContext::create_line_tensor<Polygon>(
+  const std::vector<Polygon> &, const Eigen::Matrix4d &, const double, const double, const int64_t,
+  const int64_t, const int64_t) const;
+template std::vector<float> LaneSegmentContext::create_line_tensor<LineString>(
+  const std::vector<LineString> &, const Eigen::Matrix4d &, const double, const double,
+  const int64_t, const int64_t, const int64_t) const;
+
+// Internal functions implementation
+namespace
+{
+
+std::map<lanelet::Id, size_t> create_lane_id_to_array_index_map(
+  const std::vector<LaneSegment> & lane_segments)
+{
+  std::map<lanelet::Id, size_t> lane_id_to_index;
+  for (size_t i = 0; i < lane_segments.size(); ++i) {
+    lane_id_to_index[lane_segments[i].id] = i;
+  }
+  return lane_id_to_index;
+}
+
+bool is_segment_inside(const LaneSegment & segment, const double center_x, const double center_y)
+{
+  for (const auto & point : segment.centerline) {
+    if (
+      std::abs(point.x() - center_x) <= autoware::candidate_bank::constants::LANE_MASK_RANGE_M &&
+      std::abs(point.y() - center_y) <= autoware::candidate_bank::constants::LANE_MASK_RANGE_M) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+uint8_t identify_current_light_status(
+  const int64_t turn_direction, const std::vector<TrafficLightElement> & traffic_light_elements)
+{
+  // Filter out ineffective elements (color == 0 which is UNKNOWN)
+  std::vector<TrafficLightElement> effective_elements;
+  for (const auto & element : traffic_light_elements) {
+    if (element.color != TrafficLightElement::UNKNOWN) {
+      effective_elements.push_back(element);
+    }
+  }
+
+  // If no effective elements, return UNKNOWN (0)
+  if (effective_elements.empty()) {
+    return TrafficLightElement::UNKNOWN;
+  }
+
+  // If only one effective element, return its color
+  if (effective_elements.size() == 1) {
+    return effective_elements[0].color;
+  }
+
+  // For multiple elements, find the one that matches the turn direction
+  // Map turn direction to corresponding arrow shape
+  const std::map<int64_t, uint8_t> direction_to_shape_map = {
+    {LaneSegment::TURN_DIRECTION_NONE, TrafficLightElement::UNKNOWN},       // none
+    {LaneSegment::TURN_DIRECTION_STRAIGHT, TrafficLightElement::UP_ARROW},  // straight
+    {LaneSegment::TURN_DIRECTION_LEFT, TrafficLightElement::LEFT_ARROW},    // left
+    {LaneSegment::TURN_DIRECTION_RIGHT, TrafficLightElement::RIGHT_ARROW}   // right
+  };
+
+  const auto target_shape_iter = direction_to_shape_map.find(turn_direction);
+  const uint8_t target_shape = (target_shape_iter != direction_to_shape_map.end())
+                                 ? target_shape_iter->second
+                                 : TrafficLightElement::UNKNOWN;
+
+  // If multiple matching elements, take the one with highest confidence
+  auto get_max_confidence_color = [](const std::vector<TrafficLightElement> & elements) {
+    return std::max_element(
+             elements.begin(), elements.end(),
+             [](const TrafficLightElement & a, const TrafficLightElement & b) {
+               return a.confidence < b.confidence;
+             })
+      ->color;
+  };
+
+  // First priority: Find elements with exactly matching direction
+  std::vector<TrafficLightElement> matching_elements;
+  for (const TrafficLightElement & element : effective_elements) {
+    if (element.shape == target_shape) {
+      matching_elements.push_back(element);
+    }
+  }
+  if (!matching_elements.empty()) {
+    return get_max_confidence_color(matching_elements);
+  }
+
+  // Second priority: Find circle elements
+  std::vector<TrafficLightElement> circle_elements;
+  for (const TrafficLightElement & element : effective_elements) {
+    if (element.shape == TrafficLightElement::CIRCLE) {
+      circle_elements.push_back(element);
+    }
+  }
+  if (!circle_elements.empty()) {
+    return get_max_confidence_color(circle_elements);
+  }
+
+  // If no matching direction or circle, return the element with highest confidence
+  return get_max_confidence_color(effective_elements);
+}
+
+}  // namespace
+
+}  // namespace autoware::candidate_bank::preprocess
