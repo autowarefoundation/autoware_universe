@@ -3,12 +3,23 @@
   "title": "Parameters for external_cmd_converter",
   "type": "object",
   "definitions": {
-    "velodyne_monitor": {
+    "external_cmd_converter": {
       "type": "object",
       "properties": {
+        "csv_path_accel_map": {
+          "type": "string",
+          "default": "$(find-pkg-share autoware_raw_vehicle_cmd_converter)/data/default/accel_map.csv",
+          "description": "csv file path for accel map."
+        },
+        "csv_path_brake_map": {
+          "type": "string",
+          "default": "$(find-pkg-share autoware_raw_vehicle_cmd_converter)/data/default/brake_map.csv",
+          "description": "csv file path for brake map."
+        },
         "ref_vel_gain": {
           "type": "number",
-          "default": 3.0
+          "default": 3.0,
+          "description": "reference velocity gain."
         },
         "timer_rate": {
           "type": "number",
@@ -17,7 +28,7 @@
         },
         "wait_for_first_topic": {
           "type": "boolean",
-          "default": "true",
+          "default": true,
           "description": "if time out check is done after receiving first topic."
         },
         "control_command_timeout": {
@@ -32,6 +43,8 @@
         }
       },
       "required": [
+        "csv_path_accel_map",
+        "csv_path_brake_map",
         "ref_vel_gain",
         "timer_rate",
         "wait_for_first_topic",
