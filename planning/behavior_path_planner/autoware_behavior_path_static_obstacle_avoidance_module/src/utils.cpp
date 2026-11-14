@@ -2590,7 +2590,7 @@ std::vector<ExtendedPredictedObject> getSafetyCheckTargetObjects(
     const auto & object_twist = object.kinematics.initial_twist_with_covariance.twist;
     const auto object_vel_norm = std::hypot(object_twist.linear.x, object_twist.linear.y);
     const auto object_parameter =
-      parameters->object_parameters.at(utils::getHighestProbLabel(object.classification));
+      parameters->getObjectParameter(utils::getHighestProbLabel(object.classification));
     return object_vel_norm > object_parameter.moving_speed_threshold;
   };
 
