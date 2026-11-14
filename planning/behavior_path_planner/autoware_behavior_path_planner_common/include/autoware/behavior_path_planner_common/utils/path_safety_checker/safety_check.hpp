@@ -29,6 +29,7 @@
 #include <geometry_msgs/msg/twist.hpp>
 
 #include <cmath>
+#include <map>
 #include <string>
 #include <utility>
 #include <vector>
@@ -46,6 +47,11 @@ using autoware_utils::Point2d;
 using autoware_utils::Polygon2d;
 using geometry_msgs::msg::Pose;
 using geometry_msgs::msg::Twist;
+
+// Caller-owned memo of the object-independent ego interpolated pose + footprint, keyed by query
+// time. The same ego_predicted_path is checked against many target objects; this lets those
+// checks share one interpolation per time instead of recomputing it once per object.
+using EgoInterpCache = std::map<double, std::optional<PoseWithVelocityAndPolygonStamped>>;
 
 /**
  * @brief Checks if the object is coming toward the ego vehicle judging by yaw deviation
@@ -201,7 +207,7 @@ std::optional<Polygon2d> check_collision(
   const std::vector<PoseWithVelocityStamped> & predicted_ego_path,
   const PoseWithVelocityAndPolygonStamped & obj_pose_with_poly, const RSSparams & rss_parameters,
   const double yaw_difference_th, const double max_velocity_limit, const double hysteresis_factor,
-  CollisionCheckDebug * debug = nullptr);
+  CollisionCheckDebug * debug = nullptr, EgoInterpCache * ego_interp_cache = nullptr);
 
 /**
  * @brief Iterate the points in the ego and target's predicted path and

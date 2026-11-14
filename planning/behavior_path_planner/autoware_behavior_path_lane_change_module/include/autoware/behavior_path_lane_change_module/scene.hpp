@@ -16,6 +16,7 @@
 
 #include "autoware/behavior_path_lane_change_module/base_class.hpp"
 #include "autoware/behavior_path_lane_change_module/structs/data.hpp"
+#include "autoware/behavior_path_planner_common/utils/path_safety_checker/safety_check.hpp"
 
 #include <memory>
 #include <string>
@@ -176,7 +177,8 @@ protected:
   bool is_colliding(
     const LaneChangePath & lane_change_path, const ExtendedPredictedObject & obj,
     const std::vector<PoseWithVelocityStamped> & ego_predicted_path, const RSSparams & rss_param,
-    CollisionCheckDebugMap & debug_data, const bool is_approved) const;
+    CollisionCheckDebugMap & debug_data, const bool is_approved,
+    utils::path_safety_checker::EgoInterpCache * ego_interp_cache = nullptr) const;
 
   double get_max_velocity_for_safety_check() const;
 
