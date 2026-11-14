@@ -521,12 +521,13 @@ std::vector<LabeledProbability> labeled_probabilities(
 }  // namespace
 
 // Without any classification_remap.* parameter, the built-in table keeps every label as it is
-// except HAZARD, which the perception pipeline does not use and which becomes UNKNOWN. The
-// order of the list and the probabilities are preserved.
+// except HAZARD, OVER_DRIVABLE and UNDER_DRIVABLE, which become UNKNOWN. The order of the list
+// and the probabilities are preserved.
 //
 // This is the built-in default, not the shipped configuration: the parameter file in config/
-// additionally remaps MOTORCYCLE and BICYCLE, which the unit tests cover.
-TEST_F(RadarObjectsAdapterNodeTest, Classification_BuiltInRemap_LabelsKeptExceptHazard)
+// additionally remaps BUS, TRAILER, MOTORCYCLE and BICYCLE, which the unit tests cover. The input
+// carries one of each (BUS, MOTORCYCLE) to pin that the built-in default keeps them.
+TEST_F(RadarObjectsAdapterNodeTest, Classification_BuiltInRemap_LabelsKeptExceptHazardAndDrivable)
 {
   // Arrange
   const RadarInfo info = make_radar_info(ars548_fields);
@@ -534,8 +535,10 @@ TEST_F(RadarObjectsAdapterNodeTest, Classification_BuiltInRemap_LabelsKeptExcept
   radar.classifications = {
     make_classification(RadarClassification::CAR, 0.8f),
     make_classification(RadarClassification::TRUCK, 0.1f),
-    make_classification(RadarClassification::MOTORCYCLE, 0.3f),
+    make_classification(RadarClassification::BUS, 0.3f),
+    make_classification(RadarClassification::MOTORCYCLE, 0.25f),
     make_classification(RadarClassification::HAZARD, 0.05f),
+    make_classification(RadarClassification::OVER_DRIVABLE, 0.04f),
     make_classification(RadarClassification::PEDESTRIAN, 0.02f)};
 
   // Act
@@ -544,10 +547,9 @@ TEST_F(RadarObjectsAdapterNodeTest, Classification_BuiltInRemap_LabelsKeptExcept
 
   // Assert
   const std::vector<LabeledProbability> expected = {
-    {ObjectClassification::CAR, 0.8f},
-    {ObjectClassification::TRUCK, 0.1f},
-    {ObjectClassification::MOTORCYCLE, 0.3f},
-    {ObjectClassification::UNKNOWN, 0.05f},
+    {ObjectClassification::CAR, 0.8f},        {ObjectClassification::TRUCK, 0.1f},
+    {ObjectClassification::BUS, 0.3f},        {ObjectClassification::MOTORCYCLE, 0.25f},
+    {ObjectClassification::UNKNOWN, 0.05f},   {ObjectClassification::UNKNOWN, 0.04f},
     {ObjectClassification::PEDESTRIAN, 0.02f}};
   EXPECT_EQ(labeled_probabilities(outputs->detections.objects.at(0).classification), expected);
 }
