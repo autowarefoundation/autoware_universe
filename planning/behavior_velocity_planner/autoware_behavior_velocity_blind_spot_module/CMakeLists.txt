@@ -33,6 +33,12 @@ if(BUILD_TESTING)
   #   test/test_util.cpp
   # )
   #target_link_libraries(test_${PROJECT_NAME}_util ${PROJECT_NAME})
+
+  ament_add_ros_isolated_gtest(test_${PROJECT_NAME}_ego_passage_interval
+    test/test_ego_passage_interval.cpp
+  )
+  target_include_directories(test_${PROJECT_NAME}_ego_passage_interval PRIVATE src)
+  target_link_libraries(test_${PROJECT_NAME}_ego_passage_interval ${PROJECT_NAME})
 endif()
 
 ament_auto_package(INSTALL_TO_SHARE config test_data)
