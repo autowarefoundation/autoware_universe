@@ -238,6 +238,10 @@ This node is camera-only and does not require pointcloud input. It assumes:
 - Transform information between map and base_link is available via tf for ego motion compensation
 - **The input images are undistorted**
 
+If the vehicle moves more than 50 m between two inference frames (a localization jump, or the
+cameras stalling while driving), the node drops its temporal memory and detects from the current
+frame alone until the memory refills.
+
 ## Trained Models
 
 The model bundle is hosted on [Hugging Face](https://huggingface.co/AutowareFoundation/camera_streampetr/tree/v1.0). The [ansible artifacts role](https://github.com/autowarefoundation/autoware/tree/main/ansible/roles/artifacts) downloads it into `~/autoware_data/ml_models/camera_streampetr`.
