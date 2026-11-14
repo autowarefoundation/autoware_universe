@@ -111,6 +111,59 @@ DynamicObjectList toDynamicObjectList(
   return dynamic_objects;
 }
 
+DynamicObject toDynamicObject(
+  const autoware_perception_msgs::msg::TrackedObject & tracked_object, const uint channel_index)
+{
+  DynamicObject dynamic_object;
+
+  // Preserve the original UUID from the tracked object for UUID-based association
+  dynamic_object.uuid = tracked_object.object_id;
+
+  dynamic_object.channel_index = channel_index;
+  if (tracked_object.existence_probability < 1e-6) {
+    dynamic_object.existence_probability = default_existence_probability;
+  } else if (tracked_object.existence_probability > 0.999) {
+    dynamic_object.existence_probability = 0.999;
+  } else {
+    dynamic_object.existence_probability = tracked_object.existence_probability;
+  }
+  dynamic_object.existence_probabilities.push_back(
+    {channel_index, dynamic_object.existence_probability});
+
+  dynamic_object.classification = classes::toClassifications(tracked_object.classification);
+
+  dynamic_object.pose = tracked_object.kinematics.pose_with_covariance.pose;
+  dynamic_object.pose_covariance = tracked_object.kinematics.pose_with_covariance.covariance;
+  dynamic_object.twist = tracked_object.kinematics.twist_with_covariance.twist;
+  dynamic_object.twist_covariance = tracked_object.kinematics.twist_with_covariance.covariance;
+
+  // TrackedObjectKinematics always carries covariance
+  dynamic_object.kinematics.has_position_covariance = true;
+  dynamic_object.kinematics.orientation_availability =
+    convertOrientationAvailabilityFromMsg(tracked_object.kinematics.orientation_availability);
+  dynamic_object.kinematics.has_twist = true;
+  dynamic_object.kinematics.has_twist_covariance = true;
+
+  dynamic_object.shape = tracked_object.shape;
+  dynamic_object.area = getArea(tracked_object.shape);
+
+  return dynamic_object;
+}
+
+DynamicObjectList toDynamicObjectList(
+  const autoware_perception_msgs::msg::TrackedObjects & tracked_objects, const uint channel_index)
+{
+  DynamicObjectList dynamic_objects;
+  dynamic_objects.header = tracked_objects.header;
+  dynamic_objects.channel_index = channel_index;
+  dynamic_objects.objects.reserve(tracked_objects.objects.size());
+  for (const auto & tracked_object : tracked_objects.objects) {
+    dynamic_objects.objects.emplace_back(toDynamicObject(tracked_object, channel_index));
+  }
+  dynamic_objects.buildUuidIndex();
+  return dynamic_objects;
+}
+
 void DynamicObjectList::buildUuidIndex() const
 {
   uuid_to_index_.clear();
