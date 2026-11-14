@@ -90,6 +90,10 @@ PredictedObjectKinematics convertToPredictedKinematics(
 
 PredictedObject convertToPredictedObject(const TrackedObject & tracked_object);
 
+/// Remove predicted paths whose confidence is 0 from every object. An object whose paths all
+/// have confidence 0 is left unchanged so that it never ends up without a path.
+void dropZeroConfidencePaths(PredictedObjects & objects);
+
 double calculateLocalLikelihood(
   const lanelet::ConstLanelet & current_lanelet, const TrackedObject & object,
   const double sigma_lateral_offset, const double sigma_yaw_angle_deg);
