@@ -25,7 +25,7 @@ MRM comfortable stop operator is a node that generates comfortable stop commands
 
 ## Parameters
 
-{{ json_to_markdown("system/mrm_comfortable_stop_operator/schema/mrm_comfortable_stop_operator.schema.json") }}
+{{ json_to_markdown("system/autoware_mrm_comfortable_stop_operator/schema/mrm_comfortable_stop_operator.schema.json") }}
 
 ## Assumptions / Known limits
 
