@@ -47,6 +47,7 @@ private:
 
   autoware::cuda_utils::CudaUniquePtr<std::uint64_t[]> raw_points_tensor_;
   autoware::cuda_utils::CudaUniquePtr<std::uint64_t[]> obstacle_points_tensor_;
+  autoware::cuda_utils::CudaUniquePtr<std::uint8_t[]> device_free_space_mask_;
   autoware::cuda_utils::CudaUniquePtr<Eigen::Vector3f> device_translation_scan_origin_;
 };
 
