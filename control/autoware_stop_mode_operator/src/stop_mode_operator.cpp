@@ -36,16 +36,22 @@ StopModeOperator::StopModeOperator(const rclcpp::NodeOptions & options)
 
   sub_steering_ = create_subscription<SteeringReport>(
     "/vehicle/status/steering_status", 1,
-    [this](SteeringReport::SharedPtr msg) { current_steering_ = *msg; });
+    [this](const AUTOWARE_MESSAGE_CONST_SHARED_PTR(SteeringReport) & msg) {
+      current_steering_ = *msg;
+    });
   sub_velocity_ = create_subscription<VelocityReport>(
-    "/vehicle/status/velocity_status", 1, [this](VelocityReport::SharedPtr msg) {
+    "/vehicle/status/velocity_status", 1,
+    [this](const AUTOWARE_MESSAGE_CONST_SHARED_PTR(VelocityReport) & msg) {
       vehicle_stop_check_.update(now(), std::abs(msg->longitudinal_velocity) < 1e-3);
     });
   sub_route_state_ = create_subscription<RouteState>(
-    "/planning/route_state", 1, [this](RouteState::SharedPtr msg) { current_route_state_ = *msg; });
+    "/planning/route_state", 1, [this](const AUTOWARE_MESSAGE_CONST_SHARED_PTR(RouteState) & msg) {
+      current_route_state_ = *msg;
+    });
 
   const auto period = rclcpp::Rate(declare_parameter<double>("rate")).period();
-  timer_ = rclcpp::create_timer(this, get_clock(), period, [this]() { on_timer(); });
+  timer_ =
+    autoware::agnocast_wrapper::create_timer(this, get_clock(), period, [this]() { on_timer(); });
 }
 
 void StopModeOperator::on_timer()
