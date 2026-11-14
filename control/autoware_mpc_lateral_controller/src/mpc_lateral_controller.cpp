@@ -226,7 +226,10 @@ MpcLateralControllerResult MpcLateralController::runDetailed(
     setSteeringToHistory(ctrl_cmd, stamp);
   }
 
-  ctrl_cmd.steering_tire_angle -= static_cast<float>(m_steering_offset_filtered_);
+  // Offset compensation can move an otherwise feasible MPC steering request beyond the
+  // physical steering limit. Publish a reachable command so convergence is attainable.
+  ctrl_cmd.steering_tire_angle = static_cast<float>(clamp_steering_to_vehicle_limit(
+    ctrl_cmd.steering_tire_angle - m_steering_offset_filtered_, m_mpc->m_steer_lim));
 
   result.mpc = mpc_solved_status;
   result.steering_offset.stamp = stamp;
