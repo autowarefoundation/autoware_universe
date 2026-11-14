@@ -452,10 +452,14 @@ void PathProcessor::generateOnLanePaths(
       params_.lateral_control_time_horizon, ref_path.width, ref_path.speed_limit);
     if (predicted_path.path.empty()) continue;
 
+    // A lane-follow path rejected by the lateral acceleration check still shows that the map
+    // continues ahead; speeding is no evidence of a lane change, so the held lane changes of its
+    // origin stay suppressed.
+    record_center_survival(ref_path);
+
     if (!params_.check_lateral_acceleration_constraints) {
       predicted_path.confidence = ref_path.probability;
       candidates.predicted_paths.push_back(predicted_path);
-      record_center_survival(ref_path);
       continue;
     }
 
@@ -466,20 +470,27 @@ void PathProcessor::generateOnLanePaths(
         trajectory_with_const_velocity, params_.prediction_sampling_time_interval)) {
       predicted_path.confidence = ref_path.probability;
       candidates.predicted_paths.push_back(predicted_path);
-      record_center_survival(ref_path);
       continue;
     }
 
+    // The points are sampled every prediction_sampling_time_interval, not every meter.
     constexpr double curvature_calculation_distance = 2.0;
-    constexpr double points_interval = 1.0;
-    const size_t idx_dist = static_cast<size_t>(
-      std::max(static_cast<int>((curvature_calculation_distance) / points_interval), 1));
+    const double points_interval =
+      autoware::motion_utils::calcArcLength(trajectory_with_const_velocity) /
+      static_cast<double>(std::max<size_t>(trajectory_with_const_velocity.size() - 1, 1));
+    const size_t idx_dist = std::max<size_t>(
+      static_cast<size_t>(curvature_calculation_distance / std::max(points_interval, 1E-3)), 1);
     const auto curvature_v =
       calcTrajectoryCurvatureFrom3Points(trajectory_with_const_velocity, idx_dist);
     if (curvature_v.empty()) continue;
 
+    // calc_curvature is signed (left positive); the fallback compares how much a path bends,
+    // not which way, so the magnitude is averaged.
     const auto curvature_avg =
-      std::accumulate(curvature_v.begin(), curvature_v.end(), 0.0) / curvature_v.size();
+      std::accumulate(
+        curvature_v.begin(), curvature_v.end(), 0.0,
+        [](const double sum, const double curvature) { return sum + std::fabs(curvature); }) /
+      static_cast<double>(curvature_v.size());
     if (curvature_avg < candidates.min_avg_curvature) {
       candidates.min_avg_curvature = curvature_avg;
       candidates.path_with_smallest_avg_curvature = predicted_path;
@@ -1002,35 +1013,45 @@ bool PathProcessor::isLateralAccelerationConstraintSatisfied(
   if (trajectory.size() < 3) return true;
   const double max_lateral_accel_abs = std::fabs(params_.max_lateral_accel);
 
-  double arc_length = 0.0;
-  for (size_t i = 1; i < trajectory.size(); ++i) {
-    const auto current_pose = trajectory.at(i).pose;
-    const auto next_pose = trajectory.at(i - 1).pose;
-    const double delta_s = std::hypot(
-      next_pose.position.x - current_pose.position.x,
-      next_pose.position.y - current_pose.position.y);
-    arc_length += delta_s;
+  // The curvature is taken from the positions: the heading change between two consecutive chords
+  // divided by their mean length. The first pose carries the object yaw instead of the path
+  // tangent, so pose orientations are not used.
+  constexpr double min_chord_length = 1E-3;
+  const auto chord = [&trajectory](const size_t i) {
+    const auto & from = trajectory.at(i - 1).pose.position;
+    const auto & to = trajectory.at(i).pose.position;
+    return std::make_pair(
+      std::hypot(to.x - from.x, to.y - from.y), std::atan2(to.y - from.y, to.x - from.x));
+  };
 
-    tf2::Quaternion q_current, q_next;
-    tf2::convert(current_pose.orientation, q_current);
-    tf2::convert(next_pose.orientation, q_next);
-    double delta_theta = q_current.angleShortestPath(q_next);
-    if (delta_theta > M_PI) {
-      delta_theta -= 2.0 * M_PI;
-    } else if (delta_theta < -M_PI) {
-      delta_theta += 2.0 * M_PI;
+  auto prev_chord = chord(1);
+  double arc_length = prev_chord.first;
+  for (size_t i = 2; i < trajectory.size(); ++i) {
+    const auto current_chord = chord(i);
+    // arc_length is the distance from the object to the vertex trajectory[i - 1]
+    const double vertex_arc_length = arc_length;
+    arc_length += current_chord.first;
+    if (current_chord.first < min_chord_length) continue;
+    if (prev_chord.first < min_chord_length) {
+      prev_chord = current_chord;
+      continue;
     }
 
-    const double yaw_rate = std::max(std::abs(delta_theta / delta_time), 1.0E-5);
-    const double current_speed = std::abs(trajectory.at(i).longitudinal_velocity_mps);
-    const double lateral_acceleration = std::abs(current_speed * yaw_rate);
-    if (lateral_acceleration < max_lateral_accel_abs) continue;
+    const double delta_theta =
+      std::fabs(autoware_utils::normalize_radian(current_chord.second - prev_chord.second));
+    const double curvature = delta_theta / (0.5 * (prev_chord.first + current_chord.first));
+    prev_chord = current_chord;
 
-    const double v_curvature_max = std::sqrt(max_lateral_accel_abs / yaw_rate);
-    const double t = (v_curvature_max - current_speed) / params_.min_acceleration_before_curve;
+    const double current_speed = std::abs(trajectory.at(i - 1).longitudinal_velocity_mps);
+    const double lateral_acceleration = current_speed * current_speed * curvature;
+    if (curvature < epsilon || lateral_acceleration < max_lateral_accel_abs) continue;
+
+    // speed at which the lateral acceleration on this curvature equals the limit
+    const double v_curvature_max = std::sqrt(max_lateral_accel_abs / curvature);
     const double distance_to_slow_down =
-      current_speed * t + 0.5 * params_.min_acceleration_before_curve * std::pow(t, 2);
-    if (distance_to_slow_down > arc_length) return false;
+      (v_curvature_max * v_curvature_max - current_speed * current_speed) /
+      (2.0 * params_.min_acceleration_before_curve);
+    if (distance_to_slow_down > vertex_arc_length) return false;
   }
   return true;
 }
