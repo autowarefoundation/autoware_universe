@@ -19,6 +19,9 @@
 
 #include <NvInferRuntimePlugin.h>
 
+#include <algorithm>
+#include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <exception>
@@ -42,6 +45,10 @@ ImplicitGemmPluginCreator::ImplicitGemmPluginCreator()
   plugin_attributes_.emplace_back("output_add_scale", nullptr, PluginFieldType::kFLOAT32, 1);
   plugin_attributes_.emplace_back("output_scale", nullptr, PluginFieldType::kFLOAT32, 1);
   plugin_attributes_.emplace_back("act_type", nullptr, PluginFieldType::kINT32, 1);
+  // Quantized (INT8) nodes only: the scale of the QuantizeLinear in front and the type the
+  // epilogue writes. The ONNX parser forwards only the attributes declared here.
+  plugin_attributes_.emplace_back("input_scale", nullptr, PluginFieldType::kFLOAT32, 1);
+  plugin_attributes_.emplace_back("output_type", nullptr, PluginFieldType::kCHAR, 0);
 
   fc_.nbFields = plugin_attributes_.size();
   fc_.fields = plugin_attributes_.data();
@@ -56,11 +63,10 @@ nvinfer1::PluginFieldCollection const * ImplicitGemmPluginCreator::getFieldNames
 IPluginV3 * ImplicitGemmPluginCreator::createPlugin(
   char const * name, PluginFieldCollection const * fc, TensorRTPhase phase) noexcept
 {
+  // Returns why the attributes are refused, or an empty string.
   auto parse_fields = [](
                         nvinfer1::PluginField const * fields, std::int32_t num_fields,
-                        ImplicitGemmParameters & parameters) {
-    // Accept 6 (legacy without act_type) or 7 (with act_type).
-    PLUGIN_VALIDATE(num_fields == 6 || num_fields == 7);
+                        ImplicitGemmParameters & parameters) -> std::string {
     for (std::int32_t i{0}; i < num_fields; ++i) {
       const std::string attr_name = fields[i].name;
       const nvinfer1::PluginFieldType type = fields[i].type;
@@ -87,8 +93,43 @@ IPluginV3 * ImplicitGemmPluginCreator::createPlugin(
         PLUGIN_VALIDATE(type == nvinfer1::PluginFieldType::kINT32);
         parameters.act_type = static_cast<std::int32_t const *>(fields[i].data)[0];
         PLUGIN_VALIDATE(parameters.act_type >= 0 && parameters.act_type <= 3);
+      } else if (attr_name == "input_scale") {
+        PLUGIN_VALIDATE(type == nvinfer1::PluginFieldType::kFLOAT32);
+        parameters.input_scale = static_cast<float const *>(fields[i].data)[0];
+        parameters.has_input_scale = 1;
+      } else if (attr_name == "output_type") {
+        if (type != nvinfer1::PluginFieldType::kCHAR || fields[i].data == nullptr) {
+          return "output_type must be a string";
+        }
+        // The ONNX parser counts the terminating NUL in the length.
+        auto const * chars = static_cast<char const *>(fields[i].data);
+        std::string const value(
+          chars, strnlen(chars, static_cast<std::size_t>(std::max(fields[i].length, 0))));
+        if (value == "f16") {
+          parameters.output_type = kIMPLICIT_GEMM_OUTPUT_TYPE_F16;
+        } else if (value == "bf16") {
+          return "output_type \"bf16\" is not supported: this plugin writes FP16 only";
+        } else if (value == "s8" || value == "e4m3") {
+          return "output_type \"" + value +
+                 "\" asks for an 8-bit output, which this plugin does not write";
+        } else {
+          return "output_type \"" + value +
+                 "\" is not a known type (\"f16\", \"bf16\", \"s8\", \"e4m3\")";
+        }
       }
     }
+    // The exporter writes output_scale = 1.0 on every node; the output is never quantized here.
+    if (parameters.output_scale != 1.0F) {
+      return "output_scale " + std::to_string(parameters.output_scale) +
+             " is not supported: the output is not quantized, so only 1.0 is accepted";
+    }
+    if (
+      parameters.has_input_scale != 0 &&
+      !(std::isfinite(parameters.input_scale) && parameters.input_scale > 0.0F)) {
+      return "input_scale must be positive and finite, got " +
+             std::to_string(parameters.input_scale);
+    }
+    return {};
   };
 
   // The build phase and the deserialization phase are handled differently.
@@ -99,7 +140,12 @@ IPluginV3 * ImplicitGemmPluginCreator::createPlugin(
       std::int32_t num_fields{fc->nbFields};
 
       ImplicitGemmParameters parameters{};
-      parse_fields(fields, num_fields, parameters);
+      std::string const refusal = parse_fields(fields, num_fields, parameters);
+      if (!refusal.empty()) {
+        std::string const message = std::string("ImplicitGemm ") + name + ": " + refusal;
+        logError(message.c_str());
+        return nullptr;
+      }
 
       // Log the attributes parsed from ONNX node.
       std::stringstream ss;
@@ -107,7 +153,9 @@ IPluginV3 * ImplicitGemmPluginCreator::createPlugin(
          << " act_alpha=" << parameters.act_alpha << " act_beta=" << parameters.act_beta
          << " is_subm=" << parameters.is_subm << " is_train=" << parameters.is_train
          << " output_add_scale=" << parameters.output_add_scale
-         << " output_scale=" << parameters.output_scale << " act_type=" << parameters.act_type;
+         << " output_scale=" << parameters.output_scale << " act_type=" << parameters.act_type
+         << " input_scale=" << (parameters.has_input_scale != 0 ? parameters.input_scale : 0.0F)
+         << " output_type=" << parameters.output_type;
       logDebug(ss.str().c_str());
 
       ImplicitGemmPlugin * const plugin{new ImplicitGemmPlugin{std::string(name), parameters}};
@@ -121,15 +169,22 @@ IPluginV3 * ImplicitGemmPluginCreator::createPlugin(
     try {
       nvinfer1::PluginField const * fields{fc->fields};
       std::int32_t num_fields{fc->nbFields};
-      PLUGIN_ASSERT_MSG(
-        num_fields == 1,
-        "Unsupported serialized plugin format. The plugin I/O contract has changed. "
-        "Please rebuild the TensorRT engine.");
-      PLUGIN_VALIDATE(fields[0].name != nullptr);
-      PLUGIN_VALIDATE(!strcmp(fields[0].name, "parameters"));
-      PLUGIN_VALIDATE(fields[0].type == nvinfer1::PluginFieldType::kUNKNOWN);
-      PLUGIN_VALIDATE(fields[0].length == sizeof(ImplicitGemmParameters));
-      PLUGIN_VALIDATE(fields[0].data != nullptr);
+      // An engine built with another layout of the parameters (an older plugin) must not run:
+      // reading it would reinterpret its fields. PLUGIN_VALIDATE only logs, and TensorRT 10.8
+      // crashes on a null plugin here, so stop with the reason instead.
+      bool const same_layout =
+        num_fields == 1 && fields[0].name != nullptr && strcmp(fields[0].name, "parameters") == 0 &&
+        fields[0].type == nvinfer1::PluginFieldType::kUNKNOWN &&
+        fields[0].length == static_cast<std::int32_t>(sizeof(ImplicitGemmParameters)) &&
+        fields[0].data != nullptr;
+      if (!same_layout) {
+        std::stringstream ss;
+        ss << "ImplicitGemm " << name
+           << ": the engine was serialized by a different ImplicitGemm plugin (parameters of "
+           << (num_fields == 1 ? fields[0].length : -1) << " bytes, this plugin expects "
+           << sizeof(ImplicitGemmParameters) << "). Rebuild the TensorRT engine.";
+        PLUGIN_ASSERT_MSG(same_layout, ss.str().c_str());
+      }
       auto params = *(static_cast<ImplicitGemmParameters const *>(fields[0].data));
       ImplicitGemmPlugin * const plugin{new ImplicitGemmPlugin{std::string(name), params}};
       return plugin;

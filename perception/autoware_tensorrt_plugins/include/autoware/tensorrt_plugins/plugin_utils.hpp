@@ -27,6 +27,8 @@ void logDebug(char const * msg);
 
 void logWarning(char const * msg);
 
+void logError(char const * msg);
+
 cudaError_t reportCudaStatus(
   cudaError_t status, char const * msg, char const * file, std::int32_t line);
 
