@@ -1,0 +1,56 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parameters for Generic Value Converter",
+  "type": "object",
+  "definitions": {
+    "autoware_generic_value_converter": {
+      "type": "object",
+      "properties": {
+        "csv_path_value_map": {
+          "type": "string",
+          "description": "Path to mapping CSV file",
+          "default": "$(find-pkg-share autoware_generic_value_converter)/data/value_map.csv"
+        },
+        "max_value": {
+          "type": "number",
+          "description": "Maximum output value",
+          "default": 1.0
+        },
+        "min_value": {
+          "type": "number",
+          "description": "Minimum output value",
+          "default": -1.0
+        },
+        "convert_value_cmd": {
+          "type": "boolean",
+          "description": "Whether to perform conversion",
+          "default": true
+        },
+        "use_value_ff": {
+          "type": "boolean",
+          "description": "Whether to use feedforward (lookup table)",
+          "default": true
+        }
+      },
+      "required": [
+        "csv_path_value_map",
+        "max_value",
+        "min_value",
+        "convert_value_cmd",
+        "use_value_ff"
+      ]
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/autoware_generic_value_converter"
+        }
+      },
+      "required": ["ros__parameters"]
+    }
+  },
+  "required": ["/**"]
+}

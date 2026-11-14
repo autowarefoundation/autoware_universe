@@ -1,0 +1,37 @@
+/**:
+  ros__parameters:
+    # System parameters
+    update_hz: 10.0
+    update_method: "update_offset_each_cell"  # "update_offset_each_cell" or "update_offset_total"
+    get_pitch_method: "tf"  # "tf" or "none"
+    progress_file_output: false
+    csv_default_map_dir: ""
+    csv_calibrated_map_dir: "$(env HOME)/autoware_map_calibration"
+    output_log_file: ""
+    precision: 3
+
+    # Map index parameters
+    # Input value range
+    value_min: -5.0
+    value_max: 3.0
+    value_num: 11  # Number of points (will create: min, ..., max)
+
+    # Velocity range (m/s)
+    velocity_min: 0.0
+    velocity_max: 20.0
+    velocity_num: 11  # Number of points
+
+    # Algorithm parameters
+    initial_covariance: 0.05
+    velocity_min_threshold: 0.1
+    velocity_diff_threshold: 0.556
+    value_diff_threshold: 0.03
+    max_steer_threshold: 0.3
+    max_pitch_threshold: 0.02
+    max_jerk_threshold: 1.0
+    value_velocity_thresh: 20.0
+    max_accel: 5.0
+    min_accel: -5.0
+    value_to_accel_delay: 0.3
+    update_suggest_thresh: 0.7
+    max_data_count: 200
