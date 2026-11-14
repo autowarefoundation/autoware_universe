@@ -41,23 +41,48 @@ DetectionResult detect_landmarks(
     return result;
   }
 
-  // Use parameters for initial lower/upper ring id
-  uint16_t lower_ring_id = static_cast<uint16_t>(param.lower_ring_id_init);
-  uint16_t upper_ring_id = static_cast<uint16_t>(param.upper_ring_id_init);
-  for (const auto & point : points.points) {
-    lower_ring_id = std::min(get_ring_id(point), lower_ring_id);
-    upper_ring_id = std::max(get_ring_id(point), upper_ring_id);
-  }
-  uint16_t ring_num = upper_ring_id - lower_ring_id + 1;
+  // Use only the rings in [ring_id_min, ring_id_max]. The default [0, 65535] uses all the rings.
+  const auto is_in_ring_range = [&param](const uint16_t ring_id) {
+    return param.ring_id_min <= ring_id && ring_id <= param.ring_id_max;
+  };
 
-  std::vector<pcl::PointCloud<PointT>> ring_points(ring_num);
-
+  // Find the range of the ring IDs and x of the points to be used
+  uint16_t lower_ring_id = std::numeric_limits<uint16_t>::max();
+  uint16_t upper_ring_id = 0;
   float min_x = std::numeric_limits<float>::max();
   float max_x = std::numeric_limits<float>::lowest();
+  bool has_points_in_ring_range = false;
   for (const auto & point : points.points) {
-    ring_points[get_ring_id(point) - lower_ring_id].push_back(point);
+    const uint16_t ring_id = get_ring_id(point);
+    if (!is_in_ring_range(ring_id)) {
+      continue;
+    }
+    has_points_in_ring_range = true;
+    lower_ring_id = std::min(ring_id, lower_ring_id);
+    upper_ring_id = std::max(ring_id, upper_ring_id);
     min_x = std::min(min_x, point.x);
     max_x = std::max(max_x, point.x);
+  }
+  if (!has_points_in_ring_range) {
+    result.status = DetectionStatus::no_points_in_ring_range;
+    return result;
+  }
+
+  // size_t so as not to overflow when the ring IDs span 0 to 65535
+  const size_t ring_num = static_cast<size_t>(upper_ring_id) - lower_ring_id + 1;
+
+  std::vector<pcl::PointCloud<PointT>> ring_points(ring_num);
+  for (const auto & point : points.points) {
+    const uint16_t ring_id = get_ring_id(point);
+    if (!is_in_ring_range(ring_id)) {
+      continue;
+    }
+    ring_points[ring_id - lower_ring_id].push_back(point);
+  }
+  for (const auto & one_ring : ring_points) {
+    if (!one_ring.empty()) {
+      result.ring_num_with_points++;
+    }
   }
 
   // Check that the leaf size is not too small, given the size of the data
@@ -116,16 +141,17 @@ DetectionResult detect_landmarks(
   matched_grid_msg = center_intensity_grid_msg;
 
   // for each ring
+  // ring_array_index for grid positioning (0-based index in ring_points)
+  size_t ring_array_index = 0;
   for (const auto & one_ring : ring_points) {
     if (one_ring.empty()) {
+      ring_array_index++;
       continue;
     }
 
     std::vector<double> intensity_sum(bin_num, 0.0);
     std::vector<int> intensity_num(bin_num, 0);
     std::vector<double> average_intensity(bin_num, 0.0);
-    const size_t ring_id =
-      get_ring_id(one_ring.front()) - get_ring_id(ring_points.front().points.front());
 
     for (const auto & point : one_ring.points) {
       const int bin_index = static_cast<int>((point.x - min_x) / param.resolution);
@@ -193,7 +219,8 @@ DetectionResult detect_landmarks(
           // ignore param.intensity_pattern[j] == 0
         }
       }
-      const size_t bin_position = i + param.intensity_pattern.size() / 2 + ring_id * bin_num;
+      const size_t bin_position =
+        i + param.intensity_pattern.size() / 2 + ring_array_index * bin_num;
       center_intensity_grid_msg.data[bin_position] =
         std::min(static_cast<int>(center_intensity), max_vote_percentage);
       positive_grid_msg.data[bin_position] = std::min(
@@ -208,12 +235,18 @@ DetectionResult detect_landmarks(
         vote[i]++;
       }
     }
+    ring_array_index++;
   }
 
   std::vector<landmark_manager::Landmark> detected_landmarks;
 
   for (size_t i = 0; i < bin_num - param.intensity_pattern.size(); i++) {
     if (vote[i] > param.vote_threshold_for_detect_marker) {
+      // The y of the marker on a vertical surface is unknown if the reference ring has no point in
+      // the bin, e.g. the reference ring is not in the point cloud
+      if (!param.road_surface_mode && reference_ring_y[i] == std::numeric_limits<float>::max()) {
+        continue;
+      }
       const double bin_position =
         static_cast<double>(i) + static_cast<double>(param.intensity_pattern.size()) / 2.0;
       geometry_msgs::msg::Pose marker_pose_on_base_link;

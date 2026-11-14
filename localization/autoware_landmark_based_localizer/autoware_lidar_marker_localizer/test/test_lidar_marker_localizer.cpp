@@ -21,6 +21,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -47,14 +48,16 @@ DetectionParam make_param()
   param.marker_to_vehicle_offset_y = 1.0;
   param.marker_height_from_ground = 0.5;
   param.reference_ring_number = 255;  // use all rings
-  param.lower_ring_id_init = 128;
-  param.upper_ring_id_init = 0;
+  param.ring_id_min = 0;
+  param.ring_id_max = 65535;  // use all rings
   return param;
 }
 
-// Rings 0, 1 and 2 at y = 2.0, 2.5 and 3.0, with one point per bin at x = 0, 1, ..., x_num - 1.
+// Rings first_ring, first_ring + 1 and first_ring + 2 at y = 2.0, 2.5 and 3.0, with one point per
+// bin at x = 0, 1, ..., x_num - 1.
 // The points at x = 4 and 5 have the high intensity if with_marker is true.
-pcl::PointCloud<PointT> make_points(const int x_num, const bool with_marker)
+pcl::PointCloud<PointT> make_points(
+  const int x_num, const bool with_marker, const std::uint16_t first_ring = 0)
 {
   pcl::PointCloud<PointT> points;
   for (std::uint16_t ring = 0; ring < 3; ++ring) {
@@ -64,7 +67,7 @@ pcl::PointCloud<PointT> make_points(const int x_num, const bool with_marker)
       point.y = 2.0F + 0.5F * static_cast<float>(ring);
       point.z = 0.0F;
       point.intensity = (with_marker && (x == 4 || x == 5)) ? high_intensity : low_intensity;
-      point.channel = ring;
+      point.channel = static_cast<std::uint16_t>(first_ring + ring);
       points.push_back(point);
     }
   }
@@ -167,8 +170,151 @@ TEST(DetectLandmarks, RoadSurfaceGridIsCenteredOnOffset)
   EXPECT_NEAR(right_origin.orientation.w, 1.0, 1e-9);
 }
 
-// The node declares all the parameters, including road_surface_mode.
-TEST(LidarMarkerLocalizer, Initialization)
+// The default ring range [0, 65535] uses all the rings.
+TEST(DetectLandmarks, UseAllRingsByDefault)
+{
+  const DetectionResult result =
+    detect_landmarks(make_points(10, true, 2), make_header(), make_param());
+
+  EXPECT_EQ(result.status, DetectionStatus::ok);
+  EXPECT_EQ(result.ring_num_with_points, 3U);
+  EXPECT_EQ(result.center_intensity_grid.info.height, 3U);
+  ASSERT_EQ(result.landmarks.size(), 1U);
+}
+
+// The configured range [1, 2] excludes ring 0, so the marker y is the y of ring 1.
+TEST(DetectLandmarks, SkipRingsOutsideConfiguredRange)
+{
+  DetectionParam param = make_param();
+  param.ring_id_min = 1;
+  param.ring_id_max = 2;
+
+  const DetectionResult result = detect_landmarks(make_points(10, true), make_header(), param);
+
+  EXPECT_EQ(result.status, DetectionStatus::ok);
+  EXPECT_EQ(result.ring_num_with_points, 2U);
+  EXPECT_EQ(result.center_intensity_grid.info.height, 2U);
+  ASSERT_EQ(result.landmarks.size(), 1U);
+  EXPECT_DOUBLE_EQ(result.landmarks.front().pose.position.y, 2.5);
+}
+
+// The configured range [0, 10] is wider than the rings of the points [2, 4], so it is narrowed to
+// [2, 4]. Every ring is then put on its own row of the grid.
+TEST(DetectLandmarks, NarrowConfiguredRangeToActualRings)
+{
+  DetectionParam param = make_param();
+  param.ring_id_min = 0;
+  param.ring_id_max = 10;
+
+  const DetectionResult result = detect_landmarks(make_points(10, true, 2), make_header(), param);
+
+  EXPECT_EQ(result.status, DetectionStatus::ok);
+  const auto & grid = result.center_intensity_grid;
+  ASSERT_EQ(grid.info.height, 3U);
+  ASSERT_EQ(result.landmarks.size(), 1U);
+  // the matched window starts at bin 3, so its center is bin 3 + intensity_pattern.size() / 2 = 5
+  for (std::uint32_t row = 0; row < grid.info.height; ++row) {
+    EXPECT_NE(grid.data.at(row * grid.info.width + 5), -1) << "row " << row;
+  }
+}
+
+// The points are on rings 0, 1, 2, 4, 5 and 6, so the row of ring 3 in the grid is left empty.
+TEST(DetectLandmarks, EmptyRowForRingWithoutPoint)
+{
+  DetectionParam param = make_param();
+  param.ring_id_min = 0;
+  param.ring_id_max = 10;
+  pcl::PointCloud<PointT> points = make_points(10, true);
+  points += make_points(10, true, 4);
+
+  const DetectionResult result = detect_landmarks(points, make_header(), param);
+
+  EXPECT_EQ(result.status, DetectionStatus::ok);
+  EXPECT_EQ(result.ring_num_with_points, 6U);
+  const auto & grid = result.center_intensity_grid;
+  ASSERT_EQ(grid.info.height, 7U);
+  ASSERT_EQ(result.landmarks.size(), 1U);
+  for (std::uint32_t row = 0; row < grid.info.height; ++row) {
+    if (row == 3) {
+      EXPECT_EQ(grid.data.at(row * grid.info.width + 5), -1);
+    } else {
+      EXPECT_NE(grid.data.at(row * grid.info.width + 5), -1) << "row " << row;
+    }
+  }
+}
+
+// The rings of the points [0, 2] and the configured range [5, 6] do not overlap.
+TEST(DetectLandmarks, NoPointsInConfiguredRange)
+{
+  DetectionParam param = make_param();
+  param.ring_id_min = 5;
+  param.ring_id_max = 6;
+
+  const DetectionResult result = detect_landmarks(make_points(10, true), make_header(), param);
+
+  EXPECT_EQ(result.status, DetectionStatus::no_points_in_ring_range);
+  EXPECT_TRUE(result.landmarks.empty());
+}
+
+// The rings of the points [0, 2] and [10, 12] surround the configured range [4, 6].
+TEST(DetectLandmarks, NoPointsInConfiguredRangeBetweenRings)
+{
+  DetectionParam param = make_param();
+  param.ring_id_min = 4;
+  param.ring_id_max = 6;
+  pcl::PointCloud<PointT> points = make_points(10, true);
+  points += make_points(10, true, 10);
+
+  const DetectionResult result = detect_landmarks(points, make_header(), param);
+
+  EXPECT_EQ(result.status, DetectionStatus::no_points_in_ring_range);
+  EXPECT_TRUE(result.landmarks.empty());
+}
+
+// The reference ring 5 is not in the point cloud, so the y of the marker is unknown.
+TEST(DetectLandmarks, NoMarkerWithoutReferenceRing)
+{
+  DetectionParam param = make_param();
+  param.reference_ring_number = 5;
+
+  const DetectionResult result = detect_landmarks(make_points(10, true), make_header(), param);
+
+  EXPECT_EQ(result.status, DetectionStatus::ok);
+  EXPECT_TRUE(result.landmarks.empty());
+}
+
+// The reference ring 0 is excluded by the configured range [1, 2].
+TEST(DetectLandmarks, NoMarkerWithReferenceRingOutsideConfiguredRange)
+{
+  DetectionParam param = make_param();
+  param.reference_ring_number = 0;
+  param.ring_id_min = 1;
+  param.ring_id_max = 2;
+
+  const DetectionResult result = detect_landmarks(make_points(10, true), make_header(), param);
+
+  EXPECT_EQ(result.status, DetectionStatus::ok);
+  EXPECT_TRUE(result.landmarks.empty());
+}
+
+// In the road surface mode the y of the marker does not depend on the reference ring.
+TEST(DetectLandmarks, DetectMarkerOnRoadSurfaceWithoutReferenceRing)
+{
+  DetectionParam param = make_param();
+  param.road_surface_mode = true;
+  param.reference_ring_number = 5;
+
+  const DetectionResult result = detect_landmarks(make_points(10, true), make_header(), param);
+
+  EXPECT_EQ(result.status, DetectionStatus::ok);
+  ASSERT_EQ(result.landmarks.size(), 1U);
+  EXPECT_DOUBLE_EQ(result.landmarks.front().pose.position.y, 1.0);
+}
+
+namespace
+{
+rclcpp::NodeOptions make_node_options(
+  const int64_t ring_id_min, const int64_t ring_id_max, const int64_t reference_ring_number)
 {
   rclcpp::NodeOptions node_options;
   node_options.parameter_overrides(
@@ -185,25 +331,71 @@ TEST(LidarMarkerLocalizer, Initialization)
      {"vote_threshold_for_detect_marker", 1},
      {"marker_to_vehicle_offset_y", 0.0},
      {"marker_height_from_ground", 0.0},
-     {"reference_ring_number", 0},
+     {"reference_ring_number", reference_ring_number},
      {"self_pose_timeout_sec", 1.0},
      {"self_pose_distance_tolerance_m", 1.0},
      {"limit_distance_from_self_pose_to_nearest_marker", 1.0},
      {"limit_distance_from_self_pose_to_nearest_marker_y", 1.0},
      {"limit_distance_from_self_pose_to_marker", 1.0},
      {"base_covariance", std::vector<double>(36, 0.0)},
-     {"lower_ring_id_init", 0},
-     {"upper_ring_id_init", 0},
+     {"ring_id_min", ring_id_min},
+     {"ring_id_max", ring_id_max},
      {"enable_save_log", false},
      {"save_file_directory_path", std::string("")},
      {"save_file_name", std::string("")},
      {"save_frame_id", std::string("")},
      {"radius_for_extracting_marker_pointcloud", 1.0},
      {"queue_size_for_debug_pub_msg", 1}});
+  return node_options;
+}
+}  // namespace
 
+// The node declares all the parameters, including road_surface_mode.
+TEST(LidarMarkerLocalizer, Initialization)
+{
   std::shared_ptr<LidarMarkerLocalizer> localizer;
-  ASSERT_NO_THROW(localizer = std::make_shared<LidarMarkerLocalizer>(node_options));
+  ASSERT_NO_THROW(
+    localizer = std::make_shared<LidarMarkerLocalizer>(make_node_options(0, 65535, 255)));
   EXPECT_FALSE(localizer->get_parameter("road_surface_mode").as_bool());
+}
+
+// The reference ring must be in the configured ring range unless all the rings are used.
+TEST(LidarMarkerLocalizer, RejectReferenceRingOutsideConfiguredRange)
+{
+  EXPECT_THROW(
+    std::make_shared<LidarMarkerLocalizer>(make_node_options(1, 2, 0)), std::invalid_argument);
+  EXPECT_THROW(
+    std::make_shared<LidarMarkerLocalizer>(make_node_options(1, 2, 3)), std::invalid_argument);
+  // 255 uses all the rings
+  EXPECT_NO_THROW(std::make_shared<LidarMarkerLocalizer>(make_node_options(1, 2, 255)));
+  // the default [0, 65535] uses all the rings
+  EXPECT_NO_THROW(std::make_shared<LidarMarkerLocalizer>(make_node_options(0, 65535, 5)));
+}
+
+// Each ring votes at most once for a bin, so the configured range must have more rings than
+// vote_threshold_for_detect_marker (1 in make_node_options).
+TEST(LidarMarkerLocalizer, RejectRingRangeNotMoreThanVoteThreshold)
+{
+  EXPECT_THROW(
+    std::make_shared<LidarMarkerLocalizer>(make_node_options(1, 1, 1)), std::invalid_argument);
+  EXPECT_NO_THROW(std::make_shared<LidarMarkerLocalizer>(make_node_options(1, 2, 1)));
+}
+
+TEST(LidarMarkerLocalizer, RejectRingIdMinGreaterThanMax)
+{
+  EXPECT_THROW(
+    std::make_shared<LidarMarkerLocalizer>(make_node_options(128, 0, 255)), std::invalid_argument);
+}
+
+// The ring IDs are uint16_t.
+TEST(LidarMarkerLocalizer, RejectRingIdOutOfRange)
+{
+  EXPECT_THROW(
+    std::make_shared<LidarMarkerLocalizer>(make_node_options(70000, 70010, 255)),
+    std::invalid_argument);
+  EXPECT_THROW(
+    std::make_shared<LidarMarkerLocalizer>(make_node_options(-1, 10, 255)), std::invalid_argument);
+  EXPECT_NO_THROW(std::make_shared<LidarMarkerLocalizer>(make_node_options(0, 65535, 255)));
 }
 
 }  // namespace autoware::lidar_marker_localizer

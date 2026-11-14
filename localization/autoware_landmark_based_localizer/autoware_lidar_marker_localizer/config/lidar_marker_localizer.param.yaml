@@ -19,8 +19,8 @@
     vote_threshold_for_detect_marker: 20
     marker_to_vehicle_offset_y: 0.0
     marker_height_from_ground: 1.075
-    lower_ring_id_init: 128
-    upper_ring_id_init: 0
+    ring_id_min: 0
+    ring_id_max: 65535 # set ring_id_min to 0 and ring_id_max to 65535 to use all the rings
     reference_ring_number: 255 # set to 255 to disable ring filtering
 
     # for interpolate algorithm

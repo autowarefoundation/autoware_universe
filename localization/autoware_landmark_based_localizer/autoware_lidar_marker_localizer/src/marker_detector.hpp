@@ -23,6 +23,7 @@
 
 #include <pcl/point_cloud.h>
 
+#include <cstddef>
 #include <cstdint>
 #include <vector>
 
@@ -41,15 +42,19 @@ struct DetectionParam
   double marker_to_vehicle_offset_y;
   double marker_height_from_ground;
   int64_t reference_ring_number;
-  int64_t lower_ring_id_init;
-  int64_t upper_ring_id_init;
+  // only the rings in [ring_id_min, ring_id_max] are used for the detection
+  int64_t ring_id_min;
+  int64_t ring_id_max;
 };
 
-enum class DetectionStatus { ok, no_points, bin_num_too_small };
+enum class DetectionStatus { ok, no_points, no_points_in_ring_range, bin_num_too_small };
 
 struct DetectionResult
 {
   DetectionStatus status{DetectionStatus::ok};
+  // number of the rings with points used for the detection. A marker needs votes from more rings
+  // than vote_threshold_for_detect_marker.
+  size_t ring_num_with_points{0};
   // poses of the detected markers on base_link
   std::vector<landmark_manager::Landmark> landmarks;
 

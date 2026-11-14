@@ -77,17 +77,19 @@
           "description": "Height from the ground to the center of the marker. [m]",
           "default": 1.075
         },
-        "lower_ring_id_init": {
-          "type": "number",
-          "description": "Initial value when searching for the lowest ring ID within the point cloud",
-          "default": 128,
-          "minimum": 0
-        },
-        "upper_ring_id_init": {
-          "type": "number",
-          "description": "Initial value when searching for the highest ring ID within the point cloud",
+        "ring_id_min": {
+          "type": "integer",
+          "description": "Lowest ring ID to be used for the detection",
           "default": 0,
-          "minimum": 0
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "ring_id_max": {
+          "type": "integer",
+          "description": "Highest ring ID to be used for the detection. Set it to 65535 with ring_id_min = 0 to use all the rings",
+          "default": 65535,
+          "minimum": 0,
+          "maximum": 65535
         },
         "reference_ring_number": {
           "type": "number",
