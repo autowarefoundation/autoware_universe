@@ -503,6 +503,16 @@ INSTANTIATE_TEST_SUITE_P(
 
 }  // namespace
 
+TEST(MpcLateralControllerTest, SteeringLimitKeepsSaturatedCommandReachable)
+{
+  // 0.554 rad can be requested on a tight bend even though the vehicle is
+  // physically limited to 0.54 rad. The convergence target must be reachable.
+  EXPECT_DOUBLE_EQ(clamp_steering_to_vehicle_limit(-0.554, 0.54), -0.54);
+  EXPECT_DOUBLE_EQ(clamp_steering_to_vehicle_limit(0.554, 0.54), 0.54);
+  EXPECT_DOUBLE_EQ(clamp_steering_to_vehicle_limit(0.3, 0.54), 0.3);
+  EXPECT_DOUBLE_EQ(clamp_steering_to_vehicle_limit(0.3, 0.0), 0.0);
+}
+
 TEST(MpcLateralControllerTest, ShortStopLookaheadExcludesPointsBeyondPidDepartureDistance)
 {
   constexpr double pid_departure_distance = 0.5;

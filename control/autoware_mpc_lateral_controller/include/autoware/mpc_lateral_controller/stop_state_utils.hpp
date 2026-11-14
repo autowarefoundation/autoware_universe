@@ -25,6 +25,14 @@ namespace autoware::motion::control::mpc_lateral_controller
 {
 // The candidate point contributes only when its arc length from the nearest
 // point is inside the lookahead. Check the boundary *before* taking its speed.
+// Keep the steering target reachable by the vehicle (including after offset correction).
+inline double clamp_steering_to_vehicle_limit(
+  const double requested_angle, const double max_steer_angle)
+{
+  const double limit = std::max(0.0, max_steer_angle);
+  return std::clamp(requested_angle, -limit, limit);
+}
+
 inline double min_target_velocity_within_distance(
   const autoware_planning_msgs::msg::Trajectory & trajectory, const std::size_t nearest,
   const double distance_margin)
