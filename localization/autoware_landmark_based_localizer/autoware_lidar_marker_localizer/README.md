@@ -41,6 +41,10 @@
 
 {{ json_to_markdown("localization/autoware_landmark_based_localizer/autoware_lidar_marker_localizer/schema/lidar_marker_localizer.schema.json") }}
 
+`ring_id_min` and `ring_id_max` are a fallback for launching this node without a ring filter before it.
+When a ring filter selects the rings before this node (e.g. `ring_filter` in `autoware_launch`), keep them at `0` and `65535` and set the range in the ring filter.
+In this case the validation at startup does not know the range of the ring filter, so set `reference_ring_number` within it.
+
 ## How to launch
 
 When launching Autoware, set `lidar-marker` for `pose_source`.

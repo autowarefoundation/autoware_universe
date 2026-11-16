@@ -23,11 +23,16 @@
 
 #include <pcl/point_cloud.h>
 
+#include <cstddef>
 #include <cstdint>
 #include <vector>
 
 namespace autoware::lidar_marker_localizer
 {
+
+// reference_ring_number to use all the rings in [ring_id_min, ring_id_max] as the reference ring.
+// It is out of the range of the ring IDs (uint16_t), so it never matches an actual ring.
+constexpr int64_t all_rings_as_reference = -1;
 
 struct DetectionParam
 {
@@ -40,16 +45,24 @@ struct DetectionParam
   int64_t vote_threshold_for_detect_marker;
   double marker_to_vehicle_offset_y;
   double marker_height_from_ground;
+  // ring ID whose points give the y of a marker on a vertical surface, or all_rings_as_reference
   int64_t reference_ring_number;
-  int64_t lower_ring_id_init;
-  int64_t upper_ring_id_init;
+  // only the rings in [ring_id_min, ring_id_max] are used for the detection
+  int64_t ring_id_min;
+  int64_t ring_id_max;
 };
 
-enum class DetectionStatus { ok, no_points, bin_num_too_small };
+enum class DetectionStatus { ok, no_points, no_points_in_ring_range, bin_num_too_small };
 
 struct DetectionResult
 {
   DetectionStatus status{DetectionStatus::ok};
+  // number of the rings with points used for the detection. A marker needs votes from more rings
+  // than vote_threshold_for_detect_marker.
+  size_t ring_num_with_points{0};
+  // number of the markers on a vertical surface skipped because the reference ring has no point in
+  // the bin, so their y is unknown
+  size_t skipped_marker_num_without_reference_ring{0};
   // poses of the detected markers on base_link
   std::vector<landmark_manager::Landmark> landmarks;
 
