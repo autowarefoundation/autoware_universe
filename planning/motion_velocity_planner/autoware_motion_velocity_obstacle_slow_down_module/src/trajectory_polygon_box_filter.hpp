@@ -21,11 +21,13 @@
 #include <boost/geometry/index/rtree.hpp>
 
 #include <cmath>
+#include <utility>
 #include <vector>
 
 namespace autoware::motion_velocity_planner
 {
-// Bounding boxes of the trajectory polygons, stored in an R-tree.
+// Bounding boxes of the trajectory polygons, stored in an R-tree together with the indices of the
+// polygons.
 // A point outside all the boxes is outside all the polygons, so it can be skipped before the
 // lateral offset calculation without changing the result. The boxes are enlarged by `margin` as a
 // safety margin against rounding (the points on the boundaries of the polygons are inside the boxes
@@ -33,11 +35,16 @@ namespace autoware::motion_velocity_planner
 class TrajectoryPolygonBoxFilter
 {
 public:
+  // `polygons` must outlive this object.
   explicit TrajectoryPolygonBoxFilter(
     const std::vector<autoware_utils_geometry::Polygon2d> & polygons, const double margin = 1e-3)
-  : rtree_(make_boxes(polygons, margin))
+  : polygons_(polygons), rtree_(make_boxes(polygons, margin))
   {
   }
+  // The polygons are held by reference, so temporaries (const or not) are not accepted.
+  TrajectoryPolygonBoxFilter(
+    const std::vector<autoware_utils_geometry::Polygon2d> && polygons,
+    double margin = 1e-3) = delete;
 
   // true if the point is outside all the boxes, so it can be skipped. A point with a NaN or
   // infinite coordinate is never skipped, so that it is handled in the same way as before the
@@ -55,24 +62,27 @@ public:
 private:
   using Box2d = autoware_utils_geometry::Box2d;
 
-  static std::vector<Box2d> make_boxes(
+  using BoxWithIndex = std::pair<Box2d, size_t>;
+
+  static std::vector<BoxWithIndex> make_boxes(
     const std::vector<autoware_utils_geometry::Polygon2d> & polygons, const double margin)
   {
     namespace bg = boost::geometry;
-    std::vector<Box2d> boxes;
+    std::vector<BoxWithIndex> boxes;
     boxes.reserve(polygons.size());
-    for (const auto & polygon : polygons) {
-      auto box = bg::return_envelope<Box2d>(polygon);
+    for (size_t i = 0; i < polygons.size(); ++i) {
+      auto box = bg::return_envelope<Box2d>(polygons[i]);
       bg::set<bg::min_corner, 0>(box, bg::get<bg::min_corner, 0>(box) - margin);
       bg::set<bg::min_corner, 1>(box, bg::get<bg::min_corner, 1>(box) - margin);
       bg::set<bg::max_corner, 0>(box, bg::get<bg::max_corner, 0>(box) + margin);
       bg::set<bg::max_corner, 1>(box, bg::get<bg::max_corner, 1>(box) + margin);
-      boxes.push_back(box);
+      boxes.emplace_back(box, i);
     }
     return boxes;
   }
 
-  boost::geometry::index::rtree<Box2d, boost::geometry::index::rstar<16>> rtree_;
+  const std::vector<autoware_utils_geometry::Polygon2d> & polygons_;
+  boost::geometry::index::rtree<BoxWithIndex, boost::geometry::index::rstar<16>> rtree_;
 };
 }  // namespace autoware::motion_velocity_planner
 

@@ -67,7 +67,8 @@ std::vector<Polygon2d> make_curved_trajectory_polygons()
 
 TEST(TrajectoryPolygonBoxFilter, KeepsPointsInsideAndOnTheBoundary)
 {
-  const TrajectoryPolygonBoxFilter filter({make_rectangle(1.0, 1.0, 0.0, 2.0, 2.0)});
+  const std::vector<Polygon2d> polygons{make_rectangle(1.0, 1.0, 0.0, 2.0, 2.0)};
+  const TrajectoryPolygonBoxFilter filter(polygons);
   EXPECT_FALSE(filter.is_outside_all_boxes(1.0, 1.0));     // inside
   EXPECT_FALSE(filter.is_outside_all_boxes(2.0, 1.0));     // on an edge
   EXPECT_FALSE(filter.is_outside_all_boxes(2.0, 2.0));     // on a vertex
@@ -76,21 +77,24 @@ TEST(TrajectoryPolygonBoxFilter, KeepsPointsInsideAndOnTheBoundary)
 
 TEST(TrajectoryPolygonBoxFilter, RejectsPointsOutsideAllTheBoxes)
 {
-  const TrajectoryPolygonBoxFilter filter({make_rectangle(1.0, 1.0, 0.0, 2.0, 2.0)});
+  const std::vector<Polygon2d> polygons{make_rectangle(1.0, 1.0, 0.0, 2.0, 2.0)};
+  const TrajectoryPolygonBoxFilter filter(polygons);
   EXPECT_TRUE(filter.is_outside_all_boxes(2.01, 1.0));
   EXPECT_TRUE(filter.is_outside_all_boxes(-5.0, -5.0));
 }
 
 TEST(TrajectoryPolygonBoxFilter, RejectsAllPointsWithoutPolygons)
 {
-  const TrajectoryPolygonBoxFilter filter({});
+  const std::vector<Polygon2d> polygons;
+  const TrajectoryPolygonBoxFilter filter(polygons);
   EXPECT_TRUE(filter.is_outside_all_boxes(0.0, 0.0));
 }
 
 TEST(TrajectoryPolygonBoxFilter, NeverRejectsPointsWithNonFiniteCoordinates)
 {
   // The pre-filter must not change how such points are handled, so it does not reject them.
-  const TrajectoryPolygonBoxFilter filter({make_rectangle(1.0, 1.0, 0.0, 2.0, 2.0)});
+  const std::vector<Polygon2d> polygons{make_rectangle(1.0, 1.0, 0.0, 2.0, 2.0)};
+  const TrajectoryPolygonBoxFilter filter(polygons);
   const double nan = std::numeric_limits<double>::quiet_NaN();
   const double inf = std::numeric_limits<double>::infinity();
   EXPECT_FALSE(filter.is_outside_all_boxes(1.0, nan));
