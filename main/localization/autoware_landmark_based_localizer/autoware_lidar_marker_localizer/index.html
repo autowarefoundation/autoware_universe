@@ -23354,25 +23354,25 @@
 <td>N/A</td>
 </tr>
 <tr>
-<td>lower_<wbr>ring_<wbr>id_<wbr>init</wbr></wbr></wbr></td>
-<td>float</td>
-<td>Initial value when searching for the lowest ring ID within the point cloud</td>
-<td>128</td>
-<td>≥0</td>
+<td>ring_<wbr>id_<wbr>min</wbr></wbr></td>
+<td>integer</td>
+<td>Lowest ring ID to be used for the detection. Keep it at 0 when the rings are already selected by a ring filter before this node</td>
+<td>0</td>
+<td>≥0<br>≤65535</td>
 </tr>
 <tr>
-<td>upper_<wbr>ring_<wbr>id_<wbr>init</wbr></wbr></wbr></td>
-<td>float</td>
-<td>Initial value when searching for the highest ring ID within the point cloud</td>
-<td>0</td>
-<td>≥0</td>
+<td>ring_<wbr>id_<wbr>max</wbr></wbr></td>
+<td>integer</td>
+<td>Highest ring ID to be used for the detection. Set it to 65535 with ring_id_min = 0 to use all the rings. Keep it at 65535 when the rings are already selected by a ring filter before this node</td>
+<td>65535</td>
+<td>≥0<br>≤65535</td>
 </tr>
 <tr>
 <td>reference_<wbr>ring_<wbr>number</wbr></wbr></td>
-<td>float</td>
-<td>Reference ring number when detecting the marker. Set 255 to disable ring filtering</td>
-<td>255</td>
-<td>N/A</td>
+<td>integer</td>
+<td>Ring ID whose points give the y of a marker on a vertical surface. Set -1 to use all the rings in [ring_id_min, ring_id_max]. 255 is rejected because it meant all the rings before</td>
+<td>-1</td>
+<td>≥-1<br>≤65535</td>
 </tr>
 <tr>
 <td>self_<wbr>pose_<wbr>timeout_<wbr>sec</wbr></wbr></wbr></td>
@@ -23460,6 +23460,9 @@
 </tr>
 </tbody>
 </table>
+<p><code>ring_id_min</code> and <code>ring_id_max</code> are a fallback for launching this node without a ring filter before it.
+When a ring filter selects the rings before this node (e.g. <code>ring_filter</code> in <code>autoware_launch</code>), keep them at <code>0</code> and <code>65535</code> and set the range in the ring filter.
+In this case the validation at startup does not know the range of the ring filter, so set <code>reference_ring_number</code> within it.</p>
 <h2 id="how-to-launch">How to launch<a class="headerlink" href="#how-to-launch" title="Permanent link">#</a></h2>
 <p>When launching Autoware, set <code>lidar-marker</code> for <code>pose_source</code>.</p>
 <div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>launch<span class="w"> </span>autoware_launch<span class="w"> </span>...<span class="w"> </span><span class="se">\</span>
