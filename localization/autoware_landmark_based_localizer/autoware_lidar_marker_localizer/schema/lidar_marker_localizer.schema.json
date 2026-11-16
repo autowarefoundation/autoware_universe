@@ -79,14 +79,14 @@
         },
         "ring_id_min": {
           "type": "integer",
-          "description": "Lowest ring ID to be used for the detection",
+          "description": "Lowest ring ID to be used for the detection. Keep it at 0 when the rings are already selected by a ring filter before this node",
           "default": 0,
           "minimum": 0,
           "maximum": 65535
         },
         "ring_id_max": {
           "type": "integer",
-          "description": "Highest ring ID to be used for the detection. Set it to 65535 with ring_id_min = 0 to use all the rings",
+          "description": "Highest ring ID to be used for the detection. Set it to 65535 with ring_id_min = 0 to use all the rings. Keep it at 65535 when the rings are already selected by a ring filter before this node",
           "default": 65535,
           "minimum": 0,
           "maximum": 65535
