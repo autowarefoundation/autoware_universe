@@ -250,9 +250,8 @@ ObstacleSlowDownModule::convert_point_cloud_to_slow_down_points(
     for (const auto & index : cluster_indices.indices) {
       const auto obstacle_point = autoware::motion_velocity_planner::utils::to_geometry_point(
         filtered_points_ptr->points[index]);
-      // 0. pre-filtering - skips points outside all the trajectory polygons. Only the polygons
-      // whose bounding boxes contain the point are checked. The precise filtering below rejects
-      // them too.
+      // 0. precise filtering - skips points outside all the trajectory polygons. Only the polygons
+      // whose bounding boxes contain the point are checked.
       if (traj_poly_box_filter.is_outside_all_polygons(obstacle_point.x, obstacle_point.y)) {
         continue;
       }
@@ -267,13 +266,6 @@ ObstacleSlowDownModule::convert_point_cloud_to_slow_down_points(
       // The trajectory polygon is ignored if the minimum lateral distance is more than maximum
       // lateral margin
       if (min_lat_dist_to_traj_poly >= p.max_lat_margin) {
-        continue;
-      }
-
-      // precise filtering
-      const double precise_min_lat_dist_to_traj_poly =
-        utils::get_dist_to_traj_poly(obstacle_point, decimated_traj_polys_with_lat_margin);
-      if (precise_min_lat_dist_to_traj_poly > 0.0) {
         continue;
       }
 
