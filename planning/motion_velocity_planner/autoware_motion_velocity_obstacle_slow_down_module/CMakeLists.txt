@@ -15,6 +15,7 @@ if(BUILD_TESTING)
     test/test_pointcloud_characterization.cpp
     test/test_planning_factor.cpp
     test/test_trajectory_lateral_offset_calculator.cpp
+    test/test_trajectory_polygon_box_filter.cpp
   )
 
   # Set test dependencies
