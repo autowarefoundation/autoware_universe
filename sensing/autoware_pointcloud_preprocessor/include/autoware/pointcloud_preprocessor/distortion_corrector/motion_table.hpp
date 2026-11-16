@@ -23,6 +23,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
+#include <limits>
 #include <vector>
 
 /// Ego motion over one pointcloud, quantized in time.
@@ -44,7 +45,7 @@ inline constexpr std::uint32_t bin_width_ns = 1U << bin_shift;
 inline constexpr std::uint32_t bin_remainder_mask = bin_width_ns - 1U;
 inline constexpr float bin_width_sec = 1e-9f * static_cast<float>(bin_width_ns);
 /// `time_stamp` is 32 bits wide, so no point lies beyond this many bins.
-inline constexpr std::size_t max_bin_count = (std::size_t{1} << (32U - bin_shift));
+inline constexpr std::int64_t max_bin_count = std::int64_t{1} << (32U - bin_shift);
 inline constexpr std::int64_t max_sample_distance_ns = 100'000'000;
 
 inline constexpr std::uint32_t flag_twist_missing = 1U << 0U;
@@ -52,21 +53,21 @@ inline constexpr std::uint32_t flag_imu_missing = 1U << 1U;
 /// The point counts towards the timestamp mismatch diagnostics.
 inline constexpr std::uint32_t flag_mismatch = 1U << 2U;
 
-/// A motion sample, stamped relative to the pointcloud's header stamp.
-struct Sample
-{
-  std::int64_t stamp_ns;
-  float value[3];
-};
-
-/// Linear velocity samples carry no more than the twist message does, so they are paired with the
-/// angular velocity of the same message.
+/// Motion samples are in the base frame and stamped relative to the pointcloud's header stamp.
 struct TwistSample
 {
   std::int64_t stamp_ns;
-  float linear[3];
-  float angular[3];
+  Eigen::Vector3f linear;
+  Eigen::Vector3f angular;
 };
+
+struct AngularVelocitySample
+{
+  std::int64_t stamp_ns;
+  Eigen::Vector3f angular;
+};
+
+// Bins are read by CUDA kernels, so they hold plain floats.
 
 struct Bin2D
 {
@@ -89,201 +90,7 @@ struct Bin3D
   std::uint32_t flags;
 };
 
-/// Integrates planar motion (linear x, angular z).
-class Integrator2D
-{
-public:
-  using Bin = Bin2D;
-
-  void integrate(const float * linear, const float * angular, double dt)
-  {
-    const double v = linear[0];
-    const double w = angular[2];
-    const double mid_theta = theta_ + 0.5 * w * dt;
-    x_ += v * dt * std::cos(mid_theta);
-    y_ += v * dt * std::sin(mid_theta);
-    theta_ += w * dt;
-  }
-
-  [[nodiscard]] Bin make_bin(const Integrator2D & next, double bin_dt, std::uint32_t flags) const
-  {
-    Bin bin{};
-    bin.cos_theta = static_cast<float>(std::cos(theta_));
-    bin.sin_theta = static_cast<float>(std::sin(theta_));
-    bin.x = static_cast<float>(x_);
-    bin.y = static_cast<float>(y_);
-    bin.rate_x = static_cast<float>((next.x_ - x_) / bin_dt);
-    bin.rate_y = static_cast<float>((next.y_ - y_) / bin_dt);
-    bin.rate_theta = static_cast<float>((next.theta_ - theta_) / bin_dt);
-    bin.flags = flags;
-    return bin;
-  }
-
-private:
-  double x_{0.0};
-  double y_{0.0};
-  double theta_{0.0};
-};
-
-/// Integrates rigid motion in space.
-class Integrator3D
-{
-public:
-  using Bin = Bin3D;
-
-  void integrate(const float * linear, const float * angular, double dt)
-  {
-    const Eigen::Vector3d v(linear[0], linear[1], linear[2]);
-    const Eigen::Vector3d rotation_vector =
-      Eigen::Vector3d(angular[0], angular[1], angular[2]) * dt;
-    const double angle = rotation_vector.norm();
-
-    // exp() of the twist: the translation is the left Jacobian of SO(3) applied to v * dt
-    Eigen::Matrix3d delta_rotation = Eigen::Matrix3d::Identity();
-    Eigen::Vector3d delta_translation = v * dt;
-    if (angle > 1e-9) {
-      const Eigen::Vector3d axis = rotation_vector / angle;
-      delta_rotation = Eigen::AngleAxisd(angle, axis).toRotationMatrix();
-      const Eigen::Vector3d cross = axis.cross(delta_translation);
-      delta_translation += ((1.0 - std::cos(angle)) / angle) * cross +
-                           (1.0 - std::sin(angle) / angle) * axis.cross(cross);
-    }
-
-    translation_ += rotation_ * delta_translation;
-    rotation_ = rotation_ * delta_rotation;
-  }
-
-  [[nodiscard]] Bin make_bin(const Integrator3D & next, double bin_dt, std::uint32_t flags) const
-  {
-    const Eigen::AngleAxisd delta(rotation_.transpose() * next.rotation_);
-    const Eigen::Vector3d rotation_rate = delta.axis() * (delta.angle() / bin_dt);
-    const Eigen::Vector3d translation_rate = (next.translation_ - translation_) / bin_dt;
-
-    Bin bin{};
-    for (int row = 0; row < 3; ++row) {
-      for (int col = 0; col < 3; ++col) {
-        bin.rotation[3 * row + col] = static_cast<float>(rotation_(row, col));
-      }
-      bin.translation[row] = static_cast<float>(translation_[row]);
-      bin.translation_rate[row] = static_cast<float>(translation_rate[row]);
-      bin.rotation_rate[row] = static_cast<float>(rotation_rate[row]);
-    }
-    bin.flags = flags;
-    return bin;
-  }
-
-private:
-  Eigen::Matrix3d rotation_{Eigen::Matrix3d::Identity()};
-  Eigen::Vector3d translation_{Eigen::Vector3d::Zero()};
-};
-
-namespace detail
-{
-/// Walks a stamp-sorted sample list forwards in time.
-template <typename SampleT>
-class Cursor
-{
-public:
-  explicit Cursor(const std::vector<SampleT> & samples) : samples_(samples) {}
-
-  /// The stamp of the first sample after `time_ns`, or `fallback_ns` if there is none or it is
-  /// later than that. `time_ns` must not decrease between calls.
-  [[nodiscard]] std::int64_t next_stamp_after(std::int64_t time_ns, std::int64_t fallback_ns)
-  {
-    while (index_ < samples_.size() && samples_[index_].stamp_ns <= time_ns) {
-      ++index_;
-    }
-    return index_ < samples_.size() ? std::min(fallback_ns, samples_[index_].stamp_ns)
-                                    : fallback_ns;
-  }
-
-  /// The sample in effect up to and including `time_ns`, which must lie between the argument and
-  /// the result of the last `next_stamp_after()` call. Null if there are no samples.
-  [[nodiscard]] const SampleT * sample_at(std::int64_t time_ns, bool & is_missing) const
-  {
-    if (samples_.empty()) {
-      is_missing = true;
-      return nullptr;
-    }
-    const SampleT & sample = index_ < samples_.size() ? samples_[index_] : samples_.back();
-    is_missing = std::llabs(time_ns - sample.stamp_ns) > max_sample_distance_ns;
-    return &sample;
-  }
-
-private:
-  const std::vector<SampleT> & samples_;
-  std::size_t index_{0};
-};
-}  // namespace detail
-
-/// Builds the motion table of one pointcloud into `bins`, which always ends up non-empty.
-///
-/// `twists` and `angular_velocities` must be sorted by stamp. Angular velocities take precedence
-/// over the twists' when `use_angular_velocities` is set and one is available. The table ends
-/// where the motion samples run out; its last bin holds the final pose with zero rates, for all
-/// later points.
-template <typename IntegratorT>
-void build(
-  const std::vector<TwistSample> & twists, const std::vector<Sample> & angular_velocities,
-  bool use_angular_velocities, std::vector<typename IntegratorT::Bin> & bins)
-{
-  static const std::vector<Sample> no_samples;
-  const std::vector<Sample> & imu_samples =
-    use_angular_velocities ? angular_velocities : no_samples;
-
-  std::int64_t last_stamp_ns = -max_sample_distance_ns;
-  if (!twists.empty()) last_stamp_ns = std::max(last_stamp_ns, twists.back().stamp_ns);
-  if (!imu_samples.empty()) last_stamp_ns = std::max(last_stamp_ns, imu_samples.back().stamp_ns);
-
-  const std::int64_t end_ns = last_stamp_ns + max_sample_distance_ns;
-  const auto bin_count = static_cast<std::size_t>(std::clamp<std::int64_t>(
-    (end_ns + bin_width_ns - 1) / bin_width_ns, 0, static_cast<std::int64_t>(max_bin_count) - 1));
-
-  bins.clear();
-  bins.reserve(bin_count + 1);
-
-  detail::Cursor<TwistSample> twist_cursor(twists);
-  detail::Cursor<Sample> imu_cursor(imu_samples);
-  const float zero[3] = {0.f, 0.f, 0.f};
-
-  IntegratorT pose;
-  std::uint32_t flags = 0;
-  for (std::size_t bin_index = 0; bin_index < bin_count; ++bin_index) {
-    const auto bin_start_ns = static_cast<std::int64_t>(bin_index) * bin_width_ns;
-    const auto bin_end_ns = bin_start_ns + bin_width_ns;
-    const IntegratorT bin_start_pose = pose;
-
-    flags = 0;
-    for (std::int64_t from_ns = bin_start_ns; from_ns < bin_end_ns;) {
-      std::int64_t to_ns = twist_cursor.next_stamp_after(from_ns, bin_end_ns);
-      to_ns = imu_cursor.next_stamp_after(from_ns, to_ns);
-
-      bool is_twist_missing = false;
-      bool is_imu_missing = false;
-      const TwistSample * twist = twist_cursor.sample_at(to_ns, is_twist_missing);
-      const Sample * imu = imu_cursor.sample_at(to_ns, is_imu_missing);
-
-      const float * linear = is_twist_missing ? zero : twist->linear;
-      const float * angular = is_twist_missing ? zero : twist->angular;
-      if (!is_imu_missing) {
-        angular = imu->value;
-      }
-
-      if (is_twist_missing) flags |= flag_twist_missing;
-      if (imu != nullptr && is_imu_missing) flags |= flag_imu_missing;
-      if (is_twist_missing || (use_angular_velocities && is_imu_missing)) flags |= flag_mismatch;
-
-      pose.integrate(linear, angular, 1e-9 * static_cast<double>(to_ns - from_ns));
-      from_ns = to_ns;
-    }
-
-    bins.push_back(bin_start_pose.make_bin(pose, 1e-9 * static_cast<double>(bin_width_ns), flags));
-  }
-
-  std::uint32_t end_flags = flag_twist_missing | flag_mismatch;
-  if (!imu_samples.empty()) end_flags |= flag_imu_missing;
-  bins.push_back(pose.make_bin(pose, 1.0, end_flags));
-}
+using RowMajorMatrix3f = Eigen::Matrix<float, 3, 3, Eigen::RowMajor>;
 
 /// The bin of a point and the time from the start of that bin to the point, in seconds.
 template <typename BinT>
@@ -300,9 +107,8 @@ inline void undistort(const Bin2D & bin, float remainder, float & x, float & y)
 {
   // The rotation within a bin is far below a degree, the series are exact to float precision
   const float delta = bin.rate_theta * remainder;
-  const float delta_squared = delta * delta;
-  const float cos_delta = 1.f - 0.5f * delta_squared;
-  const float sin_delta = delta * (1.f - delta_squared * (1.f / 6.f));
+  const float cos_delta = 1.f - 0.5f * delta * delta;
+  const float sin_delta = delta * (1.f - delta * delta / 6.f);
   const float cos_theta = bin.cos_theta * cos_delta - bin.sin_theta * sin_delta;
   const float sin_theta = bin.sin_theta * cos_delta + bin.cos_theta * sin_delta;
 
@@ -314,23 +120,220 @@ inline void undistort(const Bin2D & bin, float remainder, float & x, float & y)
 
 inline void undistort(const Bin3D & bin, float remainder, float & x, float & y, float & z)
 {
-  // Second-order rotation by the small rotation vector d: p + d x p + (d x (d x p)) / 2
-  const float dx = bin.rotation_rate[0] * remainder;
-  const float dy = bin.rotation_rate[1] * remainder;
-  const float dz = bin.rotation_rate[2] * remainder;
+  const Eigen::Map<const RowMajorMatrix3f> rotation(bin.rotation);
+  const Eigen::Map<const Eigen::Vector3f> translation(bin.translation);
+  const Eigen::Map<const Eigen::Vector3f> translation_rate(bin.translation_rate);
+  const Eigen::Map<const Eigen::Vector3f> rotation_rate(bin.rotation_rate);
 
-  const float cx = dy * z - dz * y;
-  const float cy = dz * x - dx * z;
-  const float cz = dx * y - dy * x;
+  // Rotation by the small rotation vector d, to second order: p + d x p + d x (d x p) / 2
+  const Eigen::Vector3f p(x, y, z);
+  const Eigen::Vector3f d = rotation_rate * remainder;
+  const Eigen::Vector3f d_cross_p = d.cross(p);
+  const Eigen::Vector3f undistorted = rotation * (p + d_cross_p + 0.5f * d.cross(d_cross_p)) +
+                                      translation + translation_rate * remainder;
 
-  const float px = x + cx + 0.5f * (dy * cz - dz * cy);
-  const float py = y + cy + 0.5f * (dz * cx - dx * cz);
-  const float pz = z + cz + 0.5f * (dx * cy - dy * cx);
+  x = undistorted.x();
+  y = undistorted.y();
+  z = undistorted.z();
+}
 
-  const float * r = bin.rotation;
-  x = r[0] * px + r[1] * py + r[2] * pz + bin.translation[0] + bin.translation_rate[0] * remainder;
-  y = r[3] * px + r[4] * py + r[5] * pz + bin.translation[1] + bin.translation_rate[1] * remainder;
-  z = r[6] * px + r[7] * py + r[8] * pz + bin.translation[2] + bin.translation_rate[2] * remainder;
+// The integrators advance by the midpoint rule: a step translates along the orientation halfway
+// through it. Steps are at most a bin long, which makes the error negligible.
+
+/// Integrates planar motion (linear x, angular z).
+class Integrator2D
+{
+public:
+  using Bin = Bin2D;
+
+  void integrate(const Eigen::Vector3f & linear, const Eigen::Vector3f & angular, double dt)
+  {
+    const double half_turn = 0.5 * angular.z() * dt;
+    theta_ += half_turn;
+    x_ += linear.x() * dt * std::cos(theta_);
+    y_ += linear.x() * dt * std::sin(theta_);
+    theta_ += half_turn;
+  }
+
+  /// The bin that starts at this pose and reaches the pose `next` a bin width later.
+  [[nodiscard]] Bin make_bin(const Integrator2D & next, std::uint32_t flags) const
+  {
+    Bin bin{};
+    bin.cos_theta = static_cast<float>(std::cos(theta_));
+    bin.sin_theta = static_cast<float>(std::sin(theta_));
+    bin.x = static_cast<float>(x_);
+    bin.y = static_cast<float>(y_);
+    bin.rate_x = static_cast<float>((next.x_ - x_) / bin_width_sec);
+    bin.rate_y = static_cast<float>((next.y_ - y_) / bin_width_sec);
+    bin.rate_theta = static_cast<float>((next.theta_ - theta_) / bin_width_sec);
+    bin.flags = flags;
+    return bin;
+  }
+
+private:
+  double x_{0.0};
+  double y_{0.0};
+  double theta_{0.0};
+};
+
+/// Integrates rigid motion in space.
+class Integrator3D
+{
+public:
+  using Bin = Bin3D;
+
+  void integrate(const Eigen::Vector3f & linear, const Eigen::Vector3f & angular, double dt)
+  {
+    const Eigen::Vector3d half_turn = 0.5 * dt * angular.cast<double>();
+    const Eigen::Matrix3d half_rotation =
+      Eigen::AngleAxisd(half_turn.norm(), half_turn.stableNormalized()).toRotationMatrix();
+
+    rotation_ = rotation_ * half_rotation;
+    translation_ += rotation_ * linear.cast<double>() * dt;
+    rotation_ = rotation_ * half_rotation;
+  }
+
+  /// The bin that starts at this pose and reaches the pose `next` a bin width later.
+  [[nodiscard]] Bin make_bin(const Integrator3D & next, std::uint32_t flags) const
+  {
+    const Eigen::AngleAxisd turn(rotation_.transpose() * next.rotation_);
+    const Eigen::Vector3d rotation_rate = turn.axis() * (turn.angle() / bin_width_sec);
+    const Eigen::Vector3d translation_rate = (next.translation_ - translation_) / bin_width_sec;
+
+    Bin bin{};
+    Eigen::Map<RowMajorMatrix3f>(bin.rotation) = rotation_.cast<float>();
+    Eigen::Map<Eigen::Vector3f>(bin.translation) = translation_.cast<float>();
+    Eigen::Map<Eigen::Vector3f>(bin.translation_rate) = translation_rate.cast<float>();
+    Eigen::Map<Eigen::Vector3f>(bin.rotation_rate) = rotation_rate.cast<float>();
+    bin.flags = flags;
+    return bin;
+  }
+
+private:
+  Eigen::Matrix3d rotation_{Eigen::Matrix3d::Identity()};
+  Eigen::Vector3d translation_{Eigen::Vector3d::Zero()};
+};
+
+namespace detail
+{
+struct Velocity
+{
+  Eigen::Vector3f linear{Eigen::Vector3f::Zero()};
+  Eigen::Vector3f angular{Eigen::Vector3f::Zero()};
+  std::uint32_t flags{0};
+};
+
+/// The first sample stamped at or after `time_ns`, or the last sample if there is none. Null if
+/// that sample is more than `max_sample_distance_ns` away from `time_ns`, or if there is no sample.
+template <typename SampleT>
+const SampleT * find_sample(const std::vector<SampleT> & samples, std::int64_t time_ns)
+{
+  if (samples.empty()) {
+    return nullptr;
+  }
+
+  const auto it = std::lower_bound(
+    samples.begin(), samples.end(), time_ns,
+    [](const SampleT & sample, std::int64_t stamp_ns) { return sample.stamp_ns < stamp_ns; });
+  const SampleT & sample = it != samples.end() ? *it : samples.back();
+  return std::abs(time_ns - sample.stamp_ns) <= max_sample_distance_ns ? &sample : nullptr;
+}
+
+/// The stamp of the first sample after `time_ns`, or the largest stamp there is if there is none.
+template <typename SampleT>
+std::int64_t next_stamp_after(const std::vector<SampleT> & samples, std::int64_t time_ns)
+{
+  const auto it = std::upper_bound(
+    samples.begin(), samples.end(), time_ns,
+    [](std::int64_t stamp_ns, const SampleT & sample) { return stamp_ns < sample.stamp_ns; });
+  return it != samples.end() ? it->stamp_ns : std::numeric_limits<std::int64_t>::max();
+}
+
+/// The velocity at `time_ns`, zero where the samples are missing. `angular_velocities` take
+/// precedence over the twists' angular velocity, and are expected if `use_angular_velocities`.
+inline Velocity velocity_at(
+  const std::vector<TwistSample> & twists,
+  const std::vector<AngularVelocitySample> & angular_velocities, bool use_angular_velocities,
+  std::int64_t time_ns)
+{
+  Velocity velocity;
+
+  if (const TwistSample * twist = find_sample(twists, time_ns)) {
+    velocity.linear = twist->linear;
+    velocity.angular = twist->angular;
+  } else {
+    velocity.flags |= flag_twist_missing | flag_mismatch;
+  }
+
+  if (const AngularVelocitySample * sample = find_sample(angular_velocities, time_ns)) {
+    velocity.angular = sample->angular;
+  } else if (use_angular_velocities) {
+    velocity.flags |= flag_mismatch;
+    if (!angular_velocities.empty()) {
+      velocity.flags |= flag_imu_missing;
+    }
+  }
+
+  return velocity;
+}
+
+/// The time from which on every sample counts as missing.
+template <typename SampleT>
+std::int64_t end_of_validity(const std::vector<SampleT> & samples)
+{
+  return samples.empty() ? 0 : samples.back().stamp_ns + max_sample_distance_ns;
+}
+}  // namespace detail
+
+/// Builds the motion table of one pointcloud into `bins`, which always ends up non-empty.
+///
+/// `twists` and `angular_velocities` must be sorted by stamp. The latter are ignored unless
+/// `use_angular_velocities` is set. The table ends where the motion samples run out; its last bin
+/// holds the final pose with zero rates, for all later points.
+template <typename IntegratorT>
+void build(
+  const std::vector<TwistSample> & twists,
+  const std::vector<AngularVelocitySample> & all_angular_velocities, bool use_angular_velocities,
+  std::vector<typename IntegratorT::Bin> & bins)
+{
+  static const std::vector<AngularVelocitySample> none;
+  const auto & angular_velocities = use_angular_velocities ? all_angular_velocities : none;
+
+  const std::int64_t end_ns = std::max(
+    {std::int64_t{0}, detail::end_of_validity(twists),
+     detail::end_of_validity(angular_velocities)});
+  const std::int64_t bin_count =
+    std::min((end_ns + bin_width_ns - 1) / bin_width_ns, max_bin_count - 1);
+
+  bins.clear();
+  bins.reserve(bin_count + 1);
+
+  IntegratorT pose;
+  for (std::int64_t bin_index = 0; bin_index < bin_count; ++bin_index) {
+    const std::int64_t bin_end_ns = (bin_index + 1) * bin_width_ns;
+    const IntegratorT bin_start_pose = pose;
+    std::uint32_t flags = 0;
+
+    // The velocity is constant between two sample stamps
+    for (std::int64_t time_ns = bin_index * bin_width_ns; time_ns < bin_end_ns;) {
+      const std::int64_t step_end_ns = std::min(
+        {bin_end_ns, detail::next_stamp_after(twists, time_ns),
+         detail::next_stamp_after(angular_velocities, time_ns)});
+      const detail::Velocity velocity =
+        detail::velocity_at(twists, angular_velocities, use_angular_velocities, step_end_ns);
+
+      pose.integrate(
+        velocity.linear, velocity.angular, 1e-9 * static_cast<double>(step_end_ns - time_ns));
+      flags |= velocity.flags;
+      time_ns = step_end_ns;
+    }
+
+    bins.push_back(bin_start_pose.make_bin(pose, flags));
+  }
+
+  const std::uint32_t end_flags =
+    detail::velocity_at(twists, angular_velocities, use_angular_velocities, end_ns + 1).flags;
+  bins.push_back(pose.make_bin(pose, end_flags));
 }
 
 }  // namespace autoware::pointcloud_preprocessor::motion_table

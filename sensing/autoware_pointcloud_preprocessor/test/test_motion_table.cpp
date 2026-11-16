@@ -35,24 +35,6 @@ constexpr std::int64_t operator""_ms(unsigned long long milliseconds)  // NOLINT
   return static_cast<std::int64_t>(milliseconds) * 1'000'000;
 }
 
-TwistSample make_twist(
-  std::int64_t stamp_ns, const Eigen::Vector3f & linear, const Eigen::Vector3f & angular)
-{
-  TwistSample sample{};
-  sample.stamp_ns = stamp_ns;
-  Eigen::Map<Eigen::Vector3f>(sample.linear) = linear;
-  Eigen::Map<Eigen::Vector3f>(sample.angular) = angular;
-  return sample;
-}
-
-Sample make_angular_velocity(std::int64_t stamp_ns, const Eigen::Vector3f & value)
-{
-  Sample sample{};
-  sample.stamp_ns = stamp_ns;
-  Eigen::Map<Eigen::Vector3f>(sample.value) = value;
-  return sample;
-}
-
 void undistort_point(const Bin2D & bin, float remainder, Eigen::Vector3f & point)
 {
   undistort(bin, remainder, point.x(), point.y());
@@ -107,7 +89,7 @@ TEST(MotionTable, ConstantPlanarTwistFollowsTheArc)
   const Eigen::Vector3f linear(v, 0, 0);
   const Eigen::Vector3f angular(0, 0, w);
   const std::vector<TwistSample> twists = {
-    make_twist(0, linear, angular), make_twist(100_ms, linear, angular)};
+    TwistSample{0, linear, angular}, TwistSample{100_ms, linear, angular}};
   const Eigen::Vector3f point(3.0F, -2.0F, 1.0F);
 
   std::vector<Bin2D> bins_2d;
@@ -133,7 +115,7 @@ TEST(MotionTable, ConstantSpatialTwistMatchesFineIntegration)
   const Eigen::Vector3f linear(15.0F, -1.0F, 0.5F);
   const Eigen::Vector3f angular(0.2F, -0.3F, 0.6F);
   const std::vector<TwistSample> twists = {
-    make_twist(0, linear, angular), make_twist(100_ms, linear, angular)};
+    TwistSample{0, linear, angular}, TwistSample{100_ms, linear, angular}};
   const Eigen::Vector3f point(3.0F, -2.0F, 1.0F);
 
   std::vector<Bin3D> bins;
@@ -157,9 +139,9 @@ TEST(MotionTable, TimeTakesItsVelocityFromTheFirstSampleAtOrAfterIt)
 {
   const Eigen::Vector3f zero = Eigen::Vector3f::Zero();
   const std::vector<TwistSample> twists = {
-    make_twist(-5_ms, Eigen::Vector3f(100.0F, 0, 0), zero),
-    make_twist(10_ms, Eigen::Vector3f(1.0F, 0, 0), zero),
-    make_twist(30_ms, Eigen::Vector3f(3.0F, 0, 0), zero)};
+    TwistSample{-5_ms, Eigen::Vector3f(100.0F, 0, 0), zero},
+    TwistSample{10_ms, Eigen::Vector3f(1.0F, 0, 0), zero},
+    TwistSample{30_ms, Eigen::Vector3f(3.0F, 0, 0), zero}};
 
   std::vector<Bin2D> bins;
   build<Integrator2D>(twists, {}, false, bins);
@@ -182,11 +164,11 @@ TEST(MotionTable, TimeTakesItsVelocityFromTheFirstSampleAtOrAfterIt)
 TEST(MotionTable, AngularVelocitySamplesTakePrecedenceOverTheTwists)
 {
   const std::vector<TwistSample> twists = {
-    make_twist(0, Eigen::Vector3f::Zero(), Eigen::Vector3f(0, 0, 1.0F)),
-    make_twist(100_ms, Eigen::Vector3f::Zero(), Eigen::Vector3f(0, 0, 1.0F))};
-  const std::vector<Sample> angular_velocities = {
-    make_angular_velocity(0, Eigen::Vector3f(0, 0, 2.0F)),
-    make_angular_velocity(100_ms, Eigen::Vector3f(0, 0, 2.0F))};
+    TwistSample{0, Eigen::Vector3f::Zero(), Eigen::Vector3f(0, 0, 1.0F)},
+    TwistSample{100_ms, Eigen::Vector3f::Zero(), Eigen::Vector3f(0, 0, 1.0F)}};
+  const std::vector<AngularVelocitySample> angular_velocities = {
+    AngularVelocitySample{0, Eigen::Vector3f(0, 0, 2.0F)},
+    AngularVelocitySample{100_ms, Eigen::Vector3f(0, 0, 2.0F)}};
   const Eigen::Vector3f point(10.0F, 0, 0);
 
   std::vector<Bin2D> bins;
@@ -200,9 +182,9 @@ TEST(MotionTable, AngularVelocitySamplesTakePrecedenceOverTheTwists)
 TEST(MotionTable, TimesWithoutASampleNearbyAreFlaggedAndDoNotMove)
 {
   const std::vector<TwistSample> twists = {
-    make_twist(0, Eigen::Vector3f(1.0F, 0, 0), Eigen::Vector3f::Zero())};
-  const std::vector<Sample> angular_velocities = {
-    make_angular_velocity(0, Eigen::Vector3f::Zero())};
+    TwistSample{0, Eigen::Vector3f(1.0F, 0, 0), Eigen::Vector3f::Zero()}};
+  const std::vector<AngularVelocitySample> angular_velocities = {
+    AngularVelocitySample{0, Eigen::Vector3f::Zero()}};
 
   std::vector<Bin2D> bins;
   build<Integrator2D>(twists, angular_velocities, true, bins);
@@ -223,8 +205,8 @@ TEST(MotionTable, TimesWithoutASampleNearbyAreFlaggedAndDoNotMove)
 TEST(MotionTable, MissingAngularVelocityFallsBackToTheTwistAndCountsAsMismatch)
 {
   const std::vector<TwistSample> twists = {
-    make_twist(0, Eigen::Vector3f::Zero(), Eigen::Vector3f(0, 0, 1.0F)),
-    make_twist(100_ms, Eigen::Vector3f::Zero(), Eigen::Vector3f(0, 0, 1.0F))};
+    TwistSample{0, Eigen::Vector3f::Zero(), Eigen::Vector3f(0, 0, 1.0F)},
+    TwistSample{100_ms, Eigen::Vector3f::Zero(), Eigen::Vector3f(0, 0, 1.0F)}};
 
   std::vector<Bin2D> bins;
   build<Integrator2D>(twists, {}, true, bins);
@@ -247,11 +229,23 @@ TEST(MotionTable, TableWithoutSamplesLeavesPointsInPlace)
   EXPECT_EQ(flags, flag_twist_missing | flag_mismatch);
 }
 
+TEST(MotionTable, SamplesLongBeforeTheHeaderStampAreMissing)
+{
+  const std::vector<TwistSample> twists = {
+    TwistSample{-500_ms, Eigen::Vector3f(1.0F, 0, 0), Eigen::Vector3f::Zero()}};
+
+  std::vector<Bin2D> bins;
+  build<Integrator2D>(twists, {}, false, bins);
+
+  ASSERT_EQ(bins.size(), 1U);
+  EXPECT_EQ(bins.front().flags, flag_twist_missing | flag_mismatch);
+}
+
 TEST(MotionTable, PoseIsContinuousAcrossBins)
 {
   const std::vector<TwistSample> twists = {
-    make_twist(0, Eigen::Vector3f(30.0F, 0, 0), Eigen::Vector3f(0, 0, 1.0F)),
-    make_twist(100_ms, Eigen::Vector3f(30.0F, 0, 0), Eigen::Vector3f(0, 0, 1.0F))};
+    TwistSample{0, Eigen::Vector3f(30.0F, 0, 0), Eigen::Vector3f(0, 0, 1.0F)},
+    TwistSample{100_ms, Eigen::Vector3f(30.0F, 0, 0), Eigen::Vector3f(0, 0, 1.0F)}};
   const Eigen::Vector3f point(50.0F, 20.0F, 0);
 
   std::vector<Bin2D> bins;
