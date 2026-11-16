@@ -21,7 +21,7 @@ The node converts the message format; it does not transform coordinates, compens
 
 This parameter allows remapping of classification labels from `autoware_sensing_msgs::msg::RadarClassification` to `autoware_perception_msgs::msg::ObjectClassification`. It should be provided as a flat list of strings, where each pair of strings represents an input label and the corresponding output label.
 
-For example, the current default configuration remaps `MOTORCYCLE` and `BICYCLE` from radar classification to `CAR` in the perception classification, while keeping other labels unchanged.
+Every label of `RadarClassification` can be named as an input label, and every label of `ObjectClassification` as an output label. For example, the current default configuration remaps `BUS`, `TRAILER`, `MOTORCYCLE` and `BICYCLE` from radar classification to `CAR` in the perception classification, and `HAZARD`, `OVER_DRIVABLE` and `UNDER_DRIVABLE` to `UNKNOWN`, while keeping other labels unchanged. A radar label without an entry in the table becomes `UNKNOWN`.
 
 The `probability` of each radar classification is treated as an independent confidence for that label, not as a share of a distribution, and is copied as it is. Consequently, if multiple radar labels are remapped to the same perception label, multiple entries with that label and their own probabilities appear in the output; the probabilities are not merged. This does not violate any logic in Autoware but may be worth monitoring.
 
