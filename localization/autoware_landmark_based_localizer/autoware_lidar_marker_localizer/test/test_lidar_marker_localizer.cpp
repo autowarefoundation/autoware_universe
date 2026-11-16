@@ -281,6 +281,7 @@ TEST(DetectLandmarks, NoMarkerWithoutReferenceRing)
 
   EXPECT_EQ(result.status, DetectionStatus::ok);
   EXPECT_TRUE(result.landmarks.empty());
+  EXPECT_GT(result.skipped_marker_num_without_reference_ring, 0U);
 }
 
 // The reference ring 0 is excluded by the configured range [1, 2].
@@ -295,6 +296,7 @@ TEST(DetectLandmarks, NoMarkerWithReferenceRingOutsideConfiguredRange)
 
   EXPECT_EQ(result.status, DetectionStatus::ok);
   EXPECT_TRUE(result.landmarks.empty());
+  EXPECT_GT(result.skipped_marker_num_without_reference_ring, 0U);
 }
 
 // In the road surface mode the y of the marker does not depend on the reference ring.
@@ -309,6 +311,7 @@ TEST(DetectLandmarks, DetectMarkerOnRoadSurfaceWithoutReferenceRing)
   EXPECT_EQ(result.status, DetectionStatus::ok);
   ASSERT_EQ(result.landmarks.size(), 1U);
   EXPECT_DOUBLE_EQ(result.landmarks.front().pose.position.y, 1.0);
+  EXPECT_EQ(result.skipped_marker_num_without_reference_ring, 0U);
 }
 
 namespace

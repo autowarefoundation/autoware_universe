@@ -245,6 +245,7 @@ DetectionResult detect_landmarks(
       // The y of the marker on a vertical surface is unknown if the reference ring has no point in
       // the bin, e.g. the reference ring is not in the point cloud
       if (!param.road_surface_mode && reference_ring_y[i] == std::numeric_limits<float>::max()) {
+        result.skipped_marker_num_without_reference_ring++;
         continue;
       }
       const double bin_position =

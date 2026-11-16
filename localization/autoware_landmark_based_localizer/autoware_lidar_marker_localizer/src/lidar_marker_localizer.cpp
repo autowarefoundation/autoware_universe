@@ -483,6 +483,15 @@ std::vector<landmark_manager::Landmark> LidarMarkerLocalizer::detect_landmarks(
         << " rings have points, which is not more than vote_threshold_for_detect_marker ("
         << param_.detection.vote_threshold_for_detect_marker << ")");
   }
+  if (result.skipped_marker_num_without_reference_ring > 0) {
+    RCLCPP_WARN_STREAM_THROTTLE(
+      this->get_logger(), *this->get_clock(), 1000,
+      "Skipped " << result.skipped_marker_num_without_reference_ring
+                 << " markers because the reference ring (reference_ring_number = "
+                 << param_.detection.reference_ring_number
+                 << ") has no point at them. Check that the reference ring is in the input "
+                    "point cloud, e.g. in the range of the ring filter before this node");
+  }
 
   pub_center_intensity_grid->publish(result.center_intensity_grid);
   pub_positive_grid->publish(result.positive_grid);

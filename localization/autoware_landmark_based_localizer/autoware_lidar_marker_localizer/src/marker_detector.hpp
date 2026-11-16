@@ -55,6 +55,9 @@ struct DetectionResult
   // number of the rings with points used for the detection. A marker needs votes from more rings
   // than vote_threshold_for_detect_marker.
   size_t ring_num_with_points{0};
+  // number of the markers on a vertical surface skipped because the reference ring has no point in
+  // the bin, so their y is unknown
+  size_t skipped_marker_num_without_reference_ring{0};
   // poses of the detected markers on base_link
   std::vector<landmark_manager::Landmark> landmarks;
 
