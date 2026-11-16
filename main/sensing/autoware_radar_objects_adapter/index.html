@@ -23125,7 +23125,7 @@
 </ul>
 <h3 id="parameter-classification_remap">Parameter: classification_remap<a class="headerlink" href="#parameter-classification_remap" title="Permanent link">#</a></h3>
 <p>This parameter allows remapping of classification labels from <code>autoware_sensing_msgs::msg::RadarClassification</code> to <code>autoware_perception_msgs::msg::ObjectClassification</code>. It should be provided as a flat list of strings, where each pair of strings represents an input label and the corresponding output label.</p>
-<p>For example, the current default configuration remaps <code>MOTORCYCLE</code> and <code>BICYCLE</code> from radar classification to <code>CAR</code> in the perception classification, while keeping other labels unchanged.</p>
+<p>Every label of <code>RadarClassification</code> can be named as an input label, and every label of <code>ObjectClassification</code> as an output label. For example, the current default configuration remaps <code>BUS</code>, <code>TRAILER</code>, <code>MOTORCYCLE</code> and <code>BICYCLE</code> from radar classification to <code>CAR</code> in the perception classification, and <code>HAZARD</code>, <code>OVER_DRIVABLE</code> and <code>UNDER_DRIVABLE</code> to <code>UNKNOWN</code>, while keeping other labels unchanged. A radar label without an entry in the table becomes <code>UNKNOWN</code>.</p>
 <p>The <code>probability</code> of each radar classification is treated as an independent confidence for that label, not as a share of a distribution, and is copied as it is. Consequently, if multiple radar labels are remapped to the same perception label, multiple entries with that label and their own probabilities appear in the output; the probabilities are not merged. This does not violate any logic in Autoware but may be worth monitoring.</p>
 <h3 id="inputs-outputs">Inputs / Outputs<a class="headerlink" href="#inputs-outputs" title="Permanent link">#</a></h3>
 <h4 id="input">Input<a class="headerlink" href="#input" title="Permanent link">#</a></h4>
@@ -23229,56 +23229,84 @@
 <tr>
 <td>classification_<wbr>remap.<wbr>UNKNOWN</wbr></wbr></td>
 <td>string</td>
-<td>Radar class to map to UNKNOWN label.</td>
+<td>Perception label that the radar label UNKNOWN becomes.</td>
 <td>UNKNOWN</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>classification_<wbr>remap.<wbr>CAR</wbr></wbr></td>
 <td>string</td>
-<td>Radar class to map to CAR label.</td>
+<td>Perception label that the radar label CAR becomes.</td>
 <td>CAR</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>classification_<wbr>remap.<wbr>TRUCK</wbr></wbr></td>
 <td>string</td>
-<td>Radar class to map to TRUCK label.</td>
+<td>Perception label that the radar label TRUCK becomes.</td>
 <td>TRUCK</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>classification_<wbr>remap.<wbr>BUS</wbr></wbr></td>
+<td>string</td>
+<td>Perception label that the radar label BUS becomes.</td>
+<td>CAR</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>classification_<wbr>remap.<wbr>TRAILER</wbr></wbr></td>
+<td>string</td>
+<td>Perception label that the radar label TRAILER becomes.</td>
+<td>CAR</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>classification_<wbr>remap.<wbr>MOTORCYCLE</wbr></wbr></td>
 <td>string</td>
-<td>Radar tends to misclassify far cars as MOTORCYCLE; default=CAR</td>
+<td>Perception label that the radar label MOTORCYCLE becomes.</td>
 <td>CAR</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>classification_<wbr>remap.<wbr>BICYCLE</wbr></wbr></td>
 <td>string</td>
-<td>Radar tends to misclassify far cars as BICYCLE; default=CAR</td>
+<td>Perception label that the radar label BICYCLE becomes.</td>
 <td>CAR</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>classification_<wbr>remap.<wbr>PEDESTRIAN</wbr></wbr></td>
 <td>string</td>
-<td>Radar class to map to PEDESTRIAN label.</td>
+<td>Perception label that the radar label PEDESTRIAN becomes.</td>
 <td>PEDESTRIAN</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>classification_<wbr>remap.<wbr>ANIMAL</wbr></wbr></td>
 <td>string</td>
-<td>Radar class to map to ANIMAL label.</td>
+<td>Perception label that the radar label ANIMAL becomes.</td>
 <td>ANIMAL</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>classification_<wbr>remap.<wbr>HAZARD</wbr></wbr></td>
 <td>string</td>
-<td>HAZARD is not a valid Perception label; fallback=UNKNOWN</td>
+<td>Perception label that the radar label HAZARD becomes.</td>
+<td>UNKNOWN</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>classification_<wbr>remap.<wbr>OVER_<wbr>DRIVABLE</wbr></wbr></wbr></td>
+<td>string</td>
+<td>Perception label that the radar label OVER_DRIVABLE becomes.</td>
+<td>UNKNOWN</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>classification_<wbr>remap.<wbr>UNDER_<wbr>DRIVABLE</wbr></wbr></wbr></td>
+<td>string</td>
+<td>Perception label that the radar label UNDER_DRIVABLE becomes.</td>
 <td>UNKNOWN</td>
 <td>N/A</td>
 </tr>
