@@ -17,6 +17,7 @@
 
 #include "autoware/cuda_pointcloud_preprocessor/point_types.hpp"
 #include "autoware/cuda_pointcloud_preprocessor/types.hpp"
+#include "autoware/cuda_pointcloud_preprocessor/undistort_kernels.hpp"
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
@@ -42,7 +43,6 @@ namespace autoware::cuda_pointcloud_preprocessor
 struct PreprocessorCapacity
 {
   std::size_t max_input_point_count{0};
-  std::size_t max_twist_struct_count{0};
 };
 
 struct ProcessingStats
@@ -74,8 +74,7 @@ public:
     const sensor_msgs::msg::PointCloud2 & input_pointcloud_msg,
     const geometry_msgs::msg::TransformStamped & transform_msg,
     const std::deque<geometry_msgs::msg::TwistWithCovarianceStamped> & twist_queue,
-    const std::deque<geometry_msgs::msg::Vector3Stamped> & angular_velocity_queue,
-    const std::uint32_t first_point_rel_stamp_nsec);
+    const std::deque<geometry_msgs::msg::Vector3Stamped> & angular_velocity_queue);
 
 private:
   static cudaStream_t initialize_stream();
@@ -124,8 +123,10 @@ private:
   thrust::device_vector<std::uint8_t> device_mismatch_mask_;
   thrust::device_vector<std::uint32_t> device_ring_outlier_mask_;
   thrust::device_vector<std::uint32_t> device_indices_;
-  thrust::device_vector<TwistStruct2D> device_twist_2d_structs_;
-  thrust::device_vector<TwistStruct3D> device_twist_3d_structs_;
+  std::vector<MotionBin2D> host_motion_bins_2d_;
+  std::vector<MotionBin3D> host_motion_bins_3d_;
+  thrust::device_vector<MotionBin2D> device_motion_bins_2d_;
+  thrust::device_vector<MotionBin3D> device_motion_bins_3d_;
   thrust::device_vector<CropBoxParameters> device_crop_box_structs_;
   // Layout of `device_processing_stats_` and of the host buffer it is read back into
   static constexpr std::size_t crop_box_passed_stat_index = 0U;

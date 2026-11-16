@@ -206,6 +206,7 @@ if(BUILD_TESTING)
   )
   target_link_libraries(test_cuda_pointcloud_preprocessor
     cuda_pointcloud_preprocessor_lib
+    autoware_pointcloud_preprocessor::distortion_corrector_core
     autoware_cuda_utils::autoware_cuda_utils
     ${CUDA_LIBRARIES}
   )

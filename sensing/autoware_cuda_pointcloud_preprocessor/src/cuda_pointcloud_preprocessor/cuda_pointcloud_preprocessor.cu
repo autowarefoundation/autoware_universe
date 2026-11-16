@@ -16,6 +16,7 @@
 #include "autoware/cuda_pointcloud_preprocessor/cuda_pointcloud_preprocessor.hpp"
 #include "autoware/cuda_pointcloud_preprocessor/outlier_kernels.hpp"
 #include "autoware/cuda_pointcloud_preprocessor/point_types.hpp"
+#include "autoware/cuda_pointcloud_preprocessor/queue_bounds.hpp"
 #include "autoware/cuda_pointcloud_preprocessor/types.hpp"
 #include "autoware/cuda_pointcloud_preprocessor/undistort_kernels.hpp"
 
@@ -112,7 +113,7 @@ namespace
 
 PreprocessorCapacity validate_capacity(const PreprocessorCapacity & capacity)
 {
-  if (capacity.max_input_point_count == 0 || capacity.max_twist_struct_count == 0) {
+  if (capacity.max_input_point_count == 0) {
     throw std::runtime_error("CudaPointcloudPreprocessor capacities must be positive");
   }
   return capacity;
@@ -188,8 +189,8 @@ void CudaPointcloudPreprocessor::initializeBuffers()
   device_mismatch_mask_.resize(max_points);
   device_ring_outlier_mask_.resize(max_points);
   device_indices_.resize(max_points);
-  device_twist_2d_structs_.resize(capacity_.max_twist_struct_count);
-  device_twist_3d_structs_.resize(capacity_.max_twist_struct_count);
+  device_motion_bins_2d_.resize(autoware::pointcloud_preprocessor::motion_table::max_bin_count);
+  device_motion_bins_3d_.resize(autoware::pointcloud_preprocessor::motion_table::max_bin_count);
   device_processing_stats_.resize(processing_stat_count);
 
   // The sort's values are the point indices 0..N-1; SortPairs leaves its inputs untouched, so
@@ -264,8 +265,7 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::pr
   const sensor_msgs::msg::PointCloud2 & input_pointcloud_msg,
   const geometry_msgs::msg::TransformStamped & transform_msg,
   const std::deque<geometry_msgs::msg::TwistWithCovarianceStamped> & twist_queue,
-  const std::deque<geometry_msgs::msg::Vector3Stamped> & angular_velocity_queue,
-  const std::uint32_t first_point_rel_stamp_nsec)
+  const std::deque<geometry_msgs::msg::Vector3Stamped> & angular_velocity_queue)
 {
   auto frame_id = input_pointcloud_msg.header.frame_id;
   const auto input_point_count =
@@ -327,30 +327,28 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::pr
   transform_struct.m32 = static_cast<float>(rotation_matrix.getRow(2).getY());
   transform_struct.m33 = static_cast<float>(rotation_matrix.getRow(2).getZ());
 
-  // Twist preprocessing
-  std::uint64_t pointcloud_stamp_nsec =
-    static_cast<std::uint64_t>(1'000'000'000) * input_pointcloud_msg.header.stamp.sec +
-    input_pointcloud_msg.header.stamp.nanosec;
+  // Motion preprocessing
+  const std::uint64_t pointcloud_stamp_nsec = detail::to_nsec(input_pointcloud_msg.header.stamp);
+  const bool has_motion_samples = !twist_queue.empty() || !angular_velocity_queue.empty();
 
-  std::size_t active_twist_2d_struct_count{};
-  std::size_t active_twist_3d_struct_count{};
+  std::uint32_t last_motion_bin_index{};
   if (undistortion_type_ == UndistortionType::Undistortion3D) {
-    active_twist_3d_struct_count = setupTwist3DStructs(
-      twist_queue, angular_velocity_queue, pointcloud_stamp_nsec, first_point_rel_stamp_nsec,
-      device_twist_3d_structs_, stream_);
+    if (has_motion_samples) {
+      last_motion_bin_index = setupMotionBins3D(
+        twist_queue, angular_velocity_queue, pointcloud_stamp_nsec, host_motion_bins_3d_,
+        device_motion_bins_3d_, stream_);
+    }
   } else if (undistortion_type_ == UndistortionType::Undistortion2D) {
-    active_twist_2d_struct_count = setupTwist2DStructs(
-      twist_queue, angular_velocity_queue, pointcloud_stamp_nsec, first_point_rel_stamp_nsec,
-      device_twist_2d_structs_, stream_);
+    if (has_motion_samples) {
+      last_motion_bin_index = setupMotionBins2D(
+        twist_queue, angular_velocity_queue, pointcloud_stamp_nsec, host_motion_bins_2d_,
+        device_motion_bins_2d_, stream_);
+    }
   } else {
     throw std::runtime_error("Invalid undistortion type");
   }
 
   // Obtain raw pointers for the kernels
-  TwistStruct2D * device_twist_2d_structs =
-    thrust::raw_pointer_cast(device_twist_2d_structs_.data());
-  TwistStruct3D * device_twist_3d_structs =
-    thrust::raw_pointer_cast(device_twist_3d_structs_.data());
   InputPointType * device_transformed_points =
     thrust::raw_pointer_cast(device_transformed_points_.data());
   std::uint32_t * device_crop_mask = thrust::raw_pointer_cast(device_crop_mask_.data());
@@ -387,17 +385,16 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::pr
   }
 
   // Undistortion
-  if (undistortion_type_ == UndistortionType::Undistortion3D && active_twist_3d_struct_count > 0) {
+  if (undistortion_type_ == UndistortionType::Undistortion3D && has_motion_samples) {
     undistort3DLaunch(
-      device_transformed_points, num_points, device_twist_3d_structs,
-      static_cast<int>(active_twist_3d_struct_count), device_mismatch_mask, threads_per_block_,
-      blocks_per_grid, stream_);
-  } else if (
-    undistortion_type_ == UndistortionType::Undistortion2D && active_twist_2d_struct_count > 0) {
+      device_transformed_points, num_points,
+      thrust::raw_pointer_cast(device_motion_bins_3d_.data()), last_motion_bin_index,
+      device_mismatch_mask, threads_per_block_, blocks_per_grid, stream_);
+  } else if (undistortion_type_ == UndistortionType::Undistortion2D && has_motion_samples) {
     undistort2DLaunch(
-      device_transformed_points, num_points, device_twist_2d_structs,
-      static_cast<int>(active_twist_2d_struct_count), device_mismatch_mask, threads_per_block_,
-      blocks_per_grid, stream_);
+      device_transformed_points, num_points,
+      thrust::raw_pointer_cast(device_motion_bins_2d_.data()), last_motion_bin_index,
+      device_mismatch_mask, threads_per_block_, blocks_per_grid, stream_);
   }
 
   // Ring outlier
