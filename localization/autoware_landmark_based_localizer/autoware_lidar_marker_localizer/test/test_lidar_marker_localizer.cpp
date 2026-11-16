@@ -47,7 +47,7 @@ DetectionParam make_param()
   param.vote_threshold_for_detect_marker = 1;
   param.marker_to_vehicle_offset_y = 1.0;
   param.marker_height_from_ground = 0.5;
-  param.reference_ring_number = 255;  // use all rings
+  param.reference_ring_number = all_rings_as_reference;
   param.ring_id_min = 0;
   param.ring_id_max = 65535;  // use all rings
   return param;
@@ -358,7 +358,7 @@ TEST(LidarMarkerLocalizer, Initialization)
 {
   std::shared_ptr<LidarMarkerLocalizer> localizer;
   ASSERT_NO_THROW(
-    localizer = std::make_shared<LidarMarkerLocalizer>(make_node_options(0, 65535, 255)));
+    localizer = std::make_shared<LidarMarkerLocalizer>(make_node_options(0, 65535, -1)));
   EXPECT_FALSE(localizer->get_parameter("road_surface_mode").as_bool());
 }
 
@@ -369,10 +369,21 @@ TEST(LidarMarkerLocalizer, RejectReferenceRingOutsideConfiguredRange)
     std::make_shared<LidarMarkerLocalizer>(make_node_options(1, 2, 0)), std::invalid_argument);
   EXPECT_THROW(
     std::make_shared<LidarMarkerLocalizer>(make_node_options(1, 2, 3)), std::invalid_argument);
-  // 255 uses all the rings
-  EXPECT_NO_THROW(std::make_shared<LidarMarkerLocalizer>(make_node_options(1, 2, 255)));
+  // -1 uses all the rings
+  EXPECT_NO_THROW(std::make_shared<LidarMarkerLocalizer>(make_node_options(1, 2, -1)));
   // the default [0, 65535] uses all the rings
   EXPECT_NO_THROW(std::make_shared<LidarMarkerLocalizer>(make_node_options(0, 65535, 5)));
+  // negative values other than -1 are not ring IDs
+  EXPECT_THROW(
+    std::make_shared<LidarMarkerLocalizer>(make_node_options(0, 65535, -2)), std::invalid_argument);
+}
+
+// 255 meant all the rings before -1 did, so it is rejected instead of being used as the ring 255.
+TEST(LidarMarkerLocalizer, RejectOldAllRingsValue)
+{
+  EXPECT_THROW(
+    std::make_shared<LidarMarkerLocalizer>(make_node_options(0, 65535, 255)),
+    std::invalid_argument);
 }
 
 // Each ring votes at most once for a bin, so the configured range must have more rings than
@@ -387,18 +398,18 @@ TEST(LidarMarkerLocalizer, RejectRingRangeNotMoreThanVoteThreshold)
 TEST(LidarMarkerLocalizer, RejectRingIdMinGreaterThanMax)
 {
   EXPECT_THROW(
-    std::make_shared<LidarMarkerLocalizer>(make_node_options(128, 0, 255)), std::invalid_argument);
+    std::make_shared<LidarMarkerLocalizer>(make_node_options(128, 0, -1)), std::invalid_argument);
 }
 
 // The ring IDs are uint16_t.
 TEST(LidarMarkerLocalizer, RejectRingIdOutOfRange)
 {
   EXPECT_THROW(
-    std::make_shared<LidarMarkerLocalizer>(make_node_options(70000, 70010, 255)),
+    std::make_shared<LidarMarkerLocalizer>(make_node_options(70000, 70010, -1)),
     std::invalid_argument);
   EXPECT_THROW(
-    std::make_shared<LidarMarkerLocalizer>(make_node_options(-1, 10, 255)), std::invalid_argument);
-  EXPECT_NO_THROW(std::make_shared<LidarMarkerLocalizer>(make_node_options(0, 65535, 255)));
+    std::make_shared<LidarMarkerLocalizer>(make_node_options(-1, 10, -1)), std::invalid_argument);
+  EXPECT_NO_THROW(std::make_shared<LidarMarkerLocalizer>(make_node_options(0, 65535, -1)));
 }
 
 }  // namespace autoware::lidar_marker_localizer

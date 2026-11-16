@@ -63,15 +63,23 @@ void validate_ring_parameters(const DetectionParam & param)
     throw std::invalid_argument("ring_id_min must not be greater than ring_id_max, but " + range);
   }
 
+  // 255 meant all the rings before -1 did. Reject it so that an old configuration does not
+  // silently use the ring 255 as the reference ring.
+  if (param.reference_ring_number == 255) {
+    throw std::invalid_argument(
+      "reference_ring_number = 255 no longer means all the rings. Set " +
+      std::to_string(all_rings_as_reference) + " to use all the rings in " + range);
+  }
+
   // The marker y on a vertical surface is taken from the reference ring, so it must be in the
-  // range unless all the rings are used (255)
+  // range unless all the rings are used (-1)
   if (
-    param.reference_ring_number != std::numeric_limits<uint8_t>::max() &&
+    param.reference_ring_number != all_rings_as_reference &&
     (param.reference_ring_number < param.ring_id_min ||
      param.ring_id_max < param.reference_ring_number)) {
     throw std::invalid_argument(
       "reference_ring_number (" + std::to_string(param.reference_ring_number) + ") must be in " +
-      range + ", or 255 to use all the rings");
+      range + ", or " + std::to_string(all_rings_as_reference) + " to use all the rings");
   }
 
   // Each ring votes at most once for a bin, so a marker needs more rings than the threshold

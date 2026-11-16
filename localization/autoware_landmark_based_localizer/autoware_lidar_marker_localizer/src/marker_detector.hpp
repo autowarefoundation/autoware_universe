@@ -30,6 +30,10 @@
 namespace autoware::lidar_marker_localizer
 {
 
+// reference_ring_number to use all the rings in [ring_id_min, ring_id_max] as the reference ring.
+// It is out of the range of the ring IDs (uint16_t), so it never matches an actual ring.
+constexpr int64_t all_rings_as_reference = -1;
+
 struct DetectionParam
 {
   bool road_surface_mode;
@@ -41,6 +45,7 @@ struct DetectionParam
   int64_t vote_threshold_for_detect_marker;
   double marker_to_vehicle_offset_y;
   double marker_height_from_ground;
+  // ring ID whose points give the y of a marker on a vertical surface, or all_rings_as_reference
   int64_t reference_ring_number;
   // only the rings in [ring_id_min, ring_id_max] are used for the detection
   int64_t ring_id_min;

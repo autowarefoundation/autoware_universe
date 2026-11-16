@@ -92,9 +92,11 @@
           "maximum": 65535
         },
         "reference_ring_number": {
-          "type": "number",
-          "description": "Reference ring number when detecting the marker. Set 255 to disable ring filtering",
-          "default": 255
+          "type": "integer",
+          "description": "Ring ID whose points give the y of a marker on a vertical surface. Set -1 to use all the rings in [ring_id_min, ring_id_max]. 255 is rejected because it meant all the rings before",
+          "default": -1,
+          "minimum": -1,
+          "maximum": 65535
         },
         "self_pose_timeout_sec": {
           "type": "number",

@@ -159,7 +159,7 @@ DetectionResult detect_landmarks(
       intensity_num[bin_index]++;
       if (
         (get_ring_id(point) == param.reference_ring_number) ||
-        (param.reference_ring_number == std::numeric_limits<uint8_t>::max())) {
+        (param.reference_ring_number == all_rings_as_reference)) {
         reference_ring_y[bin_index] = std::min(reference_ring_y[bin_index], point.y);
       }
     }
