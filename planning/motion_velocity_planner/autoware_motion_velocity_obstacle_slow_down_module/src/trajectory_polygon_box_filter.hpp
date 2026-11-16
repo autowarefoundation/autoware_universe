@@ -20,6 +20,7 @@
 #include <boost/geometry.hpp>
 #include <boost/geometry/index/rtree.hpp>
 
+#include <algorithm>
 #include <cmath>
 #include <utility>
 #include <vector>
@@ -28,10 +29,12 @@ namespace autoware::motion_velocity_planner
 {
 // Bounding boxes of the trajectory polygons, stored in an R-tree together with the indices of the
 // polygons.
-// A point outside all the boxes is outside all the polygons, so it can be skipped before the
-// lateral offset calculation without changing the result. The boxes are enlarged by `margin` as a
-// safety margin against rounding (the points on the boundaries of the polygons are inside the boxes
-// even without it).
+// A point inside a polygon is also inside its bounding box, so only the polygons whose bounding
+// boxes contain the point are checked instead of all the polygons. The result is the same as
+// checking all the polygons. A point outside all the polygons can be skipped before the lateral
+// offset calculation without changing the result. The boxes are enlarged by `margin` as a safety
+// margin against rounding (the points on the boundaries of the polygons are inside the boxes even
+// without it).
 class TrajectoryPolygonBoxFilter
 {
 public:
@@ -46,17 +49,24 @@ public:
     const std::vector<autoware_utils_geometry::Polygon2d> && polygons,
     double margin = 1e-3) = delete;
 
-  // true if the point is outside all the boxes, so it can be skipped. A point with a NaN or
-  // infinite coordinate is never skipped, so that it is handled in the same way as before the
-  // pre-filtering.
-  [[nodiscard]] bool is_outside_all_boxes(const double x, const double y) const
+  // true if the point is outside all the polygons, so it can be skipped
+  [[nodiscard]] bool is_outside_all_polygons(const double x, const double y) const
   {
+    namespace bg = boost::geometry;
+    const autoware_utils_geometry::Point2d point(x, y);
     if (!std::isfinite(x) || !std::isfinite(y)) {
-      return false;
+      // The R-tree cannot find such a point, so check all the polygons to give the same result as
+      // before (the distance to a polygon can still be 0 for a point with a NaN coordinate).
+      return !std::any_of(polygons_.begin(), polygons_.end(), [&point](const auto & polygon) {
+        return bg::distance(polygon, point) <= 0.0;
+      });
     }
-    return rtree_.qbegin(
-             boost::geometry::index::intersects(autoware_utils_geometry::Point2d(x, y))) ==
-           rtree_.qend();
+    for (auto it = rtree_.qbegin(bg::index::intersects(point)); it != rtree_.qend(); ++it) {
+      if (bg::distance(polygons_[it->second], point) <= 0.0) {
+        return false;
+      }
+    }
+    return true;
   }
 
 private:
