@@ -61,6 +61,10 @@ RadarObjectsAdapterNode::RadarObjectsAdapterNode(const rclcpp::NodeOptions & opt
     declare_parameter<std::string>("classification_remap.CAR", "CAR");
   classification_remap_str["TRUCK"] =
     declare_parameter<std::string>("classification_remap.TRUCK", "TRUCK");
+  classification_remap_str["BUS"] =
+    declare_parameter<std::string>("classification_remap.BUS", "BUS");
+  classification_remap_str["TRAILER"] =
+    declare_parameter<std::string>("classification_remap.TRAILER", "TRAILER");
   classification_remap_str["MOTORCYCLE"] =
     declare_parameter<std::string>("classification_remap.MOTORCYCLE", "MOTORCYCLE");
   classification_remap_str["BICYCLE"] =
@@ -71,6 +75,10 @@ RadarObjectsAdapterNode::RadarObjectsAdapterNode(const rclcpp::NodeOptions & opt
     declare_parameter<std::string>("classification_remap.ANIMAL", "ANIMAL");
   classification_remap_str["HAZARD"] =
     declare_parameter<std::string>("classification_remap.HAZARD", "UNKNOWN");
+  classification_remap_str["OVER_DRIVABLE"] =
+    declare_parameter<std::string>("classification_remap.OVER_DRIVABLE", "UNKNOWN");
+  classification_remap_str["UNDER_DRIVABLE"] =
+    declare_parameter<std::string>("classification_remap.UNDER_DRIVABLE", "UNKNOWN");
 
   // The names are turned into label ids outside the node; what the node keeps is the warning
   // for each entry whose perception label is not a known name.

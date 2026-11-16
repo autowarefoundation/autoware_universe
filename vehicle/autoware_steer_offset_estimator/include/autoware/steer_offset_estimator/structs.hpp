@@ -15,7 +15,7 @@
 #ifndef AUTOWARE__STEER_OFFSET_ESTIMATOR__STRUCTS_HPP_
 #define AUTOWARE__STEER_OFFSET_ESTIMATOR__STRUCTS_HPP_
 
-#include <rclcpp/rclcpp/time.hpp>
+#include <rclcpp/time.hpp>
 
 #include <string>
 #include <unordered_map>

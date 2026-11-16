@@ -58,7 +58,7 @@ std::string ml_model_path()
     return override_dir;
   }
   const char * home = std::getenv("HOME");
-  return home ? std::string(home) + "/autoware_data" : "";
+  return home ? std::string(home) + "/autoware_data/ml_models" : "";
 }
 
 std::string config_file_path()

@@ -46,6 +46,7 @@
   <depend>eigen</depend>
   <depend>geometry_msgs</depend>
   <depend>image_transport</depend>
+  <depend>libexpected-dev</depend>
   <depend>libopencv-dev</depend>
   <depend>libpcl-all-dev</depend>
   <depend>managed_transform_buffer</depend>
@@ -67,7 +68,6 @@
   <depend>tf2_geometry_msgs</depend>
   <depend>tf2_ros</depend>
   <depend>tf2_sensor_msgs</depend>
-  <depend>tl_expected</depend>
   <exec_depend>rclpy</exec_depend>
 
   <test_depend>ament_cmake_pytest</test_depend>
