@@ -22,6 +22,7 @@
 #include <gtest/gtest.h>
 #include <pcl_conversions/pcl_conversions.h>
 
+#include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <limits>
@@ -111,6 +112,41 @@ std::vector<PointXYZIRC> extract_points(const sensor_msgs::msg::PointCloud2 & ms
   pcl::PointCloud<PointXYZIRC> cloud;
   pcl::fromROSMsg(msg, cloud);
   return {cloud.points.begin(), cloud.points.end()};
+}
+
+// Runs faster_filter with publish_outlier_pointcloud enabled and returns the published outlier
+// cloud. Fails the test if nothing is received.
+std::vector<PointXYZIRCAEDT> filter_and_capture_outliers(
+  const pcl::PointCloud<PointXYZIRCAEDT> & cloud)
+{
+  auto options = make_node_options();
+  options.append_parameter_override("publish_outlier_pointcloud", true);
+  RingOutlierFilterComponentPublic node(options);
+
+  auto listener = std::make_shared<rclcpp::Node>("outlier_listener");
+  sensor_msgs::msg::PointCloud2::SharedPtr received;
+  auto subscription = listener->create_subscription<sensor_msgs::msg::PointCloud2>(
+    "debug/ring_outlier_filter", 1,
+    [&received](sensor_msgs::msg::PointCloud2::SharedPtr msg) { received = msg; });
+
+  rclcpp::executors::SingleThreadedExecutor executor;
+  executor.add_node(listener);
+  const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+  while (subscription->get_publisher_count() == 0 && std::chrono::steady_clock::now() < deadline) {
+    executor.spin_some(std::chrono::milliseconds(10));
+  }
+
+  sensor_msgs::msg::PointCloud2 output;
+  node.faster_filter(to_msg(cloud), nullptr, output, TransformInfo{});
+  while (!received && std::chrono::steady_clock::now() < deadline) {
+    executor.spin_some(std::chrono::milliseconds(10));
+  }
+
+  EXPECT_NE(received, nullptr) << "No outlier cloud was published";
+  if (!received) return {};
+  pcl::PointCloud<PointXYZIRCAEDT> outliers;
+  pcl::fromROSMsg(*received, outliers);
+  return {outliers.points.begin(), outliers.points.end()};
 }
 
 float expected_score(int filled_pixels, int horizontal_bins = default_horizontal_bins)
@@ -450,6 +486,57 @@ TEST_F(RingOutlierFilterTest, TransformPathAppliesTranslation)
   EXPECT_NEAR(out.x, in.x + 1.5F, 1e-4F);
   EXPECT_NEAR(out.y, in.y - 2.0F, 1e-4F);
   EXPECT_NEAR(out.z, in.z + 0.25F, 1e-4F);
+}
+
+TEST_F(RingOutlierFilterTest, OutlierCloudContainsEveryPointOfAnOutlierWalk)
+{
+  // Arrange
+  // Three points 0.1 deg apart at 5 m form a walk of about 0.017 m, shorter than
+  // object_length_threshold, so they are outliers. The distance jump to 8 m ends the walk, and the
+  // following arc at 8 m is long enough to be kept.
+  pcl::PointCloud<PointXYZIRCAEDT> cloud;
+  cloud.push_back(make_point(0, 10.0F * deg_to_rad, 5.0F));
+  cloud.push_back(make_point(0, 10.1F * deg_to_rad, 5.0F));
+  cloud.push_back(make_point(0, 10.2F * deg_to_rad, 5.0F));
+  for (int i = 0; i < 20; ++i) {
+    cloud.push_back(make_point(0, (10.3F + 0.1F * static_cast<float>(i)) * deg_to_rad, 8.0F));
+  }
+
+  // Act
+  const auto outliers = filter_and_capture_outliers(cloud);
+
+  // Assert
+  // Each of the three outlier points appears once, not the first point three times.
+  ASSERT_EQ(outliers.size(), 3U);
+  for (size_t i = 0; i < outliers.size(); ++i) {
+    EXPECT_FLOAT_EQ(outliers[i].azimuth, cloud.points[i].azimuth);
+    EXPECT_FLOAT_EQ(outliers[i].x, cloud.points[i].x);
+    EXPECT_FLOAT_EQ(outliers[i].y, cloud.points[i].y);
+  }
+}
+
+TEST_F(RingOutlierFilterTest, OutlierCloudContainsLastPointOfTheLastOutlierWalk)
+{
+  // Arrange
+  // A long arc at 8 m is kept. It is followed by three points at 5 m that end the ring. The last
+  // point of a ring is never visited as the start of a pair, so the last walk is the two points
+  // before it, which are 0.1 deg apart and therefore an outlier walk.
+  pcl::PointCloud<PointXYZIRCAEDT> cloud;
+  for (int i = 0; i < 20; ++i) {
+    cloud.push_back(make_point(0, (10.0F + 0.1F * static_cast<float>(i)) * deg_to_rad, 8.0F));
+  }
+  cloud.push_back(make_point(0, 12.0F * deg_to_rad, 5.0F));
+  cloud.push_back(make_point(0, 12.1F * deg_to_rad, 5.0F));
+  cloud.push_back(make_point(0, 12.2F * deg_to_rad, 5.0F));
+
+  // Act
+  const auto outliers = filter_and_capture_outliers(cloud);
+
+  // Assert
+  // Both points of the last walk are published, including its last point.
+  ASSERT_EQ(outliers.size(), 2U);
+  EXPECT_FLOAT_EQ(outliers[0].azimuth, cloud.points[20].azimuth);
+  EXPECT_FLOAT_EQ(outliers[1].azimuth, cloud.points[21].azimuth);
 }
 
 int main(int argc, char ** argv)
