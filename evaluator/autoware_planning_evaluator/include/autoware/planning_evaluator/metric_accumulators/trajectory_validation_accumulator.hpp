@@ -18,10 +18,10 @@
 #include "autoware/planning_evaluator/metrics/metric.hpp"
 #include "autoware/planning_evaluator/metrics/output_metric.hpp"
 
-#include <autoware_internal_planning_msgs/msg/validation_report_array.hpp>
 #include <autoware_utils/math/accumulator.hpp>
 #include <nlohmann/json.hpp>
 
+#include <autoware_internal_planning_msgs/msg/validation_report_array.hpp>
 #include <tier4_metric_msgs/msg/metric.hpp>
 #include <tier4_metric_msgs/msg/metric_array.hpp>
 
