@@ -15,6 +15,8 @@
 #include "obstacle_slow_down_module.hpp"
 
 #include "parameters.hpp"
+#include "trajectory_lateral_offset_calculator.hpp"
+#include "trajectory_polygon_box_filter.hpp"
 #include "types.hpp"
 
 #include <autoware/motion_utils/distance/distance.hpp>
@@ -233,6 +235,10 @@ ObstacleSlowDownModule::convert_point_cloud_to_slow_down_points(
   const PointCloud::Ptr filtered_points_ptr = pointcloud.get_filtered_pointcloud_ptr();
   const std::vector<pcl::PointIndices> clusters = pointcloud.get_cluster_indices();
 
+  const TrajectoryPolygonBoxFilter traj_poly_box_filter(decimated_traj_polys_with_lat_margin);
+  // removes the overlapping points of the trajectory only once, not for each point
+  const TrajectoryLateralOffsetCalculator lateral_offset_calculator(traj_points);
+
   // 3. convert clusters to obstacles
   for (const auto & cluster_indices : clusters) {
     double ego_to_slow_down_front_collision_distance = std::numeric_limits<double>::max();
@@ -244,10 +250,15 @@ ObstacleSlowDownModule::convert_point_cloud_to_slow_down_points(
     for (const auto & index : cluster_indices.indices) {
       const auto obstacle_point = autoware::motion_velocity_planner::utils::to_geometry_point(
         filtered_points_ptr->points[index]);
+      // 0. precise filtering - skips points outside all the trajectory polygons. Only the polygons
+      // whose bounding boxes contain the point are checked.
+      if (traj_poly_box_filter.is_outside_all_polygons(obstacle_point.x, obstacle_point.y)) {
+        continue;
+      }
       // 1. brief filtering - filters out point-cloud points that are far from the trajectory
       // laterally The lateral distance of the obstacle-point to trajectory is measured below
       const auto current_lat_dist_from_obstacle_to_traj =
-        autoware::motion_utils::calcLateralOffset(traj_points, obstacle_point);
+        lateral_offset_calculator.calc(obstacle_point);
       // The minimum lateral distance to the trajectory polygon is estimated by assuming that the
       // ego-vehicle is fully perpendicular to the trajectory, in the very worst case
       const auto min_lat_dist_to_traj_poly =
@@ -255,13 +266,6 @@ ObstacleSlowDownModule::convert_point_cloud_to_slow_down_points(
       // The trajectory polygon is ignored if the minimum lateral distance is more than maximum
       // lateral margin
       if (min_lat_dist_to_traj_poly >= p.max_lat_margin) {
-        continue;
-      }
-
-      // precise filtering
-      const double precise_min_lat_dist_to_traj_poly =
-        utils::get_dist_to_traj_poly(obstacle_point, decimated_traj_polys_with_lat_margin);
-      if (precise_min_lat_dist_to_traj_poly > 0.0) {
         continue;
       }
 
