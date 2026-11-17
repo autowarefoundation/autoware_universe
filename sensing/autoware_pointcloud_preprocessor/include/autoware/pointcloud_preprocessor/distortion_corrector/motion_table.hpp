@@ -223,49 +223,65 @@ struct Velocity
   std::uint32_t flags{0};
 };
 
-/// The first sample stamped at or after `time_ns`, or the last sample if there is none. Null if
-/// that sample is more than `max_sample_distance_ns` away from `time_ns`, or if there is no sample.
+/// Advances `index` to the first sample stamped after `time_ns`.
 template <typename SampleT>
-const SampleT * find_sample(const std::vector<SampleT> & samples, std::int64_t time_ns)
+void skip_samples_until(
+  const std::vector<SampleT> & samples, std::int64_t time_ns, std::size_t & index)
+{
+  while (index < samples.size() && samples[index].stamp_ns <= time_ns) {
+    ++index;
+  }
+}
+
+/// The stamp of the sample at `index`, or the largest stamp there is past the last sample.
+template <typename SampleT>
+std::int64_t stamp_at(const std::vector<SampleT> & samples, std::size_t index)
+{
+  return index < samples.size() ? samples[index].stamp_ns
+                                : std::numeric_limits<std::int64_t>::max();
+}
+
+/// The sample at `index`, or the last sample past the end. Null if that sample is more than
+/// `max_sample_distance_ns` away from `time_ns`, or if there is no sample.
+template <typename SampleT>
+const SampleT * sample_at(
+  const std::vector<SampleT> & samples, std::size_t index, std::int64_t time_ns)
 {
   if (samples.empty()) {
     return nullptr;
   }
 
-  const auto it = std::lower_bound(
-    samples.begin(), samples.end(), time_ns,
-    [](const SampleT & sample, std::int64_t stamp_ns) { return sample.stamp_ns < stamp_ns; });
-  const SampleT & sample = it != samples.end() ? *it : samples.back();
+  const SampleT & sample = index < samples.size() ? samples[index] : samples.back();
   return std::abs(time_ns - sample.stamp_ns) <= max_sample_distance_ns ? &sample : nullptr;
 }
 
-/// The stamp of the first sample after `time_ns`, or the largest stamp there is if there is none.
-template <typename SampleT>
-std::int64_t next_stamp_after(const std::vector<SampleT> & samples, std::int64_t time_ns)
+/// Where `build()` is in the motion samples: the first sample of each kind stamped after the
+/// time it has integrated up to.
+struct SampleIndices
 {
-  const auto it = std::upper_bound(
-    samples.begin(), samples.end(), time_ns,
-    [](std::int64_t stamp_ns, const SampleT & sample) { return stamp_ns < sample.stamp_ns; });
-  return it != samples.end() ? it->stamp_ns : std::numeric_limits<std::int64_t>::max();
-}
+  std::size_t twist{0};
+  std::size_t angular_velocity{0};
+};
 
 /// The velocity at `time_ns`, zero where the samples are missing. `angular_velocities` take
 /// precedence over the twists' angular velocity, and are expected if `use_angular_velocities`.
 inline Velocity velocity_at(
   const std::vector<TwistSample> & twists,
   const std::vector<AngularVelocitySample> & angular_velocities, bool use_angular_velocities,
-  std::int64_t time_ns)
+  const SampleIndices & indices, std::int64_t time_ns)
 {
   Velocity velocity;
 
-  if (const TwistSample * twist = find_sample(twists, time_ns)) {
+  if (const TwistSample * twist = sample_at(twists, indices.twist, time_ns)) {
     velocity.linear = twist->linear;
     velocity.angular = twist->angular;
   } else {
     velocity.flags |= flag_twist_missing | flag_mismatch;
   }
 
-  if (const AngularVelocitySample * sample = find_sample(angular_velocities, time_ns)) {
+  if (
+    const AngularVelocitySample * sample =
+      sample_at(angular_velocities, indices.angular_velocity, time_ns)) {
     velocity.angular = sample->angular;
   } else if (use_angular_velocities) {
     velocity.flags |= flag_mismatch;
@@ -309,6 +325,7 @@ void build(
   bins.reserve(bin_count + 1);
 
   IntegratorT pose;
+  detail::SampleIndices indices;
   for (std::int64_t bin_index = 0; bin_index < bin_count; ++bin_index) {
     const std::int64_t bin_end_ns = (bin_index + 1) * bin_width_ns;
     const IntegratorT bin_start_pose = pose;
@@ -316,11 +333,14 @@ void build(
 
     // The velocity is constant between two sample stamps
     for (std::int64_t time_ns = bin_index * bin_width_ns; time_ns < bin_end_ns;) {
+      detail::skip_samples_until(twists, time_ns, indices.twist);
+      detail::skip_samples_until(angular_velocities, time_ns, indices.angular_velocity);
+
       const std::int64_t step_end_ns = std::min(
-        {bin_end_ns, detail::next_stamp_after(twists, time_ns),
-         detail::next_stamp_after(angular_velocities, time_ns)});
-      const detail::Velocity velocity =
-        detail::velocity_at(twists, angular_velocities, use_angular_velocities, step_end_ns);
+        {bin_end_ns, detail::stamp_at(twists, indices.twist),
+         detail::stamp_at(angular_velocities, indices.angular_velocity)});
+      const detail::Velocity velocity = detail::velocity_at(
+        twists, angular_velocities, use_angular_velocities, indices, step_end_ns);
 
       pose.integrate(
         velocity.linear, velocity.angular, 1e-9 * static_cast<double>(step_end_ns - time_ns));
@@ -331,9 +351,10 @@ void build(
     bins.push_back(bin_start_pose.make_bin(pose, flags));
   }
 
-  const std::uint32_t end_flags =
-    detail::velocity_at(twists, angular_velocities, use_angular_velocities, end_ns + 1).flags;
-  bins.push_back(pose.make_bin(pose, end_flags));
+  const detail::SampleIndices past_the_end{twists.size(), angular_velocities.size()};
+  const detail::Velocity end_velocity = detail::velocity_at(
+    twists, angular_velocities, use_angular_velocities, past_the_end, end_ns + 1);
+  bins.push_back(pose.make_bin(pose, end_velocity.flags));
 }
 
 }  // namespace autoware::pointcloud_preprocessor::motion_table
