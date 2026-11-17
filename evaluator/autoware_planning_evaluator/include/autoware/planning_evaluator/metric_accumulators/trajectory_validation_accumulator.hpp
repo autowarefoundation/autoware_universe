@@ -18,7 +18,7 @@
 #include "autoware/planning_evaluator/metrics/metric.hpp"
 #include "autoware/planning_evaluator/metrics/output_metric.hpp"
 
-#include <autoware_trajectory_validator/msg/validation_report_array.hpp>
+#include <autoware_internal_planning_msgs/msg/validation_report_array.hpp>
 #include <autoware_utils/math/accumulator.hpp>
 #include <nlohmann/json.hpp>
 
@@ -31,7 +31,7 @@
 
 namespace planning_diagnostics
 {
-using autoware_trajectory_validator::msg::ValidationReportArray;
+using autoware_internal_planning_msgs::msg::ValidationReportArray;
 using autoware_utils::Accumulator;
 using MetricMsg = tier4_metric_msgs::msg::Metric;
 using MetricArrayMsg = tier4_metric_msgs::msg::MetricArray;

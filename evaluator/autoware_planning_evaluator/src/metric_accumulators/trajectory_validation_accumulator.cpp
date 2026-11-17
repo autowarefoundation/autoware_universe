@@ -99,7 +99,7 @@ void TrajectoryValidationAccumulator::update(const ValidationReportArray & msg)
       static_cast<double>(stamp.sec) + static_cast<double>(stamp.nanosec) * 1e-9;
 
     const bool warn_as_err = parameters.count_warn_as_error;
-    const bool traj_err = levelIndicatesError(report.level, warn_as_err);
+    const bool traj_err = levelIndicatesError(report.risk.level, warn_as_err);
     stats_by_scope_[gen].update(traj_err, report_time_s);
 
     // Rows in this report (last row wins if the same scope appears more than once).
@@ -109,7 +109,7 @@ void TrajectoryValidationAccumulator::update(const ValidationReportArray & msg)
         continue;
       }
       const std::string scope = gen + "/" + row.validator_name + "/" + row.metric_name;
-      present_error_by_scope[scope] = levelIndicatesError(row.level, warn_as_err);
+      present_error_by_scope[scope] = levelIndicatesError(row.risk.level, warn_as_err);
     }
 
     for (const auto & [scope, m_err] : present_error_by_scope) {
