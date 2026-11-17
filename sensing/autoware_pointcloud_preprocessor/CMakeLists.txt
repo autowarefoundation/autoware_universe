@@ -497,6 +497,11 @@ if(BUILD_TESTING)
     )
     target_link_libraries(test_ring_outlier_filter_node pointcloud_preprocessor_filter)
 
+    ament_add_gtest(test_dual_return_outlier_filter_node
+      test/test_dual_return_outlier_filter_node.cpp
+    )
+    target_link_libraries(test_dual_return_outlier_filter_node pointcloud_preprocessor_filter)
+
     ament_add_gtest(test_blockage_diag_node
       test/blockage_diag/test_blockage_diag_node.cpp
     )

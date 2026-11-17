@@ -126,8 +126,10 @@ void DualReturnOutlierFilterComponent::filter(
     }
   }
 
-  uint32_t horizontal_resolution =
-    static_cast<uint32_t>((max_azimuth - min_azimuth) / horizontal_bins);
+  // Azimuths are in radians, so the bin width is a fraction of a radian and must not be truncated
+  // to an integer.
+  const float horizontal_resolution =
+    (max_azimuth - min_azimuth) / static_cast<float>(horizontal_bins);
 
   pcl::PointCloud<PointXYZIRCAEDT>::Ptr pcl_output(new pcl::PointCloud<PointXYZIRCAEDT>);
   pcl_output->points.reserve(pcl_input->points.size());
@@ -218,19 +220,16 @@ void DualReturnOutlierFilterComponent::filter(
       if (deleted_azimuths.size() == 0) {
         continue;
       }
+      const float bin_end_azimuth = min_azimuth + static_cast<float>(i + 1) * horizontal_resolution;
       while (current_deleted_index < deleted_azimuths.size() &&
-             (uint)deleted_azimuths[current_deleted_index] <
-               ((i + static_cast<uint>(min_azimuth / horizontal_resolution) + 1) *
-                horizontal_resolution)) {
+             deleted_azimuths[current_deleted_index] < bin_end_azimuth) {
         noise_frequency[i] = noise_frequency[i] + 1;
         current_deleted_index++;
       }
       if (temp_segment.points.size() > 0) {
         while ((temp_segment.points[current_temp_segment_index].azimuth < 0.f
                   ? 0.f
-                  : temp_segment.points[current_temp_segment_index].azimuth) <
-                 ((i + 1 + static_cast<uint>(min_azimuth / horizontal_resolution)) *
-                  horizontal_resolution) &&
+                  : temp_segment.points[current_temp_segment_index].azimuth) < bin_end_azimuth &&
                current_temp_segment_index < (temp_segment.points.size() - 1)) {
           if (noise_frequency[i] < weak_first_local_noise_threshold_) {
             pcl_output->points.push_back(temp_segment.points[current_temp_segment_index]);
@@ -240,8 +239,8 @@ void DualReturnOutlierFilterComponent::filter(
                 if (
                   temp_segment.points[current_temp_segment_index].x < x_max_ &&
                   temp_segment.points[current_temp_segment_index].x > x_min_ &&
-                  temp_segment.points[current_temp_segment_index].y > y_max_ &&
-                  temp_segment.points[current_temp_segment_index].y < y_min_ &&
+                  temp_segment.points[current_temp_segment_index].y > y_min_ &&
+                  temp_segment.points[current_temp_segment_index].y < y_max_ &&
                   temp_segment.points[current_temp_segment_index].z < z_max_ &&
                   temp_segment.points[current_temp_segment_index].z > z_min_) {
                   noise_frequency[i] = noise_frequency[i] + 1;
