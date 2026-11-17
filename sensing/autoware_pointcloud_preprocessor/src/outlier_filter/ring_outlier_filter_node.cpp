@@ -264,7 +264,10 @@ void RingOutlierFilterComponent::faster_filter(
       walk_first_idx = idx + 1;
     }
 
-    if (walk_first_idx > walk_last_idx) continue;
+    // The loop visits each point only as the first point of a pair, so the last point of the ring
+    // is not in any walk yet. It ends the last walk: the walk it was joined to in the last
+    // iteration, or a walk of its own if that iteration ended the previous walk.
+    walk_last_idx = static_cast<int>(indices.size()) - 1;
 
     if (is_cluster(input, std::make_pair(indices[walk_first_idx], indices[walk_last_idx]))) {
       for (int i = walk_first_idx; i <= walk_last_idx; i++) {

@@ -404,13 +404,13 @@ TEST_F(RingOutlierFilterTest, DistanceRatioBelowThresholdKeepsWalkContinuous)
 TEST_F(RingOutlierFilterTest, DistanceRatioAtThresholdBreaksWalk)
 {
   // Arrange
-  // Each distance step is exactly distance_ratio, which is not below it, so each point is its own
-  // walk of length 0 and is removed.
+  // The distance goes up and back down by exactly distance_ratio, which is not below it, so each
+  // point is its own walk of length 0 and is removed.
   RingOutlierFilterComponentPublic node(make_node_options());
   pcl::PointCloud<PointXYZIRCAEDT> cloud;
   cloud.push_back(make_point(0, 0.0F * deg_to_rad, 10.0F));
   cloud.push_back(make_point(0, 0.1F * deg_to_rad, 10.3F));
-  cloud.push_back(make_point(0, 0.2F * deg_to_rad, 10.6F));
+  cloud.push_back(make_point(0, 0.2F * deg_to_rad, 10.0F));
   sensor_msgs::msg::PointCloud2 output;
 
   // Act
@@ -419,6 +419,52 @@ TEST_F(RingOutlierFilterTest, DistanceRatioAtThresholdBreaksWalk)
   // Assert
   // The three points are removed from the output.
   EXPECT_TRUE(extract_points(output).empty());
+}
+
+TEST_F(RingOutlierFilterTest, LastPointOfEveryRingIsKept)
+{
+  // Arrange
+  // Two rings, each a single long arc that is kept as one walk.
+  RingOutlierFilterComponentPublic node(make_node_options());
+  pcl::PointCloud<PointXYZIRCAEDT> cloud;
+  append_arc(cloud, 0, 10.0F, 20);
+  append_arc(cloud, 1, 10.0F, 20);
+  sensor_msgs::msg::PointCloud2 output;
+
+  // Act
+  node.faster_filter(to_msg(cloud), nullptr, output, TransformInfo{});
+
+  // Assert
+  // Every input point is kept, including the last point of each ring.
+  const auto points = extract_points(output);
+  ASSERT_EQ(points.size(), cloud.size());
+  EXPECT_FLOAT_EQ(points[19].x, cloud.points[19].x);
+  EXPECT_FLOAT_EQ(points[19].y, cloud.points[19].y);
+  EXPECT_EQ(points[19].channel, 0U);
+  EXPECT_FLOAT_EQ(points[39].x, cloud.points[39].x);
+  EXPECT_FLOAT_EQ(points[39].y, cloud.points[39].y);
+  EXPECT_EQ(points[39].channel, 1U);
+}
+
+TEST_F(RingOutlierFilterTest, IsolatedLastPointOfARingIsRemoved)
+{
+  // Arrange
+  // A long arc at 5 m is kept. The last point of the ring is at 8 m, so the distance ratio ends the
+  // walk before it, and the point forms a walk of its own, which is too short to be kept.
+  RingOutlierFilterComponentPublic node(make_node_options());
+  pcl::PointCloud<PointXYZIRCAEDT> cloud;
+  append_arc(cloud, 0, 10.0F, 20);
+  cloud.push_back(make_point(0, 12.0F * deg_to_rad, 8.0F));
+  sensor_msgs::msg::PointCloud2 output;
+
+  // Act
+  node.faster_filter(to_msg(cloud), nullptr, output, TransformInfo{});
+
+  // Assert
+  // The arc is kept and the isolated last point is removed.
+  const auto points = extract_points(output);
+  ASSERT_EQ(points.size(), 20U);
+  EXPECT_FLOAT_EQ(points.back().x, cloud.points[19].x);
 }
 
 TEST_F(RingOutlierFilterTest, TransformPathAppliesTranslation)
