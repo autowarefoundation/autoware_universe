@@ -359,14 +359,6 @@ void ControlEvaluatorNode::AddUncrossableBoundaryDistanceMetricMsg(const Pose & 
       for (size_t idx = 0; idx + 1 < basic_ls.size(); ++idx) {
         const auto segment = bdc_utils::to_segment_2d(basic_ls[idx], basic_ls[idx + 1]);
 
-        // TODO: 削除
-        // is_overlapping = !boost::geometry::disjoint(current_fp, segment);
-        // if (is_overlapping) {
-        //   nearest_left = 0.0;
-        //   nearest_right = 0.0;
-        //   break;
-        // }
-
         const auto dist_to_left = boost::geometry::distance(segment, side.left);
         const auto dist_to_right = boost::geometry::distance(segment, side.right);
 
