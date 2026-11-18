@@ -22,6 +22,12 @@ publishers:
   - name: output
     message_type: sensor_msgs/msg/PointCloud2
     remap_target: output
+  - name: crop_box_polygon
+    message_type: geometry_msgs/msg/PolygonStamped
+    remap_target: ~/crop_box_polygon
+  - name: diagnostics
+    message_type: diagnostic_msgs/msg/DiagnosticArray
+    global: /diagnostics
 
 # parameters
 param_files:
@@ -43,3 +49,5 @@ processes:
       - on_input: input
     outcomes:
       - to_output: output
+      - to_output: crop_box_polygon
+      - to_output: diagnostics

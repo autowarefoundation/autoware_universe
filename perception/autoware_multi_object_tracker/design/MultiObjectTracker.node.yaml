@@ -70,6 +70,10 @@ publishers:
     qos:
       reliability: reliable
       durability: transient_local
+  - name: diagnostics
+    message_type: diagnostic_msgs/msg/DiagnosticArray
+    description: tracker timing diagnostics
+    global: /diagnostics
 
 # parameters
 param_files:
@@ -168,3 +172,4 @@ processes:
     outcomes:
       - to_output: objects
       - to_output: merged_objects
+      - to_output: diagnostics
