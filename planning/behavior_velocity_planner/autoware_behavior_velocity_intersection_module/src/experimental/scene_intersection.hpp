@@ -812,8 +812,14 @@ private:
    */
   CollisionStatus detectCollision(const bool is_over_pass_judge_line) const;
 
+  /**
+   * @brief return the index of the first target lanelet that contains pose (within
+   * attention_area_margin) with a matching direction. target_bounding_boxes are the 2D bounding
+   * boxes of target_lanelets in the same order, used to skip far lanelets cheaply
+   */
   std::optional<size_t> checkAngleForTargetLanelets(
     const geometry_msgs::msg::Pose & pose, const lanelet::ConstLanelets & target_lanelets,
+    const std::vector<lanelet::BoundingBox2d> & target_bounding_boxes,
     const bool is_parked_vehicle) const;
 
   /**
