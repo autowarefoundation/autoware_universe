@@ -46,6 +46,14 @@ if(BUILD_TESTING)
     test/test_trajectory_follower.cpp
   )
   target_link_libraries(test_trajectory_follower ${CONTROLLER_NODE})
+
+  # characterization test for the simple trajectory follower node
+  set(SIMPLE_TRAJECTORY_FOLLOWER_TEST test_simple_trajectory_follower_node)
+  ament_add_ros_isolated_gtest(${SIMPLE_TRAJECTORY_FOLLOWER_TEST}
+    test/test_simple_trajectory_follower_node.cpp
+  )
+  target_link_libraries(
+    ${SIMPLE_TRAJECTORY_FOLLOWER_TEST} ${SIMPLE_TRAJECTORY_FOLLOWER_NODE})
 endif()
 
 ament_auto_package(
