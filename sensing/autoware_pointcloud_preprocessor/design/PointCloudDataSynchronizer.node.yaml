@@ -33,6 +33,9 @@ publishers:
     message_type: sensor_msgs/msg/PointCloud2
   - name: output2
     message_type: sensor_msgs/msg/PointCloud2
+  - name: diagnostics
+    message_type: diagnostic_msgs/msg/DiagnosticArray
+    global: /diagnostics
 
 # parameters
 param_files:
@@ -56,3 +59,4 @@ processes:
     outcomes:
       - to_output: output1
       - to_output: output2
+      - to_output: diagnostics

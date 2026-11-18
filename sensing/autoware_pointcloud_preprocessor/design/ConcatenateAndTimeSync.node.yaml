@@ -18,6 +18,7 @@ subscribers:
     message_type: geometry_msgs/msg/TwistWithCovarianceStamped
   - name: odometry
     message_type: nav_msgs/msg/Odometry
+    remap_target: ~/input/odom
   - name: input1
     message_type: sensor_msgs/msg/PointCloud2
   - name: input2
@@ -29,6 +30,9 @@ publishers:
   - name: output_info
     message_type: autoware_sensing_msgs/msg/ConcatenatedPointCloudInfo
     remap_target: output_info
+  - name: diagnostics
+    message_type: diagnostic_msgs/msg/DiagnosticArray
+    global: /diagnostics
 
 # parameters
 param_files:
@@ -72,3 +76,4 @@ processes:
     outcomes:
       - to_output: output
       - to_output: output_info
+      - to_output: diagnostics

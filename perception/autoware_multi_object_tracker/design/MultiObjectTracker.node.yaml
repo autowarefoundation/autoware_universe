@@ -51,6 +51,7 @@ subscribers:
     description: the detected objects input for channel 12
   - name: input/odometry
     message_type: nav_msgs/msg/Odometry
+    remap_target: ~/input/odometry
     description: the odometry input for ego vehicle state estimation
   - name: ros_transform
     message_type: tf2_msgs/msg/TFMessage
