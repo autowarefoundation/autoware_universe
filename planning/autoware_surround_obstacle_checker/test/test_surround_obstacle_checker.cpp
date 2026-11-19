@@ -95,8 +95,8 @@ TEST_F(SurroundObstacleCheckerNodeTest, isStopRequired)
     ASSERT_TRUE(stop_time.has_value());
 
     EXPECT_TRUE(is_stop);
-    EXPECT_GE(stop_time.value(), time_before);
-    EXPECT_LE(stop_time.value(), time_after);
+    EXPECT_GE(stop_time->nanoseconds(), time_before.nanoseconds());
+    EXPECT_LE(stop_time->nanoseconds(), time_after.nanoseconds());
   }
 
   {
@@ -107,7 +107,7 @@ TEST_F(SurroundObstacleCheckerNodeTest, isStopRequired)
     ASSERT_TRUE(stop_time.has_value());
 
     EXPECT_TRUE(is_stop);
-    EXPECT_EQ(stop_time.value(), LAST_STOP_TIME);
+    EXPECT_EQ(stop_time->nanoseconds(), LAST_STOP_TIME.nanoseconds());
   }
 
   {
