@@ -21,28 +21,6 @@
 namespace autoware::cuda_pointcloud_preprocessor
 {
 
-struct TwistStruct2D
-{
-  float cum_x;
-  float cum_y;
-  float cum_theta;
-  float cum_cos_theta;
-  float cum_sin_theta;
-  std::uint32_t last_stamp_nsec;  // relative to the start of the pointcloud
-  std::uint32_t stamp_nsec;       // relative to the start of the pointcloud
-  float v_x;
-  float v_theta;
-};
-
-struct TwistStruct3D
-{
-  float cum_transform_buffer[16];
-  std::uint32_t last_stamp_nsec;  // relative to the start of the pointcloud
-  std::uint32_t stamp_nsec;       // relative to the start of the pointcloud
-  float v[3];
-  float w[3];
-};
-
 struct TransformStruct
 {
   float x;

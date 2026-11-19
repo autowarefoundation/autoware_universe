@@ -26,6 +26,12 @@
 #include <limits>
 #include <vector>
 
+#ifdef __CUDACC__
+#define AUTOWARE_MOTION_TABLE_HOST_DEVICE __host__ __device__
+#else
+#define AUTOWARE_MOTION_TABLE_HOST_DEVICE
+#endif
+
 /// Ego motion over one pointcloud, quantized in time.
 ///
 /// Bin `k` covers the times `[k, k + 1) * bin_width_ns` after the pointcloud's header stamp and
@@ -94,7 +100,7 @@ using RowMajorMatrix3f = Eigen::Matrix<float, 3, 3, Eigen::RowMajor>;
 
 /// The bin of a point and the time from the start of that bin to the point, in seconds.
 template <typename BinT>
-inline const BinT & lookup(
+AUTOWARE_MOTION_TABLE_HOST_DEVICE inline const BinT & lookup(
   const BinT * bins, std::uint32_t last_bin_index, std::uint32_t time_stamp_ns, float & remainder)
 {
   remainder = 1e-9f * static_cast<float>(time_stamp_ns & bin_remainder_mask);
@@ -103,7 +109,8 @@ inline const BinT & lookup(
 }
 
 /// Moves a point in the base frame at its own time into the base frame at the header stamp.
-inline void undistort(const Bin2D & bin, float remainder, float & x, float & y)
+AUTOWARE_MOTION_TABLE_HOST_DEVICE inline void undistort(
+  const Bin2D & bin, float remainder, float & x, float & y)
 {
   // The rotation within a bin is far below a degree, the series are exact to float precision
   const float delta = bin.rate_theta * remainder;
@@ -118,7 +125,8 @@ inline void undistort(const Bin2D & bin, float remainder, float & x, float & y)
   y = sin_theta * distorted_x + cos_theta * distorted_y + bin.y + bin.rate_y * remainder;
 }
 
-inline void undistort(const Bin3D & bin, float remainder, float & x, float & y, float & z)
+AUTOWARE_MOTION_TABLE_HOST_DEVICE inline void undistort(
+  const Bin3D & bin, float remainder, float & x, float & y, float & z)
 {
   const Eigen::Map<const RowMajorMatrix3f> rotation(bin.rotation);
   const Eigen::Map<const Eigen::Vector3f> translation(bin.translation);
@@ -358,5 +366,7 @@ void build(
 }
 
 }  // namespace autoware::pointcloud_preprocessor::motion_table
+
+#undef AUTOWARE_MOTION_TABLE_HOST_DEVICE
 
 #endif  // AUTOWARE__POINTCLOUD_PREPROCESSOR__DISTORTION_CORRECTOR__MOTION_TABLE_HPP_

@@ -19,6 +19,7 @@
 #include <autoware/cuda_utils/cuda_check_error.hpp>
 #include <autoware/cuda_utils/cuda_gtest_utils.hpp>
 #include <autoware/point_types/types.hpp>
+#include <autoware/pointcloud_preprocessor/distortion_corrector/distortion_corrector.hpp>
 
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <sensor_msgs/msg/imu.hpp>
@@ -29,10 +30,12 @@
 #include <gtest/gtest.h>
 
 #include <cmath>
+#include <cstdint>
 #include <cstring>
 #include <deque>
 #include <map>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -48,12 +51,10 @@ using autoware::point_types::PointXYZIRCT;
 
 constexpr auto kOutputFormat = CudaPointcloudPreprocessor::OutputPointFormat::XYZIRC;
 
-PreprocessorCapacity make_capacity(
-  const std::size_t max_input_point_count = 2, const std::size_t max_twist_struct_count = 1)
+PreprocessorCapacity make_capacity(const std::size_t max_input_point_count = 2)
 {
   PreprocessorCapacity capacity;
   capacity.max_input_point_count = max_input_point_count;
-  capacity.max_twist_struct_count = max_twist_struct_count;
   return capacity;
 }
 
@@ -197,7 +198,7 @@ ProcessedCloud process_cloud(
   const std::deque<geometry_msgs::msg::Vector3Stamped> & angular_velocity_queue = {})
 {
   const auto output_cloud = preprocessor.process(
-    input_cloud, make_identity_transform(), twist_queue, angular_velocity_queue, 0U);
+    input_cloud, make_identity_transform(), twist_queue, angular_velocity_queue);
   ProcessedCloud processed;
   processed.width = output_cloud->width;
   processed.point_step = output_cloud->point_step;
@@ -230,10 +231,6 @@ TEST(CudaPointcloudPreprocessor, RejectsInvalidCapacities)
 {
   auto capacity = make_capacity();
   capacity.max_input_point_count = 0;
-  EXPECT_THROW((CudaPointcloudPreprocessor{capacity, kOutputFormat}), std::runtime_error);
-
-  capacity = make_capacity();
-  capacity.max_twist_struct_count = 0;
   EXPECT_THROW((CudaPointcloudPreprocessor{capacity, kOutputFormat}), std::runtime_error);
 }
 
@@ -379,7 +376,7 @@ TEST(QueueBounds, RejectsAlreadyOverCapacityInternalQueue)
 TEST_F(CudaPointcloudPreprocessorDeviceTest, OutputDoesNotDependOnEarlierLargerFrames)
 {
   constexpr int ring_count = 2;
-  const auto capacity = make_capacity(1800, 4);
+  const auto capacity = make_capacity(1800);
   const auto configure = [](CudaPointcloudPreprocessor & preprocessor) {
     CropBoxParameters crop_box{};
     crop_box.min_x = -100.0F;
@@ -446,7 +443,7 @@ TEST_F(CudaPointcloudPreprocessorDeviceTest, TruncatesInputCloudToConfiguredMaxi
   const auto output_cloud = preprocessor.process(
     input_cloud, make_identity_transform(),
     std::deque<geometry_msgs::msg::TwistWithCovarianceStamped>{},
-    std::deque<geometry_msgs::msg::Vector3Stamped>{}, 0U);
+    std::deque<geometry_msgs::msg::Vector3Stamped>{});
 
   ASSERT_NE(output_cloud, nullptr);
   EXPECT_EQ(output_cloud->height, 1U);
@@ -513,11 +510,9 @@ void expect_output_fields(const ProcessedCloud & cloud, const bool with_time_sta
 
 CudaPointcloudPreprocessor make_passthrough_preprocessor(
   const std::size_t max_input_point_count,
-  const CudaPointcloudPreprocessor::OutputPointFormat output_format,
-  const std::size_t max_twist_struct_count = 1)
+  const CudaPointcloudPreprocessor::OutputPointFormat output_format)
 {
-  CudaPointcloudPreprocessor preprocessor{
-    make_capacity(max_input_point_count, max_twist_struct_count), output_format};
+  CudaPointcloudPreprocessor preprocessor{make_capacity(max_input_point_count), output_format};
   preprocessor.setRingOutlierFilterActive(false);
   preprocessor.setUndistortionType(CudaPointcloudPreprocessor::UndistortionType::Undistortion2D);
   return preprocessor;
@@ -577,7 +572,7 @@ TEST_F(CudaPointcloudPreprocessorDeviceTest, UndistortionLeavesXyzirctTimeStamps
 {
   const auto points = make_stamped_ring_points(1, 6);  // stamps 0 ms .. 5 ms
   auto preprocessor = make_passthrough_preprocessor(
-    points.size(), CudaPointcloudPreprocessor::OutputPointFormat::XYZIRCT, 3);
+    points.size(), CudaPointcloudPreprocessor::OutputPointFormat::XYZIRCT);
 
   std::deque<geometry_msgs::msg::TwistWithCovarianceStamped> twist_queue;
   for (const std::uint32_t nanosec : {0U, 3'000'000U, 10'000'000U}) {
@@ -597,6 +592,123 @@ TEST_F(CudaPointcloudPreprocessorDeviceTest, UndistortionLeavesXyzirctTimeStamps
     moved |= std::fabs(point.x - input.x) > 1e-4F;
   }
   EXPECT_TRUE(moved) << "the twist did not move any point, so undistortion was not exercised";
+}
+
+// The CPU distortion corrector builds the same motion table, so both must move every point to the
+// same place. The points' stamps run against their order in the cloud, with the newest point
+// first, so the result must not rely on where a point sits in the cloud.
+TEST_F(CudaPointcloudPreprocessorDeviceTest, UndistortionMatchesCpuCorrectorForAnyPointOrder)
+{
+  constexpr int point_count = 64;
+  std::vector<InputPointType> points;
+  for (int i = 0; i < point_count; ++i) {
+    auto point = make_point(5.0F + 0.5F * i, (point_count - 1 - i) * 1'500'000U, i % 4);
+    point.y = 20.0F - 0.7F * i;
+    point.z = -1.0F + 0.05F * i;
+    point.intensity = static_cast<std::uint8_t>(i / 4);
+    points.push_back(point);
+  }
+  const auto by_key = index_by_channel_and_intensity(points);
+
+  std::deque<geometry_msgs::msg::TwistWithCovarianceStamped> twist_queue;
+  for (int i = 0; i < 7; ++i) {
+    auto twist = make_twist(i * 20'000'000U + 3'000'000U, 1);
+    twist.twist.twist.linear.x = 10.0 + i;
+    twist.twist.twist.linear.y = 0.3;
+    twist.twist.twist.linear.z = -0.2;
+    twist.twist.twist.angular.x = 0.02;
+    twist.twist.twist.angular.y = -0.03;
+    twist.twist.twist.angular.z = 0.1 + 0.02 * i;
+    twist_queue.push_back(twist);
+  }
+  std::deque<geometry_msgs::msg::Vector3Stamped> imu_queue;
+  for (int i = 0; i < 14; ++i) {
+    auto angular_velocity = make_angular_velocity(i * 10'000'000U + 7'000'000U, 1);
+    angular_velocity.vector.x = 0.05 - 0.01 * i;
+    angular_velocity.vector.y = 0.04;
+    angular_velocity.vector.z = -0.2 + 0.03 * i;
+    imu_queue.push_back(angular_velocity);
+  }
+
+  auto base_link_transform = make_identity_transform();
+  base_link_transform.child_frame_id = base_link_transform.header.frame_id;
+
+  const auto check = [&](auto cpu_corrector, const auto undistortion_type, const bool use_imu) {
+    SCOPED_TRACE(use_imu ? "with IMU" : "without IMU");
+
+    auto preprocessor = make_passthrough_preprocessor(
+      points.size(), CudaPointcloudPreprocessor::OutputPointFormat::XYZIRCT);
+    preprocessor.setUndistortionType(undistortion_type);
+    const auto output = process_cloud(
+      preprocessor, make_input_cloud(points), twist_queue,
+      use_imu ? imu_queue : std::deque<geometry_msgs::msg::Vector3Stamped>{});
+
+    for (const auto & twist : twist_queue) {
+      cpu_corrector.insert_twist(
+        std::make_shared<geometry_msgs::msg::TwistWithCovarianceStamped>(twist));
+    }
+    cpu_corrector.set_imu_transform(base_link_transform);
+    for (const auto & angular_velocity : imu_queue) {
+      sensor_msgs::msg::Imu imu;
+      imu.header = angular_velocity.header;
+      imu.angular_velocity = angular_velocity.vector;
+      cpu_corrector.insert_imu(std::make_shared<sensor_msgs::msg::Imu>(imu));
+    }
+    auto cpu_cloud = make_input_cloud(points);
+    cpu_cloud.header.frame_id = base_link_transform.child_frame_id;
+    cpu_corrector.undistort_pointcloud(use_imu, std::nullopt, base_link_transform, cpu_cloud);
+    std::vector<InputPointType> cpu_points(points.size());
+    std::memcpy(cpu_points.data(), cpu_cloud.data.data(), cpu_cloud.data.size());
+    const auto cpu_by_key = index_by_channel_and_intensity(cpu_points);
+
+    EXPECT_EQ(output.stats.mismatch_count, 0);
+    ASSERT_EQ(output.width, points.size());
+    bool moved = false;
+    for (const auto & point : as_points<PointXYZIRCT>(output)) {
+      const auto & expected = cpu_by_key.at({point.channel, point.intensity});
+      EXPECT_NEAR(point.x, expected.x, 1e-5F);
+      EXPECT_NEAR(point.y, expected.y, 1e-5F);
+      EXPECT_NEAR(point.z, expected.z, 1e-5F);
+
+      const auto & input = by_key.at({point.channel, point.intensity});
+      moved |= input.time_stamp > 0U && std::fabs(point.x - input.x) > 1e-2F;
+    }
+    EXPECT_TRUE(moved) << "no point moved, so undistortion was not exercised";
+  };
+
+  for (const bool use_imu : {false, true}) {
+    check(
+      autoware::pointcloud_preprocessor::DistortionCorrector2D{},
+      CudaPointcloudPreprocessor::UndistortionType::Undistortion2D, use_imu);
+    check(
+      autoware::pointcloud_preprocessor::DistortionCorrector3D{},
+      CudaPointcloudPreprocessor::UndistortionType::Undistortion3D, use_imu);
+  }
+}
+
+// Every point but the first precedes the first point of the cloud.
+TEST_F(CudaPointcloudPreprocessorDeviceTest, UndistortsPointsStampedBeforeTheFirstPointOfTheCloud)
+{
+  const std::vector<InputPointType> points = {
+    make_point(1.0F, 50'000'000U, 0), make_point(2.0F, 10'000'000U, 1),
+    make_point(3.0F, 30'000'000U, 2)};
+  auto preprocessor = make_passthrough_preprocessor(
+    points.size(), CudaPointcloudPreprocessor::OutputPointFormat::XYZIRCT);
+
+  std::deque<geometry_msgs::msg::TwistWithCovarianceStamped> twist_queue;
+  for (const std::uint32_t nanosec : {0U, 100'000'000U}) {
+    auto twist = make_twist(nanosec, 1);
+    twist.twist.twist.linear.x = 10.0;  // 1 cm per ms
+    twist_queue.push_back(twist);
+  }
+
+  const auto output = process_cloud(preprocessor, make_input_cloud(points), twist_queue);
+
+  ASSERT_EQ(output.width, points.size());
+  for (const auto & point : as_points<PointXYZIRCT>(output)) {
+    const auto & input = points.at(point.channel);
+    EXPECT_NEAR(point.x, input.x + 10.0F * 1e-9F * static_cast<float>(input.time_stamp), 1e-5F);
+  }
 }
 
 TEST_F(CudaPointcloudPreprocessorDeviceTest, CropBoxCompactionKeepsEachPointsOwnTimeStamp)

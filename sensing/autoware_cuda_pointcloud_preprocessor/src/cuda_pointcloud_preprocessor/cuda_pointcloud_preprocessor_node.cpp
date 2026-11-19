@@ -258,9 +258,7 @@ CudaPointcloudPreprocessorNode::CudaPointcloudPreprocessorNode(
       "output_point_type must be 'XYZIRC' or 'XYZIRCT', got '" + output_point_type + "'");
   }
 
-  const PreprocessorCapacity preprocessor_capacity{
-    input_bounds_params_.max_input_point_count,
-    input_bounds_params_.max_twist_queue_size + input_bounds_params_.max_imu_queue_size};
+  const PreprocessorCapacity preprocessor_capacity{input_bounds_params_.max_input_point_count};
   cuda_pointcloud_preprocessor_ =
     std::make_unique<CudaPointcloudPreprocessor>(preprocessor_capacity, output_point_format);
   cuda_pointcloud_preprocessor_->setRingOutlierFilterParameters(ring_outlier_filter_parameters);
@@ -347,16 +345,15 @@ void CudaPointcloudPreprocessorNode::pointcloudCallback(
 
   stop_watch_ptr_->toc("processing_time", true);
 
-  const auto [first_point_stamp, first_point_rel_stamp] =
-    getFirstPointTimeInfo(input_pointcloud_msg);
-  updateTwistQueue(first_point_stamp);
-  updateImuQueue(first_point_stamp);
+  // No point precedes the header stamp
+  const std::uint64_t pointcloud_stamp = detail::to_nsec(input_pointcloud_msg.header.stamp);
+  updateTwistQueue(pointcloud_stamp);
+  updateImuQueue(pointcloud_stamp);
 
   const auto transform_msg_opt = lookupTransformToBase(input_pointcloud_msg.header.frame_id);
   if (!transform_msg_opt.has_value()) return;
 
-  auto output_pointcloud_ptr =
-    processPointcloud(input_pointcloud_msg, *transform_msg_opt, first_point_rel_stamp);
+  auto output_pointcloud_ptr = processPointcloud(input_pointcloud_msg, *transform_msg_opt);
   output_pointcloud_ptr->header.frame_id = base_frame_;
 
   publishDiagnostics(input_pointcloud_msg, output_pointcloud_ptr);
@@ -382,38 +379,13 @@ void CudaPointcloudPreprocessorNode::pointcloudCallback(
   return false;
 }
 
-/**
- * @brief Get the first point's timestamp information from a PointCloud2 message.
- *
- * This function extracts the relative timestamp (`time_stamp` field) of the first point in the
- * point cloud and calculates its absolute timestamp by adding it to the message's header timestamp.
- *
- * @param input_pointcloud_msg The input PointCloud2 message, which must include a "time_stamp"
- * field.
- * @return std::pair<std::uint64_t, std::uint32_t>
- *   - first: The absolute timestamp of the first point (in nanoseconds).
- *   - second: The relative timestamp of the first point (in nanoseconds).
- */
-std::pair<std::uint64_t, std::uint32_t> CudaPointcloudPreprocessorNode::getFirstPointTimeInfo(
-  const sensor_msgs::msg::PointCloud2 & input_pointcloud_msg)
-{
-  sensor_msgs::PointCloud2ConstIterator<std::uint32_t> iter_stamp(
-    input_pointcloud_msg, "time_stamp");
-  auto num_points = input_pointcloud_msg.width * input_pointcloud_msg.height;
-  std::uint32_t first_point_rel_stamp = num_points > 0 ? *iter_stamp : 0;
-  std::uint64_t first_point_stamp = input_pointcloud_msg.header.stamp.sec * 1e9 +
-                                    input_pointcloud_msg.header.stamp.nanosec +
-                                    first_point_rel_stamp;
-  return {first_point_stamp, first_point_rel_stamp};
-}
-
-void CudaPointcloudPreprocessorNode::updateTwistQueue(std::uint64_t first_point_stamp)
+void CudaPointcloudPreprocessorNode::updateTwistQueue(std::uint64_t pointcloud_stamp)
 {
   std::vector<geometry_msgs::msg::TwistWithCovarianceStamped::ConstSharedPtr> twist_msgs =
     twist_sub_->take_data();
 
   latest_input_bounds_status_.dropped_twist_count += detail::prepare_queue_update(
-    twist_queue_, twist_msgs, input_bounds_params_.max_twist_queue_size, first_point_stamp);
+    twist_queue_, twist_msgs, input_bounds_params_.max_twist_queue_size, pointcloud_stamp);
   for (const auto & msg : twist_msgs) {
     if (detail::is_backward_time_jump(twist_queue_, msg->header.stamp)) {
       twist_queue_.clear();
@@ -422,14 +394,14 @@ void CudaPointcloudPreprocessorNode::updateTwistQueue(std::uint64_t first_point_
   }
 }
 
-void CudaPointcloudPreprocessorNode::updateImuQueue(std::uint64_t first_point_stamp)
+void CudaPointcloudPreprocessorNode::updateImuQueue(std::uint64_t pointcloud_stamp)
 {
   if (!imu_sub_) return;
 
   std::vector<sensor_msgs::msg::Imu::ConstSharedPtr> imu_msgs = imu_sub_->take_data();
 
   latest_input_bounds_status_.dropped_imu_count += detail::prepare_queue_update(
-    angular_velocity_queue_, imu_msgs, input_bounds_params_.max_imu_queue_size, first_point_stamp);
+    angular_velocity_queue_, imu_msgs, input_bounds_params_.max_imu_queue_size, pointcloud_stamp);
   for (const auto & msg : imu_msgs) {
     if (detail::is_backward_time_jump(angular_velocity_queue_, msg->header.stamp)) {
       angular_velocity_queue_.clear();
@@ -451,12 +423,10 @@ CudaPointcloudPreprocessorNode::lookupTransformToBase(const std::string & source
 
 std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessorNode::processPointcloud(
   const sensor_msgs::msg::PointCloud2 & input_pointcloud_msg,
-  const geometry_msgs::msg::TransformStamped & transform_msg,
-  const std::uint32_t first_point_rel_stamp)
+  const geometry_msgs::msg::TransformStamped & transform_msg)
 {
   return cuda_pointcloud_preprocessor_->process(
-    input_pointcloud_msg, transform_msg, twist_queue_, angular_velocity_queue_,
-    first_point_rel_stamp);
+    input_pointcloud_msg, transform_msg, twist_queue_, angular_velocity_queue_);
 }
 
 void CudaPointcloudPreprocessorNode::publishDiagnostics(

@@ -16,7 +16,8 @@
 #define AUTOWARE__CUDA_POINTCLOUD_PREPROCESSOR__UNDISTORT_KERNELS_HPP_
 
 #include "autoware/cuda_pointcloud_preprocessor/point_types.hpp"
-#include "autoware/cuda_pointcloud_preprocessor/types.hpp"
+
+#include <autoware/pointcloud_preprocessor/distortion_corrector/motion_table.hpp>
 
 #include <geometry_msgs/msg/twist_with_covariance_stamped.hpp>
 #include <geometry_msgs/msg/vector3_stamped.hpp>
@@ -24,32 +25,43 @@
 #include <cuda_runtime.h>
 #include <thrust/device_vector.h>
 
-#include <cstddef>
+#include <cstdint>
 #include <deque>
+#include <vector>
 
 namespace autoware::cuda_pointcloud_preprocessor
 {
+using MotionBin2D = autoware::pointcloud_preprocessor::motion_table::Bin2D;
+using MotionBin3D = autoware::pointcloud_preprocessor::motion_table::Bin3D;
+
+/// Moves each point from the base frame at its own time into the base frame at the pointcloud's
+/// header stamp. `motion_bins` holds `last_bin_index + 1` bins.
 void undistort2DLaunch(
-  InputPointType * input_points, int num_points, TwistStruct2D * twist_structs, int num_twists,
-  std::uint8_t * output_mismatch_mask, int threads_per_block, int blocks_per_grid,
-  cudaStream_t & stream);
+  InputPointType * input_points, int num_points, const MotionBin2D * motion_bins,
+  std::uint32_t last_bin_index, std::uint8_t * output_mismatch_mask, int threads_per_block,
+  int blocks_per_grid, cudaStream_t & stream);
 
 void undistort3DLaunch(
-  InputPointType * input_points, int num_points, TwistStruct3D * twist_structs, int num_twists,
-  std::uint8_t * output_mismatch_mask, int threads_per_block, int blocks_per_grid,
-  cudaStream_t & stream);
+  InputPointType * input_points, int num_points, const MotionBin3D * motion_bins,
+  std::uint32_t last_bin_index, std::uint8_t * output_mismatch_mask, int threads_per_block,
+  int blocks_per_grid, cudaStream_t & stream);
 
-std::size_t setupTwist2DStructs(
+/// Builds the motion table of the pointcloud stamped `pointcloud_stamp_nsec` into
+/// `host_motion_bins` and copies it to `device_motion_bins`, which must hold
+/// `motion_table::max_bin_count` bins. Both queues must be sorted by stamp. The angular velocities
+/// take precedence over those of the twists.
+/// \return the index of the last bin.
+std::uint32_t setupMotionBins2D(
   const std::deque<geometry_msgs::msg::TwistWithCovarianceStamped> & twist_queue,
   const std::deque<geometry_msgs::msg::Vector3Stamped> & angular_velocity_queue,
-  const std::uint64_t pointcloud_stamp_nsec, const std::uint32_t first_point_rel_stamp_nsec,
-  thrust::device_vector<TwistStruct2D> & device_twist_2d_structs, cudaStream_t & stream);
+  std::uint64_t pointcloud_stamp_nsec, std::vector<MotionBin2D> & host_motion_bins,
+  thrust::device_vector<MotionBin2D> & device_motion_bins, cudaStream_t & stream);
 
-std::size_t setupTwist3DStructs(
+std::uint32_t setupMotionBins3D(
   const std::deque<geometry_msgs::msg::TwistWithCovarianceStamped> & twist_queue,
   const std::deque<geometry_msgs::msg::Vector3Stamped> & angular_velocity_queue,
-  const std::uint64_t pointcloud_stamp_nsec, const std::uint32_t first_point_rel_stamp_nsec,
-  thrust::device_vector<TwistStruct3D> & device_twist_3d_structs, cudaStream_t & stream);
+  std::uint64_t pointcloud_stamp_nsec, std::vector<MotionBin3D> & host_motion_bins,
+  thrust::device_vector<MotionBin3D> & device_motion_bins, cudaStream_t & stream);
 
 }  // namespace autoware::cuda_pointcloud_preprocessor
 
