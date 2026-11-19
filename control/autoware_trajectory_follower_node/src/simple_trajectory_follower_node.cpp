@@ -54,9 +54,9 @@ void SimpleTrajectoryFollowerNode::on_timer()
     return;
   }
 
-  const auto result = follower_.compute_control_command(*trajectory_, *odometry_);
-  Control cmd = result.command;
-  cmd.stamp = cmd.lateral.stamp = cmd.longitudinal.stamp = get_clock()->now();
+  const auto result =
+    follower_.compute_control_command(*trajectory_, *odometry_, get_clock()->now());
+  const auto & cmd = result.command;
 
   const auto & debug = result.debug;
   RCLCPP_DEBUG(

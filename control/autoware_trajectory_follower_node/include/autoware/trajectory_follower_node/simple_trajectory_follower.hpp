@@ -15,6 +15,8 @@
 #ifndef AUTOWARE__TRAJECTORY_FOLLOWER_NODE__SIMPLE_TRAJECTORY_FOLLOWER_HPP_
 #define AUTOWARE__TRAJECTORY_FOLLOWER_NODE__SIMPLE_TRAJECTORY_FOLLOWER_HPP_
 
+#include <rclcpp/time.hpp>
+
 #include <autoware_control_msgs/msg/control.hpp>
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <nav_msgs/msg/odometry.hpp>
@@ -36,7 +38,7 @@ struct SimpleTrajectoryFollowerConfig
 // Output of one control step.
 struct SimpleTrajectoryFollowerResult
 {
-  Control command;  // stamp fields left unset; the node stamps it
+  Control command;
 
   // Control-law intermediates not already in `command`, returned so the node can log them.
   struct Debug
@@ -58,7 +60,7 @@ public:
   // Precondition: trajectory.points must not be empty. As in the original node, an empty trajectory
   // makes motion_utils::findNearestIndex throw (std::invalid_argument); this behavior is preserved.
   SimpleTrajectoryFollowerResult compute_control_command(
-    const Trajectory & trajectory, const Odometry & odometry) const;
+    const Trajectory & trajectory, const Odometry & odometry, const rclcpp::Time & stamp) const;
 
 private:
   SimpleTrajectoryFollowerConfig config_;

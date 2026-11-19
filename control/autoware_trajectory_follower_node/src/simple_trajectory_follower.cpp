@@ -98,7 +98,7 @@ SimpleTrajectoryFollower::SimpleTrajectoryFollower(const SimpleTrajectoryFollowe
 }
 
 SimpleTrajectoryFollowerResult SimpleTrajectoryFollower::compute_control_command(
-  const Trajectory & trajectory, const Odometry & odometry) const
+  const Trajectory & trajectory, const Odometry & odometry, const rclcpp::Time & stamp) const
 {
   const auto closest = findNearestIndex(trajectory.points, odometry.pose.pose.position);
   const auto & closest_traj_point = trajectory.points.at(closest);
@@ -108,6 +108,7 @@ SimpleTrajectoryFollowerResult SimpleTrajectoryFollower::compute_control_command
     closest_traj_point, odometry, config_.use_external_target_vel, config_.external_target_vel);
 
   SimpleTrajectoryFollowerResult result;
+  result.command.stamp = result.command.lateral.stamp = result.command.longitudinal.stamp = stamp;
   result.command.lateral.steering_tire_angle = static_cast<float>(steer.steer);
   result.command.longitudinal.velocity = config_.use_external_target_vel
                                            ? static_cast<float>(config_.external_target_vel)
