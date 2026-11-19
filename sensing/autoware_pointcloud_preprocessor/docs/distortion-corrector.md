@@ -47,6 +47,7 @@ ros2 launch autoware_pointcloud_preprocessor distortion_corrector.launch.xml
 ## Assumptions / Known limits
 
 - The node requires time synchronization between the topics from lidars, twist, and IMU.
+- Each point is corrected to the time of the pointcloud's header stamp. The time of a point is the header stamp plus its `time_stamp` field (in nanoseconds), so no point can be older than the header stamp. The result does not depend on the order of the points in the pointcloud.
 - If you want to use a 3D distortion corrector without IMU, please check that the linear and angular velocity fields of your twist message are not empty.
 - The node updates the per-point azimuth and distance values based on the undistorted XYZ coordinates when the input point cloud is in the sensor frame (not in the `base_link`) and the `update_azimuth_and_distance` parameter is set to `true`. The azimuth values are calculated using a modified version of OpenCV's `cv::fastAtan2` function.
 - Please note that updating the azimuth and distance fields increases the execution time by approximately 20%. Additionally, due to the `cv::fastAtan2` algorithm's has a maximum error of 0.3 degrees, there is a **possibility of changing the beam order for high azimuth resolution LiDAR**.

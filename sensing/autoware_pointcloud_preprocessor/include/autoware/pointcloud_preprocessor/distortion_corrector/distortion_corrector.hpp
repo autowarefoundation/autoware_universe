@@ -15,8 +15,10 @@
 #ifndef AUTOWARE__POINTCLOUD_PREPROCESSOR__DISTORTION_CORRECTOR__DISTORTION_CORRECTOR_HPP_
 #define AUTOWARE__POINTCLOUD_PREPROCESSOR__DISTORTION_CORRECTOR__DISTORTION_CORRECTOR_HPP_
 
+#include "autoware/pointcloud_preprocessor/distortion_corrector/motion_table.hpp"
+
 #include <Eigen/Core>
-#include <sophus/se3.hpp>
+#include <builtin_interfaces/msg/time.hpp>
 #include <tf2/LinearMath/Transform.hpp>
 #include <tl/expected.hpp>
 
@@ -32,6 +34,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <vector>
 
 namespace autoware::pointcloud_preprocessor
 {
@@ -79,17 +82,20 @@ protected:
   int timestamp_mismatch_count_{0};
   double timestamp_mismatch_fraction_{0.0};
 
+  // Motion samples of the current pointcloud, stamped relative to its header stamp.
+  std::vector<motion_table::TwistSample> twist_samples_;
+  std::vector<motion_table::AngularVelocitySample> angular_velocity_samples_;
+
+  // Transforms between the pointcloud's frame and the base frame, in which the motion is given.
+  Eigen::Matrix4f lidar_to_base_link_{Eigen::Matrix4f::Identity()};
+  Eigen::Matrix4f base_link_to_lidar_{Eigen::Matrix4f::Identity()};
+
   void enqueue_imu(const sensor_msgs::msg::Imu::ConstSharedPtr imu_msg);
-  void get_twist_and_imu_iterator(
-    bool use_imu, double first_point_time_stamp_sec,
-    std::deque<geometry_msgs::msg::TwistStamped>::iterator & it_twist,
-    std::deque<geometry_msgs::msg::Vector3Stamped>::iterator & it_imu);
-  static tf2::Transform convert_matrix_to_transform(const Eigen::Matrix4f & matrix);
+  // Collects the queued motion samples that can affect a pointcloud stamped `pointcloud_stamp`.
+  void collect_motion_samples(const builtin_interfaces::msg::Time & pointcloud_stamp, bool use_imu);
   // The lidar-to-base-frame transform (header.frame_id = base frame, child_frame_id = lidar frame)
   // is supplied by the caller; TF lookup remains outside the core.
-  virtual void set_pointcloud_transform(
-    const geometry_msgs::msg::TransformStamped & lidar_to_base_link) = 0;
-  virtual void initialize() = 0;
+  void set_pointcloud_transform(const geometry_msgs::msg::TransformStamped & lidar_to_base_link);
 
 public:
   DistortionCorrectorBase() = default;
@@ -125,7 +131,9 @@ public:
     sensor_msgs::msg::PointCloud2 & pointcloud) = 0;
 };
 
-template <class T>
+// Every point is corrected by its own `time_stamp` field alone, relative to the header stamp of
+// the pointcloud, which no point precedes. The points may be stored in any order.
+template <class IntegratorT>
 class DistortionCorrector : public DistortionCorrectorBase
 {
 public:
@@ -134,74 +142,14 @@ public:
     const geometry_msgs::msg::TransformStamped & lidar_to_base_link,
     sensor_msgs::msg::PointCloud2 & pointcloud) override;
 
-  void undistort_point(
-    sensor_msgs::PointCloud2Iterator<float> & it_x, sensor_msgs::PointCloud2Iterator<float> & it_y,
-    sensor_msgs::PointCloud2Iterator<float> & it_z,
-    std::deque<geometry_msgs::msg::TwistStamped>::iterator & it_twist,
-    std::deque<geometry_msgs::msg::Vector3Stamped>::iterator & it_imu, float const & time_offset,
-    const bool & is_twist_valid, const bool & is_imu_valid)
-  {
-    static_cast<T *>(this)->undistort_point_implementation(
-      it_x, it_y, it_z, it_twist, it_imu, time_offset, is_twist_valid, is_imu_valid);
-  };
-};
-
-class DistortionCorrector2D : public DistortionCorrector<DistortionCorrector2D>
-{
 private:
-  // defined outside of for loop for performance reasons.
-  tf2::Quaternion baselink_quat_;
-  tf2::Transform baselink_tf_odom_;
-  tf2::Vector3 point_tf_;
-  tf2::Vector3 undistorted_point_tf_;
-  float theta_;
-  float x_;
-  float y_;
-
-  // TF
-  tf2::Transform tf2_lidar_to_base_link_;
-  tf2::Transform tf2_base_link_to_lidar_;
-
-protected:
-  void initialize() override;
-  void set_pointcloud_transform(
-    const geometry_msgs::msg::TransformStamped & lidar_to_base_link) override;
-
-public:
-  void undistort_point_implementation(
-    sensor_msgs::PointCloud2Iterator<float> & it_x, sensor_msgs::PointCloud2Iterator<float> & it_y,
-    sensor_msgs::PointCloud2Iterator<float> & it_z,
-    std::deque<geometry_msgs::msg::TwistStamped>::iterator & it_twist,
-    std::deque<geometry_msgs::msg::Vector3Stamped>::iterator & it_imu, const float & time_offset,
-    const bool & is_twist_valid, const bool & is_imu_valid);
+  std::vector<typename IntegratorT::Bin> motion_bins_;
 };
 
-class DistortionCorrector3D : public DistortionCorrector<DistortionCorrector3D>
-{
-private:
-  // defined outside of for loop for performance reasons.
-  Eigen::Vector4f point_eigen_;
-  Eigen::Vector4f undistorted_point_eigen_;
-  Eigen::Matrix4f transformation_matrix_;
-  Eigen::Matrix4f prev_transformation_matrix_;
-
-  // TF
-  Eigen::Matrix4f eigen_lidar_to_base_link_;
-  Eigen::Matrix4f eigen_base_link_to_lidar_;
-
-protected:
-  void initialize() override;
-  void set_pointcloud_transform(
-    const geometry_msgs::msg::TransformStamped & lidar_to_base_link) override;
-
-public:
-  void undistort_point_implementation(
-    sensor_msgs::PointCloud2Iterator<float> & it_x, sensor_msgs::PointCloud2Iterator<float> & it_y,
-    sensor_msgs::PointCloud2Iterator<float> & it_z,
-    std::deque<geometry_msgs::msg::TwistStamped>::iterator & it_twist,
-    std::deque<geometry_msgs::msg::Vector3Stamped>::iterator & it_imu, const float & time_offset,
-    const bool & is_twist_valid, const bool & is_imu_valid);
-};
+// Corrects for planar motion: linear velocity along x and angular velocity around z.
+using DistortionCorrector2D = DistortionCorrector<motion_table::Integrator2D>;
+// Corrects for rigid motion in space.
+using DistortionCorrector3D = DistortionCorrector<motion_table::Integrator3D>;
 
 }  // namespace autoware::pointcloud_preprocessor
 
