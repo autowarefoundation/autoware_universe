@@ -12,11 +12,13 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-// Characterization test for simple_trajectory_follower::SimpleTrajectoryFollower.
+// Characterization test for simple_trajectory_follower::SimpleTrajectoryFollowerNode.
 //
 // The purpose of this test is NOT to assert the "correct" behavior, but to freeze the CURRENT
-// behavior of the node before refactoring so that regressions become visible. Production code
-// (simple_trajectory_follower.{hpp,cpp}) is intentionally left untouched.
+// behavior of the node so that regressions become visible while the production code is refactored
+// (e.g. extracting the ROS-independent control logic into SimpleTrajectoryFollower). It drives the
+// node through its ROS interface only and asserts hand-derived values, so it stays valid across
+// internal restructurings as long as the observable behavior is unchanged.
 //
 // The node is driven through its real ROS interface:
 //   subscribes : ~/input/kinematics  (nav_msgs/Odometry)
@@ -44,7 +46,7 @@
 //   - The output command stamp is set from get_clock()->now(); it is non-deterministic and so is
 //     not asserted.
 
-#include "autoware/trajectory_follower_node/simple_trajectory_follower.hpp"
+#include "autoware/trajectory_follower_node/simple_trajectory_follower_node.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -68,7 +70,7 @@ using autoware_control_msgs::msg::Control;
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using nav_msgs::msg::Odometry;
-using simple_trajectory_follower::SimpleTrajectoryFollower;
+using simple_trajectory_follower::SimpleTrajectoryFollowerNode;
 
 // The node name is hard-coded in the constructor, so the topics resolve to these fully-qualified
 // names.
@@ -127,7 +129,7 @@ protected:
     options.append_parameter_override("use_external_target_vel", params.use_external_target_vel);
     options.append_parameter_override("external_target_vel", params.external_target_vel);
     options.append_parameter_override("lateral_deviation", params.lateral_deviation);
-    follower_node_ = std::make_shared<SimpleTrajectoryFollower>(options);
+    follower_node_ = std::make_shared<SimpleTrajectoryFollowerNode>(options);
 
     test_node_ = std::make_shared<rclcpp::Node>("simple_trajectory_follower_test_node");
     odom_pub_ = test_node_->create_publisher<Odometry>(kKinematicsTopic, rclcpp::QoS{1});
@@ -181,7 +183,7 @@ protected:
     return nullptr;
   }
 
-  std::shared_ptr<SimpleTrajectoryFollower> follower_node_;
+  std::shared_ptr<SimpleTrajectoryFollowerNode> follower_node_;
   std::shared_ptr<rclcpp::Node> test_node_;
   std::shared_ptr<rclcpp::executors::SingleThreadedExecutor> executor_;
   rclcpp::Publisher<Odometry>::SharedPtr odom_pub_;

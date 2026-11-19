@@ -15,54 +15,53 @@
 #ifndef AUTOWARE__TRAJECTORY_FOLLOWER_NODE__SIMPLE_TRAJECTORY_FOLLOWER_HPP_
 #define AUTOWARE__TRAJECTORY_FOLLOWER_NODE__SIMPLE_TRAJECTORY_FOLLOWER_HPP_
 
-#include "autoware_utils/ros/polling_subscriber.hpp"
-
-#include <rclcpp/rclcpp.hpp>
-
 #include <autoware_control_msgs/msg/control.hpp>
 #include <autoware_planning_msgs/msg/trajectory.hpp>
-#include <autoware_planning_msgs/msg/trajectory_point.hpp>
-#include <geometry_msgs/msg/pose.hpp>
-#include <geometry_msgs/msg/twist.hpp>
 #include <nav_msgs/msg/odometry.hpp>
-
-#include <memory>
 
 namespace simple_trajectory_follower
 {
 using autoware_control_msgs::msg::Control;
 using autoware_planning_msgs::msg::Trajectory;
-using autoware_planning_msgs::msg::TrajectoryPoint;
-using geometry_msgs::msg::Pose;
-using geometry_msgs::msg::Twist;
 using nav_msgs::msg::Odometry;
 
-class SimpleTrajectoryFollower : public rclcpp::Node
+// Settings read once from ROS parameters by the node and passed to the constructor.
+struct SimpleTrajectoryFollowerConfig
+{
+  bool use_external_target_vel{false};
+  double external_target_vel{0.0};
+  double lateral_deviation{0.0};
+};
+
+// Output of one control step.
+struct SimpleTrajectoryFollowerResult
+{
+  Control command;  // stamp fields left unset; the node stamps it
+
+  // Control-law intermediates not already in `command`, returned so the node can log them.
+  struct Debug
+  {
+    double steer_kp{0.0};
+    double steer_kd{0.0};
+    double lateral_error{0.0};
+    double yaw_error{0.0};
+    double velocity_error{0.0};
+  } debug;
+};
+
+// ROS-independent control logic
+class SimpleTrajectoryFollower
 {
 public:
-  explicit SimpleTrajectoryFollower(const rclcpp::NodeOptions & options);
-  ~SimpleTrajectoryFollower() = default;
+  explicit SimpleTrajectoryFollower(const SimpleTrajectoryFollowerConfig & config);
+
+  // Precondition: trajectory.points must not be empty. As in the original node, an empty trajectory
+  // makes motion_utils::findNearestIndex throw (std::invalid_argument); this behavior is preserved.
+  SimpleTrajectoryFollowerResult compute_control_command(
+    const Trajectory & trajectory, const Odometry & odometry) const;
 
 private:
-  autoware_utils::InterProcessPollingSubscriber<Odometry> sub_kinematics_{
-    this, "~/input/kinematics"};
-  autoware_utils::InterProcessPollingSubscriber<Trajectory> sub_trajectory_{
-    this, "~/input/trajectory"};
-  rclcpp::Publisher<Control>::SharedPtr pub_cmd_;
-  rclcpp::TimerBase::SharedPtr timer_;
-
-  Trajectory::ConstSharedPtr trajectory_;
-  Odometry::ConstSharedPtr odometry_;
-  TrajectoryPoint closest_traj_point_;
-  bool use_external_target_vel_;
-  double external_target_vel_;
-  double lateral_deviation_;
-
-  void onTimer();
-  bool processData();
-  void updateClosest();
-  double calcSteerCmd();
-  double calcAccCmd();
+  SimpleTrajectoryFollowerConfig config_;
 };
 
 }  // namespace simple_trajectory_follower

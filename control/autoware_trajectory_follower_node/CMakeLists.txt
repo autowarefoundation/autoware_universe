@@ -23,11 +23,13 @@ autoware_agnocast_wrapper_register_node(${CONTROLLER_NODE}
 set(SIMPLE_TRAJECTORY_FOLLOWER_NODE simple_trajectory_follower)
 ament_auto_add_library(${SIMPLE_TRAJECTORY_FOLLOWER_NODE} SHARED
   include/autoware/trajectory_follower_node/simple_trajectory_follower.hpp
+  include/autoware/trajectory_follower_node/simple_trajectory_follower_node.hpp
   src/simple_trajectory_follower.cpp
+  src/simple_trajectory_follower_node.cpp
 )
 
 autoware_agnocast_wrapper_register_node(${SIMPLE_TRAJECTORY_FOLLOWER_NODE}
-  PLUGIN "simple_trajectory_follower::SimpleTrajectoryFollower"
+  PLUGIN "simple_trajectory_follower::SimpleTrajectoryFollowerNode"
   EXECUTABLE ${SIMPLE_TRAJECTORY_FOLLOWER_NODE}_exe
   AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
   ROS2_EXECUTOR SingleThreadedExecutor
