@@ -19,6 +19,9 @@
 // (ClassificationRemapper), the conversion of one radar object into a tracked object
 // (TrackedObjectConverter, parameterized by how the optional fields are filled and by how a
 // tracked object's id is made), and the derivation of the detected object from the tracked one.
+// What a radar info means for the conversion (which fields it must declare, which optional
+// fields the radar provides) is the converter's to say, since it follows from what the converter
+// reads.
 
 #include <tl/expected.hpp>
 
@@ -118,9 +121,9 @@ private:
 // are. The two standard deviations have no parameter: when the radar does not provide one, the
 // variance it would set stays zero.
 //
-// The parameters alone make the configuration for a radar that provides no optional field; the
-// adapter makes the one it converts with from them and a valid radar info, which declares what
-// the radar provides.
+// The parameters alone make the configuration for a radar that provides no optional field;
+// TrackedObjectConverter::configuration_for() makes the one to convert with from them and a valid
+// radar info, which declares what the radar provides.
 struct ConversionConfiguration
 {
   std::optional<double> default_position_z;
@@ -138,6 +141,23 @@ struct ConversionConfiguration
   std::vector<std::pair<std::string, double>> defaulted_fields() const;
 };
 
+// Why a radar info cannot be converted with: the required fields it does not declare. what()
+// names them.
+class InvalidRadarInfo : public std::runtime_error
+{
+public:
+  explicit InvalidRadarInfo(const std::vector<std::string> & missing_required_fields);
+
+  // The required fields the radar info does not declare, in the order they are required.
+  const std::vector<std::string> & missing_required_fields() const
+  {
+    return missing_required_fields_;
+  }
+
+private:
+  std::vector<std::string> missing_required_fields_;
+};
+
 // Converts one radar object into a tracked object: everything the radar reports about it, with
 // the optional fields filled as the configuration says, the velocity and the acceleration
 // rotated into the object's frame, and the id made by the given function. The classification is
@@ -145,6 +165,19 @@ struct ConversionConfiguration
 class TrackedObjectConverter
 {
 public:
+  // The object fields the conversion uses with nothing to fall back on. A radar must fill them
+  // with meaningful values and report their names in the object fields of its radar info.
+  // object_id is used as well, but is taken as always provided and need not be reported.
+  static const std::vector<std::string> & required_fields();
+
+  // What a radar info means for the conversion: the configuration to convert with, which is
+  // `defaults` (the configuration for a radar that provides no optional field) less the fields
+  // the radar info declares; or, when it does not declare every required field, the ones it
+  // lacks, in the order of required_fields(). Fields the conversion does not read are ignored.
+  static tl::expected<ConversionConfiguration, InvalidRadarInfo> configuration_for(
+    const autoware_sensing_msgs::msg::RadarInfo & radar_info,
+    const ConversionConfiguration & defaults);
+
   TrackedObjectConverter(const ConversionConfiguration & config, GenerateObjectUUID generate_uuid);
 
   autoware_perception_msgs::msg::TrackedObject operator()(
@@ -161,22 +194,6 @@ private:
 // ---------------------------------------------------------------------------------------------
 // The adapter
 // ---------------------------------------------------------------------------------------------
-
-// Why a radar info cannot be used: the required fields it does not declare. what() names them.
-class InvalidRadarInfo : public std::runtime_error
-{
-public:
-  explicit InvalidRadarInfo(const std::vector<std::string> & missing_required_fields);
-
-  // The required fields that no radar info has declared so far, in the order they are required.
-  const std::vector<std::string> & missing_required_fields() const
-  {
-    return missing_required_fields_;
-  }
-
-private:
-  std::vector<std::string> missing_required_fields_;
-};
 
 // What a radar objects message converts into: the messages to publish.
 struct ConversionOutcome
@@ -205,7 +222,8 @@ struct RadarObjectsAdapterParams
   double default_size_z{0.0};
 
   // The configuration for a radar that provides no optional field: each parameter in place of
-  // its field. The adapter takes away the entries for the fields a radar info declares.
+  // its field. TrackedObjectConverter::configuration_for() takes away the entries for the fields
+  // a radar info declares.
   [[nodiscard]] ConversionConfiguration to_config() const;
 };
 
@@ -221,8 +239,8 @@ public:
     const std::string & topic_name);
 
   // What the adapter decided from a radar info: the configuration it will convert with (the
-  // parameters, less the fields the radar provides), or why it cannot convert at all. The node
-  // logs this; the adapter is where the field -> parameter pairing lives. Nothing is decided
+  // parameters, less the fields the radar provides), or why it cannot convert at all, as
+  // TrackedObjectConverter::configuration_for() says. The node logs this. Nothing is decided
   // from an invalid radar info, and nothing new from a message after the first valid one: that
   // one comes back with the configuration already fixed.
   tl::expected<ConversionConfiguration, InvalidRadarInfo> update_radar_info(
@@ -239,8 +257,6 @@ private:
   ConversionConfiguration config_;
   GenerateObjectUUID generate_uuid_;
   ClassificationRemapper classification_remapper_;
-
-  std::vector<std::string> required_attributes_;
 
   // Set by the first radar info that declares every required field, and kept; converts nothing
   // before.

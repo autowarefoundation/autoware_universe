@@ -228,6 +228,71 @@ std::vector<autoware_perception_msgs::msg::ObjectClassification> ClassificationR
   return output;
 }
 
+const std::vector<std::string> & TrackedObjectConverter::required_fields()
+{
+  static const std::vector<std::string> fields = {"existence_probability",
+                                                  "position_x",
+                                                  "position_y",
+                                                  "velocity_x",
+                                                  "velocity_y",
+                                                  "acceleration_x",
+                                                  "acceleration_y",
+                                                  "orientation",
+                                                  "orientation_rate",
+                                                  "movement_status"};
+  return fields;
+}
+
+tl::expected<ConversionConfiguration, InvalidRadarInfo> TrackedObjectConverter::configuration_for(
+  const autoware_sensing_msgs::msg::RadarInfo & radar_info,
+  const ConversionConfiguration & defaults)
+{
+  std::set<std::string> declared_fields;
+  for (const auto & field_info : radar_info.object_fields_info) {
+    declared_fields.insert(field_info.field_name.data);
+  }
+
+  std::vector<std::string> missing_required_fields;
+  for (const auto & field : required_fields()) {
+    if (declared_fields.count(field) == 0) {
+      missing_required_fields.push_back(field);
+    }
+  }
+  if (!missing_required_fields.empty()) {
+    return tl::make_unexpected(InvalidRadarInfo(missing_required_fields));
+  }
+
+  // The fields the radar provides are copied from the object; the rest keep the parameter in
+  // their place. orientation_std and orientation_rate_std have no parameter: without them the
+  // yaw variances stay zero, and that has never been warned about.
+  ConversionConfiguration config = defaults;
+  const auto provided = [&declared_fields](const char * field) {
+    return declared_fields.count(field) > 0;
+  };
+  if (provided("position_z")) {
+    config.default_position_z.reset();
+  }
+  if (provided("velocity_z")) {
+    config.default_velocity_z.reset();
+  }
+  if (provided("acceleration_z")) {
+    config.default_acceleration_z.reset();
+  }
+  if (provided("size_x")) {
+    config.default_size_x.reset();
+  }
+  if (provided("size_y")) {
+    config.default_size_y.reset();
+  }
+  if (provided("size_z")) {
+    config.default_size_z.reset();
+  }
+  config.orientation_std_provided = provided("orientation_std");
+  config.orientation_rate_std_provided = provided("orientation_rate_std");
+
+  return config;
+}
+
 TrackedObjectConverter::TrackedObjectConverter(
   const ConversionConfiguration & config, GenerateObjectUUID generate_uuid)
 : config_(config), generate_uuid_(std::move(generate_uuid))
@@ -317,19 +382,6 @@ RadarObjectsAdapter::RadarObjectsAdapter(
   generate_uuid_(ObjectUUIDGenerator(topic_name)),
   classification_remapper_(classification_remap)
 {
-  // The fields the conversion uses with nothing to fall back on. A radar must fill them with
-  // meaningful values and report their names in the object fields of its radar info. object_id
-  // is used as well, but is taken as always provided and need not be reported.
-  required_attributes_ = {"existence_probability",
-                          "position_x",
-                          "position_y",
-                          "velocity_x",
-                          "velocity_y",
-                          "acceleration_x",
-                          "acceleration_y",
-                          "orientation",
-                          "orientation_rate",
-                          "movement_status"};
 }
 
 tl::expected<ConversionConfiguration, InvalidRadarInfo> RadarObjectsAdapter::update_radar_info(
@@ -341,51 +393,10 @@ tl::expected<ConversionConfiguration, InvalidRadarInfo> RadarObjectsAdapter::upd
     return tracked_object_converter_->configuration();
   }
 
-  std::set<std::string> declared_fields;
-  for (const auto & field_info : radar_info_msg.object_fields_info) {
-    declared_fields.insert(field_info.field_name.data);
+  const auto config = TrackedObjectConverter::configuration_for(radar_info_msg, config_);
+  if (config.has_value()) {
+    tracked_object_converter_.emplace(*config, generate_uuid_);
   }
-
-  std::vector<std::string> missing_required_fields;
-  for (const auto & attribute : required_attributes_) {
-    if (declared_fields.count(attribute) == 0) {
-      missing_required_fields.push_back(attribute);
-    }
-  }
-  if (!missing_required_fields.empty()) {
-    return tl::make_unexpected(InvalidRadarInfo(missing_required_fields));
-  }
-
-  // The fields the radar provides are copied from the object; the rest keep the parameter in
-  // their place. orientation_std and orientation_rate_std have no parameter: without them the
-  // yaw variances stay zero, and that has never been warned about.
-  ConversionConfiguration config = config_;
-  const auto provided = [&declared_fields](const char * field) {
-    return declared_fields.count(field) > 0;
-  };
-  if (provided("position_z")) {
-    config.default_position_z.reset();
-  }
-  if (provided("velocity_z")) {
-    config.default_velocity_z.reset();
-  }
-  if (provided("acceleration_z")) {
-    config.default_acceleration_z.reset();
-  }
-  if (provided("size_x")) {
-    config.default_size_x.reset();
-  }
-  if (provided("size_y")) {
-    config.default_size_y.reset();
-  }
-  if (provided("size_z")) {
-    config.default_size_z.reset();
-  }
-  config.orientation_std_provided = provided("orientation_std");
-  config.orientation_rate_std_provided = provided("orientation_rate_std");
-
-  tracked_object_converter_.emplace(config, generate_uuid_);
-
   return config;
 }
 
