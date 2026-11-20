@@ -60,7 +60,7 @@ void SimpleTrajectoryFollowerNode::on_timer()
 
   const auto & debug = result.debug;
   RCLCPP_DEBUG(
-    get_logger(), "kp = %f, lat_err = %f, kd - %f, yaw_err = %f, steer = %f", debug.steer_kp,
+    get_logger(), "kp = %f, lat_err = %f, kd = %f, yaw_err = %f, steer = %f", debug.steer_kp,
     debug.lateral_error, debug.steer_kd, debug.yaw_error, cmd.lateral.steering_tire_angle);
   RCLCPP_DEBUG(
     get_logger(), "vel_err = %f, acc = %f", debug.velocity_error, cmd.longitudinal.acceleration);
