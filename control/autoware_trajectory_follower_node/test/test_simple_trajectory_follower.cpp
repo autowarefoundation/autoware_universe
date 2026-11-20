@@ -58,7 +58,7 @@ using simple_trajectory_follower::SimpleTrajectoryFollowerConfig;
 using simple_trajectory_follower::SimpleTrajectoryFollowerResult;
 using simple_trajectory_follower::Trajectory;
 
-constexpr float kTolerance = 1e-5f;
+constexpr float tolerance = 1e-5f;
 
 geometry_msgs::msg::Quaternion yaw_to_quaternion(const double yaw)
 {
@@ -221,7 +221,7 @@ TEST(SimpleTrajectoryFollowerTest, SteersNegativeToCorrectLeftwardLateralOffset)
   const auto result = follower.compute_control_command(trajectory, odometry, make_stamp());
 
   // Assert
-  EXPECT_NEAR(result.command.lateral.steering_tire_angle, expected_steer, kTolerance);
+  EXPECT_NEAR(result.command.lateral.steering_tire_angle, expected_steer, tolerance);
   EXPECT_FLOAT_EQ(result.command.longitudinal.velocity, expected_velocity);
   EXPECT_FLOAT_EQ(result.command.longitudinal.acceleration, expected_acceleration);
 }
@@ -247,7 +247,7 @@ TEST(SimpleTrajectoryFollowerTest, LateralDeviationParameterShiftsSteeringError)
   const auto result = follower.compute_control_command(trajectory, odometry, make_stamp());
 
   // Assert
-  EXPECT_NEAR(result.command.lateral.steering_tire_angle, expected_steer, kTolerance);
+  EXPECT_NEAR(result.command.lateral.steering_tire_angle, expected_steer, tolerance);
   EXPECT_FLOAT_EQ(result.command.longitudinal.velocity, expected_velocity);
   EXPECT_FLOAT_EQ(result.command.longitudinal.acceleration, expected_acceleration);
 }
@@ -273,8 +273,8 @@ TEST(SimpleTrajectoryFollowerTest, SteersFromYawDeviationOfClosestPoint)
   const auto result = follower.compute_control_command(trajectory, odometry, make_stamp());
 
   // Assert
-  EXPECT_NEAR(result.command.lateral.steering_tire_angle, expected_steer, kTolerance);
-  EXPECT_NEAR(result.debug.yaw_error, expected_yaw_error, kTolerance);
+  EXPECT_NEAR(result.command.lateral.steering_tire_angle, expected_steer, tolerance);
+  EXPECT_NEAR(result.debug.yaw_error, expected_yaw_error, tolerance);
   EXPECT_FLOAT_EQ(result.command.longitudinal.velocity, expected_velocity);
   EXPECT_FLOAT_EQ(result.command.longitudinal.acceleration, expected_acceleration);
 }
@@ -300,7 +300,7 @@ TEST(SimpleTrajectoryFollowerTest, CombinesLateralAndYawErrorsInSteering)
   const auto result = follower.compute_control_command(trajectory, odometry, make_stamp());
 
   // Assert
-  EXPECT_NEAR(result.command.lateral.steering_tire_angle, expected_steer, kTolerance);
+  EXPECT_NEAR(result.command.lateral.steering_tire_angle, expected_steer, tolerance);
   EXPECT_FLOAT_EQ(result.command.longitudinal.velocity, expected_velocity);
   EXPECT_FLOAT_EQ(result.command.longitudinal.acceleration, expected_acceleration);
 }
@@ -327,7 +327,7 @@ TEST(SimpleTrajectoryFollowerTest, UsesAbsoluteEgoSpeedForLookahead)
   const auto result = follower.compute_control_command(trajectory, odometry, make_stamp());
 
   // Assert
-  EXPECT_NEAR(result.command.lateral.steering_tire_angle, expected_steer, kTolerance);
+  EXPECT_NEAR(result.command.lateral.steering_tire_angle, expected_steer, tolerance);
   EXPECT_FLOAT_EQ(result.command.longitudinal.velocity, expected_velocity);
   EXPECT_FLOAT_EQ(result.command.longitudinal.acceleration, expected_acceleration);
 }
@@ -544,9 +544,9 @@ TEST(SimpleTrajectoryFollowerTest, PopulatesDebugIntermediatesForLogging)
   const auto result = follower.compute_control_command(trajectory, odometry, make_stamp());
 
   // Assert
-  EXPECT_NEAR(result.debug.lateral_error, expected_lateral_error, 1e-9);
-  EXPECT_NEAR(result.debug.yaw_error, expected_yaw_error, 1e-9);
-  EXPECT_NEAR(result.debug.velocity_error, expected_velocity_error, 1e-9);
-  EXPECT_NEAR(result.debug.steer_kp, expected_steer_kp, 1e-9);
-  EXPECT_NEAR(result.debug.steer_kd, expected_steer_kd, 1e-9);
+  EXPECT_NEAR(result.debug.lateral_error, expected_lateral_error, tolerance);
+  EXPECT_NEAR(result.debug.yaw_error, expected_yaw_error, tolerance);
+  EXPECT_NEAR(result.debug.velocity_error, expected_velocity_error, tolerance);
+  EXPECT_NEAR(result.debug.steer_kp, expected_steer_kp, tolerance);
+  EXPECT_NEAR(result.debug.steer_kd, expected_steer_kd, tolerance);
 }

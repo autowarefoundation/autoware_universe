@@ -55,9 +55,9 @@ using simple_trajectory_follower::SimpleTrajectoryFollowerNode;
 
 // The node name is hard-coded in the constructor, so the topics resolve to these fully-qualified
 // names.
-constexpr char kKinematicsTopic[] = "/simple_trajectory_follower/input/kinematics";
-constexpr char kTrajectoryTopic[] = "/simple_trajectory_follower/input/trajectory";
-constexpr char kControlCmdTopic[] = "/simple_trajectory_follower/output/control_cmd";
+constexpr char kinematics_topic[] = "/simple_trajectory_follower/input/kinematics";
+constexpr char trajectory_topic[] = "/simple_trajectory_follower/input/trajectory";
+constexpr char control_cmd_topic[] = "/simple_trajectory_follower/output/control_cmd";
 
 geometry_msgs::msg::Quaternion yaw_to_quaternion(const double yaw)
 {
@@ -113,10 +113,10 @@ protected:
     follower_node_ = std::make_shared<SimpleTrajectoryFollowerNode>(options);
 
     test_node_ = std::make_shared<rclcpp::Node>("simple_trajectory_follower_test_node");
-    odom_pub_ = test_node_->create_publisher<Odometry>(kKinematicsTopic, rclcpp::QoS{1});
-    trajectory_pub_ = test_node_->create_publisher<Trajectory>(kTrajectoryTopic, rclcpp::QoS{1});
+    odom_pub_ = test_node_->create_publisher<Odometry>(kinematics_topic, rclcpp::QoS{1});
+    trajectory_pub_ = test_node_->create_publisher<Trajectory>(trajectory_topic, rclcpp::QoS{1});
     control_cmd_sub_ = test_node_->create_subscription<Control>(
-      kControlCmdTopic, rclcpp::QoS{1},
+      control_cmd_topic, rclcpp::QoS{1},
       [this](const Control::SharedPtr msg) { latest_control_cmd_ = msg; });
 
     executor_ = std::make_shared<rclcpp::executors::SingleThreadedExecutor>();
