@@ -54,6 +54,8 @@ OccupancyGridMapFixedBlindSpot::OccupancyGridMapFixedBlindSpot(
       autoware::cuda_utils::make_unique<std::uint64_t[]>(2 * angle_bin_size * range_bin_size);
     obstacle_points_tensor_ =
       autoware::cuda_utils::make_unique<std::uint64_t[]>(2 * angle_bin_size * range_bin_size);
+    device_free_space_mask_ =
+      autoware::cuda_utils::make_unique<std::uint8_t[]>(num_cells_x * num_cells_y);
   }
 }
 
@@ -143,7 +145,7 @@ void OccupancyGridMapFixedBlindSpot::updateWithPointCloud(
     raw_points_tensor_.get(), obstacle_points_tensor_.get(), distance_margin_, angle_bin_size,
     range_bin_size, range_resolution_inv, scan_origin.position.x, scan_origin.position.y, origin_x_,
     origin_y_, num_cells_x, num_cells_y, cost_value::FREE_SPACE, cost_value::NO_INFORMATION,
-    device_costmap_.get(), stream_);
+    device_free_space_mask_.get(), device_costmap_.get(), stream_);
 
   map_fixed::fillObstaclesLaunch(
     obstacle_points_tensor_.get(), distance_margin_, angle_bin_size, range_bin_size,

@@ -173,11 +173,17 @@ autoware_ament_auto_package(
 #    test/fusion_policy_test.cpp
 #    lib/fusion_policy/fusion_policy.cpp
 #  )
+#  ament_add_gtest(occupancy_grid_map_projective_unit_tests
+#    test/occupancy_grid_map_projective_test.cpp
+#  )
 #  target_link_libraries(test_utils
 #    ${CUDA_LIBRARIES}
 #    ${PCL_LIBRARIES}
 #    ${PROJECT_NAME}_common
 #    ${PROJECT_NAME}_cuda
+#  )
+#  target_link_libraries(occupancy_grid_map_projective_unit_tests
+#    pointcloud_based_occupancy_grid_map
 #  )
 #  target_include_directories(costmap_unit_tests PRIVATE "include")
 #  target_include_directories(fusion_policy_unit_tests PRIVATE "include")

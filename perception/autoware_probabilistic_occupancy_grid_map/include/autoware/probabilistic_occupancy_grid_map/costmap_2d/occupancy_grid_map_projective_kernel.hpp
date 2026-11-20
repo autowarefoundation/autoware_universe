@@ -55,8 +55,8 @@ void fillUnknownSpaceLaunch(
   const std::size_t range_bins, const float map_resolution_inv, const float scan_origin_x,
   const float scan_origin_y, const float scan_origin_z, const float map_origin_x,
   const float map_origin_y, const float robot_pose_z, const int num_cells_x, const int num_cells_y,
-  std::uint8_t free_space_value, std::uint8_t no_information_value, std::uint8_t * costmap_tensor,
-  cudaStream_t stream);
+  std::uint8_t free_space_value, std::uint8_t no_information_value, std::uint8_t * free_space_mask,
+  std::uint8_t * costmap_tensor, cudaStream_t stream);
 
 void fillObstaclesLaunch(
   const std::uint64_t * points_tensor, const float distance_margin, const std::size_t angle_bins,
