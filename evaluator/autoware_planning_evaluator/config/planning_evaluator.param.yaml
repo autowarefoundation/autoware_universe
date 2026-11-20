@@ -1,6 +1,7 @@
 /**:
   ros__parameters:
     ego_frame: base_link # reference frame of ego
+    initial_span_duration_s: 0.1 # [s] default duration on the first frame of a span accumulation (error_duration, keep_duration)
 
     metrics_for_publish:
       - curvature
@@ -30,6 +31,7 @@
       - abnormal_stop_decision
       - blinker_change_count
       - steer_change_count
+      - trajectory_validation
 
     metrics_for_output:
       - curvature
@@ -59,6 +61,7 @@
       - abnormal_stop_decision
       - blinker_change_count
       - steer_change_count
+      - trajectory_validation
 
     trajectory:
       min_point_dist_m: 0.1 # [m] minimum distance between two successive points to use for angle calculation
@@ -118,3 +121,7 @@
     steer_change_count:
       window_duration_s: 5.0 # [s] window duration of counting steer change for publishing
       steer_rate_margin: 0.2 # [rad/s] margin of steer_rate around 0 to count as steer change
+
+    trajectory_validation:
+      # If true, LOW_CAUTION also counts as error; if false, HIGH_CAUTION and above count as error.
+      count_other_than_safe_as_error: false
