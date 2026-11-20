@@ -49,7 +49,13 @@ if(BUILD_TESTING)
   )
   target_link_libraries(test_trajectory_follower ${CONTROLLER_NODE})
 
-  # characterization test for the simple trajectory follower node
+  # unit tests for the ROS-independent SimpleTrajectoryFollower core logic
+  ament_add_gtest(test_simple_trajectory_follower
+    test/test_simple_trajectory_follower.cpp
+  )
+  target_link_libraries(test_simple_trajectory_follower ${SIMPLE_TRAJECTORY_FOLLOWER_NODE})
+
+  # integration (wiring) test for the simple trajectory follower node
   set(SIMPLE_TRAJECTORY_FOLLOWER_TEST test_simple_trajectory_follower_node)
   ament_add_ros_isolated_gtest(${SIMPLE_TRAJECTORY_FOLLOWER_TEST}
     test/test_simple_trajectory_follower_node.cpp
