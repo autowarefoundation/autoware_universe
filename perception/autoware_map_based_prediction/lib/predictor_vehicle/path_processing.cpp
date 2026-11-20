@@ -97,36 +97,54 @@ bool laneEndsWithinHorizon(
     lengths.emplace(lane.id(), value);
     return value;
   };
+  // The lane "ends" only if every branch reachable from the current lanelet runs out of
+  // following lanelets within the horizon. A single branch that continues past the horizon
+  // (e.g. the straight lane at an intersection whose turn lanelets leave the mapped area)
+  // means the object can keep following its lane, so no lane change is forced.
   // Distances are measured at lanelet exits. Cache each length once per query.
-  std::unordered_map<lanelet::Id, double> shortest;
+  // The longest route decides, so a lanelet is expanded again whenever a longer route reaches
+  // it (branches of different lengths that merge again). A cycle lengthens the route on every
+  // lap until it leaves the horizon, which correctly reports "not a lane end"; zero-length
+  // cycles are dropped by the equal-distance check and the expansion cap bounds the rest.
+  constexpr size_t max_expansions = 4096;
+  std::unordered_map<lanelet::Id, double> longest;
   std::queue<std::pair<lanelet::ConstLanelet, double>> pending;
   const double initial_distance = length(current_lanelet) - object_arc_length;
-  shortest.emplace(current_lanelet.id(), initial_distance);
+  if (std::max(0.0, initial_distance) > travel_distance) return false;
+  longest.emplace(current_lanelet.id(), initial_distance);
   pending.emplace(current_lanelet, initial_distance);
-  // A non-branching chain of depth D takes O(D) expected time and O(D) memory.
-  // Equal/longer revisits are discarded, so nonnegative-length cycles terminate.
+  double farthest_dead_end = -1.0;
+  size_t expansions = 0;
   while (!pending.empty()) {
     const auto [lane, distance] = pending.front();
     pending.pop();
-    if (distance > shortest.at(lane.id()) || std::max(0.0, distance) > travel_distance) {
-      continue;
-    }
+    // Superseded by a longer route that was queued after this entry.
+    if (distance < longest.at(lane.id())) continue;
+    if (++expansions > max_expansions) return false;
     if (expanded_lanelets) ++*expanded_lanelets;
     const auto following = graph.following(lane);
     if (following.empty()) {
-      if (lane_end_distance) *lane_end_distance = std::max(0.0, distance);
-      return true;
+      farthest_dead_end = std::max(farthest_dead_end, std::max(0.0, distance));
+      continue;
     }
     for (const auto & next : following) {
       const double next_distance = distance + length(next);
-      if (std::max(0.0, next_distance) > travel_distance) continue;
-      const auto found = shortest.find(next.id());
-      if (found != shortest.end() && next_distance >= found->second) continue;
-      shortest[next.id()] = next_distance;
+      // This branch continues beyond the horizon: the lane does not end.
+      if (std::max(0.0, next_distance) > travel_distance) return false;
+      const auto found = longest.find(next.id());
+      if (found != longest.end() && next_distance <= found->second) continue;
+      longest[next.id()] = next_distance;
       pending.emplace(next, next_distance);
     }
   }
-  return false;
+  if (farthest_dead_end < 0.0) return false;
+  if (lane_end_distance) *lane_end_distance = farthest_dead_end;
+  return true;
+}
+
+bool isDetectedLaneChange(const Maneuver maneuver)
+{
+  return maneuver == Maneuver::LEFT_LANE_CHANGE || maneuver == Maneuver::RIGHT_LANE_CHANGE;
 }
 
 std::vector<LaneletPathWithPathInfo> suppressUndetectedLaneChangePaths(
@@ -140,20 +158,40 @@ std::vector<LaneletPathWithPathInfo> suppressUndetectedLaneChangePaths(
   filtered_paths.reserve(paths.size());
   for (size_t i = 0; i < paths.size(); ++i) {
     const auto & origin = origins.at(i);
-    const bool suppress = paths[i].second.maneuver != Maneuver::LANE_FOLLOW &&
-                          origin.center_exists &&
-                          origin.detected_maneuver == Maneuver::LANE_FOLLOW &&
-                          !(keep_when_lane_ends && origin.lane_ends_within_horizon);
+    const auto & maneuver = paths[i].second.maneuver;
+    const bool is_lane_change = maneuver != Maneuver::LANE_FOLLOW;
+    // Only an explicit LEFT/RIGHT judgement counts as a detected lane change. UNINITIALIZED
+    // (no judgement yet, e.g. the first frames after the history was only updated at low
+    // speed) carries no evidence of lateral motion and is treated like lane-follow.
+    const bool detected_lc = isDetectedLaneChange(origin.detected_maneuver);
+    // Undetected LC of a lane-following vehicle (unless its lane ends within the horizon).
+    const bool undetected = origin.center_exists && !detected_lc &&
+                            !(keep_when_lane_ends && origin.lane_ends_within_horizon);
+    // The LC opposite to a detected one carries probability 0 and only adds a branch that
+    // confidence-agnostic consumers would still evaluate.
+    const bool opposite_of_detected = detected_lc && maneuver != origin.detected_maneuver;
+    const bool suppress = is_lane_change && (undetected || opposite_of_detected);
     if (!suppress) {
       filtered_paths.push_back(paths[i]);
-    } else if (suppressed_paths) {
+    } else if (suppressed_paths && undetected) {
+      // Only undetected LCs are held for restoration. The opposite side of a detected LC
+      // carries probability 0 and must never come back.
       suppressed_paths->push_back(paths[i]);
     }
   }
-  // A center candidate is never suppressed; retain the original set defensively.
   if (filtered_paths.empty()) {
+    // No center survived (inconsistent metadata; normal generation always retains the center):
+    // fall back to the original set, except the opposite side of a detected lane change, which
+    // carries probability 0 and must never come back. An empty result makes the generator use
+    // the straight path.
     if (suppressed_paths) suppressed_paths->clear();
-    return paths;
+    for (size_t i = 0; i < paths.size(); ++i) {
+      const auto & maneuver = paths[i].second.maneuver;
+      const auto & detected = origins.at(i).detected_maneuver;
+      const bool opposite_of_detected =
+        isDetectedLaneChange(detected) && maneuver != Maneuver::LANE_FOLLOW && maneuver != detected;
+      if (!opposite_of_detected) filtered_paths.push_back(paths[i]);
+    }
   }
   return filtered_paths;
 }
@@ -731,8 +769,10 @@ void PathProcessor::logLaneChangeSuppressionDecisions(
     if (lanelet_ref_paths[i].second.maneuver == Maneuver::LANE_FOLLOW) continue;
     const auto & origin = path_origins.at(i);
     const char * decision =
-      !origin.center_exists                               ? "kept_no_center"
-      : origin.detected_maneuver != Maneuver::LANE_FOLLOW ? "kept_detected_lc"
+      !origin.center_exists ? "kept_no_center"
+      : detail::isDetectedLaneChange(origin.detected_maneuver)
+        ? (lanelet_ref_paths[i].second.maneuver == origin.detected_maneuver ? "kept_detected_lc"
+                                                                            : "suppressed_opposite")
       : params_.lane_change_path_suppression_keep_when_lane_ends && origin.lane_ends_within_horizon
         ? "kept_lane_end"
         : "suppressed";
