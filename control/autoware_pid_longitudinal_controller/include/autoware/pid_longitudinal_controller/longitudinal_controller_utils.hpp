@@ -97,7 +97,12 @@ std::pair<TrajectoryPoint, size_t> lerpTrajectoryPoint(
     autoware::motion_utils::calcLongitudinalOffsetToSegment(points, seg_idx, pose.position);
   const double len_segment =
     autoware::motion_utils::calcSignedArcLength(points, seg_idx, seg_idx + 1);
-  const double interpolate_ratio = std::clamp(len_to_interpolated / len_segment, 0.0, 1.0);
+
+  constexpr double min_len_segment = 1e-6;
+  const bool zero_length_segment =
+    !std::isfinite(len_segment) || std::abs(len_segment) < min_len_segment;
+  const double interpolate_ratio =
+    zero_length_segment ? 0.0 : std::clamp(len_to_interpolated / len_segment, 0.0, 1.0);
 
   {
     const size_t i = seg_idx;
