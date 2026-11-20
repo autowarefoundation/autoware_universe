@@ -176,9 +176,19 @@ RadarObjectsAdapter::RadarObjectsAdapter(
   const std::string & topic_name)
 : params_(params), classification_remap_(classification_remap)
 {
-  required_attributes_ = {
-    "existence_probability", "position_x",     "position_y", "velocity_x", "velocity_y",
-    "acceleration_x",        "acceleration_y", "orientation"};
+  // The fields the conversion uses with nothing to fall back on. A radar must fill them with
+  // meaningful values and report their names in the object fields of its radar info. object_id
+  // is used as well, but is taken as always provided and need not be reported.
+  required_attributes_ = {"existence_probability",
+                          "position_x",
+                          "position_y",
+                          "velocity_x",
+                          "velocity_y",
+                          "acceleration_x",
+                          "acceleration_y",
+                          "orientation",
+                          "orientation_rate",
+                          "movement_status"};
 
   std::size_t hash_code = std::hash<std::string>{}(topic_name);
 
