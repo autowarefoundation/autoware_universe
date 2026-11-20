@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "autoware/mpc_lateral_controller/mpc_lateral_controller.hpp"
+#include "autoware/mpc_lateral_controller/stop_state_utils.hpp"
 
 #include <rclcpp/time.hpp>
 
@@ -29,6 +30,8 @@
 
 namespace
 {
+using autoware::motion::control::mpc_lateral_controller::clamp_steering_to_vehicle_limit;
+using autoware::motion::control::mpc_lateral_controller::min_target_velocity_within_distance;
 using autoware::motion::control::mpc_lateral_controller::MpcLateralController;
 using autoware::motion::control::mpc_lateral_controller::MpcLateralControllerConfig;
 using autoware::motion::control::mpc_lateral_controller::no_log;
@@ -344,6 +347,7 @@ MpcLateralControllerConfig make_default_config()
 
   config.stop_state_entry_ego_speed = stop_state_entry_ego_speed;
   config.stop_state_entry_target_speed = stop_state_entry_target_speed;
+  config.stop_state_entry_distance = 0.5;
   config.converged_steer_rad = converged_steer_rad;
   config.keep_steer_control_until_converged = true;
   config.new_traj_duration_time = new_traj_duration_time;
@@ -500,6 +504,69 @@ INSTANTIATE_TEST_SUITE_P(
   [](const ::testing::TestParamInfo<std::string> & info) { return info.param; });
 
 }  // namespace
+
+TEST(MpcLateralControllerTest, SteeringLimitKeepsSaturatedCommandReachable)
+{
+  // 0.554 rad can be requested on a tight bend even though the vehicle is
+  // physically limited to 0.54 rad. The convergence target must be reachable.
+  EXPECT_DOUBLE_EQ(clamp_steering_to_vehicle_limit(-0.554, 0.54), -0.54);
+  EXPECT_DOUBLE_EQ(clamp_steering_to_vehicle_limit(0.554, 0.54), 0.54);
+  EXPECT_DOUBLE_EQ(clamp_steering_to_vehicle_limit(0.3, 0.54), 0.3);
+  EXPECT_DOUBLE_EQ(clamp_steering_to_vehicle_limit(0.3, 0.0), 0.0);
+}
+
+TEST(MpcLateralControllerTest, ShortStopLookaheadExcludesPointsBeyondPidDepartureDistance)
+{
+  constexpr double pid_departure_distance = 0.5;
+  for (const double stop_distance : {0.78, 1.0}) {
+    auto trajectory = make_trajectory({
+      make_point(0.0, 0.0, 0.0), make_point(stop_distance / 2.0, 0.0, 0.0),
+      make_point(stop_distance, 0.0, 0.0)});
+    trajectory.points[0].longitudinal_velocity_mps = 0.4f;
+    trajectory.points[1].longitudinal_velocity_mps = 0.4f;
+    trajectory.points[2].longitudinal_velocity_mps = 0.0f;
+    SCOPED_TRACE(stop_distance);
+    EXPECT_FLOAT_EQ(
+      min_target_velocity_within_distance(trajectory, 0, pid_departure_distance), 0.4f);
+  }
+
+  // A stop at the threshold remains a stopped state, matching PID (departure is > 0.5).
+  auto at_boundary = make_trajectory({
+    make_point(0.0, 0.0, 0.0), make_point(0.25, 0.0, 0.0),
+    make_point(0.5, 0.0, 0.0)});
+  at_boundary.points[0].longitudinal_velocity_mps = 0.4f;
+  at_boundary.points[1].longitudinal_velocity_mps = 0.4f;
+  at_boundary.points[2].longitudinal_velocity_mps = 0.0f;
+  EXPECT_FLOAT_EQ(min_target_velocity_within_distance(at_boundary, 0, 0.5), 0.0f);
+}
+
+TEST(MpcLateralControllerTest, HoldingStoppedCommandDoesNotForceSteeringSyncFalse)
+{
+  MpcLateralController controller(make_default_config(), no_log);
+  auto clock = CycleClock().first_at(0.0).every(ctrl_period);
+  const auto driving = Input().following(straight_path()).planned_at(1.0).driving_at(1.0);
+  run_cycles(controller, driving, clock, cycles_spanning(convergence_history_sec));
+
+  const auto stopped = Input().following(straight_path()).planned_at(0.0).driving_at(0.0);
+  const auto output = controller.runDetailed(stopped, at(clock.next_cycle())).output;
+
+  // A settled, previously optimized steering command can remain converged at a stop.
+  EXPECT_TRUE(output.sync_data.is_steer_converged);
+}
+
+TEST(MpcLateralControllerTest, StoppedCommandDoesNotReportConvergedWithWrongSteering)
+{
+  MpcLateralController controller(make_default_config(), no_log);
+  auto clock = CycleClock().first_at(0.0).every(ctrl_period);
+  const auto driving = Input().following(straight_path()).planned_at(1.0).driving_at(1.0);
+  run_cycles(controller, driving, clock, cycles_spanning(convergence_history_sec));
+
+  const auto stopped =
+    Input().following(straight_path()).planned_at(0.0).driving_at(0.0).steering_at(0.25);
+  const auto output = controller.runDetailed(stopped, at(clock.next_cycle())).output;
+
+  EXPECT_FALSE(output.sync_data.is_steer_converged);
+}
 
 TEST(MpcLateralControllerTest, IsNotReadyWithoutTrajectory)
 {

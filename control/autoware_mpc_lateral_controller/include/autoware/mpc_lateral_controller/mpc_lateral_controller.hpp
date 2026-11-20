@@ -64,6 +64,8 @@ struct MpcLateralControllerConfig
   // Stop state
   double stop_state_entry_ego_speed{0.0};
   double stop_state_entry_target_speed{0.0};
+  // Lookahead for stopped-state classification; match PID drive_state_stop_dist by default.
+  double stop_state_entry_distance{0.5};
   double converged_steer_rad{0.0};
   bool keep_steer_control_until_converged{true};
   double new_traj_duration_time{0.0};
@@ -148,6 +150,7 @@ private:
 
   // Target vehicle speed threshold to enter the stop state.
   double m_stop_state_entry_target_speed;
+  double m_stop_state_entry_distance;
 
   // Convergence threshold for steering control.
   double m_converged_steer_rad;
