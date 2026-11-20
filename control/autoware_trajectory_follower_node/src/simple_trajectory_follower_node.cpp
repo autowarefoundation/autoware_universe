@@ -17,6 +17,7 @@
 #include "autoware/trajectory_follower_node/simple_trajectory_follower.hpp"
 
 #include <rclcpp/rclcpp.hpp>
+#include <tl/expected.hpp>
 
 #include <chrono>
 #include <functional>
@@ -56,11 +57,15 @@ void SimpleTrajectoryFollowerNode::on_timer()
 
   const auto result =
     follower_.compute_control_command(*trajectory_, *odometry_, get_clock()->now());
-  const auto & cmd = result.command;
+  if (!result) {
+    RCLCPP_WARN(get_logger(), "cannot compute control command: %s", result.error().c_str());
+    return;
+  }
+  const auto & cmd = result->command;
 
-  const auto & debug = result.debug;
+  const auto & debug = result->debug;
   RCLCPP_DEBUG(
-    get_logger(), "kp = %f, lat_err = %f, kd - %f, yaw_err = %f, steer = %f", debug.steer_kp,
+    get_logger(), "kp = %f, lat_err = %f, kd = %f, yaw_err = %f, steer = %f", debug.steer_kp,
     debug.lateral_error, debug.steer_kd, debug.yaw_error, cmd.lateral.steering_tire_angle);
   RCLCPP_DEBUG(
     get_logger(), "vel_err = %f, acc = %f", debug.velocity_error, cmd.longitudinal.acceleration);
