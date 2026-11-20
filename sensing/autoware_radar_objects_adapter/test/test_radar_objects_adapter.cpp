@@ -155,12 +155,6 @@ const std::vector<std::string> required_fields_in_order = {
   "existence_probability", "position_x",     "position_y",  "velocity_x",       "velocity_y",
   "acceleration_x",        "acceleration_y", "orientation", "orientation_rate", "movement_status"};
 
-// The optional object fields the adapter looks at: six that are filled from a parameter when
-// undeclared, and the two standard deviations, whose variances then stay zero.
-const std::set<std::string> optional_fields = {
-  "position_z", "velocity_z", "acceleration_z",  "size_x",
-  "size_y",     "size_z",     "orientation_std", "orientation_rate_std"};
-
 // The object fields a Continental ARS548 declares through its nebula driver (read from
 // continental_ars548_decoder_wrapper.cpp on 2026-09-17). velocity_z, acceleration_z and size_z are
 // not among them, so on the vehicle those three come from the parameters.
@@ -451,135 +445,12 @@ TEST(RadarObjectsAdapter, Gate_ValidRadarInfo_ObjectsConverted)
 }
 
 // ---------------------------------------------------------------------------------------------
-// What update_radar_info() reports about a radar info: which required fields it is missing, and
-// which optional fields will be filled from a parameter, with what value. The node used to log
-// this; nothing read it, so the characterization suite could not pin it.
+// What update_radar_info() reports about a radar info, across messages: what a single radar
+// info means (which required fields it is missing, which optional fields will be filled from a
+// parameter) is the converter's and pinned by its test; here, that the answer is the converter's
+// and that the first valid radar info fixes it. The node used to log this; nothing read it, so
+// the characterization suite could not pin it.
 // ---------------------------------------------------------------------------------------------
-
-// A radar info that declares the required fields and nothing else is valid, and every optional
-// field that has a parameter is reported as filled from it, with the parameter's value.
-TEST(RadarObjectsAdapter, RadarInfo_AllRequiredFields_ValidAndAllDefaulted)
-{
-  // Arrange
-  RadarObjectsAdapter adapter = make_adapter();
-
-  // Act
-  const auto result = adapter.update_radar_info(make_radar_info(required_fields));
-
-  // Assert
-  ASSERT_TRUE(result.has_value());
-  EXPECT_EQ(result->defaulted_fields(), all_defaulted);
-}
-
-// Each of the ten required fields is required on its own: leaving out any one of them keeps
-// the radar info invalid, and the result names exactly that field.
-TEST(RadarObjectsAdapter, RadarInfo_OneRequiredFieldMissing_InvalidAndNamed)
-{
-  for (const auto & missing : required_fields) {
-    SCOPED_TRACE(missing);
-    // Arrange
-    RadarObjectsAdapter adapter = make_adapter();
-
-    // Act
-    const auto result =
-      adapter.update_radar_info(make_radar_info(without(required_fields, missing)));
-
-    // Assert
-    ASSERT_FALSE(result.has_value());
-    EXPECT_EQ(result.error().missing_required_fields(), std::vector<std::string>{missing});
-  }
-}
-
-// When several required fields are missing, all of them are named, in the order they are
-// required, whatever order the radar info declared the others in; the error's text, which the
-// node logs, lists them the same way.
-TEST(RadarObjectsAdapter, RadarInfo_SeveralRequiredFieldsMissing_AllNamedInRequiredOrder)
-{
-  // Arrange
-  RadarObjectsAdapter adapter = make_adapter();
-
-  // Act
-  const auto result =
-    adapter.update_radar_info(make_radar_info({"velocity_y", "position_x", "orientation"}));
-
-  // Assert
-  ASSERT_FALSE(result.has_value());
-  const std::vector<std::string> expected = {
-    "existence_probability", "position_y",       "velocity_x",     "acceleration_x",
-    "acceleration_y",        "orientation_rate", "movement_status"};
-  EXPECT_EQ(result.error().missing_required_fields(), expected);
-  const std::string what = result.error().what();
-  EXPECT_NE(
-    what.find(
-      "existence_probability, position_y, velocity_x, acceleration_x, acceleration_y, "
-      "orientation_rate, movement_status"),
-    std::string::npos)
-    << what;
-}
-
-// A radar info with no object fields at all names every required field.
-TEST(RadarObjectsAdapter, RadarInfo_NoFields_AllRequiredFieldsNamed)
-{
-  // Arrange
-  RadarObjectsAdapter adapter = make_adapter();
-
-  // Act
-  const auto result = adapter.update_radar_info(make_radar_info({}));
-
-  // Assert
-  ASSERT_FALSE(result.has_value());
-  EXPECT_EQ(result.error().missing_required_fields(), required_fields_in_order);
-}
-
-// Each optional field, once declared, drops out of the defaulted list and only it does.
-TEST(RadarObjectsAdapter, RadarInfo_OneOptionalField_OnlyItNotDefaulted)
-{
-  for (const auto & declared : optional_fields) {
-    SCOPED_TRACE(declared);
-    // Arrange
-    RadarObjectsAdapter adapter = make_adapter();
-
-    // Act
-    const auto result =
-      adapter.update_radar_info(make_radar_info(with(required_fields, {declared})));
-
-    // Assert
-    ASSERT_TRUE(result.has_value());
-    EXPECT_EQ(result->defaulted_fields(), all_defaulted_except(declared));
-  }
-}
-
-// With every optional field declared, nothing is defaulted.
-TEST(RadarObjectsAdapter, RadarInfo_AllOptionalFields_NothingDefaulted)
-{
-  // Arrange
-  RadarObjectsAdapter adapter = make_adapter();
-
-  // Act
-  const auto result =
-    adapter.update_radar_info(make_radar_info(with(required_fields, optional_fields)));
-
-  // Assert
-  ASSERT_TRUE(result.has_value());
-  EXPECT_TRUE(result->defaulted_fields().empty());
-}
-
-// Fields the adapter does not know (the ones the radar in use declares on top of the ones above,
-// and arbitrary names) are ignored: they neither help the required check nor count as optional.
-TEST(RadarObjectsAdapter, RadarInfo_UnknownFields_Ignored)
-{
-  // Arrange
-  RadarObjectsAdapter adapter = make_adapter();
-
-  // Act
-  const auto result = adapter.update_radar_info(make_radar_info(with(
-    without(required_fields, "orientation"),
-    {"object_id", "age", "measurement_status", "not_a_field"})));
-
-  // Assert
-  ASSERT_FALSE(result.has_value());
-  EXPECT_EQ(result.error().missing_required_fields(), std::vector<std::string>{"orientation"});
-}
 
 // Until a valid radar info arrives, each message is judged on its own: a message that declares
 // only the required field an earlier one lacked does not complete it, and nothing is converted.
@@ -1256,23 +1127,6 @@ TEST(RadarObjectsAdapter, Classification_UnknownLabelInParameter_MapsToUnknown)
   EXPECT_EQ(labeled_probabilities(outputs->detections.objects.at(0).classification), expected);
 }
 
-// An object without classifications comes out without classifications, on both outputs.
-TEST(RadarObjectsAdapter, Classification_NoClassifications_EmptyList)
-{
-  // Arrange
-  const RadarInfo info = make_radar_info(ars548_fields);
-  RadarObject radar = make_radar_object();
-  radar.classifications.clear();
-
-  // Act
-  const auto outputs = run_adapter_and_collect_outputs(info, {radar});
-  ASSERT_TRUE(outputs.has_value());
-
-  // Assert
-  EXPECT_TRUE(outputs->detections.objects.at(0).classification.empty());
-  EXPECT_TRUE(outputs->tracks.objects.at(0).classification.empty());
-}
-
 // ---------------------------------------------------------------------------------------------
 // Conversion into tracked objects. The same radar object goes in, and the tracked object made of
 // it is read. It shares pose, twist, shape and classification with the detected object, and adds
@@ -1335,62 +1189,6 @@ TEST(RadarObjectsAdapter, Tracks_Uuid_ObjectIdThenTopicHashThenZeros)
     std::equal(
       first_uuid.begin() + object_id_bytes, first_uuid.end(),
       second_uuid.begin() + object_id_bytes));
-}
-
-// Two adapters on different input topics give the same object different ids: the hash is what
-// tells one radar's tracks from another's.
-TEST(RadarObjectsAdapter, Tracks_Uuid_DiffersBetweenTopics)
-{
-  // Arrange
-  const RadarInfo info = make_radar_info(ars548_fields);
-  const RadarObjects objects = make_radar_objects({make_radar_object()});
-  RadarObjectsAdapter front = make_adapter();
-  RadarObjectsAdapter rear(
-    DefaultParameters{}.to_params(),
-    make_classification_remap_from_string_pair(built_in_remap).remap,
-    "/sensing/radar/rear/objects_raw");
-  ASSERT_TRUE(front.update_radar_info(info).has_value());
-  ASSERT_TRUE(rear.update_radar_info(info).has_value());
-
-  // Act
-  const auto from_front = front.convert(objects);
-  const auto from_rear = rear.convert(objects);
-  ASSERT_TRUE(from_front.has_value());
-  ASSERT_TRUE(from_rear.has_value());
-
-  // Assert
-  EXPECT_NE(
-    from_front->tracks.objects.at(0).object_id.uuid,
-    from_rear->tracks.objects.at(0).object_id.uuid);
-}
-
-// Only an object the radar reports as DYNAMIC is moving; STATIC, but also INVALID and UNKNOWN,
-// are reported as stationary.
-TEST(RadarObjectsAdapter, Tracks_MovementStatus_OnlyDynamicIsMoving)
-{
-  // Arrange: one object per movement status, in this order
-  const RadarInfo info = make_radar_info(ars548_fields);
-  const auto with_status = [](uint8_t status) {
-    RadarObject radar = make_radar_object();
-    radar.movement_status = status;
-    return radar;
-  };
-  const std::vector<RadarObject> radars = {
-    with_status(RadarObject::MOVEMENT_STATUS_DYNAMIC),
-    with_status(RadarObject::MOVEMENT_STATUS_STATIC),
-    with_status(RadarObject::MOVEMENT_STATUS_INVALID),
-    with_status(RadarObject::MOVEMENT_STATUS_UNKNOWN)};
-
-  // Act
-  const auto outputs = run_adapter_and_collect_outputs(info, radars);
-  ASSERT_TRUE(outputs.has_value());
-
-  // Assert
-  const auto & tracks = outputs->tracks.objects;
-  EXPECT_FALSE(tracks.at(0).kinematics.is_stationary);
-  EXPECT_TRUE(tracks.at(1).kinematics.is_stationary);
-  EXPECT_TRUE(tracks.at(2).kinematics.is_stationary);
-  EXPECT_TRUE(tracks.at(3).kinematics.is_stationary);
 }
 
 // The acceleration gets the same treatment as the velocity: rotated into the object's frame

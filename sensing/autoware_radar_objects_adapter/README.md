@@ -23,6 +23,11 @@ This parameter allows remapping of classification labels from `autoware_sensing_
 
 Every label of `RadarClassification` can be named as an input label, and every label of `ObjectClassification` as an output label. For example, the current default configuration remaps `BUS`, `TRAILER`, `MOTORCYCLE` and `BICYCLE` from radar classification to `CAR` in the perception classification, and `HAZARD`, `OVER_DRIVABLE` and `UNDER_DRIVABLE` to `UNKNOWN`, while keeping other labels unchanged. A radar label without an entry in the table becomes `UNKNOWN`.
 
+The remap serves two purposes, and a configuration is written with both in mind:
+
+- Labels the perception pipeline does not use (`HAZARD`, `OVER_DRIVABLE`, `UNDER_DRIVABLE`) become `UNKNOWN` unless a configuration says otherwise, for any radar: that is what the built-in defaults do.
+- Labels that a particular radar often gets wrong are mapped to the label it most likely meant. The shipped configuration does this for the radar in use; it is not a property of radars in general and should be reviewed when another radar is connected.
+
 The `probability` of each radar classification is treated as an independent confidence for that label, not as a share of a distribution, and is copied as it is. Consequently, if multiple radar labels are remapped to the same perception label, multiple entries with that label and their own probabilities appear in the output; the probabilities are not merged. This does not violate any logic in Autoware but may be worth monitoring.
 
 ### Inputs / Outputs
