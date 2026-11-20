@@ -245,8 +245,7 @@ void RingOutlierFilterComponent::faster_filter(
         }
       } else if (publish_outlier_pointcloud_) {
         for (int i = walk_first_idx; i <= walk_last_idx; i++) {
-          auto input_ptr =
-            reinterpret_cast<const InputPointType *>(&input->data[indices[walk_first_idx]]);
+          auto input_ptr = reinterpret_cast<const InputPointType *>(&input->data[indices[i]]);
           InputPointType outlier_point = *input_ptr;
 
           if (transform_info.need_transform) {
@@ -297,7 +296,7 @@ void RingOutlierFilterComponent::faster_filter(
         output_size += output.point_step;
       }
     } else if (publish_outlier_pointcloud_) {
-      for (int i = walk_first_idx; i < walk_last_idx; i++) {
+      for (int i = walk_first_idx; i <= walk_last_idx; i++) {
         auto input_ptr = reinterpret_cast<const InputPointType *>(&input->data[indices[i]]);
         InputPointType outlier_point = *input_ptr;
         if (transform_info.need_transform) {
