@@ -180,7 +180,8 @@ TEST(SimpleTrajectoryFollowerTest, SelectsNearestTrajectoryPointForControl)
   Trajectory trajectory;
   trajectory.header.frame_id = "map";
   trajectory.points = {
-    make_trajectory_point(-10.0, 0.0, 0.0, 1.0), make_trajectory_point(0.0, 0.0, 0.0, 5.0),
+    make_trajectory_point(-10.0, 0.0, 0.0, 1.0),
+    make_trajectory_point(0.0, 0.0, 0.0, 5.0),
     make_trajectory_point(10.0, 0.0, 0.0, 9.0),  // closest point to ego at (9.8, 0)
   };
   const auto odometry = make_odometry(9.8, 0.0, 0.0, 9.0);
