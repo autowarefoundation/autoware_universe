@@ -126,19 +126,18 @@ std::set<std::string> with(std::set<std::string> fields, const std::set<std::str
   return fields;
 }
 
-// The eight object fields the node insists on. Without any one of them it reports the radar as
+// The ten object fields the node insists on. Without any one of them it reports the radar as
 // incompatible and converts nothing.
 const std::set<std::string> required_fields = {
-  "existence_probability", "position_x",     "position_y", "velocity_x", "velocity_y",
-  "acceleration_x",        "acceleration_y", "orientation"};
+  "existence_probability", "position_x",     "position_y",  "velocity_x",       "velocity_y",
+  "acceleration_x",        "acceleration_y", "orientation", "orientation_rate", "movement_status"};
 
 // The object fields a Continental ARS548 declares through its nebula driver (read from
 // continental_ars548_decoder_wrapper.cpp on 2026-09-17). velocity_z, acceleration_z and size_z are
 // not among them, so on the vehicle those three come from the parameters.
 const std::set<std::string> ars548_fields = with(
-  required_fields,
-  {"object_id", "age", "measurement_status", "movement_status", "position_z", "size_x", "size_y",
-   "orientation_std", "orientation_rate", "orientation_rate_std"});
+  required_fields, {"object_id", "age", "measurement_status", "position_z", "size_x", "size_y",
+                    "orientation_std", "orientation_rate_std"});
 
 RadarClassification make_classification(uint8_t label, float probability)
 {
