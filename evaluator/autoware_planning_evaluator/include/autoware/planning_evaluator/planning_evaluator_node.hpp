@@ -34,6 +34,7 @@
 #include <autoware_internal_debug_msgs/msg/float64_stamped.hpp>
 #include <autoware_internal_planning_msgs/msg/planning_factor.hpp>
 #include <autoware_internal_planning_msgs/msg/planning_factor_array.hpp>
+#include <autoware_internal_planning_msgs/msg/validation_report_array.hpp>
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <autoware_planning_msgs/msg/lanelet_route.hpp>
 #include <autoware_planning_msgs/msg/pose_with_uuid_stamped.hpp>
@@ -70,6 +71,7 @@ using nav_msgs::msg::Odometry;
 using LaneletMapBin = autoware_map_msgs::msg::LaneletMapBin;
 using autoware_internal_planning_msgs::msg::PlanningFactor;
 using autoware_internal_planning_msgs::msg::PlanningFactorArray;
+using autoware_internal_planning_msgs::msg::ValidationReportArray;
 using autoware_planning_msgs::msg::LaneletRoute;
 using geometry_msgs::msg::AccelWithCovarianceStamped;
 /**
@@ -135,6 +137,11 @@ public:
   void onPlanningFactors(
     const std::shared_ptr<const PlanningFactorArray> planning_factors,
     const std::string & module_name);
+
+  /**
+   * @brief validation reports from trajectory_validator (remapped ~/input/validation_reports)
+   */
+  void onValidationReports(const ValidationReportArray::ConstSharedPtr reports_msg);
 
   /**
    * @brief add the given metric statistic
@@ -221,6 +228,10 @@ private:
     blinker_sub_ =
       autoware::agnocast_wrapper::polling::create_polling_subscriber<TurnIndicatorsReport>(
         this, "~/input/turn_indicators_status");
+  autoware::agnocast_wrapper::polling::PollingSubscriber<ValidationReportArray>::SharedPtr
+    validation_reports_sub_ =
+      autoware::agnocast_wrapper::polling::create_polling_subscriber<ValidationReportArray>(
+        this, "~/input/validation_reports");
 
   std::unordered_map<
     std::string,

@@ -53,6 +53,7 @@ enum class OutputMetric {
   abnormal_stop_decision,
   blinker_change_count,
   steer_change_count,
+  trajectory_validation,
   SIZE,
 };
 
@@ -87,7 +88,8 @@ static const std::unordered_map<std::string, OutputMetric> str_to_output_metric 
   {"stop_decision", OutputMetric::stop_decision},
   {"abnormal_stop_decision", OutputMetric::abnormal_stop_decision},
   {"blinker_change_count", OutputMetric::blinker_change_count},
-  {"steer_change_count", OutputMetric::steer_change_count}};
+  {"steer_change_count", OutputMetric::steer_change_count},
+  {"trajectory_validation", OutputMetric::trajectory_validation}};
 
 static const std::unordered_map<OutputMetric, std::string> output_metric_to_str = {
   {OutputMetric::curvature, "curvature"},
@@ -117,7 +119,8 @@ static const std::unordered_map<OutputMetric, std::string> output_metric_to_str 
   {OutputMetric::stop_decision, "stop_decision"},
   {OutputMetric::abnormal_stop_decision, "abnormal_stop_decision"},
   {OutputMetric::blinker_change_count, "blinker_change_count"},
-  {OutputMetric::steer_change_count, "steer_change_count"}};
+  {OutputMetric::steer_change_count, "steer_change_count"},
+  {OutputMetric::trajectory_validation, "trajectory_validation"}};
 
 // OutputMetrics descriptions
 static const std::unordered_map<OutputMetric, std::string> output_metric_descriptions = {
@@ -157,7 +160,10 @@ static const std::unordered_map<OutputMetric, std::string> output_metric_descrip
   {OutputMetric::blinker_change_count,
    "Statics of published blinker_change_count metrics and total count of blink changes"},
   {OutputMetric::steer_change_count,
-   "Statics of published steer_change_count metrics and total count of steer changes"}};
+   "Statics of published steer_change_count metrics and total count of steer changes"},
+  {OutputMetric::trajectory_validation,
+   "Statics of trajectory validation error_duration (min/max/mean/total of completed spans), "
+   "error_count per trajectory scope and per metric row"}};
 
 namespace details
 {
