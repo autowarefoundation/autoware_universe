@@ -87,6 +87,10 @@ struct ObstacleFilteringParam
   double obstacle_velocity_threshold_from_cruise{};
   double obstacle_velocity_threshold_to_cruise{};
 
+  double obstacle_filter_ego_jerk{};
+  double obstacle_filter_dist_max_range{};
+  double obstacle_filter_dist_min_range{};
+
   ObstacleFilteringParam() = default;
   explicit ObstacleFilteringParam(rclcpp::Node & node)
   {
@@ -134,6 +138,12 @@ struct ObstacleFilteringParam
       node, "obstacle_cruise.obstacle_filtering.obstacle_velocity_threshold_from_cruise");
     obstacle_velocity_threshold_to_cruise = get_or_declare_parameter<double>(
       node, "obstacle_cruise.obstacle_filtering.obstacle_velocity_threshold_to_cruise");
+    obstacle_filter_ego_jerk = get_or_declare_parameter<double>(
+      node, "obstacle_cruise.obstacle_filtering.obstacle_filter_ego_jerk");
+    obstacle_filter_dist_max_range = get_or_declare_parameter<double>(
+      node, "obstacle_cruise.obstacle_filtering.obstacle_filter_dist_max_range");
+    obstacle_filter_dist_min_range = get_or_declare_parameter<double>(
+      node, "obstacle_cruise.obstacle_filtering.obstacle_filter_dist_min_range");
   }
 };
 
