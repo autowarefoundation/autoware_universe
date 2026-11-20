@@ -478,7 +478,7 @@ ObjectData StaticObstacleAvoidanceModule::createObjectData(
     autoware::motion_utils::findNearestIndex(path_points, object_pose.position);
   const auto object_closest_pose = path_points.at(object_closest_index).point.pose;
   const auto object_type = utils::getHighestProbLabel(object.classification);
-  const auto object_parameter = parameters_->object_parameters.at(object_type);
+  const auto object_parameter = parameters_->getObjectParameter(object_type);
 
   ObjectData object_data{};
 
@@ -794,7 +794,7 @@ void StaticObstacleAvoidanceModule::fillDebugData(
 
   const auto o_front = data.stop_target_object.value();
   const auto object_type = utils::getHighestProbLabel(o_front.object.classification);
-  const auto object_parameter = parameters_->object_parameters.at(object_type);
+  const auto object_parameter = parameters_->getObjectParameter(object_type);
   const auto constant_distance = helper_->getFrontConstantDistance(o_front);
   const auto & vehicle_width = planner_data_->parameters.vehicle_width;
 
@@ -976,7 +976,7 @@ bool StaticObstacleAvoidanceModule::isSafePath(
     const auto & object_twist = object.initial_twist;
     const auto v_norm = std::hypot(object_twist.linear.x, object_twist.linear.y);
     const auto object_type = object.classification;
-    const auto object_parameter = parameters_->object_parameters.at(object_type.label);
+    const auto object_parameter = parameters_->getObjectParameter(object_type.label);
     const auto is_object_moving = v_norm > object_parameter.moving_speed_threshold;
 
     const auto is_object_oncoming =
@@ -1917,7 +1917,7 @@ double StaticObstacleAvoidanceModule::calcDistanceToStopLine(const ObjectData & 
   // use_conservative_buffer_longitudinal)
 
   const auto object_type = utils::getHighestProbLabel(object.object.classification);
-  const auto object_parameter = parameters_->object_parameters.at(object_type);
+  const auto object_parameter = parameters_->getObjectParameter(object_type);
 
   const auto lateral_hard_margin = object.is_parked
                                      ? object_parameter.lateral_hard_margin_for_parked_vehicle
@@ -2193,7 +2193,7 @@ void StaticObstacleAvoidanceModule::insertPrepareVelocity(ShiftedPath & shifted_
   // calculate shift length for front object.
   const auto & vehicle_width = planner_data_->parameters.vehicle_width;
   const auto object_type = utils::getHighestProbLabel(object.value().object.classification);
-  const auto object_parameter = parameters_->object_parameters.at(object_type);
+  const auto object_parameter = parameters_->getObjectParameter(object_type);
   const auto lateral_hard_margin = object.value().is_parked
                                      ? object_parameter.lateral_hard_margin_for_parked_vehicle
                                      : object_parameter.lateral_hard_margin;

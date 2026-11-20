@@ -22,9 +22,12 @@
 
 #include <rclcpp/time.hpp>
 
+#include <autoware_perception_msgs/msg/object_classification.hpp>
+
 #include <lanelet2_core/primitives/Lanelet.h>
 #include <lanelet2_core/primitives/LineString.h>
 
+#include <cstdint>
 #include <limits>
 #include <memory>
 #include <optional>
@@ -366,6 +369,18 @@ struct AvoidanceParameters
 
   // parameters depend on object class
   std::unordered_map<uint8_t, ObjectParameter> object_parameters;
+
+  // Perception may publish more classes than this planner has parameterized.
+  // The original object classification remains untouched; only lookups fall back.
+  const ObjectParameter & getObjectParameter(const uint8_t label) const
+  {
+    const auto it = object_parameters.find(label);
+    if (it != object_parameters.end()) {
+      return it->second;
+    }
+    return object_parameters.at(autoware_perception_msgs::msg::ObjectClassification::UNKNOWN);
+  }
+
 
   // ego predicted path params.
   utils::path_safety_checker::EgoPredictedPathParams ego_predicted_path_params{};

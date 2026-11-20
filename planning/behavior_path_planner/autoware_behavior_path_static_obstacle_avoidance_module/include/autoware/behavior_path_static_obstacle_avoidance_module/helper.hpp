@@ -172,7 +172,7 @@ public:
   double getFrontConstantDistance(const ObjectData & object) const
   {
     const auto object_type = utils::getHighestProbLabel(object.object.classification);
-    const auto object_parameter = parameters_->object_parameters.at(object_type);
+    const auto object_parameter = parameters_->getObjectParameter(object_type);
     if (!parameters_->consider_front_overhang) {
       return object_parameter.longitudinal_margin;
     }
@@ -182,7 +182,7 @@ public:
   double getRearConstantDistance(const ObjectData & object) const
   {
     const auto object_type = utils::getHighestProbLabel(object.object.classification);
-    const auto object_parameter = parameters_->object_parameters.at(object_type);
+    const auto object_parameter = parameters_->getObjectParameter(object_type);
     if (!parameters_->consider_rear_overhang) {
       return object_parameter.longitudinal_margin;
     }
