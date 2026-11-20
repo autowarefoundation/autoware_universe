@@ -9,9 +9,11 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   "src/continuous_condition.cpp"
 )
 
-rclcpp_components_register_node(${PROJECT_NAME}
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   PLUGIN "autoware::stop_mode_operator::StopModeOperator"
   EXECUTABLE "stop_mode_operator_node"
+  ROS2_EXECUTOR SingleThreadedExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
 )
 
 if(BUILD_TESTING)
