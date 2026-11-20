@@ -17,10 +17,9 @@
 // The control-law behavior is now covered exhaustively by the ROS-independent unit tests in
 // test_simple_trajectory_follower.cpp. What those unit tests CANNOT check is the ROS wiring: that
 // the node's polling subscribers latch the inputs, that the 30 ms timer fires, that the result is
-// published on the output topic, and that the "data not ready" guard suppresses publishing. This
-// file keeps just the two minimal cases that exercise that wiring end to end; the earlier
-// characterization cases that re-derived control values through the ROS interface were removed in
-// Phase 4 once the core unit tests replaced them.
+// published on the output topic, that the "data not ready" guard suppresses publishing, and that an
+// empty trajectory is skipped gracefully (the core returns an error) instead of crashing the node.
+// This file keeps just the minimal cases that exercise that wiring end to end.
 //
 // The node is driven through its real ROS interface:
 //   subscribes : ~/input/kinematics  (nav_msgs/Odometry)
@@ -202,24 +201,26 @@ TEST_F(SimpleTrajectoryFollowerNodeTest, PublishesControlCommandFromSubscribedIn
   EXPECT_FLOAT_EQ(cmd->longitudinal.acceleration, expected_acceleration);
 }
 
-// Wiring of the latent empty-trajectory defect. An empty trajectory (points.size() == 0) makes the
-// timer callback throw from inside findNearestIndex(); in production this exception escapes the
-// executor spin and kills the node process. The pure-function counterpart
-// (SimpleTrajectoryFollowerTest.ThrowsWhenTrajectoryIsEmpty) cannot observe the node/timer path, so
-// this node-level case is kept to characterize it. A future PR that makes the node handle an empty
-// trajectory gracefully (as the original NOTE recommended) must update this expectation.
-TEST_F(SimpleTrajectoryFollowerNodeTest, PropagatesExceptionWhenTrajectoryHasNoPoints)
+// Wiring of the empty-trajectory path. An empty trajectory (points.size() == 0) has no nearest
+// point, so the core returns an error and the node must skip publishing (and must not crash). This
+// is the node-level counterpart of
+// SimpleTrajectoryFollowerTest.ReturnsErrorWhenTrajectoryIsEmpty: the unit test proves the core
+// returns an error, this proves the timer callback handles it and keeps the node alive. (Previously
+// the core threw from findNearestIndex() and the exception escaped the timer callback, killing the
+// node process.)
+TEST_F(SimpleTrajectoryFollowerNodeTest, DoesNotPublishControlWhenTrajectoryIsEmpty)
 {
   // Arrange: odometry is ready, but the trajectory carries zero points.
   start_follower(FollowerParams{});
   set_ego_odometry(0.0, 0.0, 0.0, 1.0);
   set_trajectory(std::vector<TrajectoryPoint>{});
 
-  // Act + Assert: driving the node makes the timer callback throw; spin_until_control_command()
-  // does not catch it, so it propagates out. Assert the base std::exception rather than the
-  // concrete type so the test is not coupled to which utility (currently std::invalid_argument)
-  // raised it.
-  EXPECT_THROW(spin_until_control_command(), std::exception);
+  // Act: give the 30 ms timer plenty of chances to fire; the node should keep running and publish
+  // nothing.
+  const auto cmd = spin_until_control_command(std::chrono::milliseconds{1000});
+
+  // Assert
+  EXPECT_EQ(cmd, nullptr);
 }
 
 // Wiring of the "data not ready" guard: with only odometry available, process_data() reports not

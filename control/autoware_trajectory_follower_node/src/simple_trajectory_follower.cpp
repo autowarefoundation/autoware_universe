@@ -16,11 +16,13 @@
 
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_utils/geometry/pose_deviation.hpp>
+#include <tl/expected.hpp>
 
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 
 #include <algorithm>
 #include <cmath>
+#include <string>
 
 namespace simple_trajectory_follower
 {
@@ -102,9 +104,14 @@ SimpleTrajectoryFollower::SimpleTrajectoryFollower(const SimpleTrajectoryFollowe
 {
 }
 
-SimpleTrajectoryFollowerResult SimpleTrajectoryFollower::compute_control_command(
+tl::expected<SimpleTrajectoryFollowerResult, std::string>
+SimpleTrajectoryFollower::compute_control_command(
   const Trajectory & trajectory, const Odometry & odometry, const rclcpp::Time & stamp) const
 {
+  if (trajectory.points.empty()) {
+    return tl::make_unexpected(std::string("trajectory has no points"));
+  }
+
   const auto closest = findNearestIndex(trajectory.points, odometry.pose.pose.position);
   const auto & closest_traj_point = trajectory.points.at(closest);
 

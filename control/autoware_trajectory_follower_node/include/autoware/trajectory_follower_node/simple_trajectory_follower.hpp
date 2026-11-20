@@ -16,10 +16,13 @@
 #define AUTOWARE__TRAJECTORY_FOLLOWER_NODE__SIMPLE_TRAJECTORY_FOLLOWER_HPP_
 
 #include <rclcpp/time.hpp>
+#include <tl/expected.hpp>
 
 #include <autoware_control_msgs/msg/control.hpp>
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <nav_msgs/msg/odometry.hpp>
+
+#include <string>
 
 namespace simple_trajectory_follower
 {
@@ -57,9 +60,10 @@ class SimpleTrajectoryFollower
 public:
   explicit SimpleTrajectoryFollower(const SimpleTrajectoryFollowerConfig & config);
 
-  // Precondition: trajectory.points must not be empty. As in the original node, an empty trajectory
-  // makes motion_utils::findNearestIndex throw (std::invalid_argument); this behavior is preserved.
-  SimpleTrajectoryFollowerResult compute_control_command(
+  // Computes one control step for the ego against the trajectory. Returns an error (tl::unexpected)
+  // when no command can be produced, i.e. the trajectory has no points (the nearest-point lookup is
+  // then undefined); the node logs the error and skips the cycle instead of crashing.
+  tl::expected<SimpleTrajectoryFollowerResult, std::string> compute_control_command(
     const Trajectory & trajectory, const Odometry & odometry, const rclcpp::Time & stamp) const;
 
 private:
