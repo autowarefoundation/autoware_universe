@@ -16,6 +16,8 @@
 
 #include "autoware/multi_object_tracker/tracker/motion_model/static_motion_model.hpp"
 
+#include "autoware/multi_object_tracker/tracker/motion_model/motion_model_math.hpp"
+
 #include <Eigen/Core>
 #include <autoware_utils_geometry/msg/covariance.hpp>
 
@@ -160,29 +162,24 @@ bool StaticMotionModel::getPredictedState(
   twist.angular.z = 0.0;
 
   // set pose covariance
-  constexpr double zz_cov = 0.1 * 0.1;   // TODO(yukkysaito) Currently tentative
-  constexpr double rr_cov = 0.1 * 0.1;   // TODO(yukkysaito) Currently tentative
-  constexpr double pp_cov = 0.1 * 0.1;   // TODO(yukkysaito) Currently tentative
-  constexpr double yaw_cov = 0.1 * 0.1;  // TODO(yukkysaito) Currently tentative
   pose_cov[XYZRPY_COV_IDX::X_X] = P(IDX::X, IDX::X);
   pose_cov[XYZRPY_COV_IDX::X_Y] = P(IDX::X, IDX::Y);
   pose_cov[XYZRPY_COV_IDX::Y_X] = P(IDX::Y, IDX::X);
   pose_cov[XYZRPY_COV_IDX::Y_Y] = P(IDX::Y, IDX::Y);
-  pose_cov[XYZRPY_COV_IDX::Z_Z] = zz_cov;
-  pose_cov[XYZRPY_COV_IDX::ROLL_ROLL] = rr_cov;
-  pose_cov[XYZRPY_COV_IDX::PITCH_PITCH] = pp_cov;
-  pose_cov[XYZRPY_COV_IDX::YAW_YAW] = yaw_cov;
+  pose_cov[XYZRPY_COV_IDX::Z_Z] = motion_model_math::kUnobservedCov;
+  pose_cov[XYZRPY_COV_IDX::ROLL_ROLL] = motion_model_math::kUnobservedCov;
+  pose_cov[XYZRPY_COV_IDX::PITCH_PITCH] = motion_model_math::kUnobservedCov;
+  pose_cov[XYZRPY_COV_IDX::YAW_YAW] = motion_model_math::kUnobservedCov;
 
   // set twist covariance
-  constexpr double cov_const = 0.1 * 0.1;  // [m^2]
-  twist_cov[XYZRPY_COV_IDX::X_X] = cov_const;
+  twist_cov[XYZRPY_COV_IDX::X_X] = motion_model_math::kUnobservedCov;
   twist_cov[XYZRPY_COV_IDX::X_Y] = 0.0;
   twist_cov[XYZRPY_COV_IDX::Y_X] = 0.0;
-  twist_cov[XYZRPY_COV_IDX::Y_Y] = cov_const;
+  twist_cov[XYZRPY_COV_IDX::Y_Y] = motion_model_math::kUnobservedCov;
   twist_cov[XYZRPY_COV_IDX::Z_Z] = 0.0;
-  twist_cov[XYZRPY_COV_IDX::ROLL_ROLL] = cov_const;
-  twist_cov[XYZRPY_COV_IDX::PITCH_PITCH] = cov_const;
-  twist_cov[XYZRPY_COV_IDX::YAW_YAW] = cov_const;
+  twist_cov[XYZRPY_COV_IDX::ROLL_ROLL] = motion_model_math::kUnobservedCov;
+  twist_cov[XYZRPY_COV_IDX::PITCH_PITCH] = motion_model_math::kUnobservedCov;
+  twist_cov[XYZRPY_COV_IDX::YAW_YAW] = motion_model_math::kUnobservedCov;
 
   return true;
 }
