@@ -34,6 +34,9 @@ publishers:
   - name: output
     message_type: sensor_msgs/msg/PointCloud2
     remap_target: output
+  - name: diagnostics
+    message_type: diagnostic_msgs/msg/DiagnosticArray
+    global: /diagnostics
 
 # parameters
 param_files:
@@ -71,3 +74,4 @@ processes:
       - periodic: 10.0 # Hz
     outcomes:
       - to_output: output
+      - to_output: diagnostics

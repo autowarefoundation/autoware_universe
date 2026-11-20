@@ -32,6 +32,9 @@ publishers:
     qos:
       reliability: reliable
       durability: transient_local
+  - name: diagnostics
+    message_type: diagnostic_msgs/msg/DiagnosticArray
+    global: /diagnostics
 
 # parameters
 param_files:
@@ -53,6 +56,6 @@ processes:
   - name: predict
     trigger_conditions:
       - on_trigger: update
-      - periodic: 10.0 # Hz
     outcomes:
       - to_output: objects
+      - to_output: diagnostics
