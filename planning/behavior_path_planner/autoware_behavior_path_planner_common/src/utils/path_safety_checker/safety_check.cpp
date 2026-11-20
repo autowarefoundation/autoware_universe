@@ -572,6 +572,65 @@ bool checkSafetyWithIntegralPredictedPolygon(
   return true;
 }
 
+namespace
+{
+struct Aabb
+{
+  double min_x;
+  double min_y;
+  double max_x;
+  double max_y;
+};
+
+Aabb aabb_of(const Polygon2d & polygon)
+{
+  Aabb aabb{
+    std::numeric_limits<double>::max(), std::numeric_limits<double>::max(),
+    std::numeric_limits<double>::lowest(), std::numeric_limits<double>::lowest()};
+  for (const auto & point : polygon.outer()) {
+    aabb.min_x = std::min(aabb.min_x, point.x());
+    aabb.min_y = std::min(aabb.min_y, point.y());
+    aabb.max_x = std::max(aabb.max_x, point.x());
+    aabb.max_y = std::max(aabb.max_y, point.y());
+  }
+  return aabb;
+}
+
+bool aabb_disjoint(const Aabb & a, const Aabb & b)
+{
+  return a.max_x < b.min_x || b.max_x < a.min_x || a.max_y < b.min_y || b.max_y < a.min_y;
+}
+
+bool intersects_with_broad_phase(const Polygon2d & a, const Polygon2d & b)
+{
+  if (aabb_disjoint(aabb_of(a), aabb_of(b))) {
+    return false;
+  }
+  return boost::geometry::intersects(a, b);
+}
+
+std::optional<PoseWithVelocityAndPolygonStamped> get_interpolated_ego_data(
+  const std::vector<PoseWithVelocityStamped> & predicted_ego_path, const double current_time,
+  const VehicleInfo & vehicle_info, EgoInterpCache * ego_interp_cache)
+{
+  if (!ego_interp_cache) {
+    return get_interpolated_pose_with_velocity_and_polygon_stamped(
+      predicted_ego_path, current_time, vehicle_info);
+  }
+
+  const auto cached = ego_interp_cache->find(current_time);
+  if (cached != ego_interp_cache->end()) {
+    return cached->second;
+  }
+
+  return ego_interp_cache
+    ->emplace(
+      current_time, get_interpolated_pose_with_velocity_and_polygon_stamped(
+                      predicted_ego_path, current_time, vehicle_info))
+    .first->second;
+}
+}  // namespace
+
 bool checkCollision(
   const PathWithLaneId & planned_path,
   const std::vector<PoseWithVelocityStamped> & predicted_ego_path,
@@ -615,18 +674,15 @@ std::optional<Polygon2d> check_collision(
   const std::vector<PoseWithVelocityStamped> & predicted_ego_path,
   const PoseWithVelocityAndPolygonStamped & obj_pose_with_poly, const RSSparams & rss_parameters,
   const double yaw_difference_th, const double max_velocity_limit, const double hysteresis_factor,
-  CollisionCheckDebug * debug)
+  CollisionCheckDebug * debug, EgoInterpCache * ego_interp_cache)
 {
   const auto & current_time = obj_pose_with_poly.time;
   const auto & obj_pose = obj_pose_with_poly.pose;
   const auto & obj_polygon = obj_pose_with_poly.poly;
 
-  // get ego information at current time
-  // Note: we can create these polygons in advance. However, it can decrease the readability and
-  // variability
   const auto & ego_vehicle_info = vehicle_info;
-  const auto interpolated_data = get_interpolated_pose_with_velocity_and_polygon_stamped(
-    predicted_ego_path, current_time, ego_vehicle_info);
+  const auto interpolated_data =
+    get_interpolated_ego_data(predicted_ego_path, current_time, ego_vehicle_info, ego_interp_cache);
 
   if (!interpolated_data) {
     return std::nullopt;
@@ -639,7 +695,7 @@ std::optional<Polygon2d> check_collision(
     return std::nullopt;
   }
 
-  if (boost::geometry::intersects(ego_polygon, obj_polygon)) {
+  if (intersects_with_broad_phase(ego_polygon, obj_polygon)) {
     if (debug) {
       debug->unsafe_reason = "overlap_polygon";
       debug->expected_ego_pose = ego_pose;
@@ -683,7 +739,7 @@ std::optional<Polygon2d> check_collision(
                         obj_pose_with_poly, lon_offset, lat_margin, is_stopping_object, debug);
 
   // check intersects with extended polygon
-  if (!boost::geometry::intersects(*extended_ego_polygon_opt, extended_obj_polygon)) {
+  if (!intersects_with_broad_phase(*extended_ego_polygon_opt, extended_obj_polygon)) {
     return std::nullopt;
   }
 
