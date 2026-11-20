@@ -1,0 +1,50 @@
+<?xml version="1.0"?>
+<launch>
+  <!-- System parameters -->
+  <arg name="use_sim_time" default="true" description="Use simulation time (set true for rosbag playback)"/>
+  <arg name="rviz" default="true"/>
+
+  <!-- Calibrator parameters -->
+  <arg name="update_hz" default="10.0"/>
+  <arg name="csv_default_map_dir" default="$(find-pkg-share autoware_generic_value_calibrator)/data"/>
+  <arg name="csv_calibrated_map_dir" default="$(env HOME)/autoware_map_calibration"/>
+  <arg name="output_log_file" default=""/>
+
+  <!-- Topic converter parameters -->
+  <arg name="enable_converter" default="true" description="Enable topic converter to transform input messages"/>
+  <arg name="input_topic" default="/control/command/control_cmd" description="Input topic to convert"/>
+  <arg name="conversion_type" default="control_acceleration" description="Type of conversion (see topic_converter.py)"/>
+  <arg name="custom_field" default="" description="Custom field path for extraction (e.g., 'longitudinal.acceleration')"/>
+  <arg name="scale_factor" default="1.0" description="Scale factor for converted value"/>
+  <arg name="offset" default="0.0" description="Offset for converted value"/>
+  <arg name="converted_topic" default="/generic/input/value" description="Output topic for converted Float64Stamped"/>
+
+  <!-- Topic Converter Node (conditionally launched) -->
+  <group if="$(var enable_converter)">
+    <node pkg="autoware_generic_value_calibrator" exec="topic_converter.py" name="topic_converter" output="screen">
+      <param name="use_sim_time" value="$(var use_sim_time)"/>
+      <param name="input_topic" value="$(var input_topic)"/>
+      <param name="output_topic" value="$(var converted_topic)"/>
+      <param name="conversion_type" value="$(var conversion_type)"/>
+      <param name="custom_field" value="$(var custom_field)"/>
+      <param name="scale_factor" value="$(var scale_factor)"/>
+      <param name="offset" value="$(var offset)"/>
+    </node>
+  </group>
+
+  <!-- Generic Value Calibrator Node -->
+  <node pkg="autoware_generic_value_calibrator" exec="autoware_generic_value_calibrator_node" name="generic_value_calibrator" output="screen">
+    <param name="use_sim_time" value="$(var use_sim_time)"/>
+    <param from="$(find-pkg-share autoware_generic_value_calibrator)/config/generic_value_calibrator.param.yaml"/>
+    <param name="update_hz" value="$(var update_hz)"/>
+    <param name="csv_default_map_dir" value="$(var csv_default_map_dir)"/>
+    <param name="csv_calibrated_map_dir" value="$(var csv_calibrated_map_dir)"/>
+    <param name="output_log_file" value="$(var output_log_file)"/>
+
+    <remap from="~/input/velocity" to="/vehicle/status/velocity_status"/>
+    <remap from="~/input/steer" to="/vehicle/status/steering_status"/>
+    <remap from="~/input/value" to="$(var converted_topic)"/>
+  </node>
+
+  <node pkg="rviz2" exec="rviz2" name="rviz2" output="screen" args="-d $(find-pkg-share autoware_generic_value_calibrator)/rviz/occupancy.rviz" if="$(var rviz)"/>
+</launch>

@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="csv_path_value_map" default="$(env HOME)//autoware_map_calibration/value_map.csv"/>
+
+  <node pkg="autoware_generic_value_converter" exec="autoware_generic_value_converter_node" name="generic_value_converter" output="screen">
+    <param from="$(find-pkg-share autoware_generic_value_converter)/config/generic_value_converter.param.yaml"/>
+    <param name="csv_path_value_map" value="$(var csv_path_value_map)"/>
+
+    <remap from="~/input/control_cmd" to="/control/command/control_cmd"/>
+    <remap from="~/input/odometry" to="/localization/kinematic_state"/>
+    <remap from="~/output/value" to="/generic/output/value"/>
+  </node>
+</launch>

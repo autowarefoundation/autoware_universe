@@ -1,0 +1,210 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parameters for Generic Value Calibrator",
+  "type": "object",
+  "definitions": {
+    "autoware_generic_value_calibrator": {
+      "type": "object",
+      "properties": {
+        "update_hz": {
+          "type": "number",
+          "description": "Update frequency in Hz",
+          "default": 10.0,
+          "minimum": 0.1,
+          "maximum": 100.0
+        },
+        "update_method": {
+          "type": "string",
+          "description": "Update algorithm method",
+          "default": "update_offset_each_cell",
+          "enum": ["update_offset_each_cell", "update_offset_total"]
+        },
+        "get_pitch_method": {
+          "type": "string",
+          "description": "Method to get pitch angle",
+          "default": "tf",
+          "enum": ["tf", "none"]
+        },
+        "progress_file_output": {
+          "type": "boolean",
+          "description": "Flag to output log file for detailed calibration data",
+          "default": false
+        },
+        "csv_default_map_dir": {
+          "type": "string",
+          "description": "Default map directory (if empty, uses parameters below). If provided, map indices will be loaded from CSV file.",
+          "default": ""
+        },
+        "csv_calibrated_map_dir": {
+          "type": "string",
+          "description": "Calibrated map directory where output CSV will be saved",
+          "default": ""
+        },
+        "output_log_file": {
+          "type": "string",
+          "description": "Path to log file for detailed calibration data",
+          "default": ""
+        },
+        "precision": {
+          "type": "integer",
+          "description": "Decimal precision for CSV output",
+          "default": 3,
+          "minimum": 0,
+          "maximum": 10
+        },
+        "value_min": {
+          "type": "number",
+          "description": "Minimum input value range",
+          "default": -1.0
+        },
+        "value_max": {
+          "type": "number",
+          "description": "Maximum input value range",
+          "default": 1.0
+        },
+        "value_num": {
+          "type": "integer",
+          "description": "Number of points in input value range (includes endpoints)",
+          "default": 11,
+          "minimum": 2
+        },
+        "velocity_min": {
+          "type": "number",
+          "description": "Minimum velocity range (m/s)",
+          "default": 0.0,
+          "minimum": 0.0
+        },
+        "velocity_max": {
+          "type": "number",
+          "description": "Maximum velocity range (m/s)",
+          "default": 20.0,
+          "minimum": 0.0
+        },
+        "velocity_num": {
+          "type": "integer",
+          "description": "Number of points in velocity range",
+          "default": 11,
+          "minimum": 2
+        },
+        "initial_covariance": {
+          "type": "number",
+          "description": "Initial covariance for RLS algorithm",
+          "default": 0.05,
+          "minimum": 0.0
+        },
+        "velocity_min_threshold": {
+          "type": "number",
+          "description": "Minimum velocity threshold for data filtering",
+          "default": 0.1,
+          "minimum": 0.0
+        },
+        "velocity_diff_threshold": {
+          "type": "number",
+          "description": "Velocity difference threshold for data filtering",
+          "default": 0.556,
+          "minimum": 0.0
+        },
+        "value_diff_threshold": {
+          "type": "number",
+          "description": "Value difference threshold for data filtering",
+          "default": 0.03,
+          "minimum": 0.0
+        },
+        "max_steer_threshold": {
+          "type": "number",
+          "description": "Maximum steering angle threshold for data filtering",
+          "default": 0.2,
+          "minimum": 0.0
+        },
+        "max_pitch_threshold": {
+          "type": "number",
+          "description": "Maximum pitch angle threshold for data filtering",
+          "default": 0.02,
+          "minimum": 0.0
+        },
+        "max_jerk_threshold": {
+          "type": "number",
+          "description": "Maximum jerk threshold for data filtering",
+          "default": 0.7,
+          "minimum": 0.0
+        },
+        "value_velocity_thresh": {
+          "type": "number",
+          "description": "Value-velocity threshold for data filtering",
+          "default": 0.15,
+          "minimum": 0.0
+        },
+        "max_accel": {
+          "type": "number",
+          "description": "Maximum acceleration limit (m/s²)",
+          "default": 5.0
+        },
+        "min_accel": {
+          "type": "number",
+          "description": "Minimum acceleration limit (m/s²)",
+          "default": -5.0
+        },
+        "value_to_accel_delay": {
+          "type": "number",
+          "description": "Delay from input value to acceleration (seconds)",
+          "default": 0.3,
+          "minimum": 0.0
+        },
+        "update_suggest_thresh": {
+          "type": "number",
+          "description": "Threshold for update suggestion flag (RMSE ratio threshold)",
+          "default": 0.7,
+          "minimum": 0.0,
+          "maximum": 1.0
+        },
+        "max_data_count": {
+          "type": "integer",
+          "description": "Maximum number of data points per cell",
+          "default": 200,
+          "minimum": 1
+        }
+      },
+      "required": [
+        "update_hz",
+        "update_method",
+        "get_pitch_method",
+        "progress_file_output",
+        "csv_default_map_dir",
+        "csv_calibrated_map_dir",
+        "output_log_file",
+        "precision",
+        "value_min",
+        "value_max",
+        "value_num",
+        "velocity_min",
+        "velocity_max",
+        "velocity_num",
+        "initial_covariance",
+        "velocity_min_threshold",
+        "velocity_diff_threshold",
+        "value_diff_threshold",
+        "max_steer_threshold",
+        "max_pitch_threshold",
+        "max_jerk_threshold",
+        "value_velocity_thresh",
+        "max_accel",
+        "min_accel",
+        "value_to_accel_delay",
+        "update_suggest_thresh",
+        "max_data_count"
+      ]
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/autoware_generic_value_calibrator"
+        }
+      },
+      "required": ["ros__parameters"]
+    }
+  },
+  "required": ["/**"]
+}
