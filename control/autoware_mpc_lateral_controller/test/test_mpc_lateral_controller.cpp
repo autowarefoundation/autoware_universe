@@ -760,6 +760,42 @@ TEST(MpcLateralControllerTest, SteeringIsConvergedOnceTheHistoryWindowIsFilled)
   EXPECT_TRUE(output.sync_data.is_steer_converged);
 }
 
+/// The controller adds no commands to the record while Autoware is not driving the vehicle.
+/// After a pause longer than convergence_history_sec, every command recorded before the
+/// pause is too old to keep. The first cycle under control therefore holds one recent
+/// command, too few to decide convergence, and the record has to cover
+/// convergence_history_sec again before convergence is reported.
+TEST(MpcLateralControllerTest, SteeringIsNotConvergedRightAfterControlReturns)
+{
+  MpcLateralController controller(make_default_config(), no_log);
+  const auto engaged = Input().following(straight_path()).planned_at(1.0).driving_at(1.0);
+  const InputData disengaged =
+    Input().following(straight_path()).planned_at(1.0).driving_at(1.0).without_autoware_control();
+  auto clock = CycleClock().first_at(0.0).every(ctrl_period);
+  run_cycles(controller, engaged, clock, cycles_spanning(convergence_history_sec));
+  run_cycles(controller, disengaged, clock, cycles_spanning(convergence_history_sec));
+
+  const auto output = run_cycles(controller, engaged, clock, 1);
+
+  EXPECT_FALSE(output.sync_data.is_steer_converged);
+}
+
+TEST(MpcLateralControllerTest, SteeringIsConvergedOnceTheHistoryWindowIsFilledAfterControlReturns)
+{
+  MpcLateralController controller(make_default_config(), no_log);
+  const auto engaged = Input().following(straight_path()).planned_at(1.0).driving_at(1.0);
+  const InputData disengaged =
+    Input().following(straight_path()).planned_at(1.0).driving_at(1.0).without_autoware_control();
+  const int cycles_filling_history = cycles_spanning(convergence_history_sec);  // 35
+  auto clock = CycleClock().first_at(0.0).every(ctrl_period);
+  run_cycles(controller, engaged, clock, cycles_filling_history);
+  run_cycles(controller, disengaged, clock, cycles_spanning(convergence_history_sec));
+
+  const auto output = run_cycles(controller, engaged, clock, cycles_filling_history);
+
+  EXPECT_TRUE(output.sync_data.is_steer_converged);
+}
+
 /// The controller compares each path it is given against the ones it still holds, and
 /// treats the path as a new shape when the far end has moved further than
 /// new_traj_end_dist. A new shape withdraws the convergence report until the path settles.

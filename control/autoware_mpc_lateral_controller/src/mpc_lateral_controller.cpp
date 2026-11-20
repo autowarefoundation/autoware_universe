@@ -437,13 +437,10 @@ void MpcLateralController::setSteeringToHistory(
   if (rclcpp::Duration(time - m_mpc_steering_history.begin()->second).seconds() >= 1.0) {
     m_is_mpc_history_filled = true;
     // remove old data that is older than 1 sec
-    for (auto itr = m_mpc_steering_history.begin(); itr != m_mpc_steering_history.end(); ++itr) {
-      if (rclcpp::Duration(time - itr->second).seconds() > 1.0) {
-        m_mpc_steering_history.erase(m_mpc_steering_history.begin());
-      } else {
-        break;
-      }
-    }
+    const auto first_recent = std::find_if(
+      m_mpc_steering_history.begin(), m_mpc_steering_history.end(),
+      [&](const auto & entry) { return rclcpp::Duration(time - entry.second).seconds() <= 1.0; });
+    m_mpc_steering_history.erase(m_mpc_steering_history.begin(), first_recent);
   } else {
     m_is_mpc_history_filled = false;
   }
