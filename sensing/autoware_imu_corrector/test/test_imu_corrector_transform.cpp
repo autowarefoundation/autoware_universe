@@ -36,7 +36,8 @@ class ImuCorrectorTransformTest : public testing::TestWithParam<int>
 
 TEST_P(ImuCorrectorTransformTest, TransformsFromImuToOutputFrame)
 {
-  using namespace std::chrono_literals;
+  using std::chrono_literals::operator""ms;
+  using std::chrono_literals::operator""s;
   const auto corrector = std::make_shared<ImuCorrector>(rclcpp::NodeOptions{});
   const auto test_node = std::make_shared<rclcpp::Node>("imu_transform_test");
   rclcpp::executors::SingleThreadedExecutor executor;
