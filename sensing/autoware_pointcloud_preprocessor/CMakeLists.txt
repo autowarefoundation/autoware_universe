@@ -482,6 +482,10 @@ if(BUILD_TESTING)
     test/test_polar_voxel_noise_filter_node.cpp
   )
 
+  ament_add_gtest(test_dual_return_outlier_filter_utils
+    test/test_dual_return_outlier_filter_utils.cpp
+  )
+
   ament_add_gtest(test_blockage_diag
     test/blockage_diag/test_blockage_diag.cpp
   )

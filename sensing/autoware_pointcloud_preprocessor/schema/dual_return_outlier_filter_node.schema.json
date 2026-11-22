@@ -64,8 +64,8 @@
         },
         "max_azimuth_diff": {
           "type": "number",
-          "description": "The azimuth difference threshold in degrees for ring_outlier_filter",
-          "default": "50.0",
+          "description": "The azimuth step threshold in degrees between two consecutive points of a ring, in either scan direction, for them to be in the same segment",
+          "default": "0.5",
           "minimum": 0.0
         },
         "weak_first_distance_ratio": {

@@ -15,7 +15,7 @@
 #include "autoware/pointcloud_preprocessor/outlier_filter/dual_return_outlier_filter_node.hpp"
 
 #include "autoware/point_types/types.hpp"
-#include "autoware/pointcloud_preprocessor/utility/azimuth.hpp"
+#include "autoware/pointcloud_preprocessor/outlier_filter/dual_return_outlier_filter_utils.hpp"
 
 #include <std_msgs/msg/header.hpp>
 
@@ -127,183 +127,112 @@ void DualReturnOutlierFilterComponent::filter(
     }
   }
 
-  uint32_t horizontal_resolution =
-    static_cast<uint32_t>((max_azimuth - min_azimuth) / horizontal_bins);
+  const dual_return_outlier_filter::AzimuthBins azimuth_bins(
+    min_azimuth, max_azimuth, horizontal_bins);
+  const float max_azimuth_diff = max_azimuth_diff_ * static_cast<float>(M_PI / 180.0);
+
+  // Region where the weak first returns are counted for the visibility estimation
+  const auto roi_mode = roi_mode_map_[roi_mode_];
+  const auto is_in_roi = [&](const PointXYZIRCAEDT & p) {
+    switch (roi_mode) {
+      case 1:  // base_link xyz-ROI
+        return p.x > x_min_ && p.x < x_max_ && p.y > y_min_ && p.y < y_max_ && p.z > z_min_ &&
+               p.z < z_max_;
+      case 2:  // azimuth-ROI in the LiDAR frame
+        return azimuth_bins.contains(p.azimuth) && p.distance < max_distance_;
+      default:
+        return true;
+    }
+  };
 
   pcl::PointCloud<PointXYZIRCAEDT>::Ptr pcl_output(new pcl::PointCloud<PointXYZIRCAEDT>);
   pcl_output->points.reserve(pcl_input->points.size());
 
-  std::vector<pcl::PointCloud<PointXYZIRCAEDT>> pcl_input_ring_array;
-  std::vector<pcl::PointCloud<PointXYZIRCAEDT>> weak_first_pcl_input_ring_array;
-
   pcl::PointCloud<PointXYZIRCAEDT>::Ptr noise_output(new pcl::PointCloud<PointXYZIRCAEDT>);
   noise_output->points.reserve(pcl_input->points.size());
-  pcl_input_ring_array.resize(
-    vertical_bins);  // TODO(davidw): this is for Pandar 40 only, make dynamic
-  weak_first_pcl_input_ring_array.resize(vertical_bins);
 
-  // Split into 36 x 10 degree bins x 40 lines (TODO: change to dynamic)
+  std::vector<std::vector<PointXYZIRCAEDT>> input_rings(vertical_bins);
+  std::vector<std::vector<PointXYZIRCAEDT>> weak_first_rings(vertical_bins);
+  size_t num_points_with_invalid_ring = 0;
   for (const auto & p : pcl_input->points) {
+    if (p.channel >= vertical_bins) {
+      ++num_points_with_invalid_ring;
+      continue;
+    }
     if (p.return_type == ReturnType::DUAL_WEAK_FIRST) {
-      weak_first_pcl_input_ring_array.at(p.channel).push_back(p);
+      weak_first_rings[p.channel].push_back(p);
     } else {
-      pcl_input_ring_array.at(p.channel).push_back(p);
+      input_rings[p.channel].push_back(p);
     }
   }
+  if (num_points_with_invalid_ring > 0) {
+    RCLCPP_WARN_THROTTLE(
+      get_logger(), *get_clock(), 5000,
+      "Skipped %zu points whose channel is not less than vertical_bins (%u).",
+      num_points_with_invalid_ring, vertical_bins);
+  }
 
-  float max_azimuth_diff = max_azimuth_diff_;
   cv::Mat frequency_image(cv::Size(horizontal_bins, vertical_bins), CV_8UC1, cv::Scalar(0));
 
-  for (const auto & weak_first_single_ring : weak_first_pcl_input_ring_array) {
-    if (weak_first_single_ring.points.size() < 2) {
+  // Weak first returns: points that are not part of a segment are noise. A horizontal bin with
+  // at least weak_first_local_noise_threshold noise points in the ROI is noisy, and the segment
+  // points in it are removed as well. Bins are computed from each point's own azimuth, so the
+  // result does not depend on the order of the points within a ring.
+  std::vector<int> noise_frequency(horizontal_bins);
+  for (uint32_t ring_id = 0; ring_id < vertical_bins; ++ring_id) {
+    const auto & ring = weak_first_rings[ring_id];
+    if (ring.empty()) {
       continue;
     }
-    std::vector<float> deleted_azimuths;
-    std::vector<float> deleted_distances;
-    pcl::PointCloud<PointXYZIRCAEDT> temp_segment;
+    const auto in_segment = dual_return_outlier_filter::find_segment_points(
+      ring, weak_first_distance_ratio_, max_azimuth_diff);
 
-    bool keep_next = false;
-    uint ring_id = weak_first_single_ring.points.front().channel;
-    for (auto iter = std::begin(weak_first_single_ring) + 1;
-         iter != std::end(weak_first_single_ring) - 1; ++iter) {
-      const float min_dist = std::min(iter->distance, (iter + 1)->distance);
-      const float max_dist = std::max(iter->distance, (iter + 1)->distance);
-      // Unsigned, so that azimuths decreasing along the ring are handled like increasing ones
-      const float azimuth_diff = utils::azimuth_distance(iter->azimuth, (iter + 1)->azimuth);
-
-      if (max_dist < min_dist * weak_first_distance_ratio_ && azimuth_diff < max_azimuth_diff) {
-        temp_segment.points.push_back(*iter);
-        keep_next = true;
-      } else if (keep_next) {
-        temp_segment.points.push_back(*iter);
-        keep_next = false;
-        // Analyze segment points here
-      } else {
-        // Log the deleted azimuth and its distance for analysis
-        switch (roi_mode_map_[roi_mode_]) {
-          case 1:  // base_link xyz-ROI
-          {
-            if (
-              iter->x > x_min_ && iter->x < x_max_ && iter->y > y_min_ && iter->y < y_max_ &&
-              iter->z > z_min_ && iter->z < z_max_) {
-              deleted_azimuths.push_back(iter->azimuth < 0.f ? 0.f : iter->azimuth);
-              deleted_distances.push_back(iter->distance);
-              noise_output->points.push_back(*iter);
-            }
-            break;
-          }
-          case 2: {
-            if (
-              iter->azimuth > min_azimuth && iter->azimuth < max_azimuth &&
-              iter->distance < max_distance_) {
-              deleted_azimuths.push_back(iter->azimuth < 0.f ? 0.f : iter->azimuth);
-              noise_output->points.push_back(*iter);
-              deleted_distances.push_back(iter->distance);
-            }
-            break;
-          }
-          default: {
-            deleted_azimuths.push_back(iter->azimuth < 0.f ? 0.f : iter->azimuth);
-            deleted_distances.push_back(iter->distance);
-            noise_output->points.push_back(*iter);
-            break;
-          }
-        }
-      }
-    }
-    // Analyze last segment points here
-    std::vector<int> noise_frequency(horizontal_bins, 0);
-    uint current_deleted_index = 0;
-    uint current_temp_segment_index = 0;
-    for (uint i = 0; i < noise_frequency.size() - 1; i++) {
-      if (deleted_azimuths.size() == 0) {
+    std::fill(noise_frequency.begin(), noise_frequency.end(), 0);
+    for (size_t i = 0; i < ring.size(); ++i) {
+      if (in_segment[i] || !is_in_roi(ring[i])) {
         continue;
       }
-      while (current_deleted_index < deleted_azimuths.size() &&
-             (uint)deleted_azimuths[current_deleted_index] <
-               ((i + static_cast<uint>(min_azimuth / horizontal_resolution) + 1) *
-                horizontal_resolution)) {
-        noise_frequency[i] = noise_frequency[i] + 1;
-        current_deleted_index++;
+      if (const auto bin = azimuth_bins.bin(ring[i].azimuth)) {
+        ++noise_frequency[*bin];
       }
-      if (temp_segment.points.size() > 0) {
-        while ((temp_segment.points[current_temp_segment_index].azimuth < 0.f
-                  ? 0.f
-                  : temp_segment.points[current_temp_segment_index].azimuth) <
-                 ((i + 1 + static_cast<uint>(min_azimuth / horizontal_resolution)) *
-                  horizontal_resolution) &&
-               current_temp_segment_index < (temp_segment.points.size() - 1)) {
-          if (noise_frequency[i] < weak_first_local_noise_threshold_) {
-            pcl_output->points.push_back(temp_segment.points[current_temp_segment_index]);
-          } else {
-            switch (roi_mode_map_[roi_mode_]) {
-              case 1: {
-                if (
-                  temp_segment.points[current_temp_segment_index].x < x_max_ &&
-                  temp_segment.points[current_temp_segment_index].x > x_min_ &&
-                  temp_segment.points[current_temp_segment_index].y > y_max_ &&
-                  temp_segment.points[current_temp_segment_index].y < y_min_ &&
-                  temp_segment.points[current_temp_segment_index].z < z_max_ &&
-                  temp_segment.points[current_temp_segment_index].z > z_min_) {
-                  noise_frequency[i] = noise_frequency[i] + 1;
-                  noise_output->points.push_back(temp_segment.points[current_temp_segment_index]);
-                }
-                break;
-              }
-              case 2: {
-                if (
-                  temp_segment.points[current_temp_segment_index].azimuth < max_azimuth &&
-                  temp_segment.points[current_temp_segment_index].azimuth > min_azimuth &&
-                  temp_segment.points[current_temp_segment_index].distance < max_distance_) {
-                  noise_frequency[i] = noise_frequency[i] + 1;
-                  noise_output->points.push_back(temp_segment.points[current_temp_segment_index]);
-                }
-                break;
-              }
-              default: {
-                noise_frequency[i] = noise_frequency[i] + 1;
-                noise_output->points.push_back(temp_segment.points[current_temp_segment_index]);
-                break;
-              }
-            }
-          }
-          current_temp_segment_index++;
-          frequency_image.at<uchar>(ring_id, i) = noise_frequency[i];
+    }
+    // The decision uses the counts of the isolated points only, so it does not depend on the
+    // order in which the segment points are visited.
+    const std::vector<int> isolated_noise_frequency = noise_frequency;
+
+    for (size_t i = 0; i < ring.size(); ++i) {
+      const auto & p = ring[i];
+      if (!in_segment[i]) {
+        noise_output->points.push_back(p);
+        continue;
+      }
+      const auto bin = azimuth_bins.bin(p.azimuth);
+      if (bin && isolated_noise_frequency[*bin] >= weak_first_local_noise_threshold_) {
+        noise_output->points.push_back(p);
+        if (is_in_roi(p)) {
+          ++noise_frequency[*bin];
         }
+      } else {
+        pcl_output->points.push_back(p);
       }
+    }
+
+    for (uint32_t bin = 0; bin < horizontal_bins; ++bin) {
+      frequency_image.at<uchar>(ring_id, bin) =
+        static_cast<uchar>(std::min(noise_frequency[bin], 255));
     }
   }
 
-  // Ring outlier filter for normal points
-  for (const auto & input_ring : pcl_input_ring_array) {
-    if (input_ring.size() < 2) {
-      continue;
-    }
-    pcl::PointCloud<PointXYZIRCAEDT> temp_segment;
-    bool keep_next = false;
-    // uint ring_id = input_ring.points.front().ring;
-    for (auto iter = std::begin(input_ring) + 1; iter != std::end(input_ring) - 1; ++iter) {
-      const float min_dist = std::min(iter->distance, (iter + 1)->distance);
-      const float max_dist = std::max(iter->distance, (iter + 1)->distance);
-      // Unsigned, so that azimuths decreasing along the ring are handled like increasing ones
-      const float azimuth_diff = utils::azimuth_distance(iter->azimuth, (iter + 1)->azimuth);
-
-      if (max_dist < min_dist * general_distance_ratio_ && azimuth_diff < max_azimuth_diff) {
-        temp_segment.points.push_back(*iter);
-        keep_next = true;
-      } else if (keep_next) {
-        temp_segment.points.push_back(*iter);
-        keep_next = false;
-        // Analyze segment points here
+  // Other returns: a ring outlier filter, without the visibility estimation
+  for (const auto & ring : input_rings) {
+    const auto in_segment = dual_return_outlier_filter::find_segment_points(
+      ring, general_distance_ratio_, max_azimuth_diff);
+    for (size_t i = 0; i < ring.size(); ++i) {
+      if (in_segment[i]) {
+        pcl_output->points.push_back(ring[i]);
       } else {
-        // Log the deleted azimuth and its distance for analysis
-        // deleted_azimuths.push_back(iter->azimuth < 0.f ? 0.f : iter->azimuth);
-        // deleted_distances.push_back(iter->distance);
-        noise_output->points.push_back(*iter);
+        noise_output->points.push_back(ring[i]);
       }
-    }
-    for (const auto & tmp_p : temp_segment.points) {
-      pcl_output->points.push_back(tmp_p);
     }
   }
 

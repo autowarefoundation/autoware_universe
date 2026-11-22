@@ -57,6 +57,8 @@ This implementation inherits `autoware::pointcloud_preprocessor::Filter` class, 
 Not recommended for use as it is under development.
 Input data must be [PointXYZIRCAEDT](https://github.com/autowarefoundation/autoware_core/blob/main/common/autoware_point_types/include/autoware/point_types/types.hpp#L95-L116) type data including `return_type`.
 
+Points of a ring must be in scan order, but the azimuth may increase or decrease along a ring, and both `[0, 2pi)` and `[-pi, pi)` are accepted. The horizontal bin of the visibility histogram is computed from each point's own azimuth. Points whose `channel` is not less than `vertical_bins` are skipped with a warning.
+
 ## (Optional) Error detection and handling
 
 ## (Optional) Performance characterization
