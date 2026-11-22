@@ -381,6 +381,24 @@ TEST_F(RingOutlierFilterTest, AzimuthStepJustAboveOneDegreeBreaksWalk)
   EXPECT_TRUE(extract_points(output).empty());
 }
 
+TEST_F(RingOutlierFilterTest, ContinuousArcKeepsEveryPointIncludingTheLast)
+{
+  // Arrange
+  // One continuous walk over the whole ring. The last point of the ring ends the last walk, so it
+  // is kept with the others.
+  RingOutlierFilterComponentPublic node(make_node_options());
+  pcl::PointCloud<PointXYZIRCAEDT> cloud;
+  append_arc(cloud, 0, 30.0F, 20);
+  sensor_msgs::msg::PointCloud2 output;
+
+  // Act
+  node.faster_filter(to_msg(cloud), nullptr, output, TransformInfo{});
+
+  // Assert
+  // Every point is kept.
+  EXPECT_EQ(extract_points(output).size(), cloud.size());
+}
+
 TEST_F(RingOutlierFilterTest, DecreasingAzimuthAlongRingIsKept)
 {
   // Arrange
@@ -478,13 +496,13 @@ TEST_F(RingOutlierFilterTest, DistanceRatioBelowThresholdKeepsWalkContinuous)
 TEST_F(RingOutlierFilterTest, DistanceRatioAtThresholdBreaksWalk)
 {
   // Arrange
-  // Each distance step is exactly distance_ratio, which is not below it, so each point is its own
-  // walk of length 0 and is removed.
+  // Each distance step is distance_ratio (10.0 -> 10.3 -> 10.609), which is not below it in float,
+  // so each point is its own walk of length 0 and is removed.
   RingOutlierFilterComponentPublic node(make_node_options());
   pcl::PointCloud<PointXYZIRCAEDT> cloud;
   cloud.push_back(make_point(0, 0.0F * deg_to_rad, 10.0F));
   cloud.push_back(make_point(0, 0.1F * deg_to_rad, 10.3F));
-  cloud.push_back(make_point(0, 0.2F * deg_to_rad, 10.6F));
+  cloud.push_back(make_point(0, 0.2F * deg_to_rad, 10.609F));
   sensor_msgs::msg::PointCloud2 output;
 
   // Act
