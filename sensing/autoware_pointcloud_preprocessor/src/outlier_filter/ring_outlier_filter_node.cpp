@@ -17,6 +17,7 @@
 #include "autoware/point_types/types.hpp"
 #include "autoware/pointcloud_preprocessor/diagnostics/latency_diagnostics.hpp"
 #include "autoware/pointcloud_preprocessor/diagnostics/pass_rate_diagnostics.hpp"
+#include "autoware/pointcloud_preprocessor/utility/azimuth.hpp"
 
 #include <sensor_msgs/point_cloud2_iterator.hpp>
 
@@ -198,8 +199,8 @@ void RingOutlierFilterComponent::faster_filter(
         *reinterpret_cast<const float *>(&input->data[current_data_idx + input_azimuth_offset]);
       const float & next_azimuth =
         *reinterpret_cast<const float *>(&input->data[next_data_idx + input_azimuth_offset]);
-      float azimuth_diff = next_azimuth - current_azimuth;
-      azimuth_diff = azimuth_diff < 0.f ? azimuth_diff + 2 * M_PI : azimuth_diff;
+      // Unsigned, so that azimuths decreasing along the ring are handled like increasing ones
+      const float azimuth_diff = utils::azimuth_distance(current_azimuth, next_azimuth);
 
       const float & current_distance =
         *reinterpret_cast<const float *>(&input->data[current_data_idx + input_distance_offset]);
