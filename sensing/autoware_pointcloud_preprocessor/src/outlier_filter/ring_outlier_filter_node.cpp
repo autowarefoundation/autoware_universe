@@ -246,8 +246,7 @@ void RingOutlierFilterComponent::faster_filter(
         }
       } else if (publish_outlier_pointcloud_) {
         for (int i = walk_first_idx; i <= walk_last_idx; i++) {
-          auto input_ptr =
-            reinterpret_cast<const InputPointType *>(&input->data[indices[walk_first_idx]]);
+          auto input_ptr = reinterpret_cast<const InputPointType *>(&input->data[indices[i]]);
           InputPointType outlier_point = *input_ptr;
 
           if (transform_info.need_transform) {
@@ -265,6 +264,8 @@ void RingOutlierFilterComponent::faster_filter(
       walk_first_idx = idx + 1;
     }
 
+    // The last point of the ring ends the last walk
+    walk_last_idx = static_cast<int>(indices.size()) - 1;
     if (walk_first_idx > walk_last_idx) continue;
 
     if (is_cluster(input, std::make_pair(indices[walk_first_idx], indices[walk_last_idx]))) {
@@ -298,7 +299,7 @@ void RingOutlierFilterComponent::faster_filter(
         output_size += output.point_step;
       }
     } else if (publish_outlier_pointcloud_) {
-      for (int i = walk_first_idx; i < walk_last_idx; i++) {
+      for (int i = walk_first_idx; i <= walk_last_idx; i++) {
         auto input_ptr = reinterpret_cast<const InputPointType *>(&input->data[indices[i]]);
         InputPointType outlier_point = *input_ptr;
         if (transform_info.need_transform) {
