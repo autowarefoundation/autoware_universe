@@ -15,7 +15,6 @@
 #include "autoware/pointcloud_preprocessor/outlier_filter/ring_outlier_filter_node.hpp"
 
 #include "autoware/point_types/types.hpp"
-#include "autoware/pointcloud_preprocessor/diagnostics/azimuth_order_diagnostics.hpp"
 #include "autoware/pointcloud_preprocessor/diagnostics/latency_diagnostics.hpp"
 #include "autoware/pointcloud_preprocessor/diagnostics/pass_rate_diagnostics.hpp"
 #include "autoware/pointcloud_preprocessor/utility/azimuth.hpp"
@@ -183,18 +182,10 @@ void RingOutlierFilterComponent::faster_filter(
   int walk_first_idx = 0;
   int walk_last_idx = -1;
 
-  // Rings whose points are not in scan order. The walk below compares consecutive points only, so
-  // such input is still processed, but it is reported because valid points may be removed. With one
-  // sample every 8 steps, rings of fewer than about 80 points are not judged (see min_steps).
-  int checked_ring_count = 0;
-  int unordered_ring_count = 0;
-  utils::AzimuthOrderCounter azimuth_order;
-
   for (const auto & indices : ring2indices) {
     if (indices.size() < 2) continue;
 
     walk_first_idx = 0;
-    azimuth_order.reset();
 
     for (size_t idx = 0U; idx < indices.size() - 1; ++idx) {
       const size_t & current_data_idx = indices[idx];
@@ -209,11 +200,6 @@ void RingOutlierFilterComponent::faster_filter(
         *reinterpret_cast<const float *>(&input->data[next_data_idx + input_azimuth_offset]);
       // Unsigned, so that azimuths decreasing along the ring are handled like increasing ones
       const float azimuth_diff = utils::azimuth_distance(current_azimuth, next_azimuth);
-      // The scan order is checked on every 8th step only: counting every step costs about 45% of
-      // this loop, sampling keeps it within noise and still detects shuffled rings.
-      if ((idx & 7U) == 0U) {
-        azimuth_order.add(utils::azimuth_step(current_azimuth, next_azimuth));
-      }
 
       const float & current_distance =
         *reinterpret_cast<const float *>(&input->data[current_data_idx + input_distance_offset]);
@@ -277,11 +263,6 @@ void RingOutlierFilterComponent::faster_filter(
       walk_first_idx = idx + 1;
     }
 
-    ++checked_ring_count;
-    if (!azimuth_order.is_ordered()) {
-      ++unordered_ring_count;
-    }
-
     // The last point of the ring ends the last walk. It is never empty: walk_first_idx is at most
     // indices.size() - 1.
     walk_last_idx = static_cast<int>(indices.size()) - 1;
@@ -335,14 +316,6 @@ void RingOutlierFilterComponent::faster_filter(
 
   set_up_pointcloud_format(input, output, output_size);
 
-  if (unordered_ring_count > 0) {
-    RCLCPP_WARN_THROTTLE(
-      get_logger(), *get_clock(), 5000,
-      "%d of %d rings are not in scan order: their azimuth goes back and forth. The points of each "
-      "ring must be sorted by azimuth (increasing or decreasing), or valid points may be removed.",
-      unordered_ring_count, checked_ring_count);
-  }
-
   if (publish_outlier_pointcloud_) {
     PointCloud2 outlier;
     pcl::toROSMsg(*outlier_pcl, outlier);
@@ -378,9 +351,7 @@ void RingOutlierFilterComponent::faster_filter(
 
   auto pass_rate_diagnostics = std::make_shared<PassRateDiagnostics>(
     static_cast<int>(input->width * input->height), static_cast<int>(output.width * output.height));
-  auto azimuth_order_diagnostics =
-    std::make_shared<AzimuthOrderDiagnostics>(checked_ring_count, unordered_ring_count);
-  publish_diagnostics({latency_diagnostics, pass_rate_diagnostics, azimuth_order_diagnostics});
+  publish_diagnostics({latency_diagnostics, pass_rate_diagnostics});
 }
 
 void RingOutlierFilterComponent::publish_diagnostics(
