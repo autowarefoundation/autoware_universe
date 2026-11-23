@@ -17,7 +17,6 @@
 
 #include <array>
 #include <cstddef>
-#include <utility>
 
 namespace autoware::geo_pose_projector
 {
