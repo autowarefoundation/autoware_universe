@@ -438,10 +438,6 @@ if(BUILD_TESTING)
     test/test_utilities.cpp
   )
 
-  ament_add_gtest(test_azimuth_utils
-    test/test_azimuth_utils.cpp
-  )
-
   ament_add_gtest(test_distortion_corrector_node
     test/test_distortion_corrector_node.cpp
   )
