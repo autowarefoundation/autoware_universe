@@ -14,6 +14,14 @@ rclcpp_components_register_node(${PROJECT_NAME}
   EXECUTOR SingleThreadedExecutor
 )
 
+if(BUILD_TESTING)
+  find_package(ament_cmake_gtest REQUIRED)
+  ament_auto_add_gtest(test_covariance_conversion
+    test/test_covariance_conversion.cpp
+  )
+  target_include_directories(test_covariance_conversion PRIVATE src)
+endif()
+
 ament_auto_package(
   INSTALL_TO_SHARE
   launch

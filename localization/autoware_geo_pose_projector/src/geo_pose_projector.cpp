@@ -14,6 +14,8 @@
 
 #include "geo_pose_projector.hpp"
 
+#include "covariance_conversion.hpp"
+
 #include <autoware/geography_utils/height.hpp>
 #include <autoware/geography_utils/projection.hpp>
 
@@ -73,12 +75,9 @@ void GeoPoseProjector::on_geo_pose(const GeoPoseWithCovariance::ConstSharedPtr m
   projected_pose.header = msg->header;
   projected_pose.pose.pose.position = position;
   projected_pose.pose.pose.orientation = msg->pose.pose.orientation;
-  projected_pose.pose.covariance = msg->pose.covariance;
-
-  // Covariance in GeoPoseWithCovariance is in Lat/Lon/Alt coordinate.
-  // TODO(TIER IV): This swap may be invalid when using other projector type.
-  projected_pose.pose.covariance[0] = msg->pose.covariance[7];
-  projected_pose.pose.covariance[7] = msg->pose.covariance[0];
+  // Covariance in GeoPoseWithCovariance is in Lat/Lon/Alt order; reorder it to map x/y/z.
+  // TODO(TIER IV): Meridian convergence of the projector type is not taken into account.
+  projected_pose.pose.covariance = convert_lat_lon_alt_covariance_to_map(msg->pose.covariance);
 
   pose_pub_->publish(projected_pose);
 
