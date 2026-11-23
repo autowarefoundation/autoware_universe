@@ -107,6 +107,7 @@ private:
   void set_up_pointcloud_format(
     const PointCloud2ConstPtr & input, PointCloud2 & formatted_points, size_t points_size);
   void publish_diagnostics(const std::vector<std::shared_ptr<const DiagnosticsBase>> & diagnostics);
+  void warn_rings_not_in_scan_order(int checked_ring_count, int unordered_ring_count);
 
 public:
   PCL_MAKE_ALIGNED_OPERATOR_NEW

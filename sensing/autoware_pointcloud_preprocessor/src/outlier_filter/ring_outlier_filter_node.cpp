@@ -209,11 +209,7 @@ void RingOutlierFilterComponent::faster_filter(
         *reinterpret_cast<const float *>(&input->data[next_data_idx + input_azimuth_offset]);
       // Unsigned, so that azimuths decreasing along the ring are handled like increasing ones
       const float azimuth_diff = utils::azimuth_distance(current_azimuth, next_azimuth);
-      // The scan order is checked on every 8th step only: counting every step costs about 45% of
-      // this loop, sampling keeps it within noise and still detects shuffled rings.
-      if ((idx & 7U) == 0U) {
-        azimuth_order.add(utils::azimuth_step(current_azimuth, next_azimuth));
-      }
+      azimuth_order.add_sampled(idx, current_azimuth, next_azimuth);
 
       const float & current_distance =
         *reinterpret_cast<const float *>(&input->data[current_data_idx + input_distance_offset]);
@@ -278,9 +274,7 @@ void RingOutlierFilterComponent::faster_filter(
     }
 
     ++checked_ring_count;
-    if (!azimuth_order.is_ordered()) {
-      ++unordered_ring_count;
-    }
+    unordered_ring_count += static_cast<int>(!azimuth_order.is_ordered());
 
     // The last point of the ring ends the last walk. It is never empty: walk_first_idx is at most
     // indices.size() - 1.
@@ -335,13 +329,7 @@ void RingOutlierFilterComponent::faster_filter(
 
   set_up_pointcloud_format(input, output, output_size);
 
-  if (unordered_ring_count > 0) {
-    RCLCPP_WARN_THROTTLE(
-      get_logger(), *get_clock(), 5000,
-      "%d of %d rings are not in scan order: their azimuth goes back and forth. The points of each "
-      "ring must be sorted by azimuth (increasing or decreasing), or valid points may be removed.",
-      unordered_ring_count, checked_ring_count);
-  }
+  warn_rings_not_in_scan_order(checked_ring_count, unordered_ring_count);
 
   if (publish_outlier_pointcloud_) {
     PointCloud2 outlier;
@@ -381,6 +369,19 @@ void RingOutlierFilterComponent::faster_filter(
   auto azimuth_order_diagnostics =
     std::make_shared<AzimuthOrderDiagnostics>(checked_ring_count, unordered_ring_count);
   publish_diagnostics({latency_diagnostics, pass_rate_diagnostics, azimuth_order_diagnostics});
+}
+
+void RingOutlierFilterComponent::warn_rings_not_in_scan_order(
+  const int checked_ring_count, const int unordered_ring_count)
+{
+  if (unordered_ring_count == 0) {
+    return;
+  }
+  RCLCPP_WARN_THROTTLE(
+    get_logger(), *get_clock(), 5000,
+    "%d of %d rings are not in scan order: their azimuth goes back and forth. The points of each "
+    "ring must be sorted by azimuth (increasing or decreasing), or valid points may be removed.",
+    unordered_ring_count, checked_ring_count);
 }
 
 void RingOutlierFilterComponent::publish_diagnostics(

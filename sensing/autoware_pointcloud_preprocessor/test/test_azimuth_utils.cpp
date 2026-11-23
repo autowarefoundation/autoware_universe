@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <cmath>
 #include <random>
+#include <utility>
 #include <vector>
 
 using autoware::pointcloud_preprocessor::utils::azimuth_distance;
@@ -142,10 +143,12 @@ TEST(AzimuthOrderCounterTest, SamplingEvery8thStepStillDetectsShuffledRing)
   const auto ordered = make_ring(120.0F, -0.2F, 1800);
   AzimuthOrderCounter shuffled_counter;
   AzimuthOrderCounter ordered_counter;
-  for (size_t i = 0; i + 1 < shuffled.size(); i += 8) {
-    shuffled_counter.add(azimuth_step(shuffled[i], shuffled[i + 1]));
-    ordered_counter.add(azimuth_step(ordered[i], ordered[i + 1]));
+  for (size_t i = 0; i + 1 < shuffled.size(); ++i) {
+    shuffled_counter.add_sampled(i, shuffled[i], shuffled[i + 1]);
+    ordered_counter.add_sampled(i, ordered[i], ordered[i + 1]);
   }
+  // 1799 steps, one counted out of 8
+  EXPECT_EQ(ordered_counter.forward() + ordered_counter.backward(), 225U);
   EXPECT_FALSE(shuffled_counter.is_ordered());
   EXPECT_TRUE(ordered_counter.is_ordered());
 }
