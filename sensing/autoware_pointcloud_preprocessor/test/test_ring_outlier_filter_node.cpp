@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "autoware/pointcloud_preprocessor/diagnostics/azimuth_order_diagnostics.hpp"
 #include "autoware/pointcloud_preprocessor/outlier_filter/ring_outlier_filter_node.hpp"
 
 #include <autoware/point_types/types.hpp>
@@ -32,6 +33,7 @@
 
 using autoware::point_types::PointXYZIRC;
 using autoware::point_types::PointXYZIRCAEDT;
+using autoware::pointcloud_preprocessor::AzimuthOrderDiagnostics;
 using autoware::pointcloud_preprocessor::RingOutlierFilterComponent;
 using autoware::pointcloud_preprocessor::TransformInfo;
 
@@ -490,6 +492,25 @@ TEST_F(RingOutlierFilterTest, TransformPathAppliesTranslation)
   EXPECT_NEAR(out.x, in.x + 1.5F, 1e-4F);
   EXPECT_NEAR(out.y, in.y - 2.0F, 1e-4F);
   EXPECT_NEAR(out.z, in.z + 0.25F, 1e-4F);
+}
+
+TEST(AzimuthOrderDiagnosticsTest, WarnsOnlyWhenARingIsNotInScanOrder)
+{
+  // Arrange
+  const AzimuthOrderDiagnostics ordered(128, 0);
+  const AzimuthOrderDiagnostics unordered(128, 3);
+
+  // Act
+  const auto ordered_status = ordered.evaluate_status();
+  const auto unordered_status = unordered.evaluate_status();
+
+  // Assert
+  // In-order input adds no status. Out-of-order input is a warning, not an error, because the
+  // filter still runs.
+  EXPECT_FALSE(ordered_status.has_value());
+  ASSERT_TRUE(unordered_status.has_value());
+  EXPECT_EQ(unordered_status->first, diagnostic_msgs::msg::DiagnosticStatus::WARN);
+  EXPECT_NE(unordered_status->second.find("3 ring(s)"), std::string::npos);
 }
 
 int main(int argc, char ** argv)
