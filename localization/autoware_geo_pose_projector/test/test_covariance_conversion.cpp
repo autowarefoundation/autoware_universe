@@ -123,13 +123,12 @@ TEST(ConvertLatLonAltCovarianceToMap, PermutesEveryEntryOfTheFullMatrix)
   }
 
   // Expected map-frame covariance for geo[k] = k, in row-major order.
-  const Covariance6x6 expected{
-    7.0,  6.0,  8.0,  9.0,  10.0, 11.0,  //
-    1.0,  0.0,  2.0,  3.0,  4.0,  5.0,   //
-    13.0, 12.0, 14.0, 15.0, 16.0, 17.0,  //
-    19.0, 18.0, 20.0, 21.0, 22.0, 23.0,  //
-    25.0, 24.0, 26.0, 27.0, 28.0, 29.0,  //
-    31.0, 30.0, 32.0, 33.0, 34.0, 35.0};
+  const Covariance6x6 expected{7.0,  6.0,  8.0,  9.0,  10.0, 11.0,  //
+                               1.0,  0.0,  2.0,  3.0,  4.0,  5.0,   //
+                               13.0, 12.0, 14.0, 15.0, 16.0, 17.0,  //
+                               19.0, 18.0, 20.0, 21.0, 22.0, 23.0,  //
+                               25.0, 24.0, 26.0, 27.0, 28.0, 29.0,  //
+                               31.0, 30.0, 32.0, 33.0, 34.0, 35.0};
 
   EXPECT_EQ(convert_lat_lon_alt_covariance_to_map(geo), expected);
 }
