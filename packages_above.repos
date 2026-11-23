@@ -12,6 +12,11 @@ repositories:
     type: git
     url: https://github.com/autowarefoundation/autoware_launch.git
     version: main
+  # autoware_launch depends on tier4_datetime_rviz_plugin, which is in autoware_rviz_plugins
+  core/autoware_rviz_plugins:
+    type: git
+    url: https://github.com/autowarefoundation/autoware_rviz_plugins.git
+    version: main
   universe/external/eagleye:
     type: git
     url: https://github.com/MapIV/eagleye.git
