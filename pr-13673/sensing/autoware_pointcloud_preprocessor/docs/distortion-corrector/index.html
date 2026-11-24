@@ -23495,7 +23495,7 @@
 </tbody>
 </table>
 <h2 id="offline-use-from-python">Offline use from Python<a class="headerlink" href="#offline-use-from-python" title="Permanent link">#</a></h2>
-<p>The correction core (<code>DistortionCorrector2D</code> / <code>DistortionCorrector3D</code>, which the node runs) can be used from Python through <code>autoware_pointcloud_preprocessor.distortion_corrector</code>. It is built and installed with the package. It takes twists, IMU samples and point clouds serialized, as rosbags store them, and returns an rclpy message. It needs no ROS node: no <code>rclpy.init()</code>, no executor and no TF listener, so the result depends only on the inputs.</p>
+<p>The correction core (<code>DistortionCorrector2D</code> / <code>DistortionCorrector3D</code>, which the node runs) can be used from Python through <code>autoware_pointcloud_preprocessor.distortion_corrector</code>. It is built and installed with the package. It takes twists, IMU samples and point clouds serialized, as rosbags store them, or as rclpy messages, and returns an rclpy message. It needs no ROS node: no <code>rclpy.init()</code>, no executor and no TF listener, so the result depends only on the inputs.</p>
 <div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">autoware_pointcloud_preprocessor.distortion_corrector</span><span class="w"> </span><span class="kn">import</span> <span class="n">DistortionCorrector</span><span class="p">,</span> <span class="n">PointcloudValidity</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">geometry_msgs.msg</span><span class="w"> </span><span class="kn">import</span> <span class="n">TransformStamped</span>
 
@@ -23521,7 +23521,7 @@
     <span class="o">...</span>  <span class="c1"># the cloud was returned unchanged; see status.validity</span>
 </code></pre></div>
 <ul>
-<li>Passing twists, IMU samples and point clouds as message objects is deprecated, since they have to be serialized first, which is slow. Transforms are passed as message objects, since rosbags store them inside <code>tf2_msgs/msg/TFMessage</code>s.</li>
+<li>Twists, IMU samples and point clouds can also be passed as message objects, but those have to be serialized first, which is slower. Transforms are always passed as message objects, since rosbags store them inside <code>tf2_msgs/msg/TFMessage</code>s.</li>
 <li>Transforms have <code>header.frame_id</code> = base frame and <code>child_frame_id</code> = sensor frame, as TF provides them.</li>
 <li>The twist and IMU queues follow the node's rules: a sample older than the queue front clears the queue, and samples older than the newest one by more than 1 s are dropped.</li>
 <li><code>status</code> also carries <code>twist_queue_empty</code>, <code>twist_timestamp_too_late</code>, <code>imu_timestamp_too_late</code>, <code>timestamp_mismatch_count</code>, <code>timestamp_mismatch_fraction</code> and <code>angle_conversion_error</code>, the conditions the node logs or reports as diagnostics. <code>angle_conversion_error</code> is set when <code>update_azimuth_and_distance=True</code> but the azimuth conversion could not be computed from this cloud, in which case azimuth and distance are left unchanged.</li>

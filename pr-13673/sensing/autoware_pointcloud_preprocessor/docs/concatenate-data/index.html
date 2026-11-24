@@ -24002,7 +24002,8 @@ status:
 <li>The same messages with the same arrival times always give the same frames.</li>
 <li>Each transform maps a sensor frame directly into the output frame, as <code>lookup_transform(output_frame, sensor_frame, ...)</code> returns.</li>
 <li>To reproduce the node exactly, pass its <code>max_open_collectors</code> and <code>reject_late_clouds=True</code>.</li>
-<li>Passing clouds, twists and odometry as message objects is deprecated, since they have to be serialized first, which is slow. Transforms are passed as message objects, since rosbags store them inside <code>tf2_msgs/msg/TFMessage</code>s.</li>
+<li>Clouds, twists and odometry can also be passed as message objects, but those have to be serialized first, which is slower. Transforms are always passed as message objects, since rosbags store them inside <code>tf2_msgs/msg/TFMessage</code>s.</li>
+<li>When building clouds in Python, keep <code>cloud.data</code> as the <code>array('B')</code> that <code>deserialize_message</code> returns; assigning <code>bytes</code> is slow.</li>
 </ul>
 <p>See the docstrings (<code>help(Concatenator)</code>) for all options and exceptions.</p>
 <h2 id="assumptions-known-limits">Assumptions / Known Limits<a class="headerlink" href="#assumptions-known-limits" title="Permanent link">#</a></h2>

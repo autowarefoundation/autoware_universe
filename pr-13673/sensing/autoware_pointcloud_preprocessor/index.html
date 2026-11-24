@@ -23436,9 +23436,9 @@ of <a href="https://github.com/ros-perception/perception_pcl/issues/9">this issu
 <p>The concatenation core (<code>CloudConcatenator</code>, which the <code>concatenate_data</code> node runs) can be used
 from Python through <code>autoware_pointcloud_preprocessor.concatenate_pointclouds</code>. It is built and
 installed with the package, so no extra build option is needed. It takes clouds, twists and
-odometry serialized, as rosbags store them, and returns rclpy messages. It needs no ROS node: no
-<code>rclpy.init()</code>, no executor and no TF listener. This makes it useful for offline work such as
-re-concatenating a rosbag.</p>
+odometry serialized, as rosbags store them, or as rclpy messages, and returns rclpy messages. It
+needs no ROS node: no <code>rclpy.init()</code>, no executor and no TF listener. This makes it useful for
+offline work such as re-concatenating a rosbag.</p>
 <div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">autoware_pointcloud_preprocessor.concatenate_pointclouds</span><span class="w"> </span><span class="kn">import</span> <span class="n">Concatenator</span><span class="p">,</span> <span class="n">FrameStatus</span>
 
 <span class="n">concatenator</span> <span class="o">=</span> <span class="n">Concatenator</span><span class="p">(</span>
@@ -23462,9 +23462,9 @@ re-concatenating a rosbag.</p>
 <code>result.concatenation_info</code>, <code>result.motion_compensation_status</code> and
 <code>result.dropped_sources_missing_transform</code>. <code>frame.build_diagnostics()</code> returns the
 <code>DiagnosticStatus</code> the node would publish for it.</p>
-<p>Passing clouds, twists and odometry as message objects is deprecated, since they have to be
-serialized first, which is slow. Transforms are passed as message objects, since rosbags store
-them inside <code>tf2_msgs/msg/TFMessage</code>s.</p>
+<p>Clouds, twists and odometry can also be passed as message objects, but those have to be
+serialized first, which is slower. Transforms are always passed as message objects, since rosbags
+store them inside <code>tf2_msgs/msg/TFMessage</code>s.</p>
 <p>The arguments, return values and exceptions of each call are in the docstrings
 (<code>help(Concatenator)</code>).</p>
 <p>A runnable example is <a href="#concatenate_without_ros_nodepy"><code>examples/concatenate_without_ros_node.py</code></a>.
