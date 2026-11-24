@@ -19,6 +19,10 @@
 Time is supplied by the caller: every cloud comes with its arrival time (e.g. the rosbag record
 timestamp), which drives the collector timeouts and, for the naive strategy, the matching. The
 same clouds with the same arrival times always give the same frames.
+
+Clouds, twists and odometry are passed serialized, as stored in rosbags, or as rclpy message
+objects, which are serialized first. The C++ core deserializes them. Transforms are passed as rclpy
+message objects.
 """
 
 from dataclasses import dataclass
@@ -28,6 +32,7 @@ from typing import List
 from typing import NamedTuple
 from typing import Optional
 from typing import Sequence
+from typing import Union
 
 from autoware_sensing_msgs.msg import ConcatenatedPointCloudInfo
 from diagnostic_msgs.msg import DiagnosticStatus
@@ -135,6 +140,15 @@ def _check_type(message, expected):
     # The CDR bytes carry no type, so a wrong message type would be silently reinterpreted.
     if not isinstance(message, expected):
         raise TypeError(f"expected {expected.__name__}, got {type(message).__name__}")
+
+
+def _serialized(message, expected):
+    """Return ``message`` as is if it is serialized, else serialize it."""
+    if isinstance(message, bytes):
+        return message
+    if not isinstance(message, expected):
+        raise TypeError(f"expected bytes or {expected.__name__}, got {type(message).__name__}")
+    return serialize_message(message)
 
 
 def _wrap_frame(core: _ext.CoreFrame) -> ConcatenatedFrame:
@@ -262,41 +276,46 @@ class Concatenator:
         _check_type(sensor_to_output_frame, TransformStamped)
         self._impl.set_transform(serialize_message(sensor_to_output_frame))
 
-    def process_twist(self, twist: TwistWithCovarianceStamped) -> None:
+    def process_twist(self, twist: Union[bytes, TwistWithCovarianceStamped]) -> None:
         """Queue a velocity sample for motion compensation.
 
         Args:
-            twist: Vehicle twist. Only the linear x and angular z velocities are used.
+            twist: Vehicle twist, as a serialized ``TwistWithCovarianceStamped`` in the format that
+                rosbags store (CDR), or as a message object, which is slower since it has to be
+                serialized first. Only the linear x and angular z velocities are used.
 
         Raises:
-            TypeError: If ``twist`` is not a ``TwistWithCovarianceStamped``.
+            TypeError: If ``twist`` is neither bytes nor a ``TwistWithCovarianceStamped``.
+            ValueError: If ``twist`` cannot be deserialized as a ``TwistWithCovarianceStamped``.
         """
-        _check_type(twist, TwistWithCovarianceStamped)
-        self._impl.process_twist(serialize_message(twist))
+        self._impl.process_twist(_serialized(twist, TwistWithCovarianceStamped))
 
-    def process_odometry(self, odometry: Odometry) -> None:
+    def process_odometry(self, odometry: Union[bytes, Odometry]) -> None:
         """Queue a velocity sample for motion compensation, from odometry.
 
         Takes the place of :meth:`process_twist` for an ``input_twist_topic_type: odom`` setup.
 
         Args:
-            odometry: Vehicle odometry. Only its twist's linear x and angular z velocities are
-                used.
+            odometry: Vehicle odometry, as a serialized ``Odometry`` in the format that rosbags
+                store (CDR), or as a message object, which is slower since it has to be serialized
+                first. Only its twist's linear x and angular z velocities are used.
 
         Raises:
-            TypeError: If ``odometry`` is not an ``Odometry``.
+            TypeError: If ``odometry`` is neither bytes nor an ``Odometry``.
+            ValueError: If ``odometry`` cannot be deserialized as an ``Odometry``.
         """
-        _check_type(odometry, Odometry)
-        self._impl.process_odometry(serialize_message(odometry))
+        self._impl.process_odometry(_serialized(odometry, Odometry))
 
     def process_cloud(
-        self, topic: str, cloud: PointCloud2, arrival_time: float
+        self, topic: str, cloud: Union[bytes, PointCloud2], arrival_time: float
     ) -> List[ConcatenatedFrame]:
         """Add a cloud to its collector and return the frames this resolves.
 
         Args:
             topic: Input topic the cloud was received on.
-            cloud: Cloud with the fields of the output point type.
+            cloud: Cloud with the fields of the output point type, as a serialized ``PointCloud2``
+                in the format that rosbags store (CDR), or as a message object, which is slower
+                since it has to be serialized first.
             arrival_time: Time (seconds) the cloud was received, e.g. its rosbag record time. It
                 takes the place of the node's clock.
 
@@ -305,13 +324,14 @@ class Concatenator:
             resolve at once.
 
         Raises:
-            TypeError: If ``cloud`` is not a ``PointCloud2``.
-            ValueError: If ``topic`` is not one of the input topics, or the cloud lacks a field
-                of the output point type (``x``, ``y``, ``z``, ``intensity``, ``return_type``,
-                ``channel``, and ``time_stamp`` for ``"XYZIRCT"``).
+            TypeError: If ``cloud`` is neither bytes nor a ``PointCloud2``.
+            ValueError: If ``cloud`` cannot be deserialized as a ``PointCloud2``, ``topic`` is not
+                one of the input topics, or the cloud lacks a field of the output point type
+                (``x``, ``y``, ``z``, ``intensity``, ``return_type``, ``channel``, and
+                ``time_stamp`` for ``"XYZIRCT"``).
         """
-        _check_type(cloud, PointCloud2)
-        frames = self._impl.process_cloud(topic, serialize_message(cloud), arrival_time)
+        cloud = _serialized(cloud, PointCloud2)
+        frames = self._impl.process_cloud(topic, cloud, arrival_time)
         return [_wrap_frame(frame) for frame in frames]
 
     def close_expired_collectors(self, now: float) -> List[ConcatenatedFrame]:

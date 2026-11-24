@@ -29,6 +29,7 @@ from geometry_msgs.msg import TransformStamped
 from geometry_msgs.msg import TwistWithCovarianceStamped
 from nav_msgs.msg import Odometry
 import pytest
+from rclpy.serialization import serialize_message
 from sensor_msgs.msg import PointCloud2
 from sensor_msgs.msg import PointField
 
@@ -374,14 +375,54 @@ def test_wrong_message_type_raises_type_error():
     # CDR bytes carry no type: without the check a twist would be deserialized as a cloud.
     concatenator = _make_concatenator(["lidar_x"], is_motion_compensated=True)
 
-    with pytest.raises(TypeError, match="expected PointCloud2"):
+    with pytest.raises(TypeError, match="expected bytes or PointCloud2"):
         concatenator.process_cloud("lidar_x", _make_twist(10, 0, 1.0), arrival_time=100.0)
-    with pytest.raises(TypeError, match="expected TwistWithCovarianceStamped"):
+    with pytest.raises(TypeError, match="expected bytes or TwistWithCovarianceStamped"):
         concatenator.process_twist(_make_cloud(10, 0))
-    with pytest.raises(TypeError, match="expected Odometry"):
+    with pytest.raises(TypeError, match="expected bytes or Odometry"):
         concatenator.process_odometry(_make_twist(10, 0, 1.0))
     with pytest.raises(TypeError, match="expected TransformStamped"):
         concatenator.set_transform(_make_odometry(10, 0, 1.0))
+    # Transforms are only taken as message objects.
+    with pytest.raises(TypeError, match="expected TransformStamped"):
+        concatenator.set_transform(serialize_message(_make_transform("lidar_x")))
+
+
+@pytest.mark.parametrize("make_velocity", [_make_twist, _make_odometry], ids=["twist", "odometry"])
+def test_serialized_messages_give_the_same_frames(make_velocity):
+    def run(convert):
+        concatenator = _make_concatenator(["lidar_a", "lidar_b"], is_motion_compensated=True)
+        for ms in range(9900, 10250, 50):
+            velocity = make_velocity(ms // 1000, (ms % 1000) * 1_000_000, vx=1.0)
+            if isinstance(velocity, Odometry):
+                concatenator.process_odometry(convert(velocity))
+            else:
+                concatenator.process_twist(convert(velocity))
+        concatenator.process_cloud("lidar_a", convert(_make_cloud(10, 0)), arrival_time=100.0)
+        return concatenator.process_cloud(
+            "lidar_b", convert(_make_cloud(10, 100_000_000)), arrival_time=100.01
+        )
+
+    frames = run(serialize_message)
+
+    assert frames[0].result.motion_compensation_status is MotionCompensationStatus.VALID
+    assert frames == run(lambda message: message)
+
+
+def test_malformed_serialized_messages_raise_value_error():
+    concatenator = _make_concatenator(["lidar_x"], is_motion_compensated=True)
+    cloud = serialize_message(_make_cloud(10, 0))
+
+    for malformed in (b"", cloud[:4], cloud[: len(cloud) // 2]):
+        with pytest.raises(ValueError, match="Could not deserialize sensor_msgs/msg/PointCloud2"):
+            concatenator.process_cloud("lidar_x", malformed, arrival_time=100.0)
+        with pytest.raises(ValueError, match="TwistWithCovarianceStamped"):
+            concatenator.process_twist(malformed)
+        with pytest.raises(ValueError, match="Odometry"):
+            concatenator.process_odometry(malformed)
+
+    # The rejected clouds did not open a collector.
+    assert concatenator.flush() == []
 
 
 def _with_no_data(cloud):

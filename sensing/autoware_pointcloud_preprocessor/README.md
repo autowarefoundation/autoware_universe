@@ -66,8 +66,9 @@ of [this issue](https://github.com/ros-perception/perception_pcl/issues/9).
 
 The concatenation core (`CloudConcatenator`, which the `concatenate_data` node runs) can be used
 from Python through `autoware_pointcloud_preprocessor.concatenate_pointclouds`. It is built and
-installed with the package, so no extra build option is needed. It takes and returns rclpy messages
-and needs no ROS node: no `rclpy.init()`, no executor and no TF listener. This makes it useful for
+installed with the package, so no extra build option is needed. It takes clouds, twists and
+odometry serialized, as rosbags store them, or as rclpy messages, and returns rclpy messages. It
+needs no ROS node: no `rclpy.init()`, no executor and no TF listener. This makes it useful for
 offline work such as re-concatenating a rosbag.
 
 ```python
@@ -80,9 +81,9 @@ concatenator = Concatenator(
 )
 concatenator.set_transform(top_to_base_link)  # a TransformStamped per sensor frame
 concatenator.set_transform(left_to_base_link)
-concatenator.process_twist(twist)  # TwistWithCovarianceStamped; or process_odometry(odometry)
+concatenator.process_twist(twist)  # serialized TwistWithCovarianceStamped; or process_odometry()
 
-# Feed the clouds in arrival order. The arrival time (seconds) replaces the node's clock.
+# Feed the serialized clouds in arrival order. The arrival time (seconds) replaces the node's clock.
 for frame in concatenator.process_cloud("/sensing/lidar/top/pointcloud", cloud, arrival_time=t):
     if frame.status is FrameStatus.COMPLETE:
         merged = frame.result.concatenated_cloud  # sensor_msgs.msg.PointCloud2
@@ -95,6 +96,10 @@ Each frame carries `status` (`COMPLETE`, `TIMEOUT` or `LATE`), `result.concatena
 `result.concatenation_info`, `result.motion_compensation_status` and
 `result.dropped_sources_missing_transform`. `frame.build_diagnostics()` returns the
 `DiagnosticStatus` the node would publish for it.
+
+Clouds, twists and odometry can also be passed as message objects, but those have to be
+serialized first, which is slower. Transforms are always passed as message objects, since rosbags
+store them inside `tf2_msgs/msg/TFMessage`s.
 
 The arguments, return values and exceptions of each call are in the docstrings
 (`help(Concatenator)`).

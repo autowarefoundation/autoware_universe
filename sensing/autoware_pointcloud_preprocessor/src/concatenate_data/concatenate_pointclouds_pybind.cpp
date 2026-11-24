@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Python bindings for CloudConcatenator. Messages cross the boundary as CDR bytes
-// (rclpy.serialization on the Python side), so the binding needs no message conversion code, and
-// all concatenation logic stays in the core.
+// Python bindings for CloudConcatenator. Messages cross the boundary as CDR bytes, as stored in
+// rosbags, so the binding needs no message conversion code, and all concatenation logic stays in
+// the core.
 
 #include "autoware/pointcloud_preprocessor/concatenate_data/cloud_concatenator.hpp"
 #include "autoware/pointcloud_preprocessor/concatenate_data/concatenation_diagnostics.hpp"
@@ -22,6 +22,7 @@
 
 #include <rclcpp/serialization.hpp>
 #include <rclcpp/serialized_message.hpp>
+#include <rosidl_runtime_cpp/traits.hpp>
 
 #include <diagnostic_msgs/msg/diagnostic_status.hpp>
 #include <geometry_msgs/msg/transform_stamped.hpp>
@@ -73,17 +74,29 @@ PointFormat parse_output_point_type(const std::string & output_point_type)
     "output_point_type must be 'XYZIRC' or 'XYZIRCT', got '" + output_point_type + "'");
 }
 
+/// @throws std::invalid_argument (ValueError in Python) if `data` is not a valid serialized MsgT
 template <typename MsgT>
 MsgT deserialize(const py::bytes & data)
 {
+  const std::string error_prefix =
+    std::string("Could not deserialize ") + rosidl_generator_traits::name<MsgT>() + ": ";
+
   const std::string_view buffer = data;
+  if (buffer.empty()) {
+    throw std::invalid_argument(error_prefix + "the serialized message is empty");
+  }
+
   rclcpp::SerializedMessage serialized(buffer.size());
   auto & rcl_msg = serialized.get_rcl_serialized_message();
   std::memcpy(rcl_msg.buffer, buffer.data(), buffer.size());
   rcl_msg.buffer_length = buffer.size();
 
   MsgT msg;
-  rclcpp::Serialization<MsgT>().deserialize_message(&serialized, &msg);
+  try {
+    rclcpp::Serialization<MsgT>().deserialize_message(&serialized, &msg);
+  } catch (const std::runtime_error & e) {
+    throw std::invalid_argument(error_prefix + e.what());
+  }
   return msg;
 }
 

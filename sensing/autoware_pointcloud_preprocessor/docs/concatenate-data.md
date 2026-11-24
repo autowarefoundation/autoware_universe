@@ -294,10 +294,7 @@ Note that the `concatenate_pointclouds` and `time_synchronizer_nodelet` are usin
 
 ```python
 from autoware_pointcloud_preprocessor.concatenate_pointclouds import Concatenator, FrameStatus
-from geometry_msgs.msg import TwistWithCovarianceStamped
-from rclpy.serialization import deserialize_message
 from rosbag2_py import ConverterOptions, SequentialReader, StorageOptions
-from sensor_msgs.msg import PointCloud2
 
 input_topics = ["/sensing/lidar/top/pointcloud", "/sensing/lidar/left/pointcloud"]
 twist_topic = "/sensing/vehicle_velocity_converter/twist_with_covariance"
@@ -310,11 +307,11 @@ reader = SequentialReader()
 reader.open(StorageOptions(uri="my_bag", storage_id="mcap"), ConverterOptions("", ""))
 while reader.has_next():
     topic, data, record_time_ns = reader.read_next()
+    # The messages are passed as the bag stores them, without deserializing them in Python.
     if topic == twist_topic:
-        concatenator.process_twist(deserialize_message(data, TwistWithCovarianceStamped))
+        concatenator.process_twist(data)
     elif topic in input_topics:
-        cloud = deserialize_message(data, PointCloud2)
-        for frame in concatenator.process_cloud(topic, cloud, arrival_time=record_time_ns * 1e-9):
+        for frame in concatenator.process_cloud(topic, data, arrival_time=record_time_ns * 1e-9):
             handle(frame)
 for frame in concatenator.flush():
     handle(frame)
@@ -325,7 +322,8 @@ where `handle(frame)` reads `frame.status` (`COMPLETE`, `TIMEOUT`, or `LATE` wit
 - The same messages with the same arrival times always give the same frames.
 - Each transform maps a sensor frame directly into the output frame, as `lookup_transform(output_frame, sensor_frame, ...)` returns.
 - To reproduce the node exactly, pass its `max_open_collectors` and `reject_late_clouds=True`.
-- Keep `cloud.data` as the `array('B')` that `deserialize_message` returns; assigning `bytes` is slow.
+- Clouds, twists and odometry can also be passed as message objects, but those have to be serialized first, which is slower. Transforms are always passed as message objects, since rosbags store them inside `tf2_msgs/msg/TFMessage`s.
+- When building clouds in Python, keep `cloud.data` as the `array('B')` that `deserialize_message` returns; assigning `bytes` is slow.
 
 See the docstrings (`help(Concatenator)`) for all options and exceptions.
 
