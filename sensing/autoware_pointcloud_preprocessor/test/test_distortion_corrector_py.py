@@ -21,6 +21,7 @@ from autoware_pointcloud_preprocessor.distortion_corrector import PointcloudVali
 from geometry_msgs.msg import TransformStamped
 from geometry_msgs.msg import TwistWithCovarianceStamped
 import pytest
+from rclpy.serialization import serialize_message
 from sensor_msgs.msg import Imu
 from sensor_msgs.msg import PointCloud2
 from sensor_msgs.msg import PointField
@@ -104,19 +105,23 @@ _DEFAULT_POINTS = [
 _SAMPLE_NANOSECS = [90_000_000 + ms * 1_000_000 for ms in (95, 110, 125, 140, 155)]
 
 
-def _feed_twists(corrector):
+def _as_is(msg):
+    return msg
+
+
+def _feed_twists(corrector, convert=_as_is):
     for nanosec in _SAMPLE_NANOSECS:
-        corrector.insert_twist(_make_twist(_CLOUD_SEC, nanosec))
+        corrector.insert_twist(convert(_make_twist(_CLOUD_SEC, nanosec)))
 
 
-def _feed_imus(corrector, yaw_rate=0.5):
+def _feed_imus(corrector, yaw_rate=0.5, convert=_as_is):
     for nanosec in _SAMPLE_NANOSECS:
         imu = Imu()
         imu.header.stamp.sec = _CLOUD_SEC
         imu.header.stamp.nanosec = nanosec
         imu.header.frame_id = "imu_link"
         imu.angular_velocity.z = yaw_rate
-        corrector.insert_imu(imu)
+        corrector.insert_imu(convert(imu))
 
 
 def test_empty_pointcloud_reports_empty():
@@ -240,3 +245,47 @@ def test_wrong_message_type_raises():
         corrector.insert_twist(_identity_transform("base_link"))
     with pytest.raises(TypeError):
         corrector.undistort_pointcloud(_make_twist(_CLOUD_SEC, 0), _IDENTITY)
+    # Transforms are only taken as message objects.
+    with pytest.raises(TypeError):
+        corrector.undistort_pointcloud(
+            serialize_message(_make_pointcloud(_DEFAULT_POINTS)), serialize_message(_IDENTITY)
+        )
+
+
+def test_serialized_messages_give_the_same_result():
+    # Arrange
+    with_objects = DistortionCorrector()
+    with_serialized = DistortionCorrector()
+    for corrector in (with_objects, with_serialized):
+        corrector.set_imu_transform(_identity_transform("imu_link"))
+    _feed_twists(with_objects)
+    _feed_imus(with_objects)
+    _feed_twists(with_serialized, convert=serialize_message)
+    _feed_imus(with_serialized, convert=serialize_message)
+    cloud = _make_pointcloud(_DEFAULT_POINTS)
+
+    # Act
+    expected, expected_status = with_objects.undistort_pointcloud(cloud, _IDENTITY)
+    out, status = with_serialized.undistort_pointcloud(serialize_message(cloud), _IDENTITY)
+
+    # Assert
+    assert _read_xyz(expected) != _read_xyz(cloud)
+    assert _read_xyz(out) == _read_xyz(expected)
+    assert status == expected_status
+
+
+def test_malformed_serialized_messages_raise():
+    # Arrange
+    corrector = DistortionCorrector()
+    corrector.set_imu_transform(_identity_transform("imu_link"))
+    twist = serialize_message(_make_twist(_CLOUD_SEC, 0))
+    cloud = serialize_message(_make_pointcloud(_DEFAULT_POINTS))
+
+    # Act & Assert
+    for malformed in (b"", twist[:4], twist[: len(twist) // 2]):
+        with pytest.raises(ValueError, match="TwistWithCovarianceStamped"):
+            corrector.insert_twist(malformed)
+        with pytest.raises(ValueError, match="Imu"):
+            corrector.insert_imu(malformed)
+    with pytest.raises(ValueError, match="PointCloud2"):
+        corrector.undistort_pointcloud(cloud[: len(cloud) // 2], _IDENTITY)

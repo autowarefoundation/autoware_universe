@@ -63,17 +63,16 @@ ros2 launch autoware_pointcloud_preprocessor distortion_corrector.launch.xml
 
 ## Offline use from Python
 
-The correction core (`DistortionCorrector2D` / `DistortionCorrector3D`, which the node runs) can be used from Python through `autoware_pointcloud_preprocessor.distortion_corrector`. It is built and installed with the package. It takes and returns rclpy messages and needs no ROS node: no `rclpy.init()`, no executor and no TF listener, so the result depends only on the inputs.
+The correction core (`DistortionCorrector2D` / `DistortionCorrector3D`, which the node runs) can be used from Python through `autoware_pointcloud_preprocessor.distortion_corrector`. It is built and installed with the package. It takes twists, IMU samples and point clouds serialized, as rosbags store them, or as rclpy messages, and returns an rclpy message. It needs no ROS node: no `rclpy.init()`, no executor and no TF listener, so the result depends only on the inputs.
 
 ```python
 from autoware_pointcloud_preprocessor.distortion_corrector import DistortionCorrector, PointcloudValidity
-from geometry_msgs.msg import TransformStamped, TwistWithCovarianceStamped
-from sensor_msgs.msg import Imu, PointCloud2
+from geometry_msgs.msg import TransformStamped
 
-# Inputs, e.g. read from a rosbag.
-twists: list[TwistWithCovarianceStamped]
-imus: list[Imu]
-cloud: PointCloud2
+# Inputs, e.g. read from a rosbag: serialized messages as the bag stores them, and transforms.
+twists: list[bytes]  # geometry_msgs/msg/TwistWithCovarianceStamped
+imus: list[bytes]  # sensor_msgs/msg/Imu
+cloud: bytes  # sensor_msgs/msg/PointCloud2
 imu_to_base_link: TransformStamped
 lidar_to_base_link: TransformStamped
 
@@ -87,15 +86,16 @@ for imu in imus:
     corrector.insert_imu(imu)
 undistorted, status = corrector.undistort_pointcloud(
     cloud, lidar_to_base_link, use_imu=True, update_azimuth_and_distance=False
-)
+)  # undistorted is a sensor_msgs.msg.PointCloud2
 if status.validity is not PointcloudValidity.VALID:
     ...  # the cloud was returned unchanged; see status.validity
 ```
 
+- Twists, IMU samples and point clouds can also be passed as message objects, but those have to be serialized first, which is slower. Transforms are always passed as message objects, since rosbags store them inside `tf2_msgs/msg/TFMessage`s.
 - Transforms have `header.frame_id` = base frame and `child_frame_id` = sensor frame, as TF provides them.
 - The twist and IMU queues follow the node's rules: a sample older than the queue front clears the queue, and samples older than the newest one by more than 1 s are dropped.
 - `status` also carries `twist_queue_empty`, `twist_timestamp_too_late`, `imu_timestamp_too_late`, `timestamp_mismatch_count`, `timestamp_mismatch_fraction` and `angle_conversion_error`, the conditions the node logs or reports as diagnostics. `angle_conversion_error` is set when `update_azimuth_and_distance=True` but the azimuth conversion could not be computed from this cloud, in which case azimuth and distance are left unchanged.
-- A message of the wrong type raises `TypeError`, and `insert_imu` before `set_imu_transform` raises `RuntimeError`.
+- A message object of the wrong type raises `TypeError`, bytes that cannot be deserialized raise `ValueError`, and `insert_imu` before `set_imu_transform` raises `RuntimeError`. Bytes of another message type are not detected in every case, and may be deserialized as garbage.
 
 ## References/External links
 
