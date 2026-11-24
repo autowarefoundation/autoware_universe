@@ -48,8 +48,8 @@ inline float azimuth_distance(const float from, const float to)
  */
 inline float azimuth_step(const float from, const float to)
 {
-  constexpr float two_pi = 6.28318530717958647692F;
-  constexpr float pi = 3.14159265358979323846F;
+  constexpr float two_pi = static_cast<float>(2.0 * M_PI);
+  constexpr float pi = static_cast<float>(M_PI);
   float step = to - from;
   if (step > pi) {
     step -= two_pi;
