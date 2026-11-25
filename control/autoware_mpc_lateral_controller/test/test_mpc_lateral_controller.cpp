@@ -34,6 +34,7 @@ using autoware::motion::control::mpc_lateral_controller::clamp_steering_to_vehic
 using autoware::motion::control::mpc_lateral_controller::min_target_velocity_within_distance;
 using autoware::motion::control::mpc_lateral_controller::MpcLateralController;
 using autoware::motion::control::mpc_lateral_controller::MpcLateralControllerConfig;
+using autoware::motion::control::mpc_lateral_controller::MPCParam;
 using autoware::motion::control::mpc_lateral_controller::no_log;
 using autoware::motion::control::trajectory_follower::InputData;
 using autoware::motion::control::trajectory_follower::LateralOutput;
@@ -330,6 +331,42 @@ int cycles_to_forget_shape_change()
   return static_cast<int>(std::ceil((new_traj_duration_time - ctrl_period) / ctrl_period));
 }
 
+MPCParam make_default_mpc_params()
+{
+  MPCParam mpc;
+  mpc.prediction_horizon = 50;
+  mpc.prediction_dt = 0.1;
+  mpc.steer_tau = 0.27;
+  mpc.zero_ff_steer_deg = 0.5;
+  mpc.acceleration_limit = 2.0;
+  mpc.velocity_time_constant = 0.3;
+  mpc.min_prediction_length = 5.0;
+  mpc.low_curvature_thresh_curvature = 0.0;
+
+  auto & nominal = mpc.nominal_weight;
+  nominal.lat_error = 1.0;
+  nominal.heading_error = 0.0;
+  nominal.heading_error_squared_vel = 0.3;
+  nominal.steering_input = 1.0;
+  nominal.steering_input_squared_vel = 0.25;
+  nominal.lat_jerk = 0.1;
+  nominal.steer_rate = 0.0;
+  nominal.steer_acc = 0.000001;
+  nominal.terminal_lat_error = 1.0;
+  nominal.terminal_heading_error = 0.1;
+
+  auto & low_curvature = mpc.low_curvature_weight;
+  low_curvature.lat_error = 0.1;
+  low_curvature.heading_error = 0.0;
+  low_curvature.heading_error_squared_vel = 0.3;
+  low_curvature.steering_input = 1.0;
+  low_curvature.steering_input_squared_vel = 0.25;
+  low_curvature.lat_jerk = 0.0;
+  low_curvature.steer_rate = 0.0;
+  low_curvature.steer_acc = 0.000001;
+  return mpc;
+}
+
 /// The values the shipped parameter files carry. The vehicle values are the ones the vehicle
 /// description package provides in production.
 MpcLateralControllerConfig make_default_config()
@@ -347,7 +384,6 @@ MpcLateralControllerConfig make_default_config()
 
   config.stop_state_entry_ego_speed = stop_state_entry_ego_speed;
   config.stop_state_entry_target_speed = stop_state_entry_target_speed;
-  config.stop_state_entry_distance = 0.5;
   config.converged_steer_rad = converged_steer_rad;
   config.keep_steer_control_until_converged = true;
   config.new_traj_duration_time = new_traj_duration_time;
@@ -380,37 +416,7 @@ MpcLateralControllerConfig make_default_config()
     {10.0, 60.0 * deg2rad}, {15.0, 50.0 * deg2rad}, {20.0, 40.0 * deg2rad}};
 
   config.qp_solver_type = "osqp";
-  auto & mpc = config.mpc_param;
-  mpc.prediction_horizon = 50;
-  mpc.prediction_dt = 0.1;
-  mpc.steer_tau = 0.27;
-  mpc.zero_ff_steer_deg = 0.5;
-  mpc.acceleration_limit = 2.0;
-  mpc.velocity_time_constant = 0.3;
-  mpc.min_prediction_length = 5.0;
-  mpc.low_curvature_thresh_curvature = 0.0;
-
-  auto & nominal = mpc.nominal_weight;
-  nominal.lat_error = 1.0;
-  nominal.heading_error = 0.0;
-  nominal.heading_error_squared_vel = 0.3;
-  nominal.steering_input = 1.0;
-  nominal.steering_input_squared_vel = 0.25;
-  nominal.lat_jerk = 0.1;
-  nominal.steer_rate = 0.0;
-  nominal.steer_acc = 0.000001;
-  nominal.terminal_lat_error = 1.0;
-  nominal.terminal_heading_error = 0.1;
-
-  auto & low_curvature = mpc.low_curvature_weight;
-  low_curvature.lat_error = 0.1;
-  low_curvature.heading_error = 0.0;
-  low_curvature.heading_error_squared_vel = 0.3;
-  low_curvature.steering_input = 1.0;
-  low_curvature.steering_input_squared_vel = 0.25;
-  low_curvature.lat_jerk = 0.0;
-  low_curvature.steer_rate = 0.0;
-  low_curvature.steer_acc = 0.000001;
+  config.mpc_param = make_default_mpc_params();
 
   config.input_delay = 0.24;
   config.use_steer_prediction = false;
@@ -519,9 +525,9 @@ TEST(MpcLateralControllerTest, ShortStopLookaheadExcludesPointsBeyondPidDepartur
 {
   constexpr double pid_departure_distance = 0.5;
   for (const double stop_distance : {0.78, 1.0}) {
-    auto trajectory = make_trajectory({
-      make_point(0.0, 0.0, 0.0), make_point(stop_distance / 2.0, 0.0, 0.0),
-      make_point(stop_distance, 0.0, 0.0)});
+    auto trajectory = make_trajectory(
+      {make_point(0.0, 0.0, 0.0), make_point(stop_distance / 2.0, 0.0, 0.0),
+       make_point(stop_distance, 0.0, 0.0)});
     trajectory.points[0].longitudinal_velocity_mps = 0.4f;
     trajectory.points[1].longitudinal_velocity_mps = 0.4f;
     trajectory.points[2].longitudinal_velocity_mps = 0.0f;
@@ -531,9 +537,8 @@ TEST(MpcLateralControllerTest, ShortStopLookaheadExcludesPointsBeyondPidDepartur
   }
 
   // A stop at the threshold remains a stopped state, matching PID (departure is > 0.5).
-  auto at_boundary = make_trajectory({
-    make_point(0.0, 0.0, 0.0), make_point(0.25, 0.0, 0.0),
-    make_point(0.5, 0.0, 0.0)});
+  auto at_boundary = make_trajectory(
+    {make_point(0.0, 0.0, 0.0), make_point(0.25, 0.0, 0.0), make_point(0.5, 0.0, 0.0)});
   at_boundary.points[0].longitudinal_velocity_mps = 0.4f;
   at_boundary.points[1].longitudinal_velocity_mps = 0.4f;
   at_boundary.points[2].longitudinal_velocity_mps = 0.0f;
@@ -551,6 +556,33 @@ TEST(MpcLateralControllerTest, HoldingStoppedCommandDoesNotForceSteeringSyncFals
   const auto output = controller.runDetailed(stopped, at(clock.next_cycle())).output;
 
   // A settled, previously optimized steering command can remain converged at a stop.
+  EXPECT_TRUE(output.sync_data.is_steer_converged);
+}
+
+TEST(MpcLateralControllerTest, StoppedConvergenceComparesThePublishedAngleToRawSteering)
+{
+  constexpr double offset = 0.05;
+  auto config = make_default_config();
+  config.converged_steer_rad = 0.01;
+  MpcLateralController controller(config, no_log);
+  auto clock = CycleClock().first_at(0.0).every(ctrl_period);
+  const auto driving = Input()
+                         .following(straight_path())
+                         .planned_at(1.0)
+                         .driving_at(1.0)
+                         .steering_at(-offset)
+                         .with_steering_offset(offset);
+  run_cycles(controller, driving, clock, cycles_spanning(15.0));
+
+  const auto stopped = Input()
+                         .following(straight_path())
+                         .planned_at(0.0)
+                         .driving_at(0.0)
+                         .steering_at(-offset)
+                         .with_steering_offset(offset);
+  const auto output = controller.runDetailed(stopped, at(clock.next_cycle())).output;
+
+  EXPECT_NEAR(output.control_cmd.steering_tire_angle, -offset, config.converged_steer_rad);
   EXPECT_TRUE(output.sync_data.is_steer_converged);
 }
 

@@ -291,6 +291,8 @@ private:
    */
   [[nodiscard]] Lateral getStopControlCommand() const;
 
+  void updateSteeringOffset(float measured_offset);
+
   /**
    * @brief Get the control command applied before initialization.
    * @return Initial control command.
