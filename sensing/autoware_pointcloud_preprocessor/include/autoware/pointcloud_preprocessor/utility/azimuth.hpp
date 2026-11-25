@@ -44,7 +44,8 @@ inline float azimuth_distance(const float from, const float to)
  *
  * Positive when the azimuth increases (counterclockwise), negative when it decreases. The
  * wrap-around is handled anywhere on the circle, like azimuth_distance(), whose value is
- * std::fabs(azimuth_step(from, to)).
+ * std::fabs(azimuth_step(from, to)). It stays in float with two branches instead of using
+ * autoware_utils_math::normalize_radian(), which works in double with fmod.
  */
 inline float azimuth_step(const float from, const float to)
 {
@@ -71,8 +72,10 @@ inline float azimuth_step(const float from, const float to)
 class AzimuthOrderCounter
 {
 public:
-  static constexpr float default_max_minority_ratio = 0.05F;
-  static constexpr std::size_t default_min_steps = 10;
+  /// largest tolerated share of steps against the majority direction
+  static constexpr float max_minority_ratio = 0.05F;
+  /// rings with fewer counted steps are always considered in order
+  static constexpr std::size_t min_steps = 10;
   /// add_sampled() counts one step out of sample_stride
   static constexpr std::size_t sample_stride = 8;
 
@@ -85,8 +88,7 @@ public:
   /**
    * @brief Counts the step from `from` to `to` when step_index is a multiple of sample_stride.
    *
-   * Counting every step of a ring costs about 45% of the ring outlier filter's walk loop.
-   * Sampling one step out of 8 keeps the cost within noise and still detects shuffled rings.
+   * For callers in a hot loop: one step out of 8 is enough to detect shuffled rings.
    */
   void add_sampled(const std::size_t step_index, const float from, const float to)
   {
@@ -95,20 +97,8 @@ public:
     }
   }
 
-  void reset()
-  {
-    forward_ = 0;
-    backward_ = 0;
-  }
-
-  /**
-   * @brief Whether the counted steps are in scan order.
-   * @param max_minority_ratio largest tolerated share of steps against the majority direction
-   * @param min_steps rings with fewer counted steps are always considered in order
-   */
-  [[nodiscard]] bool is_ordered(
-    const float max_minority_ratio = default_max_minority_ratio,
-    const std::size_t min_steps = default_min_steps) const
+  /// Whether the counted steps are in scan order.
+  [[nodiscard]] bool is_ordered() const
   {
     const std::size_t total = forward_ + backward_;
     if (total < min_steps) {

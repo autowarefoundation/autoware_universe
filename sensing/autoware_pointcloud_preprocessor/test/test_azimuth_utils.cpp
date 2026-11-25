@@ -41,11 +41,28 @@ std::vector<float> make_ring(float start_deg, float step_deg, int num_points)
   return azimuths;
 }
 
+std::vector<float> make_shuffled_ring(std::mt19937::result_type seed)
+{
+  auto azimuths = make_ring(0.0F, 0.2F, 1800);
+  std::mt19937 rng(seed);
+  std::shuffle(azimuths.begin(), azimuths.end(), rng);
+  return azimuths;
+}
+
 AzimuthOrderCounter count(const std::vector<float> & azimuths)
 {
   AzimuthOrderCounter counter;
   for (size_t i = 0; i + 1 < azimuths.size(); ++i) {
     counter.add(azimuth_step(azimuths[i], azimuths[i + 1]));
+  }
+  return counter;
+}
+
+AzimuthOrderCounter count_sampled(const std::vector<float> & azimuths)
+{
+  AzimuthOrderCounter counter;
+  for (size_t i = 0; i + 1 < azimuths.size(); ++i) {
+    counter.add_sampled(i, azimuths[i], azimuths[i + 1]);
   }
   return counter;
 }
@@ -87,10 +104,7 @@ TEST(AzimuthOrderCounterTest, IncreasingAndDecreasingRingsAreOrdered)
 
 TEST(AzimuthOrderCounterTest, ShuffledRingIsNotOrdered)
 {
-  auto azimuths = make_ring(0.0F, 0.2F, 1800);
-  std::mt19937 rng(42);
-  std::shuffle(azimuths.begin(), azimuths.end(), rng);
-  EXPECT_FALSE(count(azimuths).is_ordered());
+  EXPECT_FALSE(count(make_shuffled_ring(42)).is_ordered());
 }
 
 TEST(AzimuthOrderCounterTest, FewBackwardStepsAreTolerated)
@@ -130,23 +144,13 @@ TEST(AzimuthOrderCounterTest, TooFewStepsAreNotJudged)
   counter.add(0.1F);
   counter.add(-0.1F);
   EXPECT_FALSE(counter.is_ordered());  // 10 steps, half backward
-  counter.reset();
-  EXPECT_EQ(counter.forward() + counter.backward(), 0U);
 }
 
 TEST(AzimuthOrderCounterTest, SamplingEvery8thStepStillDetectsShuffledRing)
 {
   // The ring outlier filter feeds the counter with every 8th step only.
-  auto shuffled = make_ring(0.0F, 0.2F, 1800);
-  std::mt19937 rng(7);
-  std::shuffle(shuffled.begin(), shuffled.end(), rng);
-  const auto ordered = make_ring(120.0F, -0.2F, 1800);
-  AzimuthOrderCounter shuffled_counter;
-  AzimuthOrderCounter ordered_counter;
-  for (size_t i = 0; i + 1 < shuffled.size(); ++i) {
-    shuffled_counter.add_sampled(i, shuffled[i], shuffled[i + 1]);
-    ordered_counter.add_sampled(i, ordered[i], ordered[i + 1]);
-  }
+  const auto shuffled_counter = count_sampled(make_shuffled_ring(7));
+  const auto ordered_counter = count_sampled(make_ring(120.0F, -0.2F, 1800));
   // 1799 steps, one counted out of 8
   EXPECT_EQ(ordered_counter.forward() + ordered_counter.backward(), 225U);
   EXPECT_FALSE(shuffled_counter.is_ordered());

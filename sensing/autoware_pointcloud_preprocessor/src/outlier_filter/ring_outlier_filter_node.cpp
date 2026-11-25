@@ -186,15 +186,15 @@ void RingOutlierFilterComponent::faster_filter(
   // Rings whose points are not in scan order. The walk below compares consecutive points only, so
   // such input is still processed, but it is reported because valid points may be removed. With one
   // sample every 8 steps, rings of fewer than about 80 points are not judged (see min_steps).
+  // Counting every step instead costs about 45% of the walk loop.
   int checked_ring_count = 0;
   int unordered_ring_count = 0;
-  utils::AzimuthOrderCounter azimuth_order;
 
   for (const auto & indices : ring2indices) {
     if (indices.size() < 2) continue;
 
     walk_first_idx = 0;
-    azimuth_order.reset();
+    utils::AzimuthOrderCounter azimuth_order;
 
     for (size_t idx = 0U; idx < indices.size() - 1; ++idx) {
       const size_t & current_data_idx = indices[idx];
