@@ -49,7 +49,7 @@ public:
   /** @brief Azimuth wrapped into [0, 2pi). */
   static float wrap(const float azimuth)
   {
-    constexpr float two_pi = 6.28318530717958647692F;
+    constexpr float two_pi = static_cast<float>(2.0 * M_PI);
     float wrapped = azimuth < 0.0F ? azimuth + two_pi : azimuth;
     wrapped = wrapped >= two_pi ? wrapped - two_pi : wrapped;
     return wrapped;
