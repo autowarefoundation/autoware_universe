@@ -61,13 +61,20 @@ Rings split_into_rings(
   return rings;
 }
 
-/** @brief Appends each noise point of the ring to noise_output, and the others to output. */
+/** @brief The kept points and the removed (noise) points. */
+struct FilteredClouds
+{
+  pcl::PointCloud<PointXYZIRCAEDT> kept;
+  pcl::PointCloud<PointXYZIRCAEDT> noise;
+};
+
+/** @brief Appends each noise point of the ring to clouds.noise, and the others to clouds.kept. */
 void append_by_noise_flag(
   const std::vector<PointXYZIRCAEDT> & ring, const std::vector<bool> & is_noise,
-  pcl::PointCloud<PointXYZIRCAEDT> & output, pcl::PointCloud<PointXYZIRCAEDT> & noise_output)
+  FilteredClouds & clouds)
 {
   for (size_t i = 0; i < ring.size(); ++i) {
-    auto & target = is_noise[i] ? noise_output : output;
+    auto & target = is_noise[i] ? clouds.noise : clouds.kept;
     target.points.push_back(ring[i]);
   }
 }
@@ -105,14 +112,13 @@ void write_frequency_row(
 /** @brief Applies a ring outlier filter to the non weak first returns. */
 void filter_other_rings(
   const std::vector<std::vector<PointXYZIRCAEDT>> & rings, const double distance_ratio,
-  const float max_azimuth_diff, pcl::PointCloud<PointXYZIRCAEDT> & output,
-  pcl::PointCloud<PointXYZIRCAEDT> & noise_output)
+  const float max_azimuth_diff, FilteredClouds & clouds)
 {
   for (const auto & ring : rings) {
     auto is_noise =
       dual_return_outlier_filter::find_segment_points(ring, distance_ratio, max_azimuth_diff);
     is_noise.flip();
-    append_by_noise_flag(ring, is_noise, output, noise_output);
+    append_by_noise_flag(ring, is_noise, clouds);
   }
 }
 }  // namespace
@@ -217,10 +223,9 @@ void DualReturnOutlierFilterComponent::filter(
       rings.num_points_with_invalid_channel, vertical_bins);
   }
 
-  pcl::PointCloud<PointXYZIRCAEDT> pcl_output;
-  pcl_output.points.reserve(pcl_input->points.size());
-  pcl::PointCloud<PointXYZIRCAEDT> noise_output;
-  noise_output.points.reserve(pcl_input->points.size());
+  FilteredClouds clouds;
+  clouds.kept.points.reserve(pcl_input->points.size());
+  clouds.noise.points.reserve(pcl_input->points.size());
 
   // Weak first returns: isolated points are noise, and so are the segment points in noisy bins.
   // The noise counts of each ring and bin make the frequency image.
@@ -231,25 +236,24 @@ void DualReturnOutlierFilterComponent::filter(
     const auto & ring = rings.weak_first[ring_id];
     const auto result = dual_return_outlier_filter::classify_weak_first_ring(
       ring, azimuth_bins, weak_first_params, is_in_roi);
-    append_by_noise_flag(ring, result.is_noise, pcl_output, noise_output);
+    append_by_noise_flag(ring, result.is_noise, clouds);
     write_frequency_row(frequency_image, ring_id, result.noise_frequency);
   }
 
   // Other returns: a ring outlier filter, without the visibility estimation
   filter_other_rings(
-    rings.others, general_distance_ratio_, weak_first_params.max_azimuth_diff, pcl_output,
-    noise_output);
+    rings.others, general_distance_ratio_, weak_first_params.max_azimuth_diff, clouds);
 
   publish_visibility(frequency_image, input->header);
 
   // Publish noise points
   sensor_msgs::msg::PointCloud2 noise_output_msg;
-  pcl::toROSMsg(noise_output, noise_output_msg);
+  pcl::toROSMsg(clouds.noise, noise_output_msg);
   noise_output_msg.header = input->header;
   noise_cloud_pub_->publish(noise_output_msg);
 
   // Publish filtered pointcloud
-  pcl::toROSMsg(pcl_output, output);
+  pcl::toROSMsg(clouds.kept, output);
   output.header = input->header;
 }
 
