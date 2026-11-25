@@ -224,8 +224,9 @@ dual_return_outlier_filter::AzimuthBins DualReturnOutlierFilterComponent::make_a
 {
   constexpr std::size_t horizontal_bins = 36;
   if (roi_mode == 2) {
-    constexpr float deg_to_rad = static_cast<float>(M_PI / 180.0);
-    return {min_azimuth_deg_ * deg_to_rad, max_azimuth_deg_ * deg_to_rad, horizontal_bins};
+    return {
+      min_azimuth_deg_ * static_cast<float>(M_PI / 180.0),
+      max_azimuth_deg_ * static_cast<float>(M_PI / 180.0), horizontal_bins};
   }
   return {0.0F, static_cast<float>(2.0 * M_PI), horizontal_bins};
 }
