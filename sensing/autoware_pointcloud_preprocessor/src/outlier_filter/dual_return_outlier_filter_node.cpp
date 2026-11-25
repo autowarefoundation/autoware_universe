@@ -15,6 +15,7 @@
 #include "autoware/pointcloud_preprocessor/outlier_filter/dual_return_outlier_filter_node.hpp"
 
 #include "autoware/point_types/types.hpp"
+#include "autoware/pointcloud_preprocessor/utility/azimuth.hpp"
 
 #include <std_msgs/msg/header.hpp>
 
@@ -167,8 +168,8 @@ void DualReturnOutlierFilterComponent::filter(
          iter != std::end(weak_first_single_ring) - 1; ++iter) {
       const float min_dist = std::min(iter->distance, (iter + 1)->distance);
       const float max_dist = std::max(iter->distance, (iter + 1)->distance);
-      float azimuth_diff = (iter + 1)->azimuth - iter->azimuth;
-      azimuth_diff = azimuth_diff < 0.f ? azimuth_diff + 2 * M_PI : azimuth_diff;
+      // Unsigned, so that azimuths decreasing along the ring are handled like increasing ones
+      const float azimuth_diff = utils::azimuth_distance(iter->azimuth, (iter + 1)->azimuth);
 
       if (max_dist < min_dist * weak_first_distance_ratio_ && azimuth_diff < max_azimuth_diff) {
         temp_segment.points.push_back(*iter);
@@ -284,8 +285,8 @@ void DualReturnOutlierFilterComponent::filter(
     for (auto iter = std::begin(input_ring) + 1; iter != std::end(input_ring) - 1; ++iter) {
       const float min_dist = std::min(iter->distance, (iter + 1)->distance);
       const float max_dist = std::max(iter->distance, (iter + 1)->distance);
-      float azimuth_diff = (iter + 1)->azimuth - iter->azimuth;
-      azimuth_diff = azimuth_diff < 0.f ? azimuth_diff + 2 * M_PI : azimuth_diff;
+      // Unsigned, so that azimuths decreasing along the ring are handled like increasing ones
+      const float azimuth_diff = utils::azimuth_distance(iter->azimuth, (iter + 1)->azimuth);
 
       if (max_dist < min_dist * general_distance_ratio_ && azimuth_diff < max_azimuth_diff) {
         temp_segment.points.push_back(*iter);

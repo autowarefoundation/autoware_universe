@@ -29,16 +29,31 @@ namespace autoware::radar_objects_adapter
 
 // Maps for classification remapping
 const std::map<std::string, RadarClassification::_label_type> RADAR_LABEL_TO_UINT_MAP = {
-  {"UNKNOWN", RadarClassification::UNKNOWN}, {"CAR", RadarClassification::CAR},
-  {"TRUCK", RadarClassification::TRUCK},     {"MOTORCYCLE", RadarClassification::MOTORCYCLE},
-  {"BICYCLE", RadarClassification::BICYCLE}, {"PEDESTRIAN", RadarClassification::PEDESTRIAN},
-  {"ANIMAL", RadarClassification::ANIMAL},   {"HAZARD", RadarClassification::HAZARD}};
+  {"UNKNOWN", RadarClassification::UNKNOWN},
+  {"CAR", RadarClassification::CAR},
+  {"TRUCK", RadarClassification::TRUCK},
+  {"BUS", RadarClassification::BUS},
+  {"TRAILER", RadarClassification::TRAILER},
+  {"MOTORCYCLE", RadarClassification::MOTORCYCLE},
+  {"BICYCLE", RadarClassification::BICYCLE},
+  {"PEDESTRIAN", RadarClassification::PEDESTRIAN},
+  {"ANIMAL", RadarClassification::ANIMAL},
+  {"HAZARD", RadarClassification::HAZARD},
+  {"OVER_DRIVABLE", RadarClassification::OVER_DRIVABLE},
+  {"UNDER_DRIVABLE", RadarClassification::UNDER_DRIVABLE}};
 const std::map<std::string, ObjectClassification::_label_type> OBJECT_LABEL_TO_UINT_MAP = {
-  {"UNKNOWN", ObjectClassification::UNKNOWN}, {"CAR", ObjectClassification::CAR},
-  {"TRUCK", ObjectClassification::TRUCK},     {"BUS", ObjectClassification::BUS},
-  {"TRAILER", ObjectClassification::TRAILER}, {"MOTORCYCLE", ObjectClassification::MOTORCYCLE},
-  {"BICYCLE", ObjectClassification::BICYCLE}, {"PEDESTRIAN", ObjectClassification::PEDESTRIAN},
-  {"ANIMAL", ObjectClassification::ANIMAL}};
+  {"UNKNOWN", ObjectClassification::UNKNOWN},
+  {"CAR", ObjectClassification::CAR},
+  {"TRUCK", ObjectClassification::TRUCK},
+  {"BUS", ObjectClassification::BUS},
+  {"TRAILER", ObjectClassification::TRAILER},
+  {"MOTORCYCLE", ObjectClassification::MOTORCYCLE},
+  {"BICYCLE", ObjectClassification::BICYCLE},
+  {"PEDESTRIAN", ObjectClassification::PEDESTRIAN},
+  {"ANIMAL", ObjectClassification::ANIMAL},
+  {"HAZARD", ObjectClassification::HAZARD},
+  {"OVER_DRIVABLE", ObjectClassification::OVER_DRIVABLE},
+  {"UNDER_DRIVABLE", ObjectClassification::UNDER_DRIVABLE}};
 
 ClassificationRemapParseResult make_classification_remap_from_string_pair(
   const std::map<std::string, std::string> & classification_remap_str)
@@ -83,6 +98,52 @@ std::string join(const std::vector<std::string> & words)
   return joined;
 }
 
+using DETECTION_COV_IDX = autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;
+using RADAR_COV_IDX = autoware_utils_geometry::xyz_upper_covariance_index::XYZ_UPPER_COV_IDX;
+
+double squared(const double value)
+{
+  return value * value;
+}
+
+// A 6x6 covariance whose x/y block is copied from the radar's upper triangle as it is. Every
+// other entry is zero.
+std::array<double, 36> copied_xy_covariance(const std::array<float, 6> & radar_cov)
+{
+  std::array<double, 36> cov{};
+
+  cov[DETECTION_COV_IDX::X_X] = mask_cov_value(radar_cov[RADAR_COV_IDX::X_X]);
+  cov[DETECTION_COV_IDX::X_Y] = mask_cov_value(radar_cov[RADAR_COV_IDX::X_Y]);
+  cov[DETECTION_COV_IDX::Y_X] = mask_cov_value(radar_cov[RADAR_COV_IDX::X_Y]);
+  cov[DETECTION_COV_IDX::Y_Y] = mask_cov_value(radar_cov[RADAR_COV_IDX::Y_Y]);
+
+  return cov;
+}
+
+// A 6x6 covariance whose x/y block is the radar's, rotated into the frame of an object facing
+// `yaw`. Every other entry is zero. Serves the twist and the acceleration alike.
+std::array<double, 36> rotated_xy_covariance(
+  const std::array<float, 6> & radar_cov, const float yaw)
+{
+  std::array<double, 36> cov{};
+
+  const float c = std::cos(yaw);
+  const float s = std::sin(yaw);
+
+  const float xx = mask_cov_value(radar_cov[RADAR_COV_IDX::X_X]);
+  const float xy = mask_cov_value(radar_cov[RADAR_COV_IDX::X_Y]);
+  const float yy = mask_cov_value(radar_cov[RADAR_COV_IDX::Y_Y]);
+
+  cov[DETECTION_COV_IDX::X_X] = xx * c * c + yy * s * s + 2.f * xy * s * c;
+
+  cov[DETECTION_COV_IDX::X_Y] = (yy - xx) * s * c + xy * (c * c - s * s);
+  cov[DETECTION_COV_IDX::Y_X] = cov[DETECTION_COV_IDX::X_Y];
+
+  cov[DETECTION_COV_IDX::Y_Y] = xx * s * s + yy * c * c - 2.f * xy * s * c;
+
+  return cov;
+}
+
 }  // namespace
 
 void ConversionConfiguration::add_field(std::string name, double default_value)
@@ -115,9 +176,19 @@ RadarObjectsAdapter::RadarObjectsAdapter(
   const std::string & topic_name)
 : params_(params), classification_remap_(classification_remap)
 {
-  required_attributes_ = {
-    "existence_probability", "position_x",     "position_y", "velocity_x", "velocity_y",
-    "acceleration_x",        "acceleration_y", "orientation"};
+  // The fields the conversion uses with nothing to fall back on. A radar must fill them with
+  // meaningful values and report their names in the object fields of its radar info. object_id
+  // is used as well, but is taken as always provided and need not be reported.
+  required_attributes_ = {"existence_probability",
+                          "position_x",
+                          "position_y",
+                          "velocity_x",
+                          "velocity_y",
+                          "acceleration_x",
+                          "acceleration_y",
+                          "orientation",
+                          "orientation_rate",
+                          "movement_status"};
 
   std::size_t hash_code = std::hash<std::string>{}(topic_name);
 
@@ -200,80 +271,6 @@ tl::expected<ConversionOutcome, MissingRadarInfo> RadarObjectsAdapter::convert(
   return ConversionOutcome{detected_objects, tracked_objects};
 }
 
-void RadarObjectsAdapter::radar_cov_to_detection_pose_cov(
-  const std::array<float, 6> & radar_pose_cov, const double orientation_std,
-  std::array<double, 36> & pose_cov) const
-{
-  using DETECTION_COV_IDX = autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;
-  using RADAR_COV_IDX = autoware_utils_geometry::xyz_upper_covariance_index::XYZ_UPPER_COV_IDX;
-
-  pose_cov[DETECTION_COV_IDX::X_X] = mask_cov_value(radar_pose_cov[RADAR_COV_IDX::X_X]);
-  pose_cov[DETECTION_COV_IDX::X_Y] = mask_cov_value(radar_pose_cov[RADAR_COV_IDX::X_Y]);
-  pose_cov[DETECTION_COV_IDX::Y_X] = mask_cov_value(radar_pose_cov[RADAR_COV_IDX::X_Y]);
-  pose_cov[DETECTION_COV_IDX::Y_Y] = mask_cov_value(radar_pose_cov[RADAR_COV_IDX::Y_Y]);
-
-  if (orientation_std_available_) {
-    pose_cov[DETECTION_COV_IDX::YAW_YAW] = static_cast<double>(orientation_std * orientation_std);
-  }
-}
-
-void RadarObjectsAdapter::radar_cov_to_detection_twist_cov(
-  const std::array<float, 6> & radar_twist_cov, const float yaw, const float yaw_rate_std,
-  std::array<double, 36> & twist_cov) const
-{
-  using DETECTION_COV_IDX = autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;
-  using RADAR_COV_IDX = autoware_utils_geometry::xyz_upper_covariance_index::XYZ_UPPER_COV_IDX;
-
-  const float c = std::cos(yaw);
-  const float s = std::sin(yaw);
-
-  const float xx = mask_cov_value(radar_twist_cov[RADAR_COV_IDX::X_X]);
-  const float xy = mask_cov_value(radar_twist_cov[RADAR_COV_IDX::X_Y]);
-  const float yy = mask_cov_value(radar_twist_cov[RADAR_COV_IDX::Y_Y]);
-
-  twist_cov[DETECTION_COV_IDX::X_X] =
-    static_cast<double>(xx * c * c + yy * s * s + 2.f * xy * s * c);
-
-  twist_cov[DETECTION_COV_IDX::X_Y] = static_cast<double>((yy - xx) * s * c + xy * (c * c - s * s));
-  twist_cov[DETECTION_COV_IDX::Y_X] = twist_cov[DETECTION_COV_IDX::X_Y];
-
-  twist_cov[DETECTION_COV_IDX::Y_Y] =
-    static_cast<double>(xx * s * s + yy * c * c - 2.f * xy * s * c);
-
-  twist_cov[DETECTION_COV_IDX::Y_Z] = 0.0;
-
-  if (orientation_rate_std_available_) {
-    twist_cov[DETECTION_COV_IDX::YAW_YAW] = static_cast<double>(yaw_rate_std * yaw_rate_std);
-  }
-}
-
-void RadarObjectsAdapter::radar_cov_to_detection_acceleration_cov(
-  const std::array<float, 6> & radar_acceleration_cov, const float yaw,
-  std::array<double, 36> & acceleration_cov)
-{
-  using DETECTION_COV_IDX = autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;
-  using RADAR_COV_IDX = autoware_utils_geometry::xyz_upper_covariance_index::XYZ_UPPER_COV_IDX;
-
-  const float c = std::cos(yaw);
-  const float s = std::sin(yaw);
-
-  const float xx = mask_cov_value(radar_acceleration_cov[RADAR_COV_IDX::X_X]);
-  const float xy = mask_cov_value(radar_acceleration_cov[RADAR_COV_IDX::X_Y]);
-  const float yy = mask_cov_value(radar_acceleration_cov[RADAR_COV_IDX::Y_Y]);
-
-  acceleration_cov[DETECTION_COV_IDX::X_X] =
-    static_cast<double>(xx * c * c + yy * s * s + 2.f * xy * s * c);
-
-  acceleration_cov[DETECTION_COV_IDX::X_Y] =
-    static_cast<double>((yy - xx) * s * c + xy * (c * c - s * s));
-  acceleration_cov[DETECTION_COV_IDX::Y_X] = acceleration_cov[DETECTION_COV_IDX::X_Y];
-
-  acceleration_cov[DETECTION_COV_IDX::Y_Y] =
-    static_cast<double>(xx * s * s + yy * c * c - 2.f * xy * s * c);
-
-  acceleration_cov[DETECTION_COV_IDX::Y_Z] = 0.0;
-}
-
 template <typename ObjectType>
 void RadarObjectsAdapter::populate_common_fields(
   const autoware_sensing_msgs::msg::RadarObject & input_object, ObjectType & output_object,
@@ -300,9 +297,11 @@ void RadarObjectsAdapter::populate_common_fields(
   output_pose.position.z = position_z_available_ ? input_object.position.z : default_position_z;
   output_pose.orientation = autoware_utils_geometry::create_quaternion_from_yaw(yaw);
 
-  radar_cov_to_detection_pose_cov(
-    input_object.position_covariance, input_object.orientation_std,
-    output_object.kinematics.pose_with_covariance.covariance);
+  auto & pose_cov = output_object.kinematics.pose_with_covariance.covariance;
+  pose_cov = copied_xy_covariance(input_object.position_covariance);
+  if (orientation_std_available_) {
+    pose_cov[DETECTION_COV_IDX::YAW_YAW] = squared(input_object.orientation_std);
+  }
 
   auto & output_twist = output_object.kinematics.twist_with_covariance.twist;
   output_twist.linear.x =
@@ -312,9 +311,11 @@ void RadarObjectsAdapter::populate_common_fields(
   output_twist.linear.z = velocity_z_available_ ? input_object.velocity.z : default_velocity_z;
   output_twist.angular.z = input_object.orientation_rate;
 
-  radar_cov_to_detection_twist_cov(
-    input_object.velocity_covariance, yaw, input_object.orientation_rate_std,
-    output_object.kinematics.twist_with_covariance.covariance);
+  auto & twist_cov = output_object.kinematics.twist_with_covariance.covariance;
+  twist_cov = rotated_xy_covariance(input_object.velocity_covariance, yaw);
+  if (orientation_rate_std_available_) {
+    twist_cov[DETECTION_COV_IDX::YAW_YAW] = squared(input_object.orientation_rate_std);
+  }
 
   // Additional fields for TrackedObject
   if constexpr (std::is_same_v<ObjectType, autoware_perception_msgs::msg::TrackedObject>) {
@@ -326,9 +327,8 @@ void RadarObjectsAdapter::populate_common_fields(
     output_acceleration.linear.z =
       acceleration_z_available_ ? input_object.acceleration.z : default_acceleration_z;
 
-    radar_cov_to_detection_acceleration_cov(
-      input_object.acceleration_covariance, yaw,
-      output_object.kinematics.acceleration_with_covariance.covariance);
+    output_object.kinematics.acceleration_with_covariance.covariance =
+      rotated_xy_covariance(input_object.acceleration_covariance, yaw);
   }
 }
 

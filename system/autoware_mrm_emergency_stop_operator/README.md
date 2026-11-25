@@ -25,7 +25,7 @@ MRM emergency stop operator is a node that generates emergency stop commands acc
 
 ## Parameters
 
-{{ json_to_markdown("system/mrm_emergency_stop_operator/schema/mrm_emergency_stop_operator.schema.json") }}
+{{ json_to_markdown("system/autoware_mrm_emergency_stop_operator/schema/mrm_emergency_stop_operator.schema.json") }}
 
 ## Assumptions / Known limits
 

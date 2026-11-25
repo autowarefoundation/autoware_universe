@@ -33,12 +33,12 @@
   <depend>diagnostic_updater</depend>
   <depend>eigen</depend>
   <depend>geometry_msgs</depend>
+  <depend>libexpected-dev</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
   <depend>std_msgs</depend>
   <depend>tf2</depend>
   <depend>tf2_ros</depend>
-  <depend>tl_expected</depend>
 
   <test_depend>ament_cmake_ros</test_depend>
   <test_depend>ament_index_cpp</test_depend>

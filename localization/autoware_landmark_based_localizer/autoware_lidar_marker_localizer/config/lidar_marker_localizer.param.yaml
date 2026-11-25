@@ -19,9 +19,9 @@
     vote_threshold_for_detect_marker: 20
     marker_to_vehicle_offset_y: 0.0
     marker_height_from_ground: 1.075
-    lower_ring_id_init: 128
-    upper_ring_id_init: 0
-    reference_ring_number: 255 # set to 255 to disable ring filtering
+    ring_id_min: 0
+    ring_id_max: 65535 # set ring_id_min to 0 and ring_id_max to 65535 to use all the rings
+    reference_ring_number: -1 # ring ID whose points give the y of a marker on a vertical surface. -1 uses all the rings in [ring_id_min, ring_id_max]
 
     # for interpolate algorithm
     self_pose_timeout_sec: 1.0
@@ -41,13 +41,14 @@
                       0.0,  0.0,  0.0,  0.0,        0.00007569, 0.0,
                       0.0,  0.0,  0.0,  0.0,        0.0,        0.00030625]
 
-    # for visualize the detected marker pointcloud
-    marker_width: 0.8
-
     # for save log
     enable_save_log: false
     save_file_directory_path: detected_reflector_intensity
     save_file_name: detected_reflector_intensity
     save_frame_id: velodyne_top
+
+    # for extracting the detected marker pointcloud (debug visualization and save log)
     radius_for_extracting_marker_pointcloud: 0.4 # [m] within
+
+    # for debug publishers
     queue_size_for_debug_pub_msg: 10 # Queue size for debug publishers

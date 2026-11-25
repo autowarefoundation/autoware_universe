@@ -10,7 +10,6 @@
   <maintainer email="taiki.yamada@tier4.jp">Taiki Yamada</maintainer>
   <license>Apache License 2.0</license>
   <author email="kento.yabuuchi.2@tier4.jp">Kento Yabuuchi</author>
-  <author email="anh.nguyen.2@tier4.jp">NGUYEN Viet Anh</author>
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
   <build_depend>autoware_cmake</build_depend>

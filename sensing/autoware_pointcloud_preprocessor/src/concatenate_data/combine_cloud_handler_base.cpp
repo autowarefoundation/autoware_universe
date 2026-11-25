@@ -103,11 +103,6 @@ void CombineCloudHandlerBase::process_odometry(
   twist_queue_.push_back(msg);
 }
 
-std::deque<geometry_msgs::msg::TwistStamped> CombineCloudHandlerBase::get_twist_queue()
-{
-  return twist_queue_;
-}
-
 Eigen::Matrix4f CombineCloudHandlerBase::compute_transform_to_adjust_for_old_timestamp(
   const builtin_interfaces::msg::Time & old_stamp, const builtin_interfaces::msg::Time & new_stamp,
   MotionCompensationStatus * status)
