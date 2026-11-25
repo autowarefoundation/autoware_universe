@@ -139,47 +139,59 @@ auto get_parameters() -> std::shared_ptr<AvoidanceParameters>
   return std::make_shared<AvoidanceParameters>(parameters);
 }
 
-TEST(TestUtils, unconfiguredClassificationUsesUnknownParameters)
+class UnconfiguredClassificationTest : public ::testing::TestWithParam<uint8_t>
 {
-  auto parameters = get_parameters();
-  const auto & unknown = parameters->getObjectParameter(ObjectClassification::UNKNOWN);
-  const auto & truck = parameters->getObjectParameter(ObjectClassification::TRUCK);
+protected:
+  const std::shared_ptr<AvoidanceParameters> parameters = get_parameters();
 
-  // Configured classes retain their original parameters.
-  EXPECT_EQ(&truck, &parameters->object_parameters.at(ObjectClassification::TRUCK));
-  EXPECT_TRUE(truck.is_avoidance_target);
-
-  for (const uint8_t label : {
-         ObjectClassification::HAZARD, ObjectClassification::ANIMAL,
-         ObjectClassification::OVER_DRIVABLE, ObjectClassification::UNDER_DRIVABLE,
-         ObjectClassification::UNKNOWN}) {
-    SCOPED_TRACE(static_cast<int>(label));
-    EXPECT_EQ(&unknown, &parameters->getObjectParameter(label));
-
+  ObjectData makeObject() const
+  {
     ObjectData object;
     object.object.classification.emplace_back(
-      autoware_perception_msgs::build<ObjectClassification>().label(label).probability(1.0));
-    object.move_time = unknown.moving_time_threshold + 1.0;
-    EXPECT_NO_THROW(filtering_utils::isMovingObject(object, parameters));
-    EXPECT_TRUE(filtering_utils::isUnknownTypeObject(object));
-    EXPECT_EQ(
-      filtering_utils::isAvoidanceTargetObjectType(object.object, parameters),
-      unknown.is_avoidance_target);
-    EXPECT_EQ(
-      filtering_utils::isSafetyCheckTargetObjectType(object.object, parameters),
-      unknown.is_safety_check_target);
-    // Parameter fallback must never rewrite the original perception label.
-    EXPECT_EQ(object.object.classification.front().label, label);
+      autoware_perception_msgs::build<ObjectClassification>().label(GetParam()).probability(1.0));
+    return object;
   }
+};
 
-  // Unsupported classes inherit the configured UNKNOWN target policy.
-  parameters->object_parameters.at(ObjectClassification::UNKNOWN).is_avoidance_target = true;
-  ObjectData hazard;
-  hazard.object.classification.emplace_back(
-    autoware_perception_msgs::build<ObjectClassification>()
-      .label(ObjectClassification::HAZARD)
-      .probability(1.0));
-  EXPECT_TRUE(filtering_utils::isAvoidanceTargetObjectType(hazard.object, parameters));
+TEST_P(UnconfiguredClassificationTest, UsesUnknownParameters)
+{
+  const auto & unknown = parameters->getObjectParameter(ObjectClassification::UNKNOWN);
+  EXPECT_EQ(&parameters->getObjectParameter(GetParam()), &unknown);
+  EXPECT_TRUE(filtering_utils::isUnknownTypeObject(makeObject()));
+}
+
+TEST_P(UnconfiguredClassificationTest, UsesUnknownMovingThreshold)
+{
+  auto object = makeObject();
+  object.move_time =
+    parameters->getObjectParameter(ObjectClassification::UNKNOWN).moving_time_threshold + 1.0;
+  EXPECT_TRUE(filtering_utils::isMovingObject(object, parameters));
+}
+
+TEST_P(UnconfiguredClassificationTest, PreservesClassificationAndUsesUnknownTargetPolicy)
+{
+  auto object = makeObject();
+  auto & unknown = parameters->object_parameters.at(ObjectClassification::UNKNOWN);
+  unknown.is_safety_check_target = false;
+  unknown.is_avoidance_target = true;
+
+  EXPECT_TRUE(filtering_utils::isAvoidanceTargetObjectType(object.object, parameters));
+  EXPECT_FALSE(filtering_utils::isSafetyCheckTargetObjectType(object.object, parameters));
+  EXPECT_EQ(object.object.classification.front().label, GetParam());
+}
+
+INSTANTIATE_TEST_SUITE_P(
+  UnknownLabels, UnconfiguredClassificationTest,
+  ::testing::Values(
+    ObjectClassification::HAZARD, ObjectClassification::ANIMAL, ObjectClassification::OVER_DRIVABLE,
+    ObjectClassification::UNDER_DRIVABLE, ObjectClassification::UNKNOWN));
+
+TEST(TestUtils, configuredClassificationRetainsItsParameters)
+{
+  const auto parameters = get_parameters();
+  const auto & truck = parameters->getObjectParameter(ObjectClassification::TRUCK);
+  EXPECT_EQ(&truck, &parameters->object_parameters.at(ObjectClassification::TRUCK));
+  EXPECT_TRUE(truck.is_avoidance_target);
 }
 
 TEST(TestUtils, isMovingObject)

@@ -39,6 +39,7 @@
 #include <lanelet2_routing/RoutingGraphContainer.h>
 
 #include <algorithm>
+#include <array>
 #include <limits>
 #include <memory>
 #include <optional>
@@ -206,20 +207,12 @@ bool isSafetyCheckTargetObjectType(
 bool isUnknownTypeObject(const ObjectData & object)
 {
   const auto object_type = utils::getHighestProbLabel(object.object.classification);
-  // Use the UNKNOWN planning policy for classes without dedicated behavior.
-  // Do not overwrite the original perception label.
-  switch (object_type) {
-    case ObjectClassification::CAR:
-    case ObjectClassification::TRUCK:
-    case ObjectClassification::TRAILER:
-    case ObjectClassification::BUS:
-    case ObjectClassification::MOTORCYCLE:
-    case ObjectClassification::PEDESTRIAN:
-    case ObjectClassification::BICYCLE:
-      return false;
-    default:
-      return true;
-  }
+  static constexpr std::array known_labels{
+    ObjectClassification::CAR,        ObjectClassification::TRUCK,
+    ObjectClassification::TRAILER,    ObjectClassification::BUS,
+    ObjectClassification::MOTORCYCLE, ObjectClassification::PEDESTRIAN,
+    ObjectClassification::BICYCLE};
+  return std::find(known_labels.begin(), known_labels.end(), object_type) == known_labels.end();
 }
 
 /**
