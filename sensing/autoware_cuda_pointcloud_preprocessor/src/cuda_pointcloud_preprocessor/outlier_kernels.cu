@@ -17,8 +17,19 @@
 
 #include <autoware/cuda_utils/cuda_check_error.hpp>
 
+#include <math_constants.h>
+
 namespace autoware::cuda_pointcloud_preprocessor
 {
+
+// Angular distance in [0, pi] between two azimuths, independent of the scan direction and of
+// where the azimuth wraps around. Same as utils::azimuth_distance in pointcloud_preprocessor.
+__device__ __forceinline__ float azimuthDistance(const float from, const float to)
+{
+  constexpr float two_pi = static_cast<float>(2.0 * CUDART_PI);
+  const float diff = fabsf(to - from);
+  return fminf(diff, two_pi - diff);
+}
 
 // `points` are sorted by ring (input order within a ring), so a point's ring neighbours are the
 // adjacent entries with the same channel; the window is clamped to them.
@@ -50,8 +61,9 @@ __global__ void ringOutlierFilterKernel(
     const InputPointType & right_point = points[k + 1];
 
     // Find biggest walk that passes through i
-    float azimuth_diff = right_point.azimuth - left_point.azimuth;
-    azimuth_diff = azimuth_diff < 0.f ? azimuth_diff + 2 * M_PI : azimuth_diff;
+    // Unsigned angular distance, so that azimuths decreasing along the ring are handled like
+    // increasing ones
+    const float azimuth_diff = azimuthDistance(left_point.azimuth, right_point.azimuth);
 
     if (
       max(left_point.distance, right_point.distance) <
