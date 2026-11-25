@@ -23509,8 +23509,8 @@
 <tr>
 <td>max_<wbr>azimuth_<wbr>diff</wbr></wbr></td>
 <td>float</td>
-<td>The azimuth difference threshold in degrees for ring_outlier_filter</td>
-<td>50.0</td>
+<td>The azimuth step threshold in degrees between two consecutive points of a ring, in either scan direction, for them to be in the same segment</td>
+<td>0.5</td>
 <td>≥0.0</td>
 </tr>
 <tr>
@@ -23560,6 +23560,7 @@
 <h2 id="assumptions-known-limits">Assumptions / Known limits<a class="headerlink" href="#assumptions-known-limits" title="Permanent link">#</a></h2>
 <p>Not recommended for use as it is under development.
 Input data must be <a href="https://github.com/autowarefoundation/autoware_core/blob/main/common/autoware_point_types/include/autoware/point_types/types.hpp#L95-L116">PointXYZIRCAEDT</a> type data including <code>return_type</code>.</p>
+<p>Points of a ring must be in scan order, but the azimuth may increase or decrease along a ring, and both <code>[0, 2pi)</code> and <code>[-pi, pi)</code> are accepted. The horizontal bin of the visibility histogram is computed from each point's own azimuth. Points whose <code>channel</code> is not less than <code>vertical_bins</code> are skipped with a warning.</p>
 <h2 id="optional-error-detection-and-handling">(Optional) Error detection and handling<a class="headerlink" href="#optional-error-detection-and-handling" title="Permanent link">#</a></h2>
 <h2 id="optional-performance-characterization">(Optional) Performance characterization<a class="headerlink" href="#optional-performance-characterization" title="Permanent link">#</a></h2>
 <h2 id="referencesexternal-links">References/External links<a class="headerlink" href="#referencesexternal-links" title="Permanent link">#</a></h2>
