@@ -45,6 +45,7 @@ from sensor_msgs.msg import PointCloud2
 
 from ._concatenate_pointclouds_pybind import FrameStatus
 from ._concatenate_pointclouds_pybind import MotionCompensationStatus
+from ._serialization import serialized
 from . import _concatenate_pointclouds_pybind as _ext
 
 __all__ = [
@@ -140,15 +141,6 @@ def _check_type(message, expected):
     # The CDR bytes carry no type, so a wrong message type would be silently reinterpreted.
     if not isinstance(message, expected):
         raise TypeError(f"expected {expected.__name__}, got {type(message).__name__}")
-
-
-def _serialized(message, expected):
-    """Return ``message`` as is if it is serialized, else serialize it."""
-    if isinstance(message, bytes):
-        return message
-    if not isinstance(message, expected):
-        raise TypeError(f"expected bytes or {expected.__name__}, got {type(message).__name__}")
-    return serialize_message(message)
 
 
 def _wrap_frame(core: _ext.CoreFrame) -> ConcatenatedFrame:
@@ -288,7 +280,7 @@ class Concatenator:
             TypeError: If ``twist`` is neither bytes nor a ``TwistWithCovarianceStamped``.
             ValueError: If ``twist`` cannot be deserialized as a ``TwistWithCovarianceStamped``.
         """
-        self._impl.process_twist(_serialized(twist, TwistWithCovarianceStamped))
+        self._impl.process_twist(serialized(twist, TwistWithCovarianceStamped))
 
     def process_odometry(self, odometry: Union[bytes, Odometry]) -> None:
         """Queue a velocity sample for motion compensation, from odometry.
@@ -304,7 +296,7 @@ class Concatenator:
             TypeError: If ``odometry`` is neither bytes nor an ``Odometry``.
             ValueError: If ``odometry`` cannot be deserialized as an ``Odometry``.
         """
-        self._impl.process_odometry(_serialized(odometry, Odometry))
+        self._impl.process_odometry(serialized(odometry, Odometry))
 
     def process_cloud(
         self, topic: str, cloud: Union[bytes, PointCloud2], arrival_time: float
@@ -330,7 +322,7 @@ class Concatenator:
                 (``x``, ``y``, ``z``, ``intensity``, ``return_type``, ``channel``, and
                 ``time_stamp`` for ``"XYZIRCT"``).
         """
-        cloud = _serialized(cloud, PointCloud2)
+        cloud = serialized(cloud, PointCloud2)
         frames = self._impl.process_cloud(topic, cloud, arrival_time)
         return [_wrap_frame(frame) for frame in frames]
 

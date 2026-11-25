@@ -34,6 +34,7 @@ from rclpy.serialization import serialize_message
 from sensor_msgs.msg import Imu
 from sensor_msgs.msg import PointCloud2
 
+from ._serialization import serialized
 from . import _distortion_corrector_pybind as _ext
 
 PointcloudValidity = _ext.PointcloudValidity
@@ -44,15 +45,6 @@ __all__ = ["DistortionCorrector", "PointcloudValidity", "UndistortionStatus"]
 def _serialize(msg, msg_type):
     if not isinstance(msg, msg_type):
         raise TypeError(f"expected {msg_type.__name__}, got {type(msg).__name__}")
-    return serialize_message(msg)
-
-
-def _serialized(msg, msg_type):
-    """Return ``msg`` as is if it is serialized, else serialize it."""
-    if isinstance(msg, bytes):
-        return msg
-    if not isinstance(msg, msg_type):
-        raise TypeError(f"expected bytes or {msg_type.__name__}, got {type(msg).__name__}")
     return serialize_message(msg)
 
 
@@ -112,7 +104,7 @@ class DistortionCorrector:
             TypeError: If ``twist`` is neither bytes nor a ``TwistWithCovarianceStamped``.
             ValueError: If ``twist`` cannot be deserialized as a ``TwistWithCovarianceStamped``.
         """
-        self._impl.insert_twist(_serialized(twist, TwistWithCovarianceStamped))
+        self._impl.insert_twist(serialized(twist, TwistWithCovarianceStamped))
 
     def set_imu_transform(self, imu_to_base_link: TransformStamped) -> None:
         """Set the transform that rotates IMU angular velocities into the base frame.
@@ -143,7 +135,7 @@ class DistortionCorrector:
             ValueError: If ``imu`` cannot be deserialized as an ``Imu``.
             RuntimeError: If :meth:`set_imu_transform` has not been called.
         """
-        self._impl.insert_imu(_serialized(imu, Imu))
+        self._impl.insert_imu(serialized(imu, Imu))
 
     def undistort_pointcloud(
         self,
@@ -175,7 +167,7 @@ class DistortionCorrector:
                 and an azimuth conversion is available.
         """
         out_bytes, result, angle_conversion_error = self._impl.undistort_pointcloud(
-            _serialized(pointcloud, PointCloud2),
+            serialized(pointcloud, PointCloud2),
             _serialize(lidar_to_base_link, TransformStamped),
             use_imu,
             update_azimuth_and_distance,
