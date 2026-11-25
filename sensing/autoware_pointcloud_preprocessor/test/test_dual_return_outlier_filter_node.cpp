@@ -101,14 +101,20 @@ PointXYZIRCAEDT make_point(
   return p;
 }
 
-// Consecutive points 0.1 deg apart at the same distance: every point is in one segment.
-void append_arc(
-  pcl::PointCloud<PointXYZIRCAEDT> & cloud, float start_deg, int num_points, float step_deg = 0.1F,
-  float distance = 5.0F, std::uint8_t return_type = ReturnType::DUAL_WEAK_FIRST)
+// Points step_deg apart at 5 m. With the default step of 0.1 deg, every point is in one segment.
+struct Arc
 {
-  for (int i = 0; i < num_points; ++i) {
+  float start_deg;
+  int num_points;
+  float step_deg{0.1F};
+  std::uint8_t return_type{ReturnType::DUAL_WEAK_FIRST};
+};
+
+void append_arc(pcl::PointCloud<PointXYZIRCAEDT> & cloud, const Arc & arc)
+{
+  for (int i = 0; i < arc.num_points; ++i) {
     cloud.push_back(
-      make_point(start_deg + step_deg * static_cast<float>(i), distance, return_type));
+      make_point(arc.start_deg + arc.step_deg * static_cast<float>(i), 5.0F, arc.return_type));
   }
 }
 
@@ -135,10 +141,10 @@ std::vector<PointXYZIRCAEDT> run_filter(
 pcl::PointCloud<PointXYZIRCAEDT> make_cloud_with_one_noisy_bin(float isolated_distance = 5.0F)
 {
   pcl::PointCloud<PointXYZIRCAEDT> cloud;
-  append_arc(cloud, 1.0F, 6);
+  append_arc(cloud, {1.0F, 6});
   cloud.push_back(make_point(4.0F, isolated_distance));
   cloud.push_back(make_point(7.0F, isolated_distance));
-  append_arc(cloud, 21.0F, 6);
+  append_arc(cloud, {21.0F, 6});
   return cloud;
 }
 }  // namespace
@@ -154,7 +160,7 @@ TEST_F(DualReturnOutlierFilterTest, WeakFirstSegmentIsKept)
   // the output.
   DualReturnOutlierFilterComponentPublic node(make_node_options());
   pcl::PointCloud<PointXYZIRCAEDT> cloud;
-  append_arc(cloud, 30.0F, 20);
+  append_arc(cloud, {30.0F, 20});
 
   // Act
   const auto output = run_filter(node, cloud);
@@ -177,7 +183,7 @@ TEST_F(DualReturnOutlierFilterTest, WeakFirstSegmentIsKeptInEitherDirectionAndAc
   DualReturnOutlierFilterComponentPublic node(make_node_options());
   for (const auto & c : cases) {
     pcl::PointCloud<PointXYZIRCAEDT> cloud;
-    append_arc(cloud, c.start_deg, 20, c.step_deg);
+    append_arc(cloud, {c.start_deg, 20, c.step_deg});
 
     // Act
     const auto output = run_filter(node, cloud);
@@ -195,7 +201,7 @@ TEST_F(DualReturnOutlierFilterTest, IsolatedWeakFirstPointsAreRemoved)
   // Steps of 3 deg are above max_azimuth_diff (0.5 deg), so no point has a neighbour.
   DualReturnOutlierFilterComponentPublic node(make_node_options());
   pcl::PointCloud<PointXYZIRCAEDT> cloud;
-  append_arc(cloud, 30.0F, 3, 3.0F);
+  append_arc(cloud, {30.0F, 3, 3.0F});
 
   // Act
   const auto output = run_filter(node, cloud);
@@ -250,10 +256,10 @@ TEST_F(DualReturnOutlierFilterTest, AzimuthRoiIgnoresPointsOutsideIt)
   // the same layout has no bin.
   DualReturnOutlierFilterComponentPublic node(make_node_options("Fixed_azimuth_ROI"));
   pcl::PointCloud<PointXYZIRCAEDT> cloud;
-  append_arc(cloud, 30.0F, 6);
+  append_arc(cloud, {30.0F, 6});
   cloud.push_back(make_point(31.2F, 5.0F));
   cloud.push_back(make_point(32.0F, 5.0F));
-  append_arc(cloud, 150.0F, 6);
+  append_arc(cloud, {150.0F, 6});
   cloud.push_back(make_point(151.2F, 5.0F));
   cloud.push_back(make_point(152.0F, 5.0F));
 
@@ -275,7 +281,7 @@ TEST_F(DualReturnOutlierFilterTest, OtherReturnsKeepSegmentsAndRemoveIsolatedPoi
   // general_distance_ratio, without the noisy-bin check.
   DualReturnOutlierFilterComponentPublic node(make_node_options());
   pcl::PointCloud<PointXYZIRCAEDT> cloud;
-  append_arc(cloud, 30.0F, 20, 0.1F, 5.0F, ReturnType::DUAL_STRONGEST_FIRST);
+  append_arc(cloud, {30.0F, 20, 0.1F, ReturnType::DUAL_STRONGEST_FIRST});
   cloud.push_back(make_point(40.0F, 5.0F, ReturnType::DUAL_STRONGEST_FIRST));
   cloud.push_back(make_point(43.0F, 5.0F, ReturnType::DUAL_STRONGEST_FIRST));
 
@@ -293,7 +299,7 @@ TEST_F(DualReturnOutlierFilterTest, PointWithChannelOutOfRangeIsSkipped)
   // Before the fix, a channel not less than vertical_bins threw std::out_of_range.
   DualReturnOutlierFilterComponentPublic node(make_node_options());
   pcl::PointCloud<PointXYZIRCAEDT> cloud;
-  append_arc(cloud, 30.0F, 20);
+  append_arc(cloud, {30.0F, 20});
   cloud.push_back(make_point(
     32.0F, 5.0F, ReturnType::DUAL_WEAK_FIRST, static_cast<std::uint16_t>(vertical_bins)));
 
@@ -331,8 +337,9 @@ TEST_F(DualReturnOutlierFilterTest, VisibilityAndNoiseCloudReflectNoisyBins)
 
   // Act
   // The publishers are best effort, so filter() runs until the listener has both messages.
+  const auto received_both = [&]() { return visibility && num_noise_points; };
   const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
-  while ((!visibility || !num_noise_points) && std::chrono::steady_clock::now() < deadline) {
+  while (!received_both() && std::chrono::steady_clock::now() < deadline) {
     run_filter(*node, cloud);
     executor.spin_some();
     std::this_thread::sleep_for(std::chrono::milliseconds(20));
