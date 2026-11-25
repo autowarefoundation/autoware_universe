@@ -130,7 +130,7 @@ jobs:
           output_file: build_depends.repos
 
       - name: Remove released Debian packages of the source-built dependencies
-        if: ${{ steps.get-modified-packages.outputs.modified-packages != '' }}
+        if: ${{ steps.get-self-packages.outputs.self-packages != '' }}
         run: |
           ros_distro="${ROS_DISTRO:-${{ inputs.rosdistro }}}"
           # colcon-build imports these into dependency_ws and builds them from source.
