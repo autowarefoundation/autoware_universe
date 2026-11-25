@@ -33,6 +33,45 @@ using autoware::point_types::PointXYZIRCAEDT;
 using autoware::point_types::ReturnType;
 using diagnostic_msgs::msg::DiagnosticStatus;
 
+namespace
+{
+/** @brief Points of each ring, split by return type. */
+struct Rings
+{
+  std::vector<std::vector<PointXYZIRCAEDT>> weak_first;
+  std::vector<std::vector<PointXYZIRCAEDT>> others;
+  size_t num_points_with_invalid_channel{0};
+};
+
+Rings split_into_rings(
+  const pcl::PointCloud<PointXYZIRCAEDT>::VectorType & points, const uint32_t vertical_bins)
+{
+  Rings rings{
+    std::vector<std::vector<PointXYZIRCAEDT>>(vertical_bins),
+    std::vector<std::vector<PointXYZIRCAEDT>>(vertical_bins), 0};
+  for (const auto & p : points) {
+    if (p.channel >= vertical_bins) {
+      ++rings.num_points_with_invalid_channel;
+      continue;
+    }
+    auto & target = p.return_type == ReturnType::DUAL_WEAK_FIRST ? rings.weak_first : rings.others;
+    target[p.channel].push_back(p);
+  }
+  return rings;
+}
+
+/** @brief Appends each noise point of the ring to noise_output, and the others to output. */
+void append_by_noise_flag(
+  const std::vector<PointXYZIRCAEDT> & ring, const std::vector<bool> & is_noise,
+  pcl::PointCloud<PointXYZIRCAEDT> & output, pcl::PointCloud<PointXYZIRCAEDT> & noise_output)
+{
+  for (size_t i = 0; i < ring.size(); ++i) {
+    auto & target = is_noise[i] ? noise_output : output;
+    target.points.push_back(ring[i]);
+  }
+}
+}  // namespace
+
 DualReturnOutlierFilterComponent::DualReturnOutlierFilterComponent(
   const rclcpp::NodeOptions & options)
 : Filter("DualReturnOutlierFilter", options)
@@ -109,35 +148,20 @@ void DualReturnOutlierFilterComponent::filter(
   pcl::PointCloud<PointXYZIRCAEDT>::Ptr pcl_input(new pcl::PointCloud<PointXYZIRCAEDT>);
   pcl::fromROSMsg(*input, *pcl_input);
 
-  uint32_t vertical_bins = vertical_bins_;
-  uint32_t horizontal_bins = 36;
-  float max_azimuth = 2 * M_PI;
-  float min_azimuth = 0.0f;
-  switch (roi_mode_map_[roi_mode_]) {
-    case 2: {
-      max_azimuth = max_azimuth_deg_ * (M_PI / 180.0);
-      min_azimuth = min_azimuth_deg_ * (M_PI / 180.0);
-      break;
-    }
-
-    default: {
-      max_azimuth = 2 * M_PI;
-      min_azimuth = 0.0f;
-      break;
-    }
-  }
-
-  const dual_return_outlier_filter::AzimuthBins azimuth_bins(
-    min_azimuth, max_azimuth, horizontal_bins);
-  const float max_azimuth_diff = max_azimuth_diff_ * static_cast<float>(M_PI / 180.0);
+  const auto vertical_bins = static_cast<uint32_t>(vertical_bins_);
+  const auto roi_mode = roi_mode_map_[roi_mode_];
+  const auto azimuth_bins = make_azimuth_bins(roi_mode);
+  const dual_return_outlier_filter::WeakFirstParams weak_first_params{
+    weak_first_distance_ratio_, max_azimuth_diff_ * static_cast<float>(M_PI / 180.0),
+    weak_first_local_noise_threshold_};
 
   // Region where the weak first returns are counted for the visibility estimation
-  const auto roi_mode = roi_mode_map_[roi_mode_];
+  const dual_return_outlier_filter::XyzRoi xyz_roi{
+    {x_min_, x_max_}, {y_min_, y_max_}, {z_min_, z_max_}};
   const auto is_in_roi = [&](const PointXYZIRCAEDT & p) {
     switch (roi_mode) {
       case 1:  // base_link xyz-ROI
-        return p.x > x_min_ && p.x < x_max_ && p.y > y_min_ && p.y < y_max_ && p.z > z_min_ &&
-               p.z < z_max_;
+        return xyz_roi.contains(p);
       case 2:  // azimuth-ROI in the LiDAR frame
         return azimuth_bins.contains(p.azimuth) && p.distance < max_distance_;
       default:
@@ -145,127 +169,89 @@ void DualReturnOutlierFilterComponent::filter(
     }
   };
 
-  pcl::PointCloud<PointXYZIRCAEDT>::Ptr pcl_output(new pcl::PointCloud<PointXYZIRCAEDT>);
-  pcl_output->points.reserve(pcl_input->points.size());
-
-  pcl::PointCloud<PointXYZIRCAEDT>::Ptr noise_output(new pcl::PointCloud<PointXYZIRCAEDT>);
-  noise_output->points.reserve(pcl_input->points.size());
-
-  std::vector<std::vector<PointXYZIRCAEDT>> input_rings(vertical_bins);
-  std::vector<std::vector<PointXYZIRCAEDT>> weak_first_rings(vertical_bins);
-  size_t num_points_with_invalid_ring = 0;
-  for (const auto & p : pcl_input->points) {
-    if (p.channel >= vertical_bins) {
-      ++num_points_with_invalid_ring;
-      continue;
-    }
-    if (p.return_type == ReturnType::DUAL_WEAK_FIRST) {
-      weak_first_rings[p.channel].push_back(p);
-    } else {
-      input_rings[p.channel].push_back(p);
-    }
-  }
-  if (num_points_with_invalid_ring > 0) {
+  const auto rings = split_into_rings(pcl_input->points, vertical_bins);
+  if (rings.num_points_with_invalid_channel > 0) {
     RCLCPP_WARN_THROTTLE(
       get_logger(), *get_clock(), 5000,
       "Skipped %zu points whose channel is not less than vertical_bins (%u).",
-      num_points_with_invalid_ring, vertical_bins);
+      rings.num_points_with_invalid_channel, vertical_bins);
   }
 
-  cv::Mat frequency_image(cv::Size(horizontal_bins, vertical_bins), CV_8UC1, cv::Scalar(0));
+  pcl::PointCloud<PointXYZIRCAEDT> pcl_output;
+  pcl_output.points.reserve(pcl_input->points.size());
+  pcl::PointCloud<PointXYZIRCAEDT> noise_output;
+  noise_output.points.reserve(pcl_input->points.size());
 
-  // Weak first returns: points that are not part of a segment are noise. A horizontal bin with
-  // at least weak_first_local_noise_threshold noise points in the ROI is noisy, and the segment
-  // points in it are removed as well. Bins are computed from each point's own azimuth, so the
-  // result does not depend on the order of the points within a ring.
-  std::vector<int> noise_frequency(horizontal_bins);
+  // Weak first returns: isolated points are noise, and so are the segment points in noisy bins.
+  // The noise counts of each ring and bin make the frequency image.
+  cv::Mat frequency_image(
+    cv::Size(static_cast<int>(azimuth_bins.size()), static_cast<int>(vertical_bins)), CV_8UC1,
+    cv::Scalar(0));
   for (uint32_t ring_id = 0; ring_id < vertical_bins; ++ring_id) {
-    const auto & ring = weak_first_rings[ring_id];
-    if (ring.empty()) {
-      continue;
-    }
-    const auto in_segment = dual_return_outlier_filter::find_segment_points(
-      ring, weak_first_distance_ratio_, max_azimuth_diff);
-
-    std::fill(noise_frequency.begin(), noise_frequency.end(), 0);
-    for (size_t i = 0; i < ring.size(); ++i) {
-      if (in_segment[i] || !is_in_roi(ring[i])) {
-        continue;
-      }
-      if (const auto bin = azimuth_bins.bin(ring[i].azimuth)) {
-        ++noise_frequency[*bin];
-      }
-    }
-    // The decision uses the counts of the isolated points only, so it does not depend on the
-    // order in which the segment points are visited.
-    const std::vector<int> isolated_noise_frequency = noise_frequency;
-
-    for (size_t i = 0; i < ring.size(); ++i) {
-      const auto & p = ring[i];
-      if (!in_segment[i]) {
-        noise_output->points.push_back(p);
-        continue;
-      }
-      const auto bin = azimuth_bins.bin(p.azimuth);
-      if (bin && isolated_noise_frequency[*bin] >= weak_first_local_noise_threshold_) {
-        noise_output->points.push_back(p);
-        if (is_in_roi(p)) {
-          ++noise_frequency[*bin];
-        }
-      } else {
-        pcl_output->points.push_back(p);
-      }
-    }
-
-    for (uint32_t bin = 0; bin < horizontal_bins; ++bin) {
-      frequency_image.at<uchar>(ring_id, bin) =
-        static_cast<uchar>(std::min(noise_frequency[bin], 255));
+    const auto & ring = rings.weak_first[ring_id];
+    const auto result = dual_return_outlier_filter::classify_weak_first_ring(
+      ring, azimuth_bins, weak_first_params, is_in_roi);
+    append_by_noise_flag(ring, result.is_noise, pcl_output, noise_output);
+    for (size_t bin = 0; bin < azimuth_bins.size(); ++bin) {
+      frequency_image.at<uchar>(static_cast<int>(ring_id), static_cast<int>(bin)) =
+        static_cast<uchar>(std::min(result.noise_frequency[bin], 255));
     }
   }
 
   // Other returns: a ring outlier filter, without the visibility estimation
-  for (const auto & ring : input_rings) {
-    const auto in_segment = dual_return_outlier_filter::find_segment_points(
-      ring, general_distance_ratio_, max_azimuth_diff);
-    for (size_t i = 0; i < ring.size(); ++i) {
-      if (in_segment[i]) {
-        pcl_output->points.push_back(ring[i]);
-      } else {
-        noise_output->points.push_back(ring[i]);
-      }
-    }
+  for (const auto & ring : rings.others) {
+    auto is_noise = dual_return_outlier_filter::find_segment_points(
+      ring, general_distance_ratio_, weak_first_params.max_azimuth_diff);
+    is_noise.flip();
+    append_by_noise_flag(ring, is_noise, pcl_output, noise_output);
   }
 
-  // Threshold for diagnostics (tunable)
-  cv::Mat binary_image;
-  cv::inRange(frequency_image, weak_first_local_noise_threshold_, 255, binary_image);
-  int num_pixels = cv::countNonZero(binary_image);
-  float filled =
-    static_cast<float>(num_pixels) / static_cast<float>(vertical_bins * horizontal_bins);
-  visibility_ = 1.0f - filled;
-  // Visualization of histogram
-  cv::Mat frequency_image_colorized;
-  // Multiply bins by four to get pretty colours
-  cv::applyColorMap(frequency_image * 4, frequency_image_colorized, cv::COLORMAP_JET);
-  sensor_msgs::msg::Image::SharedPtr frequency_image_msg =
-    cv_bridge::CvImage(std_msgs::msg::Header(), "bgr8", frequency_image_colorized).toImageMsg();
-  frequency_image_msg->header = input->header;
-  // Publish histogram image
-  image_pub_.publish(frequency_image_msg);
-  autoware_internal_debug_msgs::msg::Float32Stamped visibility_msg;
-  visibility_msg.data = (1.0f - filled);
-  visibility_msg.stamp = now();
-  visibility_pub_->publish(visibility_msg);
+  publish_visibility(frequency_image, input->header);
 
   // Publish noise points
   sensor_msgs::msg::PointCloud2 noise_output_msg;
-  pcl::toROSMsg(*noise_output, noise_output_msg);
+  pcl::toROSMsg(noise_output, noise_output_msg);
   noise_output_msg.header = input->header;
   noise_cloud_pub_->publish(noise_output_msg);
 
   // Publish filtered pointcloud
-  pcl::toROSMsg(*pcl_output, output);
+  pcl::toROSMsg(pcl_output, output);
   output.header = input->header;
+}
+
+dual_return_outlier_filter::AzimuthBins DualReturnOutlierFilterComponent::make_azimuth_bins(
+  const uint8_t roi_mode) const
+{
+  constexpr std::size_t horizontal_bins = 36;
+  if (roi_mode == 2) {
+    constexpr float deg_to_rad = static_cast<float>(M_PI / 180.0);
+    return {min_azimuth_deg_ * deg_to_rad, max_azimuth_deg_ * deg_to_rad, horizontal_bins};
+  }
+  return {0.0F, static_cast<float>(2.0 * M_PI), horizontal_bins};
+}
+
+void DualReturnOutlierFilterComponent::publish_visibility(
+  const cv::Mat & frequency_image, const std_msgs::msg::Header & header)
+{
+  // A pixel is filled when its noise count reaches the threshold (tunable)
+  cv::Mat binary_image;
+  cv::inRange(frequency_image, weak_first_local_noise_threshold_, 255, binary_image);
+  const int num_pixels = cv::countNonZero(binary_image);
+  const float filled = static_cast<float>(num_pixels) / static_cast<float>(frequency_image.total());
+  visibility_ = 1.0f - filled;
+
+  // Visualization of histogram. Multiply bins by four to get pretty colours
+  cv::Mat frequency_image_colorized;
+  cv::applyColorMap(frequency_image * 4, frequency_image_colorized, cv::COLORMAP_JET);
+  sensor_msgs::msg::Image::SharedPtr frequency_image_msg =
+    cv_bridge::CvImage(std_msgs::msg::Header(), "bgr8", frequency_image_colorized).toImageMsg();
+  frequency_image_msg->header = header;
+  image_pub_.publish(frequency_image_msg);
+
+  autoware_internal_debug_msgs::msg::Float32Stamped visibility_msg;
+  visibility_msg.data = (1.0f - filled);
+  visibility_msg.stamp = now();
+  visibility_pub_->publish(visibility_msg);
 }
 
 rcl_interfaces::msg::SetParametersResult DualReturnOutlierFilterComponent::param_callback(

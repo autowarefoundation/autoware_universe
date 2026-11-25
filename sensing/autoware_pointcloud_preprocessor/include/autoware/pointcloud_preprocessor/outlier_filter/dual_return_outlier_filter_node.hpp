@@ -16,6 +16,7 @@
 #define AUTOWARE__POINTCLOUD_PREPROCESSOR__OUTLIER_FILTER__DUAL_RETURN_OUTLIER_FILTER_NODE_HPP_
 
 #include "autoware/pointcloud_preprocessor/filter.hpp"
+#include "autoware/pointcloud_preprocessor/outlier_filter/dual_return_outlier_filter_utils.hpp"
 
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <image_transport/image_transport.hpp>
@@ -59,6 +60,10 @@ protected:
 
 private:
   void onVisibilityChecker(DiagnosticStatusWrapper & stat);
+  /** \brief Horizontal bins over the full circle, or over the azimuth ROI in that mode. */
+  dual_return_outlier_filter::AzimuthBins make_azimuth_bins(uint8_t roi_mode) const;
+  /** \brief Computes the visibility from the frequency image, and publishes both. */
+  void publish_visibility(const cv::Mat & frequency_image, const std_msgs::msg::Header & header);
   Updater updater_{this};
   double visibility_ = -1.0f;
   double weak_first_distance_ratio_;

@@ -111,6 +111,107 @@ std::vector<bool> find_segment_points(
   }
   return in_segment;
 }
+
+/** @brief Open interval (min, max). */
+struct OpenRange
+{
+  float min;
+  float max;
+
+  bool contains(const float value) const { return value > min && value < max; }
+};
+
+/** @brief Box in which a point is inside when each coordinate is strictly inside its range. */
+struct XyzRoi
+{
+  OpenRange x;
+  OpenRange y;
+  OpenRange z;
+
+  /** @tparam PointT a type with float members `x`, `y` and `z` */
+  template <typename PointT>
+  bool contains(const PointT & p) const
+  {
+    return contains_horizontally(p) && z.contains(p.z);
+  }
+
+private:
+  template <typename PointT>
+  bool contains_horizontally(const PointT & p) const
+  {
+    return x.contains(p.x) && y.contains(p.y);
+  }
+};
+
+/** @brief Parameters of classify_weak_first_ring(). */
+struct WeakFirstParams
+{
+  /// distance_ratio of find_segment_points()
+  double distance_ratio;
+  /// max_azimuth_diff of find_segment_points(), in radians
+  float max_azimuth_diff;
+  /// A bin with at least this many isolated points in the ROI is noisy
+  int noise_threshold;
+};
+
+/** @brief Classification of the weak first returns of one ring. */
+struct WeakFirstRingResult
+{
+  /// For each point of the ring, whether it is noise
+  std::vector<bool> is_noise;
+  /// For each bin, the number of noise points in the ROI
+  std::vector<int> noise_frequency;
+};
+
+/**
+ * @brief Classifies the weak first returns of one ring.
+ *
+ * A point that is not in a segment (see find_segment_points()) is noise. A bin with at least
+ * noise_threshold such isolated points in the ROI is noisy, and the segment points in it are noise
+ * as well. The decision uses the counts of the isolated points only, so it does not depend on the
+ * order of the points. noise_frequency counts every noise point in the ROI, isolated or not.
+ *
+ * @tparam PointT a type with float members `distance` and `azimuth`
+ * @tparam RoiPredicate a callable `bool(const PointT &)`, true for a point in the ROI
+ */
+template <typename PointT, typename RoiPredicate>
+WeakFirstRingResult classify_weak_first_ring(
+  const std::vector<PointT> & ring, const AzimuthBins & bins, const WeakFirstParams & params,
+  const RoiPredicate & is_in_roi)
+{
+  WeakFirstRingResult result{
+    find_segment_points(ring, params.distance_ratio, params.max_azimuth_diff),
+    std::vector<int>(bins.size(), 0)};
+  // find_segment_points() gives in_segment, so noise is its negation
+  result.is_noise.flip();
+
+  const auto count_if_in_roi = [&](const PointT & p) {
+    const auto bin = bins.bin(p.azimuth);
+    if (bin && is_in_roi(p)) {
+      ++result.noise_frequency[*bin];
+    }
+  };
+
+  for (std::size_t i = 0; i < ring.size(); ++i) {
+    if (result.is_noise[i]) {
+      count_if_in_roi(ring[i]);
+    }
+  }
+  const std::vector<int> isolated_frequency = result.noise_frequency;
+
+  for (std::size_t i = 0; i < ring.size(); ++i) {
+    if (result.is_noise[i]) {
+      continue;
+    }
+    const auto bin = bins.bin(ring[i].azimuth);
+    if (!bin || isolated_frequency[*bin] < params.noise_threshold) {
+      continue;
+    }
+    result.is_noise[i] = true;
+    count_if_in_roi(ring[i]);
+  }
+  return result;
+}
 }  // namespace autoware::pointcloud_preprocessor::dual_return_outlier_filter
 
 #endif  // AUTOWARE__POINTCLOUD_PREPROCESSOR__OUTLIER_FILTER__DUAL_RETURN_OUTLIER_FILTER_UTILS_HPP_

@@ -16,12 +16,16 @@
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <vector>
 
 using autoware::pointcloud_preprocessor::dual_return_outlier_filter::AzimuthBins;
+using autoware::pointcloud_preprocessor::dual_return_outlier_filter::classify_weak_first_ring;
 using autoware::pointcloud_preprocessor::dual_return_outlier_filter::find_segment_points;
+using autoware::pointcloud_preprocessor::dual_return_outlier_filter::WeakFirstParams;
+using autoware::pointcloud_preprocessor::dual_return_outlier_filter::XyzRoi;
 
 namespace
 {
@@ -42,6 +46,33 @@ std::vector<Point> make_arc(float start_deg, float step_deg, int num_points, flo
   }
   return ring;
 }
+
+std::vector<Point> concat(std::vector<std::vector<Point>> parts)
+{
+  std::vector<Point> ring;
+  for (const auto & part : parts) {
+    ring.insert(ring.end(), part.begin(), part.end());
+  }
+  return ring;
+}
+
+// A segment and two isolated points in bin 0 (0 to 10 deg), and a segment in bin 2 (20 to 30 deg)
+std::vector<Point> make_ring_with_one_noisy_bin()
+{
+  return concat({make_arc(1.0F, 0.1F, 6), make_arc(4.0F, 3.0F, 2), make_arc(21.0F, 0.1F, 6)});
+}
+
+const AzimuthBins full_circle_bins(0.0F, static_cast<float>(2.0 * M_PI), 36);
+// Default values of the node: weak_first_distance_ratio, max_azimuth_diff, and
+// weak_first_local_noise_threshold
+const WeakFirstParams default_params{1.004, half_degree, 2};
+
+struct Point3
+{
+  float x;
+  float y;
+  float z;
+};
 }  // namespace
 
 TEST(AzimuthBinsTest, FullCircleHasNonZeroResolution)
@@ -183,4 +214,81 @@ TEST(FindSegmentPointsTest, SinglePointAndEmptyRing)
   // Act & Assert
   EXPECT_EQ(find_segment_points(single, 1.03, half_degree), std::vector<bool>{false});
   EXPECT_TRUE(find_segment_points(empty, 1.03, half_degree).empty());
+}
+
+TEST(XyzRoiTest, ContainsOnlyPointsStrictlyInsideEveryRange)
+{
+  // Arrange
+  const XyzRoi roi{{-12.0F, 18.0F}, {-2.0F, 2.0F}, {0.0F, 10.0F}};
+
+  // Act & Assert
+  EXPECT_TRUE(roi.contains(Point3{5.0F, 1.0F, 1.0F}));
+  // Each coordinate outside its range, including on the bound, puts the point outside.
+  EXPECT_FALSE(roi.contains(Point3{30.0F, 1.0F, 1.0F}));
+  EXPECT_FALSE(roi.contains(Point3{5.0F, 2.5F, 1.0F}));
+  EXPECT_FALSE(roi.contains(Point3{5.0F, -2.5F, 1.0F}));
+  EXPECT_FALSE(roi.contains(Point3{5.0F, 1.0F, 0.0F}));
+  EXPECT_FALSE(roi.contains(Point3{5.0F, 1.0F, 10.0F}));
+}
+
+TEST(ClassifyWeakFirstRingTest, SegmentInNoisyBinIsNoiseAndSegmentInQuietBinIsNot)
+{
+  // Arrange
+  const auto ring = make_ring_with_one_noisy_bin();
+  const auto all_in_roi = [](const Point &) { return true; };
+
+  // Act
+  const auto result = classify_weak_first_ring(ring, full_circle_bins, default_params, all_in_roi);
+
+  // Assert
+  // The 6 segment points and the 2 isolated points of bin 0 are noise. The segment of bin 2 is
+  // not. Bin 0 counts all 8 noise points.
+  const std::vector<bool> expected_is_noise = {true, true,  true,  true,  true,  true,  true,
+                                               true, false, false, false, false, false, false};
+  EXPECT_EQ(result.is_noise, expected_is_noise);
+  ASSERT_EQ(result.noise_frequency.size(), 36U);
+  EXPECT_EQ(result.noise_frequency[0], 8);
+  EXPECT_EQ(result.noise_frequency[2], 0);
+}
+
+TEST(ClassifyWeakFirstRingTest, PointsOutsideRoiAreNotCounted)
+{
+  // Arrange
+  // With no point in the ROI, no bin reaches the threshold.
+  const auto ring = make_ring_with_one_noisy_bin();
+  const auto none_in_roi = [](const Point &) { return false; };
+
+  // Act
+  const auto result = classify_weak_first_ring(ring, full_circle_bins, default_params, none_in_roi);
+
+  // Assert
+  // Only the 2 isolated points are noise, and no bin counts anything.
+  const std::vector<bool> expected_is_noise = {false, false, false, false, false, false, true,
+                                               true,  false, false, false, false, false, false};
+  EXPECT_EQ(result.is_noise, expected_is_noise);
+  for (const int count : result.noise_frequency) {
+    EXPECT_EQ(count, 0);
+  }
+}
+
+TEST(ClassifyWeakFirstRingTest, ResultDoesNotDependOnScanDirection)
+{
+  // Arrange
+  auto reversed_ring = make_ring_with_one_noisy_bin();
+  std::reverse(reversed_ring.begin(), reversed_ring.end());
+  const auto all_in_roi = [](const Point &) { return true; };
+
+  // Act
+  const auto forward = classify_weak_first_ring(
+    make_ring_with_one_noisy_bin(), full_circle_bins, default_params, all_in_roi);
+  const auto backward =
+    classify_weak_first_ring(reversed_ring, full_circle_bins, default_params, all_in_roi);
+
+  // Assert
+  // The same points are noise, in reverse order, and the bin counts are the same.
+  std::vector<bool> backward_is_noise_in_forward_order = backward.is_noise;
+  std::reverse(
+    backward_is_noise_in_forward_order.begin(), backward_is_noise_in_forward_order.end());
+  EXPECT_EQ(backward_is_noise_in_forward_order, forward.is_noise);
+  EXPECT_EQ(backward.noise_frequency, forward.noise_frequency);
 }
