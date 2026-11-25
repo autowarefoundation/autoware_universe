@@ -29,6 +29,7 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <thread>
 #include <vector>
@@ -149,15 +150,9 @@ pcl::PointCloud<PointXYZIRCAEDT> make_cloud_with_one_noisy_bin(float isolated_di
 }
 }  // namespace
 
-class DualReturnOutlierFilterTest : public ::testing::Test
-{
-};
-
-TEST_F(DualReturnOutlierFilterTest, WeakFirstSegmentIsKept)
+TEST(DualReturnOutlierFilterTest, WeakFirstSegmentIsKept)
 {
   // Arrange
-  // Before the fix, horizontal_resolution was truncated to 0, so no weak first return reached
-  // the output.
   DualReturnOutlierFilterComponentPublic node(make_node_options());
   pcl::PointCloud<PointXYZIRCAEDT> cloud;
   append_arc(cloud, {30.0F, 20});
@@ -170,32 +165,55 @@ TEST_F(DualReturnOutlierFilterTest, WeakFirstSegmentIsKept)
   EXPECT_EQ(output.size(), cloud.size());
 }
 
-TEST_F(DualReturnOutlierFilterTest, WeakFirstSegmentIsKeptInEitherDirectionAndAcrossWrapAround)
+TEST(DualReturnOutlierFilterTest, WeakFirstSegmentIsKeptWhenAzimuthDecreases)
 {
   // Arrange
-  struct Case
-  {
-    float start_deg;
-    float step_deg;
-  };
-  const std::vector<Case> cases = {{31.9F, -0.1F}, {359.0F, 0.1F}, {1.0F, -0.1F}};
-  // filter() keeps no state that changes the output between calls, so one node serves every case.
+  // 31.9 to 30.0 deg
   DualReturnOutlierFilterComponentPublic node(make_node_options());
-  for (const auto & c : cases) {
-    pcl::PointCloud<PointXYZIRCAEDT> cloud;
-    append_arc(cloud, {c.start_deg, 20, c.step_deg});
+  pcl::PointCloud<PointXYZIRCAEDT> cloud;
+  append_arc(cloud, {31.9F, 20, -0.1F});
 
-    // Act
-    const auto output = run_filter(node, cloud);
+  // Act
+  const auto output = run_filter(node, cloud);
 
-    // Assert
-    // Every point of the segment is kept.
-    EXPECT_EQ(output.size(), cloud.size())
-      << "start_deg=" << c.start_deg << " step_deg=" << c.step_deg;
-  }
+  // Assert
+  // Every point of the segment is kept.
+  EXPECT_EQ(output.size(), cloud.size());
 }
 
-TEST_F(DualReturnOutlierFilterTest, IsolatedWeakFirstPointsAreRemoved)
+TEST(DualReturnOutlierFilterTest, WeakFirstSegmentIsKeptAcrossWrapAroundWhenAzimuthIncreases)
+{
+  // Arrange
+  // 359.0 to 0.9 deg
+  DualReturnOutlierFilterComponentPublic node(make_node_options());
+  pcl::PointCloud<PointXYZIRCAEDT> cloud;
+  append_arc(cloud, {359.0F, 20, 0.1F});
+
+  // Act
+  const auto output = run_filter(node, cloud);
+
+  // Assert
+  // Every point of the segment is kept.
+  EXPECT_EQ(output.size(), cloud.size());
+}
+
+TEST(DualReturnOutlierFilterTest, WeakFirstSegmentIsKeptAcrossWrapAroundWhenAzimuthDecreases)
+{
+  // Arrange
+  // 1.0 to -0.9 deg
+  DualReturnOutlierFilterComponentPublic node(make_node_options());
+  pcl::PointCloud<PointXYZIRCAEDT> cloud;
+  append_arc(cloud, {1.0F, 20, -0.1F});
+
+  // Act
+  const auto output = run_filter(node, cloud);
+
+  // Assert
+  // Every point of the segment is kept.
+  EXPECT_EQ(output.size(), cloud.size());
+}
+
+TEST(DualReturnOutlierFilterTest, IsolatedWeakFirstPointsAreRemoved)
 {
   // Arrange
   // Steps of 3 deg are above max_azimuth_diff (0.5 deg), so no point has a neighbour.
@@ -211,7 +229,7 @@ TEST_F(DualReturnOutlierFilterTest, IsolatedWeakFirstPointsAreRemoved)
   EXPECT_TRUE(output.empty());
 }
 
-TEST_F(DualReturnOutlierFilterTest, SegmentInNoisyBinIsRemoved)
+TEST(DualReturnOutlierFilterTest, SegmentInNoisyBinIsRemoved)
 {
   // Arrange
   DualReturnOutlierFilterComponentPublic node(make_node_options());
@@ -228,7 +246,7 @@ TEST_F(DualReturnOutlierFilterTest, SegmentInNoisyBinIsRemoved)
   }
 }
 
-TEST_F(DualReturnOutlierFilterTest, XyzRoiCountsOnlyIsolatedPointsInsideIt)
+TEST(DualReturnOutlierFilterTest, XyzRoiCountsOnlyIsolatedPointsInsideIt)
 {
   // Arrange
   // Isolated points at 5 m are inside the xyz ROI. At 30 m, x is above x_max (18 m), so they
@@ -248,7 +266,7 @@ TEST_F(DualReturnOutlierFilterTest, XyzRoiCountsOnlyIsolatedPointsInsideIt)
   EXPECT_EQ(output_outside.size(), 12U);
 }
 
-TEST_F(DualReturnOutlierFilterTest, AzimuthRoiIgnoresPointsOutsideIt)
+TEST(DualReturnOutlierFilterTest, AzimuthRoiIgnoresPointsOutsideIt)
 {
   // Arrange
   // The azimuth ROI is 135 to 225 deg, so the 36 bins are 2.5 deg wide. Inside the ROI, a
@@ -275,7 +293,7 @@ TEST_F(DualReturnOutlierFilterTest, AzimuthRoiIgnoresPointsOutsideIt)
   }
 }
 
-TEST_F(DualReturnOutlierFilterTest, OtherReturnsKeepSegmentsAndRemoveIsolatedPoints)
+TEST(DualReturnOutlierFilterTest, OtherReturnsKeepSegmentsAndRemoveIsolatedPoints)
 {
   // Arrange
   // Returns other than the weak first go through a plain ring outlier filter with
@@ -294,10 +312,9 @@ TEST_F(DualReturnOutlierFilterTest, OtherReturnsKeepSegmentsAndRemoveIsolatedPoi
   EXPECT_EQ(output.size(), 20U);
 }
 
-TEST_F(DualReturnOutlierFilterTest, PointWithChannelOutOfRangeIsSkipped)
+TEST(DualReturnOutlierFilterTest, PointWithChannelOutOfRangeIsSkipped)
 {
   // Arrange
-  // Before the fix, a channel not less than vertical_bins threw std::out_of_range.
   DualReturnOutlierFilterComponentPublic node(make_node_options());
   pcl::PointCloud<PointXYZIRCAEDT> cloud;
   append_arc(cloud, {30.0F, 20});
@@ -313,10 +330,9 @@ TEST_F(DualReturnOutlierFilterTest, PointWithChannelOutOfRangeIsSkipped)
   EXPECT_EQ(output.size(), 20U);
 }
 
-TEST_F(DualReturnOutlierFilterTest, VisibilityAndNoiseCloudReflectNoisyBins)
+TEST(DualReturnOutlierFilterTest, VisibilityAndNoiseCloudReflectNoisyBins)
 {
   // Arrange
-  // Before the fix, the visibility was always 1.0 and some removed points were not published.
   auto node = std::make_shared<DualReturnOutlierFilterComponentPublic>(make_node_options());
   auto listener = std::make_shared<rclcpp::Node>("dual_return_outlier_filter_test_listener");
   std::optional<float> visibility;
@@ -353,6 +369,18 @@ TEST_F(DualReturnOutlierFilterTest, VisibilityAndNoiseCloudReflectNoisyBins)
   ASSERT_TRUE(num_noise_points.has_value());
   EXPECT_FLOAT_EQ(*visibility, 1.0F - 1.0F / static_cast<float>(vertical_bins * horizontal_bins));
   EXPECT_EQ(*num_noise_points, 8U);
+}
+
+TEST(DualReturnOutlierFilterTest, ThrowsWhenAzimuthRoiCrossesZero)
+{
+  // Arrange
+  // An azimuth ROI from 315 to 45 deg crosses 0 deg, which is not supported.
+  const auto options = make_node_options("Fixed_azimuth_ROI")
+                         .append_parameter_override("min_azimuth_deg", 315.0)
+                         .append_parameter_override("max_azimuth_deg", 45.0);
+
+  // Act & Assert
+  EXPECT_THROW(DualReturnOutlierFilterComponentPublic node(options), std::invalid_argument);
 }
 
 int main(int argc, char ** argv)

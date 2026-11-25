@@ -78,7 +78,7 @@ struct Point3
 TEST(AzimuthBinsTest, FullCircleHasNonZeroResolution)
 {
   // Arrange
-  // 36 bins over [0, 2pi) are 10 degrees wide. The old integer resolution was 0 here.
+  // 36 bins over [0, 2pi) are 10 degrees wide.
   const AzimuthBins bins(0.0F, static_cast<float>(2.0 * M_PI), 36);
 
   // Act & Assert
@@ -111,14 +111,31 @@ TEST(AzimuthBinsTest, AzimuthJustBelowMaxStaysInLastBin)
 TEST(AzimuthBinsTest, AzimuthOutsideRoiHasNoBin)
 {
   // Arrange
-  // Fixed_azimuth_ROI with the default 135 to 225 degrees: 36 bins of 2.5 degrees.
+  // Fixed_azimuth_ROI with the default 135 to 225 degrees
   const AzimuthBins bins(135.0F * deg_to_rad, 225.0F * deg_to_rad, 36);
 
   // Act & Assert
   EXPECT_FALSE(bins.bin(134.0F * deg_to_rad).has_value());
   EXPECT_FALSE(bins.bin(226.0F * deg_to_rad).has_value());
+}
+
+TEST(AzimuthBinsTest, AzimuthInsideRoiIsBinnedFromMinAzimuth)
+{
+  // Arrange
+  // 36 bins over 135 to 225 degrees are 2.5 degrees wide
+  const AzimuthBins bins(135.0F * deg_to_rad, 225.0F * deg_to_rad, 36);
+
+  // Act & Assert
   EXPECT_EQ(bins.bin(136.0F * deg_to_rad), 0U);
   EXPECT_EQ(bins.bin(224.0F * deg_to_rad), 35U);
+}
+
+TEST(AzimuthBinsTest, NegativeAzimuthInsideRoiIsWrapped)
+{
+  // Arrange
+  const AzimuthBins bins(135.0F * deg_to_rad, 225.0F * deg_to_rad, 36);
+
+  // Act & Assert
   // -170 degrees is 190 degrees, inside the ROI
   EXPECT_EQ(bins.bin(-170.0F * deg_to_rad), 22U);
 }

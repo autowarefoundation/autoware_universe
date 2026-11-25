@@ -46,10 +46,11 @@ public:
   {
   }
 
+  static constexpr float two_pi = static_cast<float>(2.0 * M_PI);
+
   /** @brief Azimuth wrapped into [0, 2pi). */
   static float wrap(const float azimuth)
   {
-    constexpr float two_pi = static_cast<float>(2.0 * M_PI);
     float wrapped = azimuth < 0.0F ? azimuth + two_pi : azimuth;
     wrapped = wrapped >= two_pi ? wrapped - two_pi : wrapped;
     return wrapped;
@@ -132,14 +133,7 @@ struct XyzRoi
   template <typename PointT>
   bool contains(const PointT & p) const
   {
-    return contains_horizontally(p) && z.contains(p.z);
-  }
-
-private:
-  template <typename PointT>
-  bool contains_horizontally(const PointT & p) const
-  {
-    return x.contains(p.x) && y.contains(p.y);
+    return x.contains(p.x) && y.contains(p.y) && z.contains(p.z);
   }
 };
 

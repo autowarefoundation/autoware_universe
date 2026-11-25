@@ -24,6 +24,7 @@
 #include <pcl/segmentation/segment_differences.h>
 
 #include <algorithm>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -97,6 +98,12 @@ DualReturnOutlierFilterComponent::DualReturnOutlierFilterComponent(
     visibility_error_threshold_ = declare_parameter<double>("visibility_error_threshold");
     visibility_warn_threshold_ = declare_parameter<double>("visibility_warn_threshold");
   }
+
+  if (roi_mode_ == "Fixed_azimuth_ROI" && min_azimuth_deg_ >= max_azimuth_deg_) {
+    // An ROI crossing 0 deg is not supported
+    throw std::invalid_argument("min_azimuth_deg must be less than max_azimuth_deg.");
+  }
+
   updater_.setHardwareID("dual_return_outlier_filter");
   updater_.add(
     std::string(this->get_namespace()) + ": visibility_validation", this,
