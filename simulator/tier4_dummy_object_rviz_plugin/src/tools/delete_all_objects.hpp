@@ -79,8 +79,11 @@ private:  // NOLINT for Qt
   rclcpp::Clock::SharedPtr clock_;
   rclcpp::Publisher<autoware_simulation_msgs::msg::SimulatedObject>::SharedPtr
     dummy_object_info_pub_;
+  rclcpp::Publisher<autoware_simulation_msgs::msg::SimulatedObject>::SharedPtr
+    dummy_static_area_pub_;
 
   rviz_common::properties::StringProperty * topic_property_;
+  rviz_common::properties::StringProperty * static_area_topic_property_;
 };
 
 }  // namespace rviz_plugins

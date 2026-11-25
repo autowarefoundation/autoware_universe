@@ -77,22 +77,26 @@
           "description": "Height from the ground to the center of the marker. [m]",
           "default": 1.075
         },
-        "lower_ring_id_init": {
-          "type": "number",
-          "description": "Initial value when searching for the lowest ring ID within the point cloud",
-          "default": 128,
-          "minimum": 0
-        },
-        "upper_ring_id_init": {
-          "type": "number",
-          "description": "Initial value when searching for the highest ring ID within the point cloud",
+        "ring_id_min": {
+          "type": "integer",
+          "description": "Lowest ring ID to be used for the detection. Keep it at 0 when the rings are already selected by a ring filter before this node",
           "default": 0,
-          "minimum": 0
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "ring_id_max": {
+          "type": "integer",
+          "description": "Highest ring ID to be used for the detection. Set it to 65535 with ring_id_min = 0 to use all the rings. Keep it at 65535 when the rings are already selected by a ring filter before this node",
+          "default": 65535,
+          "minimum": 0,
+          "maximum": 65535
         },
         "reference_ring_number": {
-          "type": "number",
-          "description": "Reference ring number when detecting the marker. Set 255 to disable ring filtering",
-          "default": 255
+          "type": "integer",
+          "description": "Ring ID whose points give the y of a marker on a vertical surface. Set -1 to use all the rings in [ring_id_min, ring_id_max]. 255 is rejected because it meant all the rings before",
+          "default": -1,
+          "minimum": -1,
+          "maximum": 65535
         },
         "self_pose_timeout_sec": {
           "type": "number",
@@ -133,12 +137,6 @@
             0.0, 0.0, 0.0, 0.00030625
           ]
         },
-        "marker_width": {
-          "type": "number",
-          "description": "Width of a marker. This param is used for visualizing the detected marker pointcloud[m]",
-          "default": 0.8,
-          "minimum": 0.0
-        },
         "enable_save_log": {
           "type": "boolean",
           "description": "",
@@ -156,12 +154,12 @@
         },
         "save_frame_id": {
           "type": "string",
-          "description": "",
+          "description": "Frame in which the detected marker pointcloud is published and saved",
           "default": "velodyne_top"
         },
         "radius_for_extracting_marker_pointcloud": {
           "type": "number",
-          "description": "Only points closer than this value to the marker center on the xy plane are extracted as the “marker point cloud”. [m]",
+          "description": "Only points closer than this value to the marker center are extracted as the “marker point cloud” for the debug visualization and the saved log. The distance is measured on the xy plane, or on the xz plane in road_surface_mode. [m]",
           "default": 0.4,
           "minimum": 0.0
         },
@@ -188,7 +186,6 @@
         "limit_distance_from_self_pose_to_nearest_marker_y",
         "limit_distance_from_self_pose_to_marker",
         "base_covariance",
-        "marker_width",
         "enable_save_log",
         "save_file_directory_path",
         "save_file_name",

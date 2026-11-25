@@ -9,7 +9,6 @@
   <maintainer email="taiki.yamada@tier4.jp">Taiki Yamada</maintainer>
   <license>Apache License 2.0</license>
   <author email="shintaro.sakoda@tier4.jp">Shintaro Sakoda</author>
-  <author email="anh.nguyen.2@tier4.jp">NGUYEN Viet Anh</author>
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
   <buildtool_depend>autoware_cmake</buildtool_depend>

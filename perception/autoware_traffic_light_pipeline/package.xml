@@ -21,6 +21,7 @@
   <depend>autoware_traffic_light_map_based_detector</depend>
   <depend>autoware_traffic_light_selector</depend>
   <depend>diagnostic_msgs</depend>
+  <depend>libexpected-dev</depend>
   <depend>message_filters</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
@@ -28,7 +29,6 @@
   <depend>tf2</depend>
   <depend>tf2_ros</depend>
   <depend>tier4_perception_msgs</depend>
-  <depend>tl_expected</depend>
 
   <test_depend>ament_cmake_gtest</test_depend>
   <test_depend>ament_cmake_ros</test_depend>

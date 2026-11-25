@@ -11,7 +11,7 @@
   <maintainer email="junya.sasaki@tier4.jp">Junya Sasaki</maintainer>
 
   <license>Apache License 2.0</license>
-  <author email="anh.nguyen.2@tier4.jp">Anh Nguyen</author>
+  <author email="dominik.jargot@robotec.ai">Dominik Jargot</author>
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
   <buildtool_depend>autoware_cmake</buildtool_depend>

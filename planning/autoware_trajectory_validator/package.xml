@@ -43,10 +43,10 @@
   <depend>builtin_interfaces</depend>
   <depend>generate_parameter_library</depend>
   <depend>geometry_msgs</depend>
+  <depend>libexpected-dev</depend>
   <depend>nav_msgs</depend>
   <depend>pluginlib</depend>
   <depend>rclcpp</depend>
-  <depend>tl_expected</depend>
   <depend>unique_identifier_msgs</depend>
 
   <test_depend>ament_lint_auto</test_depend>
