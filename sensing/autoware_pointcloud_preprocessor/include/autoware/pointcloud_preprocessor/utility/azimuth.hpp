@@ -33,7 +33,7 @@ namespace autoware::pointcloud_preprocessor::utils
  */
 inline float azimuth_distance(const float from, const float to)
 {
-  constexpr float two_pi = 6.28318530717958647692F;
+  constexpr float two_pi = static_cast<float>(2.0 * M_PI);
   const float diff = std::fabs(to - from);
   return std::min(diff, two_pi - diff);
 }

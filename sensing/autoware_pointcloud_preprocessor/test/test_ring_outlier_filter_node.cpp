@@ -367,8 +367,9 @@ TEST_F(RingOutlierFilterTest, AzimuthStepJustAboveOneDegreeBreaksWalk)
   // for increasing and decreasing azimuths. Starting from 0, the steps are exact in float.
   const float step =
     std::nextafter(static_cast<float>(M_PI / 180.0), std::numeric_limits<float>::infinity());
+  // faster_filter() keeps no state between calls, so one node serves every case.
+  RingOutlierFilterComponentPublic node(make_node_options());
   for (const float sign : {1.0F, -1.0F}) {
-    RingOutlierFilterComponentPublic node(make_node_options());
     pcl::PointCloud<PointXYZIRCAEDT> cloud;
     for (int i = 0; i < 3; ++i) {
       cloud.push_back(make_point(0, sign * static_cast<float>(i) * step, 5.0F));
@@ -400,8 +401,9 @@ TEST_F(RingOutlierFilterTest, ContinuousArcKeepsEveryPointInEitherDirectionAndRa
   const std::vector<Case> cases = {{30.0F, 0.1F, 0.0F},     {30.0F, -0.1F, 0.0F},
                                    {359.0F, 0.1F, 0.0F},    {1.0F, -0.1F, 0.0F},
                                    {179.0F, 0.1F, -180.0F}, {-179.0F, -0.1F, -180.0F}};
+  // faster_filter() keeps no state between calls, so one node serves every case.
+  RingOutlierFilterComponentPublic node(make_node_options());
   for (const auto & c : cases) {
-    RingOutlierFilterComponentPublic node(make_node_options());
     pcl::PointCloud<PointXYZIRCAEDT> cloud;
     for (int i = 0; i < 20; ++i) {
       float deg = c.start_deg + c.step_deg * static_cast<float>(i);

@@ -17,6 +17,8 @@
 
 #include <autoware/cuda_utils/cuda_check_error.hpp>
 
+#include <math_constants.h>
+
 namespace autoware::cuda_pointcloud_preprocessor
 {
 
@@ -24,7 +26,7 @@ namespace autoware::cuda_pointcloud_preprocessor
 // where the azimuth wraps around. Same as utils::azimuth_distance in pointcloud_preprocessor.
 __device__ __forceinline__ float azimuthDistance(const float from, const float to)
 {
-  constexpr float two_pi = 6.28318530717958647692f;
+  constexpr float two_pi = static_cast<float>(2.0 * CUDART_PI);
   const float diff = fabsf(to - from);
   return fminf(diff, two_pi - diff);
 }
