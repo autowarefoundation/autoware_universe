@@ -71,6 +71,50 @@ void append_by_noise_flag(
     target.points.push_back(ring[i]);
   }
 }
+
+/** @brief Region where the weak first returns are counted for the visibility estimation. */
+struct VisibilityRoi
+{
+  uint8_t mode;  // 0: whole cloud, 1: base_link xyz-ROI, 2: azimuth-ROI in the LiDAR frame
+  dual_return_outlier_filter::XyzRoi xyz;
+  const dual_return_outlier_filter::AzimuthBins & azimuth_bins;
+  float max_distance;
+
+  bool operator()(const PointXYZIRCAEDT & p) const
+  {
+    if (mode == 1) {
+      return xyz.contains(p);
+    }
+    if (mode == 2) {
+      return azimuth_bins.contains(p.azimuth) && p.distance < max_distance;
+    }
+    return true;
+  }
+};
+
+/** @brief Writes the noise counts of one ring to its row of the frequency image. */
+void write_frequency_row(
+  cv::Mat & frequency_image, const uint32_t ring_id, const std::vector<int> & noise_frequency)
+{
+  for (size_t bin = 0; bin < noise_frequency.size(); ++bin) {
+    frequency_image.at<uchar>(static_cast<int>(ring_id), static_cast<int>(bin)) =
+      static_cast<uchar>(std::min(noise_frequency[bin], 255));
+  }
+}
+
+/** @brief Applies a ring outlier filter to the non weak first returns. */
+void filter_other_rings(
+  const std::vector<std::vector<PointXYZIRCAEDT>> & rings, const double distance_ratio,
+  const float max_azimuth_diff, pcl::PointCloud<PointXYZIRCAEDT> & output,
+  pcl::PointCloud<PointXYZIRCAEDT> & noise_output)
+{
+  for (const auto & ring : rings) {
+    auto is_noise =
+      dual_return_outlier_filter::find_segment_points(ring, distance_ratio, max_azimuth_diff);
+    is_noise.flip();
+    append_by_noise_flag(ring, is_noise, output, noise_output);
+  }
+}
 }  // namespace
 
 DualReturnOutlierFilterComponent::DualReturnOutlierFilterComponent(
@@ -162,19 +206,8 @@ void DualReturnOutlierFilterComponent::filter(
     weak_first_distance_ratio_, max_azimuth_diff_ * static_cast<float>(M_PI / 180.0),
     weak_first_local_noise_threshold_};
 
-  // Region where the weak first returns are counted for the visibility estimation
-  const dual_return_outlier_filter::XyzRoi xyz_roi{
-    {x_min_, x_max_}, {y_min_, y_max_}, {z_min_, z_max_}};
-  const auto is_in_roi = [&](const PointXYZIRCAEDT & p) {
-    switch (roi_mode) {
-      case 1:  // base_link xyz-ROI
-        return xyz_roi.contains(p);
-      case 2:  // azimuth-ROI in the LiDAR frame
-        return azimuth_bins.contains(p.azimuth) && p.distance < max_distance_;
-      default:
-        return true;
-    }
-  };
+  const VisibilityRoi is_in_roi{
+    roi_mode, {{x_min_, x_max_}, {y_min_, y_max_}, {z_min_, z_max_}}, azimuth_bins, max_distance_};
 
   const auto rings = split_into_rings(pcl_input->points, vertical_bins);
   if (rings.num_points_with_invalid_channel > 0) {
@@ -199,19 +232,13 @@ void DualReturnOutlierFilterComponent::filter(
     const auto result = dual_return_outlier_filter::classify_weak_first_ring(
       ring, azimuth_bins, weak_first_params, is_in_roi);
     append_by_noise_flag(ring, result.is_noise, pcl_output, noise_output);
-    for (size_t bin = 0; bin < azimuth_bins.size(); ++bin) {
-      frequency_image.at<uchar>(static_cast<int>(ring_id), static_cast<int>(bin)) =
-        static_cast<uchar>(std::min(result.noise_frequency[bin], 255));
-    }
+    write_frequency_row(frequency_image, ring_id, result.noise_frequency);
   }
 
   // Other returns: a ring outlier filter, without the visibility estimation
-  for (const auto & ring : rings.others) {
-    auto is_noise = dual_return_outlier_filter::find_segment_points(
-      ring, general_distance_ratio_, weak_first_params.max_azimuth_diff);
-    is_noise.flip();
-    append_by_noise_flag(ring, is_noise, pcl_output, noise_output);
-  }
+  filter_other_rings(
+    rings.others, general_distance_ratio_, weak_first_params.max_azimuth_diff, pcl_output,
+    noise_output);
 
   publish_visibility(frequency_image, input->header);
 
@@ -267,25 +294,17 @@ rcl_interfaces::msg::SetParametersResult DualReturnOutlierFilterComponent::param
 {
   std::scoped_lock lock(mutex_);
 
-  if (get_param(p, "weak_first_distance_ratio", weak_first_distance_ratio_)) {
-    RCLCPP_DEBUG(
-      get_logger(), "Setting new weak first distance ratio to: %f.", weak_first_distance_ratio_);
-  }
-  if (get_param(p, "general_distance_ratio", general_distance_ratio_)) {
-    RCLCPP_DEBUG(
-      get_logger(), "Setting new general distance ratio to: %f.", general_distance_ratio_);
-  }
-  if (get_param(p, "weak_first_local_noise_threshold", weak_first_local_noise_threshold_)) {
-    RCLCPP_DEBUG(
-      get_logger(), "Setting new weak first local noise threshold to: %d.",
-      weak_first_local_noise_threshold_);
-  }
-  if (get_param(p, "vertical_bins", vertical_bins_)) {
-    RCLCPP_DEBUG(get_logger(), "Setting new vertical_bins to: %d.", vertical_bins_);
-  }
-  if (get_param(p, "max_azimuth_diff", max_azimuth_diff_)) {
-    RCLCPP_DEBUG(get_logger(), "Setting new max_azimuth_diff to: %f.", max_azimuth_diff_);
-  }
+  get_param(p, "weak_first_distance_ratio", weak_first_distance_ratio_);
+  get_param(p, "general_distance_ratio", general_distance_ratio_);
+  get_param(p, "weak_first_local_noise_threshold", weak_first_local_noise_threshold_);
+  get_param(p, "vertical_bins", vertical_bins_);
+  get_param(p, "max_azimuth_diff", max_azimuth_diff_);
+  RCLCPP_DEBUG(
+    get_logger(),
+    "Parameters: weak_first_distance_ratio=%f, general_distance_ratio=%f, "
+    "weak_first_local_noise_threshold=%d, vertical_bins=%d, max_azimuth_diff=%f.",
+    weak_first_distance_ratio_, general_distance_ratio_, weak_first_local_noise_threshold_,
+    vertical_bins_, max_azimuth_diff_);
 
   rcl_interfaces::msg::SetParametersResult result;
   result.successful = true;
