@@ -252,16 +252,17 @@ TEST_F(DualReturnOutlierFilterTest, AzimuthRoiIgnoresPointsOutsideIt)
 {
   // Arrange
   // The azimuth ROI is 135 to 225 deg, so the 36 bins are 2.5 deg wide. Inside the ROI, a
-  // segment and two isolated points share the bin from 150 to 152.5 deg. Outside the ROI (30 deg),
-  // the same layout has no bin.
+  // segment and two isolated points share the bin from 150 to 152.5 deg, away from its edges so
+  // that float rounding does not move a point to the next bin. Outside the ROI (30 deg), the same
+  // layout has no bin.
   DualReturnOutlierFilterComponentPublic node(make_node_options("Fixed_azimuth_ROI"));
   pcl::PointCloud<PointXYZIRCAEDT> cloud;
-  append_arc(cloud, {30.0F, 6});
-  cloud.push_back(make_point(31.2F, 5.0F));
-  cloud.push_back(make_point(32.0F, 5.0F));
-  append_arc(cloud, {150.0F, 6});
-  cloud.push_back(make_point(151.2F, 5.0F));
-  cloud.push_back(make_point(152.0F, 5.0F));
+  append_arc(cloud, {30.5F, 6});
+  cloud.push_back(make_point(31.7F, 5.0F));
+  cloud.push_back(make_point(32.4F, 5.0F));
+  append_arc(cloud, {150.5F, 6});
+  cloud.push_back(make_point(151.7F, 5.0F));
+  cloud.push_back(make_point(152.4F, 5.0F));
 
   // Act
   const auto output = run_filter(node, cloud);
