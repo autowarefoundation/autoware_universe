@@ -8,31 +8,33 @@
       "properties": {
         "delay_time": {
           "type": "number",
-          "default": 0.3,
-          "description": "Delay time of vehicles."
+          "default": 0.03,
+          "description": "Delay time of vehicle [s]."
         },
         "update_rate": {
-          "type": "number"
+          "type": "number",
+          "default": 10.0,
+          "description": "Rate of the collision check [Hz]."
         },
         "footprint_margin": {
           "type": "number",
           "default": 0.0,
-          "description": "Foot print margin."
+          "description": "Foot print margin [m]."
         },
         "max_deceleration": {
           "type": "number",
-          "default": 2.0,
-          "description": "Max deceleration for ego vehicle to stop."
+          "default": 1.5,
+          "description": "Max deceleration for ego vehicle to stop [m/s^2]."
         },
         "resample_interval": {
           "type": "number",
           "default": 0.3,
-          "description": "Interval for resampling trajectory."
+          "description": "Interval for resampling trajectory [m]."
         },
         "search_radius": {
           "type": "number",
           "default": 5.0,
-          "description": "Search distance from trajectory to point cloud"
+          "description": "Search distance from trajectory to point cloud [m]."
         }
       },
       "required": [
