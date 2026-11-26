@@ -3,7 +3,7 @@
   "title": "Parameters for obstacle collision checker",
   "type": "object",
   "definitions": {
-    "vehicle_cmd_gate": {
+    "obstacle_collision_checker": {
       "type": "object",
       "properties": {
         "delay_time": {
