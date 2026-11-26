@@ -331,17 +331,7 @@ void RingOutlierFilterComponent::faster_filter(
 
   warn_rings_not_in_scan_order(checked_ring_count, unordered_ring_count);
 
-  if (publish_outlier_pointcloud_) {
-    PointCloud2 outlier;
-    pcl::toROSMsg(*outlier_pcl, outlier);
-    outlier.header = input->header;
-    outlier_pointcloud_publisher_->publish(outlier);
-
-    autoware_internal_debug_msgs::msg::Float32Stamped visibility_msg;
-    visibility_msg.data = calculate_visibility_score(outlier);
-    visibility_msg.stamp = input->header.stamp;
-    visibility_pub_->publish(visibility_msg);
-  }
+  publish_outlier_pointcloud(*outlier_pcl, input->header);
 
   const double cyclic_time_ms = stop_watch_ptr_->toc("cyclic_time", true);
   const double processing_time_ms = stop_watch_ptr_->toc("processing_time", true);
@@ -350,15 +340,7 @@ void RingOutlierFilterComponent::faster_filter(
       std::chrono::nanoseconds((this->get_clock()->now() - input->header.stamp).nanoseconds()))
       .count();
 
-  // Debug output
-  if (debug_publisher_) {
-    debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
-      "debug/cyclic_time_ms", cyclic_time_ms);
-    debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
-      "debug/processing_time_ms", processing_time_ms);
-    debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
-      "debug/pipeline_latency_ms", pipeline_latency_ms);
-  }
+  publish_debug_times(cyclic_time_ms, processing_time_ms, pipeline_latency_ms);
 
   auto latency_diagnostics = std::make_shared<LatencyDiagnostics>(
     input->header.stamp, processing_time_ms, pipeline_latency_ms,
@@ -369,6 +351,37 @@ void RingOutlierFilterComponent::faster_filter(
   auto azimuth_order_diagnostics =
     std::make_shared<AzimuthOrderDiagnostics>(checked_ring_count, unordered_ring_count);
   publish_diagnostics({latency_diagnostics, pass_rate_diagnostics, azimuth_order_diagnostics});
+}
+
+void RingOutlierFilterComponent::publish_outlier_pointcloud(
+  const pcl::PointCloud<InputPointType> & outlier_pcl, const std_msgs::msg::Header & header)
+{
+  if (!publish_outlier_pointcloud_) {
+    return;
+  }
+  PointCloud2 outlier;
+  pcl::toROSMsg(outlier_pcl, outlier);
+  outlier.header = header;
+  outlier_pointcloud_publisher_->publish(outlier);
+
+  autoware_internal_debug_msgs::msg::Float32Stamped visibility_msg;
+  visibility_msg.data = calculate_visibility_score(outlier);
+  visibility_msg.stamp = header.stamp;
+  visibility_pub_->publish(visibility_msg);
+}
+
+void RingOutlierFilterComponent::publish_debug_times(
+  const double cyclic_time_ms, const double processing_time_ms, const double pipeline_latency_ms)
+{
+  if (!debug_publisher_) {
+    return;
+  }
+  debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
+    "debug/cyclic_time_ms", cyclic_time_ms);
+  debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
+    "debug/processing_time_ms", processing_time_ms);
+  debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
+    "debug/pipeline_latency_ms", pipeline_latency_ms);
 }
 
 void RingOutlierFilterComponent::warn_rings_not_in_scan_order(

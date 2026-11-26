@@ -121,6 +121,19 @@ std::vector<PointXYZIRC> extract_points(const sensor_msgs::msg::PointCloud2 & ms
   return {cloud.points.begin(), cloud.points.end()};
 }
 
+// Returns the status of the node named node_name in msg, if any.
+std::optional<diagnostic_msgs::msg::DiagnosticStatus> find_status(
+  const diagnostic_msgs::msg::DiagnosticArray & msg, const std::string & node_name)
+{
+  const auto it = std::find_if(msg.status.begin(), msg.status.end(), [&](const auto & status) {
+    return status.name.find(node_name) != std::string::npos;
+  });
+  if (it == msg.status.end()) {
+    return std::nullopt;
+  }
+  return *it;
+}
+
 // Runs faster_filter() until this node's status arrives on /diagnostics, and returns it.
 // /diagnostics is volatile, so a status published before the subscription is matched is lost.
 // faster_filter() keeps no state between calls, so it is simply repeated until one arrives.
@@ -133,18 +146,13 @@ std::optional<diagnostic_msgs::msg::DiagnosticStatus> filter_and_get_diagnostics
   const auto subscription = listener->create_subscription<diagnostic_msgs::msg::DiagnosticArray>(
     "/diagnostics", rclcpp::QoS(10),
     [&](const diagnostic_msgs::msg::DiagnosticArray::ConstSharedPtr msg) {
-      for (const auto & status : msg->status) {
-        if (status.name.find(node_name) != std::string::npos) {
-          result = status;
-        }
+      if (const auto status = find_status(*msg, node_name)) {
+        result = status;
       }
     });
 
   const auto input = to_msg(cloud);
-  for (int attempt = 0; attempt < 100; ++attempt) {  // about 2 s
-    if (result.has_value()) {
-      break;
-    }
+  for (int attempt = 0; attempt < 100 && !result.has_value(); ++attempt) {  // about 2 s
     sensor_msgs::msg::PointCloud2 output;
     node.faster_filter(input, nullptr, output, TransformInfo{});
     std::this_thread::sleep_for(std::chrono::milliseconds(20));
