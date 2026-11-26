@@ -133,18 +133,20 @@ TEST(SimpleTrajectoryFollowerTest, ConstructorDoesNotThrow)
   EXPECT_NO_THROW({ SimpleTrajectoryFollower follower(config); });
 }
 
-TEST(SimpleTrajectoryFollowerTest, ThrowsWhenTrajectoryIsEmpty)
+TEST(SimpleTrajectoryFollowerTest, ReturnsErrorWhenTrajectoryIsEmpty)
 {
-  // Arrange: an empty trajectory. findNearestIndex() rejects an empty point list, so the core
-  // throws (this is the ROS-independent counterpart of the node-level characterization case).
+  // Arrange: an empty trajectory has no nearest point to track, so the core cannot produce a
+  // command and must report that by returning an error (tl::unexpected) instead of throwing, which
+  // previously crashed the node from inside its timer callback.
   const SimpleTrajectoryFollower follower(make_default_config());
-  Trajectory empty_trajectory;
+  const Trajectory empty_trajectory;
   const auto odometry = make_odometry(0.0, 0.0, 0.0, 1.0);
 
-  // Act + Assert: assert the base std::exception rather than the concrete type so the test is not
-  // coupled to which utility (currently std::invalid_argument from validateNonEmpty) raised it.
-  EXPECT_THROW(
-    follower.compute_control_command(empty_trajectory, odometry, make_stamp()), std::exception);
+  // Act
+  const auto result = follower.compute_control_command(empty_trajectory, odometry, make_stamp());
+
+  // Assert
+  EXPECT_FALSE(result.has_value());
 }
 
 TEST(SimpleTrajectoryFollowerTest, OutputsNeutralCommandWhenPerfectlyTrackingTrajectory)
@@ -166,9 +168,10 @@ TEST(SimpleTrajectoryFollowerTest, OutputsNeutralCommandWhenPerfectlyTrackingTra
   const auto result = follower.compute_control_command(trajectory, odometry, make_stamp());
 
   // Assert
-  EXPECT_FLOAT_EQ(result.command.lateral.steering_tire_angle, expected_steer);
-  EXPECT_FLOAT_EQ(result.command.longitudinal.velocity, expected_velocity);
-  EXPECT_FLOAT_EQ(result.command.longitudinal.acceleration, expected_acceleration);
+  ASSERT_TRUE(result.has_value());
+  EXPECT_FLOAT_EQ(result->command.lateral.steering_tire_angle, expected_steer);
+  EXPECT_FLOAT_EQ(result->command.longitudinal.velocity, expected_velocity);
+  EXPECT_FLOAT_EQ(result->command.longitudinal.acceleration, expected_acceleration);
 }
 
 TEST(SimpleTrajectoryFollowerTest, SelectsNearestTrajectoryPointForControl)
@@ -197,9 +200,10 @@ TEST(SimpleTrajectoryFollowerTest, SelectsNearestTrajectoryPointForControl)
   const auto result = follower.compute_control_command(trajectory, odometry, make_stamp());
 
   // Assert
-  EXPECT_FLOAT_EQ(result.command.lateral.steering_tire_angle, expected_steer);
-  EXPECT_FLOAT_EQ(result.command.longitudinal.velocity, expected_velocity);
-  EXPECT_FLOAT_EQ(result.command.longitudinal.acceleration, expected_acceleration);
+  ASSERT_TRUE(result.has_value());
+  EXPECT_FLOAT_EQ(result->command.lateral.steering_tire_angle, expected_steer);
+  EXPECT_FLOAT_EQ(result->command.longitudinal.velocity, expected_velocity);
+  EXPECT_FLOAT_EQ(result->command.longitudinal.acceleration, expected_acceleration);
 }
 
 TEST(SimpleTrajectoryFollowerTest, SteersNegativeToCorrectLeftwardLateralOffset)
@@ -221,9 +225,10 @@ TEST(SimpleTrajectoryFollowerTest, SteersNegativeToCorrectLeftwardLateralOffset)
   const auto result = follower.compute_control_command(trajectory, odometry, make_stamp());
 
   // Assert
-  EXPECT_NEAR(result.command.lateral.steering_tire_angle, expected_steer, tolerance);
-  EXPECT_FLOAT_EQ(result.command.longitudinal.velocity, expected_velocity);
-  EXPECT_FLOAT_EQ(result.command.longitudinal.acceleration, expected_acceleration);
+  ASSERT_TRUE(result.has_value());
+  EXPECT_NEAR(result->command.lateral.steering_tire_angle, expected_steer, tolerance);
+  EXPECT_FLOAT_EQ(result->command.longitudinal.velocity, expected_velocity);
+  EXPECT_FLOAT_EQ(result->command.longitudinal.acceleration, expected_acceleration);
 }
 
 TEST(SimpleTrajectoryFollowerTest, LateralDeviationParameterShiftsSteeringError)
@@ -247,9 +252,10 @@ TEST(SimpleTrajectoryFollowerTest, LateralDeviationParameterShiftsSteeringError)
   const auto result = follower.compute_control_command(trajectory, odometry, make_stamp());
 
   // Assert
-  EXPECT_NEAR(result.command.lateral.steering_tire_angle, expected_steer, tolerance);
-  EXPECT_FLOAT_EQ(result.command.longitudinal.velocity, expected_velocity);
-  EXPECT_FLOAT_EQ(result.command.longitudinal.acceleration, expected_acceleration);
+  ASSERT_TRUE(result.has_value());
+  EXPECT_NEAR(result->command.lateral.steering_tire_angle, expected_steer, tolerance);
+  EXPECT_FLOAT_EQ(result->command.longitudinal.velocity, expected_velocity);
+  EXPECT_FLOAT_EQ(result->command.longitudinal.acceleration, expected_acceleration);
 }
 
 TEST(SimpleTrajectoryFollowerTest, SteersFromYawDeviationOfClosestPoint)
@@ -273,10 +279,11 @@ TEST(SimpleTrajectoryFollowerTest, SteersFromYawDeviationOfClosestPoint)
   const auto result = follower.compute_control_command(trajectory, odometry, make_stamp());
 
   // Assert
-  EXPECT_NEAR(result.command.lateral.steering_tire_angle, expected_steer, tolerance);
-  EXPECT_NEAR(result.debug.yaw_error, expected_yaw_error, tolerance);
-  EXPECT_FLOAT_EQ(result.command.longitudinal.velocity, expected_velocity);
-  EXPECT_FLOAT_EQ(result.command.longitudinal.acceleration, expected_acceleration);
+  ASSERT_TRUE(result.has_value());
+  EXPECT_NEAR(result->command.lateral.steering_tire_angle, expected_steer, tolerance);
+  EXPECT_NEAR(result->debug.yaw_error, expected_yaw_error, tolerance);
+  EXPECT_FLOAT_EQ(result->command.longitudinal.velocity, expected_velocity);
+  EXPECT_FLOAT_EQ(result->command.longitudinal.acceleration, expected_acceleration);
 }
 
 TEST(SimpleTrajectoryFollowerTest, CombinesLateralAndYawErrorsInSteering)
@@ -300,9 +307,10 @@ TEST(SimpleTrajectoryFollowerTest, CombinesLateralAndYawErrorsInSteering)
   const auto result = follower.compute_control_command(trajectory, odometry, make_stamp());
 
   // Assert
-  EXPECT_NEAR(result.command.lateral.steering_tire_angle, expected_steer, tolerance);
-  EXPECT_FLOAT_EQ(result.command.longitudinal.velocity, expected_velocity);
-  EXPECT_FLOAT_EQ(result.command.longitudinal.acceleration, expected_acceleration);
+  ASSERT_TRUE(result.has_value());
+  EXPECT_NEAR(result->command.lateral.steering_tire_angle, expected_steer, tolerance);
+  EXPECT_FLOAT_EQ(result->command.longitudinal.velocity, expected_velocity);
+  EXPECT_FLOAT_EQ(result->command.longitudinal.acceleration, expected_acceleration);
 }
 
 TEST(SimpleTrajectoryFollowerTest, UsesAbsoluteEgoSpeedForLookahead)
@@ -327,9 +335,10 @@ TEST(SimpleTrajectoryFollowerTest, UsesAbsoluteEgoSpeedForLookahead)
   const auto result = follower.compute_control_command(trajectory, odometry, make_stamp());
 
   // Assert
-  EXPECT_NEAR(result.command.lateral.steering_tire_angle, expected_steer, tolerance);
-  EXPECT_FLOAT_EQ(result.command.longitudinal.velocity, expected_velocity);
-  EXPECT_FLOAT_EQ(result.command.longitudinal.acceleration, expected_acceleration);
+  ASSERT_TRUE(result.has_value());
+  EXPECT_NEAR(result->command.lateral.steering_tire_angle, expected_steer, tolerance);
+  EXPECT_FLOAT_EQ(result->command.longitudinal.velocity, expected_velocity);
+  EXPECT_FLOAT_EQ(result->command.longitudinal.acceleration, expected_acceleration);
 }
 
 TEST(SimpleTrajectoryFollowerTest, ClampsSteeringToLowerSteerLimit)
@@ -348,9 +357,10 @@ TEST(SimpleTrajectoryFollowerTest, ClampsSteeringToLowerSteerLimit)
   const auto result = follower.compute_control_command(trajectory, odometry, make_stamp());
 
   // Assert
-  EXPECT_FLOAT_EQ(result.command.lateral.steering_tire_angle, expected_steer);
-  EXPECT_FLOAT_EQ(result.command.longitudinal.velocity, expected_velocity);
-  EXPECT_FLOAT_EQ(result.command.longitudinal.acceleration, expected_acceleration);
+  ASSERT_TRUE(result.has_value());
+  EXPECT_FLOAT_EQ(result->command.lateral.steering_tire_angle, expected_steer);
+  EXPECT_FLOAT_EQ(result->command.longitudinal.velocity, expected_velocity);
+  EXPECT_FLOAT_EQ(result->command.longitudinal.acceleration, expected_acceleration);
 }
 
 TEST(SimpleTrajectoryFollowerTest, ClampsSteeringToUpperSteerLimit)
@@ -369,9 +379,10 @@ TEST(SimpleTrajectoryFollowerTest, ClampsSteeringToUpperSteerLimit)
   const auto result = follower.compute_control_command(trajectory, odometry, make_stamp());
 
   // Assert
-  EXPECT_FLOAT_EQ(result.command.lateral.steering_tire_angle, expected_steer);
-  EXPECT_FLOAT_EQ(result.command.longitudinal.velocity, expected_velocity);
-  EXPECT_FLOAT_EQ(result.command.longitudinal.acceleration, expected_acceleration);
+  ASSERT_TRUE(result.has_value());
+  EXPECT_FLOAT_EQ(result->command.lateral.steering_tire_angle, expected_steer);
+  EXPECT_FLOAT_EQ(result->command.longitudinal.velocity, expected_velocity);
+  EXPECT_FLOAT_EQ(result->command.longitudinal.acceleration, expected_acceleration);
 }
 
 TEST(SimpleTrajectoryFollowerTest, UsesExternalTargetVelocityWhenEnabled)
@@ -396,9 +407,10 @@ TEST(SimpleTrajectoryFollowerTest, UsesExternalTargetVelocityWhenEnabled)
   const auto result = follower.compute_control_command(trajectory, odometry, make_stamp());
 
   // Assert
-  EXPECT_FLOAT_EQ(result.command.lateral.steering_tire_angle, expected_steer);
-  EXPECT_FLOAT_EQ(result.command.longitudinal.velocity, expected_velocity);
-  EXPECT_FLOAT_EQ(result.command.longitudinal.acceleration, expected_acceleration);
+  ASSERT_TRUE(result.has_value());
+  EXPECT_FLOAT_EQ(result->command.lateral.steering_tire_angle, expected_steer);
+  EXPECT_FLOAT_EQ(result->command.longitudinal.velocity, expected_velocity);
+  EXPECT_FLOAT_EQ(result->command.longitudinal.acceleration, expected_acceleration);
 }
 
 TEST(SimpleTrajectoryFollowerTest, AcceleratesWhenEgoBelowTargetVelocity)
@@ -419,9 +431,10 @@ TEST(SimpleTrajectoryFollowerTest, AcceleratesWhenEgoBelowTargetVelocity)
   const auto result = follower.compute_control_command(trajectory, odometry, make_stamp());
 
   // Assert
-  EXPECT_FLOAT_EQ(result.command.lateral.steering_tire_angle, expected_steer);
-  EXPECT_FLOAT_EQ(result.command.longitudinal.velocity, expected_velocity);
-  EXPECT_FLOAT_EQ(result.command.longitudinal.acceleration, expected_acceleration);
+  ASSERT_TRUE(result.has_value());
+  EXPECT_FLOAT_EQ(result->command.lateral.steering_tire_angle, expected_steer);
+  EXPECT_FLOAT_EQ(result->command.longitudinal.velocity, expected_velocity);
+  EXPECT_FLOAT_EQ(result->command.longitudinal.acceleration, expected_acceleration);
 }
 
 TEST(SimpleTrajectoryFollowerTest, BrakesWhenEgoExceedsTargetVelocity)
@@ -442,9 +455,10 @@ TEST(SimpleTrajectoryFollowerTest, BrakesWhenEgoExceedsTargetVelocity)
   const auto result = follower.compute_control_command(trajectory, odometry, make_stamp());
 
   // Assert
-  EXPECT_FLOAT_EQ(result.command.lateral.steering_tire_angle, expected_steer);
-  EXPECT_FLOAT_EQ(result.command.longitudinal.velocity, expected_velocity);
-  EXPECT_FLOAT_EQ(result.command.longitudinal.acceleration, expected_acceleration);
+  ASSERT_TRUE(result.has_value());
+  EXPECT_FLOAT_EQ(result->command.lateral.steering_tire_angle, expected_steer);
+  EXPECT_FLOAT_EQ(result->command.longitudinal.velocity, expected_velocity);
+  EXPECT_FLOAT_EQ(result->command.longitudinal.acceleration, expected_acceleration);
 }
 
 TEST(SimpleTrajectoryFollowerTest, ClampsAccelerationToLowerAccLimit)
@@ -466,9 +480,10 @@ TEST(SimpleTrajectoryFollowerTest, ClampsAccelerationToLowerAccLimit)
   const auto result = follower.compute_control_command(trajectory, odometry, make_stamp());
 
   // Assert
-  EXPECT_FLOAT_EQ(result.command.lateral.steering_tire_angle, expected_steer);
-  EXPECT_FLOAT_EQ(result.command.longitudinal.velocity, expected_velocity);
-  EXPECT_FLOAT_EQ(result.command.longitudinal.acceleration, expected_acceleration);
+  ASSERT_TRUE(result.has_value());
+  EXPECT_FLOAT_EQ(result->command.lateral.steering_tire_angle, expected_steer);
+  EXPECT_FLOAT_EQ(result->command.longitudinal.velocity, expected_velocity);
+  EXPECT_FLOAT_EQ(result->command.longitudinal.acceleration, expected_acceleration);
 }
 
 TEST(SimpleTrajectoryFollowerTest, ClampsAccelerationToUpperAccLimit)
@@ -490,9 +505,10 @@ TEST(SimpleTrajectoryFollowerTest, ClampsAccelerationToUpperAccLimit)
   const auto result = follower.compute_control_command(trajectory, odometry, make_stamp());
 
   // Assert
-  EXPECT_FLOAT_EQ(result.command.lateral.steering_tire_angle, expected_steer);
-  EXPECT_FLOAT_EQ(result.command.longitudinal.velocity, expected_velocity);
-  EXPECT_FLOAT_EQ(result.command.longitudinal.acceleration, expected_acceleration);
+  ASSERT_TRUE(result.has_value());
+  EXPECT_FLOAT_EQ(result->command.lateral.steering_tire_angle, expected_steer);
+  EXPECT_FLOAT_EQ(result->command.longitudinal.velocity, expected_velocity);
+  EXPECT_FLOAT_EQ(result->command.longitudinal.acceleration, expected_acceleration);
 }
 
 TEST(SimpleTrajectoryFollowerTest, StampsAllCommandHeadersWithGivenTime)
@@ -511,12 +527,13 @@ TEST(SimpleTrajectoryFollowerTest, StampsAllCommandHeadersWithGivenTime)
   const auto result = follower.compute_control_command(trajectory, odometry, stamp);
 
   // Assert: the top-level command and both sub-commands carry the given stamp.
-  EXPECT_EQ(result.command.stamp.sec, expected_sec);
-  EXPECT_EQ(result.command.stamp.nanosec, expected_nanosec);
-  EXPECT_EQ(result.command.lateral.stamp.sec, expected_sec);
-  EXPECT_EQ(result.command.lateral.stamp.nanosec, expected_nanosec);
-  EXPECT_EQ(result.command.longitudinal.stamp.sec, expected_sec);
-  EXPECT_EQ(result.command.longitudinal.stamp.nanosec, expected_nanosec);
+  ASSERT_TRUE(result.has_value());
+  EXPECT_EQ(result->command.stamp.sec, expected_sec);
+  EXPECT_EQ(result->command.stamp.nanosec, expected_nanosec);
+  EXPECT_EQ(result->command.lateral.stamp.sec, expected_sec);
+  EXPECT_EQ(result->command.lateral.stamp.nanosec, expected_nanosec);
+  EXPECT_EQ(result->command.longitudinal.stamp.sec, expected_sec);
+  EXPECT_EQ(result->command.longitudinal.stamp.nanosec, expected_nanosec);
 }
 
 TEST(SimpleTrajectoryFollowerTest, PopulatesDebugIntermediatesForLogging)
@@ -544,9 +561,10 @@ TEST(SimpleTrajectoryFollowerTest, PopulatesDebugIntermediatesForLogging)
   const auto result = follower.compute_control_command(trajectory, odometry, make_stamp());
 
   // Assert
-  EXPECT_NEAR(result.debug.lateral_error, expected_lateral_error, tolerance);
-  EXPECT_NEAR(result.debug.yaw_error, expected_yaw_error, tolerance);
-  EXPECT_NEAR(result.debug.velocity_error, expected_velocity_error, tolerance);
-  EXPECT_NEAR(result.debug.steer_kp, expected_steer_kp, tolerance);
-  EXPECT_NEAR(result.debug.steer_kd, expected_steer_kd, tolerance);
+  ASSERT_TRUE(result.has_value());
+  EXPECT_NEAR(result->debug.lateral_error, expected_lateral_error, tolerance);
+  EXPECT_NEAR(result->debug.yaw_error, expected_yaw_error, tolerance);
+  EXPECT_NEAR(result->debug.velocity_error, expected_velocity_error, tolerance);
+  EXPECT_NEAR(result->debug.steer_kp, expected_steer_kp, tolerance);
+  EXPECT_NEAR(result->debug.steer_kd, expected_steer_kd, tolerance);
 }
