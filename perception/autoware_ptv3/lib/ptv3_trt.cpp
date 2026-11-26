@@ -47,11 +47,6 @@ std::int64_t poolingDepth(const std::int64_t stride)
   return depth;
 }
 
-std::string stageFeatureName(const std::size_t stage_index)
-{
-  return "point_feat_" + std::to_string(stage_index);
-}
-
 std::string poolingClusterName(const std::size_t stage_index)
 {
   return "pooling_cluster_" + std::to_string(stage_index);
@@ -201,15 +196,6 @@ void PTv3TRT::initPtr()
   grid_coord_d_ = autoware::cuda_utils::make_unique<std::int32_t[]>(config_.max_num_voxels_ * 3);
   serialized_code_d_ =
     autoware::cuda_utils::make_unique<std::int64_t[]>(config_.max_num_voxels_ * 2);
-
-  // Encoder outputs shared with all the heads: one feature buffer per stage.
-  stage_feat_d_.clear();
-  stage_feat_d_.reserve(config_.enc_channels_.size());
-  for (std::size_t stage = 0; stage < config_.enc_channels_.size(); ++stage) {
-    stage_feat_d_.push_back(
-      autoware::cuda_utils::make_unique<float[]>(
-        config_.stage_voxel_capacity(stage) * config_.enc_channels_[stage]));
-  }
 
   if (config_.use_seg3d_head_) {
     pred_labels_d_ = autoware::cuda_utils::make_unique<std::int64_t[]>(config_.max_num_voxels_);
@@ -413,13 +399,8 @@ void PTv3TRT::initEncoderTrt(const tensorrt_common::TrtCommonConfig & trt_config
     }
   }
 
-  // Outputs: per-encoder-stage point features point_feat_i [N_i, enc_channels[i]],
-  // finest to deepest.
-  for (std::size_t stage = 0; stage < config_.enc_channels_.size(); ++stage) {
-    network_io.emplace_back(
-      stageFeatureName(stage), nvinfer1::Dims{2, {-1, config_.enc_channels_[stage]}},
-      nvinfer1::DataType::kFLOAT);
-  }
+  // Outputs: whatever the encoder produces for the heads, such as the per-stage point features.
+  EncoderOutputs::offerOutputs(*encoder_trt_ptr_, network_io);
 
   if (!encoder_trt_ptr_->setup(
         std::make_unique<std::vector<autoware::tensorrt_common::ProfileDims>>(profile_dims),
@@ -433,30 +414,25 @@ void PTv3TRT::initEncoderTrt(const tensorrt_common::TrtCommonConfig & trt_config
   encoder_trt_ptr_->setTensorAddress("grid_coord", grid_coord_d_.get());
   encoder_trt_ptr_->setTensorAddress("serialized_order", pre_ptr_->inputLevelSerializedOrder());
   encoder_trt_ptr_->setTensorAddress("serialized_inverse", pre_ptr_->inputLevelSerializedInverse());
-  for (std::size_t stage = 0; stage < stage_feat_d_.size(); ++stage) {
-    encoder_trt_ptr_->setTensorAddress(stageFeatureName(stage).c_str(), stage_feat_d_[stage].get());
-  }
+  encoder_outputs_.allocate(*encoder_trt_ptr_, profile_dims);
   bindSerializedPoolingAddresses();
 }
 
 void PTv3TRT::initSeg3dHeadTrt(const tensorrt_common::TrtCommonConfig & trt_config)
 {
+  seg3d_head_trt_ptr_ = std::make_unique<autoware::tensorrt_common::TrtCommon>(
+    trt_config, std::make_shared<autoware::tensorrt_common::Profiler>(),
+    std::vector<std::string>{config_.plugins_path_});
+
   std::vector<autoware::tensorrt_common::NetworkIO> network_io;
   std::vector<autoware::tensorrt_common::ProfileDims> profile_dims;
 
-  // Inputs: per-encoder-stage features plus the per-pooling cluster tensors that drive the
-  // segmentation decoder's unpooling. Cluster s maps every stage-s voxel to its pooled voxel,
-  // so it is stage-s-count-sized.
+  // Inputs: the encoder outputs the head reads, such as the per-stage features, plus the
+  // per-pooling cluster tensors that drive the segmentation decoder's unpooling. Cluster s maps
+  // every stage-s voxel to its pooled voxel, so it is stage-s-count-sized.
+  seg3d_forwarded_inputs_ =
+    encoder_outputs_.offerInputs(*seg3d_head_trt_ptr_, network_io, profile_dims);
   const auto stage_count = config_.enc_channels_.size();
-  for (std::size_t stage = 0; stage < stage_count; ++stage) {
-    const auto counts = config_.stage_profile_counts(stage);
-    const auto channels = config_.enc_channels_[stage];
-    network_io.emplace_back(
-      stageFeatureName(stage), nvinfer1::Dims{2, {-1, channels}}, nvinfer1::DataType::kFLOAT);
-    profile_dims.emplace_back(
-      stageFeatureName(stage), nvinfer1::Dims{2, {counts[0], channels}},
-      nvinfer1::Dims{2, {counts[1], channels}}, nvinfer1::Dims{2, {counts[2], channels}});
-  }
   for (std::size_t stage = 0; stage + 1 < stage_count; ++stage) {
     const auto counts = config_.stage_profile_counts(stage);
     network_io.emplace_back(
@@ -466,7 +442,9 @@ void PTv3TRT::initSeg3dHeadTrt(const tensorrt_common::TrtCommonConfig & trt_conf
       nvinfer1::Dims{1, {counts[2]}});
   }
 
-  // Stages with decoder blocks additionally consume their serialization metadata
+  // Stages with decoder blocks additionally consume their serialization metadata. Their grid
+  // coordinates are optional: a head that reuses the encoder's index pairs does not read them.
+  constexpr bool kOptional = true;
   const auto num_orders = static_cast<std::int64_t>(config_.serialization_orders_.size());
   for (std::size_t stage = 0; stage + 1 < stage_count; ++stage) {
     if (config_.dec_depths_[stage] == 0) {
@@ -481,10 +459,11 @@ void PTv3TRT::initSeg3dHeadTrt(const tensorrt_common::TrtCommonConfig & trt_conf
           name, nvinfer1::Dims{2, {num_orders, counts[0]}},
           nvinfer1::Dims{2, {num_orders, counts[1]}}, nvinfer1::Dims{2, {num_orders, counts[2]}});
       }
-      network_io.emplace_back("grid_coord", nvinfer1::Dims{2, {-1, 3}}, nvinfer1::DataType::kINT32);
+      network_io.emplace_back(
+        "grid_coord", nvinfer1::Dims{2, {-1, 3}}, nvinfer1::DataType::kINT32, kOptional);
       profile_dims.emplace_back(
         "grid_coord", nvinfer1::Dims{2, {counts[0], 3}}, nvinfer1::Dims{2, {counts[1], 3}},
-        nvinfer1::Dims{2, {counts[2], 3}});
+        nvinfer1::Dims{2, {counts[2], 3}}, kOptional);
       continue;
     }
     const auto prefix = "serialized_pooling_" + std::to_string(stage - 1) + "_";
@@ -497,10 +476,10 @@ void PTv3TRT::initSeg3dHeadTrt(const tensorrt_common::TrtCommonConfig & trt_conf
         nvinfer1::Dims{2, {num_orders, counts[1]}}, nvinfer1::Dims{2, {num_orders, counts[2]}});
     }
     network_io.emplace_back(
-      prefix + "grid_coord", nvinfer1::Dims{2, {-1, 3}}, nvinfer1::DataType::kINT32);
+      prefix + "grid_coord", nvinfer1::Dims{2, {-1, 3}}, nvinfer1::DataType::kINT32, kOptional);
     profile_dims.emplace_back(
       prefix + "grid_coord", nvinfer1::Dims{2, {counts[0], 3}}, nvinfer1::Dims{2, {counts[1], 3}},
-      nvinfer1::Dims{2, {counts[2], 3}});
+      nvinfer1::Dims{2, {counts[2], 3}}, kOptional);
   }
 
   network_io.emplace_back("pred_labels", nvinfer1::Dims{1, {-1}}, nvinfer1::DataType::kINT64);
@@ -509,22 +488,15 @@ void PTv3TRT::initSeg3dHeadTrt(const tensorrt_common::TrtCommonConfig & trt_conf
     nvinfer1::Dims{2, {-1, static_cast<std::int64_t>(config_.segmentation_class_names_.size())}},
     nvinfer1::DataType::kFLOAT);
 
-  seg3d_head_trt_ptr_ = std::make_unique<autoware::tensorrt_common::TrtCommon>(
-    trt_config, std::make_shared<autoware::tensorrt_common::Profiler>(),
-    std::vector<std::string>{config_.plugins_path_});
-
   if (!seg3d_head_trt_ptr_->setup(
         std::make_unique<std::vector<autoware::tensorrt_common::ProfileDims>>(profile_dims),
         std::make_unique<std::vector<autoware::tensorrt_common::NetworkIO>>(network_io))) {
     throw std::runtime_error("Failed to setup seg3d_head TRT engine.");
   }
 
-  // Feature buffers are encoder outputs; cluster buffers are preprocessing outputs consumed
+  // Forwarded buffers are encoder outputs; cluster buffers are preprocessing outputs consumed
   // by the head engines. All addresses are stable (allocated once).
-  for (std::size_t stage = 0; stage < stage_count; ++stage) {
-    seg3d_head_trt_ptr_->setTensorAddress(
-      stageFeatureName(stage).c_str(), stage_feat_d_[stage].get());
-  }
+  encoder_outputs_.bind(*seg3d_head_trt_ptr_, seg3d_forwarded_inputs_);
   for (std::size_t stage = 0; stage + 1 < stage_count; ++stage) {
     seg3d_head_trt_ptr_->setTensorAddress(
       poolingClusterName(stage).c_str(), serialized_pooling_stages_d_[stage].cluster.get());
@@ -632,34 +604,21 @@ bool PTv3TRT::setSerializedPoolingInputShapes()
 
 void PTv3TRT::initDetection3DHeadTrt(const tensorrt_common::TrtCommonConfig & trt_config)
 {
+  detection3d_head_trt_ptr_ = std::make_unique<autoware::tensorrt_common::TrtCommon>(
+    trt_config, std::make_shared<autoware::tensorrt_common::Profiler>(),
+    std::vector<std::string>{config_.plugins_path_});
+
   std::vector<autoware::tensorrt_common::NetworkIO> network_io;
   std::vector<autoware::tensorrt_common::ProfileDims> profile_dims;
 
-  // Inputs: the two coarsest encoder stages plus the pooling metadata that fuses them
-  // (the batch offset is computed in-graph from the skip-stage feature shape).
+  // Inputs: the encoder outputs the head reads, such as the two coarsest stages' features, plus
+  // the pooling metadata that fuses them (the batch offset is computed in-graph from the
+  // skip-stage feature shape).
+  det3d_forwarded_inputs_ =
+    encoder_outputs_.offerInputs(*detection3d_head_trt_ptr_, network_io, profile_dims);
   const auto stage_count = config_.enc_channels_.size();
   const auto skip_stage = stage_count - 2;
-  const auto deep_stage = stage_count - 1;
   const auto skip_counts = config_.stage_profile_counts(skip_stage);
-  const auto deep_counts = config_.stage_profile_counts(deep_stage);
-  const auto skip_channels = config_.enc_channels_[skip_stage];
-  const auto deep_channels = config_.enc_channels_[deep_stage];
-
-  network_io.emplace_back(
-    stageFeatureName(skip_stage), nvinfer1::Dims{2, {-1, skip_channels}},
-    nvinfer1::DataType::kFLOAT);
-  profile_dims.emplace_back(
-    stageFeatureName(skip_stage), nvinfer1::Dims{2, {skip_counts[0], skip_channels}},
-    nvinfer1::Dims{2, {skip_counts[1], skip_channels}},
-    nvinfer1::Dims{2, {skip_counts[2], skip_channels}});
-
-  network_io.emplace_back(
-    stageFeatureName(deep_stage), nvinfer1::Dims{2, {-1, deep_channels}},
-    nvinfer1::DataType::kFLOAT);
-  profile_dims.emplace_back(
-    stageFeatureName(deep_stage), nvinfer1::Dims{2, {deep_counts[0], deep_channels}},
-    nvinfer1::Dims{2, {deep_counts[1], deep_channels}},
-    nvinfer1::Dims{2, {deep_counts[2], deep_channels}});
 
   network_io.emplace_back(
     poolingClusterName(skip_stage), nvinfer1::Dims{1, {-1}}, nvinfer1::DataType::kINT64);
@@ -693,20 +652,13 @@ void PTv3TRT::initDetection3DHeadTrt(const tensorrt_common::TrtCommonConfig & tr
     network_io.emplace_back("vel", nvinfer1::Dims{3, {1, 2, np}}, nvinfer1::DataType::kFLOAT);
   }
 
-  detection3d_head_trt_ptr_ = std::make_unique<autoware::tensorrt_common::TrtCommon>(
-    trt_config, std::make_shared<autoware::tensorrt_common::Profiler>(),
-    std::vector<std::string>{config_.plugins_path_});
-
   if (!detection3d_head_trt_ptr_->setup(
         std::make_unique<std::vector<autoware::tensorrt_common::ProfileDims>>(profile_dims),
         std::make_unique<std::vector<autoware::tensorrt_common::NetworkIO>>(network_io))) {
     throw std::runtime_error("Failed to setup Detection3D head TRT engine.");
   }
 
-  detection3d_head_trt_ptr_->setTensorAddress(
-    stageFeatureName(skip_stage).c_str(), stage_feat_d_[skip_stage].get());
-  detection3d_head_trt_ptr_->setTensorAddress(
-    stageFeatureName(deep_stage).c_str(), stage_feat_d_[deep_stage].get());
+  encoder_outputs_.bind(*detection3d_head_trt_ptr_, det3d_forwarded_inputs_);
   detection3d_head_trt_ptr_->setTensorAddress(
     poolingClusterName(skip_stage).c_str(), serialized_pooling_stages_d_[skip_stage].cluster.get());
   // Pooled coordinates of the skip stage are the previous pooling stage's grid_coord output;
@@ -973,14 +925,10 @@ bool PTv3TRT::inferenceEncoder()
 bool PTv3TRT::inferenceSeg3dHead()
 {
   // serialized_pooling_num_voxels_[i] holds every encoder stage count (entry 0 is num_voxels_).
-  bool success = true;
   const auto stage_count = config_.enc_channels_.size();
   const auto num_orders = static_cast<std::int64_t>(config_.serialization_orders_.size());
-  for (std::size_t stage = 0; stage < stage_count; ++stage) {
-    success &= seg3d_head_trt_ptr_->setInputShape(
-      stageFeatureName(stage).c_str(),
-      nvinfer1::Dims{2, {serialized_pooling_num_voxels_[stage], config_.enc_channels_[stage]}});
-  }
+  bool success = encoder_outputs_.setInputShapes(
+    *encoder_trt_ptr_, *seg3d_head_trt_ptr_, seg3d_forwarded_inputs_);
   for (std::size_t stage = 0; stage + 1 < stage_count; ++stage) {
     success &= seg3d_head_trt_ptr_->setInputShape(
       poolingClusterName(stage).c_str(),
@@ -1023,17 +971,10 @@ bool PTv3TRT::inferenceDetection3DHead()
 {
   const auto stage_count = config_.enc_channels_.size();
   const auto skip_stage = stage_count - 2;
-  const auto deep_stage = stage_count - 1;
   const auto skip_count = serialized_pooling_num_voxels_[skip_stage];
-  const auto deep_count = serialized_pooling_num_voxels_[deep_stage];
 
-  bool success = true;
-  success &= detection3d_head_trt_ptr_->setInputShape(
-    stageFeatureName(skip_stage).c_str(),
-    nvinfer1::Dims{2, {skip_count, config_.enc_channels_[skip_stage]}});
-  success &= detection3d_head_trt_ptr_->setInputShape(
-    stageFeatureName(deep_stage).c_str(),
-    nvinfer1::Dims{2, {deep_count, config_.enc_channels_[deep_stage]}});
+  bool success = encoder_outputs_.setInputShapes(
+    *encoder_trt_ptr_, *detection3d_head_trt_ptr_, det3d_forwarded_inputs_);
   success &= detection3d_head_trt_ptr_->setInputShape(
     poolingClusterName(skip_stage).c_str(), nvinfer1::Dims{1, {skip_count}});
   success &= detection3d_head_trt_ptr_->setInputShape(

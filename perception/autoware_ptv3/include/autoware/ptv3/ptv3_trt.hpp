@@ -15,6 +15,7 @@
 #ifndef AUTOWARE__PTV3__PTV3_TRT_HPP_
 #define AUTOWARE__PTV3__PTV3_TRT_HPP_
 
+#include "autoware/ptv3/encoder_outputs.hpp"
 #include "autoware/ptv3/postprocess/detection3d_postprocess.hpp"
 #include "autoware/ptv3/postprocess/postprocess_kernel.hpp"
 #include "autoware/ptv3/preprocess/preprocess_kernel.hpp"
@@ -164,9 +165,10 @@ protected:
   CudaUniquePtr<std::int32_t[]> grid_coord_d_{nullptr};
   CudaUniquePtr<std::int64_t[]> serialized_code_d_{nullptr};
 
-  // Encoder outputs shared with all the heads: per-stage point features,
-  // finest to deepest, sized by each stage's geometric voxel capacity.
-  std::vector<CudaUniquePtr<float[]>> stage_feat_d_;
+  // Encoder outputs, forwarded by name to the head inputs that read them.
+  EncoderOutputs encoder_outputs_;
+  std::vector<std::string> seg3d_forwarded_inputs_;
+  std::vector<std::string> det3d_forwarded_inputs_;
 
   // Segmentation head outputs
   CudaUniquePtr<std::int64_t[]> pred_labels_d_{nullptr};

@@ -98,6 +98,7 @@ if(TRT_AVAIL AND CUDA_AVAIL)
   )
 
   ament_auto_add_library(${PROJECT_NAME}_lib SHARED
+    lib/encoder_outputs.cpp
     lib/preprocess/pointcloud_densification.cpp
     lib/preprocess/sweep_aggregator.cpp
     lib/ptv3_trt.cpp
@@ -212,6 +213,20 @@ if(TRT_AVAIL AND CUDA_AVAIL)
     target_link_libraries(ros_utils_test
       ${PROJECT_NAME}_lib
     )
+
+    # Builds small TensorRT engines, which takes a while even for tiny networks.
+    ament_add_gtest(encoder_outputs_test
+      test/encoder_outputs_test.cpp
+      TIMEOUT 300
+    )
+    if(TARGET encoder_outputs_test)
+      target_link_libraries(encoder_outputs_test
+        ${PROJECT_NAME}_lib
+      )
+      target_compile_definitions(encoder_outputs_test PRIVATE
+        TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/test/data"
+      )
+    endif()
 
   endif()
 
