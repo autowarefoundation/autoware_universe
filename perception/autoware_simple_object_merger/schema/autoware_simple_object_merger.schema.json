@@ -21,6 +21,11 @@
           "description": "This parameter sets the threshold for timeout judgment. If the time difference between the first topic in `input_topics` and another input topic exceeds this value, the objects in that topic are not merged into the output objects.",
           "default": 1.0
         },
+        "uuid_mapping_cleanup_threshold": {
+          "type": "number",
+          "description": "Time in seconds after which the tracked object merger removes an object UUID mapping that has not been seen again.",
+          "default": 30.0
+        },
         "input_topics": {
           "type": "array",
           "description": "This parameter lists the names of input topics. For example, when this package is used for radar objects, input topics can be specified here.",
