@@ -388,7 +388,7 @@ void PlanningEvaluatorNode::onTimer()
     }
   }
   {
-    const auto reports = validation_reports_sub_.take_data();
+    const auto reports = validation_reports_sub_->take_data();
     onValidationReports(reports);
   }
   // Publish metrics
