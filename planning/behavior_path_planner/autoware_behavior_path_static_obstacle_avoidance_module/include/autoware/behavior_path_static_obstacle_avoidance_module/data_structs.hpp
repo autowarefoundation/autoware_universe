@@ -381,7 +381,6 @@ struct AvoidanceParameters
     return object_parameters.at(autoware_perception_msgs::msg::ObjectClassification::UNKNOWN);
   }
 
-
   // ego predicted path params.
   utils::path_safety_checker::EgoPredictedPathParams ego_predicted_path_params{};
 
