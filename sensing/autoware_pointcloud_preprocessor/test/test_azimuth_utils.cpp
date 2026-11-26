@@ -70,26 +70,42 @@ AzimuthOrderCounter count_sampled(const std::vector<float> & azimuths)
 
 TEST(AzimuthStepTest, SignFollowsDirectionAndWrapsAround)
 {
-  EXPECT_NEAR(azimuth_step(10.0F * deg_to_rad, 10.2F * deg_to_rad), 0.2F * deg_to_rad, 1e-6F);
-  EXPECT_NEAR(azimuth_step(10.2F * deg_to_rad, 10.0F * deg_to_rad), -0.2F * deg_to_rad, 1e-6F);
-  // Across 0 in [0, 2pi)
-  EXPECT_NEAR(azimuth_step(359.9F * deg_to_rad, 0.1F * deg_to_rad), 0.2F * deg_to_rad, 1e-5F);
-  EXPECT_NEAR(azimuth_step(0.1F * deg_to_rad, 359.9F * deg_to_rad), -0.2F * deg_to_rad, 1e-5F);
-  // Across pi in [-pi, pi)
-  EXPECT_NEAR(azimuth_step(179.9F * deg_to_rad, -179.9F * deg_to_rad), 0.2F * deg_to_rad, 1e-5F);
-  EXPECT_FLOAT_EQ(azimuth_step(1.0F, 1.0F), 0.0F);
+  // Arrange
+  const float step = 0.2F * deg_to_rad;
+
+  // Act
+  const float increasing = azimuth_step(10.0F * deg_to_rad, 10.2F * deg_to_rad);
+  const float decreasing = azimuth_step(10.2F * deg_to_rad, 10.0F * deg_to_rad);
+  const float increasing_across_zero = azimuth_step(359.9F * deg_to_rad, 0.1F * deg_to_rad);
+  const float decreasing_across_zero = azimuth_step(0.1F * deg_to_rad, 359.9F * deg_to_rad);
+  const float increasing_across_pi = azimuth_step(179.9F * deg_to_rad, -179.9F * deg_to_rad);
+  const float no_step = azimuth_step(1.0F, 1.0F);
+
+  // Assert
+  EXPECT_NEAR(increasing, step, 1e-6F);
+  EXPECT_NEAR(decreasing, -step, 1e-6F);
+  EXPECT_NEAR(increasing_across_zero, step, 1e-5F);  // in [0, 2pi)
+  EXPECT_NEAR(decreasing_across_zero, -step, 1e-5F);
+  EXPECT_NEAR(increasing_across_pi, step, 1e-5F);  // in [-pi, pi)
+  EXPECT_FLOAT_EQ(no_step, 0.0F);
 }
 
 TEST(AzimuthStepTest, AbsoluteValueMatchesAzimuthDistance)
 {
+  // Arrange
   // Both azimuths in [0, 2pi), or both in [-pi, pi), as documented
   const std::vector<std::vector<float>> ranges = {
     {0.0F, 0.5F, 3.0F, 3.3F, 6.2F}, {-3.1F, -1.0F, 0.0F, 0.5F, 3.1F}};
+
   for (const auto & values : ranges) {
     for (const float from : values) {
       for (const float to : values) {
-        EXPECT_NEAR(std::fabs(azimuth_step(from, to)), azimuth_distance(from, to), 1e-5F)
-          << "from=" << from << " to=" << to;
+        // Act
+        const float step = azimuth_step(from, to);
+        const float distance = azimuth_distance(from, to);
+
+        // Assert
+        EXPECT_NEAR(std::fabs(step), distance, 1e-5F) << "from=" << from << " to=" << to;
       }
     }
   }
@@ -97,37 +113,63 @@ TEST(AzimuthStepTest, AbsoluteValueMatchesAzimuthDistance)
 
 TEST(AzimuthOrderCounterTest, IncreasingAndDecreasingRingsAreOrdered)
 {
+  // Arrange
   // Increasing (nebula) and decreasing (clockwise atan2), each across the wrap-around
-  EXPECT_TRUE(count(make_ring(300.0F, 0.2F, 1800)).is_ordered());
-  EXPECT_TRUE(count(make_ring(60.0F, -0.2F, 1800)).is_ordered());
+  const auto increasing = make_ring(300.0F, 0.2F, 1800);
+  const auto decreasing = make_ring(60.0F, -0.2F, 1800);
+
+  // Act
+  const auto increasing_counter = count(increasing);
+  const auto decreasing_counter = count(decreasing);
+
+  // Assert
+  EXPECT_TRUE(increasing_counter.is_ordered());
+  EXPECT_TRUE(decreasing_counter.is_ordered());
 }
 
 TEST(AzimuthOrderCounterTest, ShuffledRingIsNotOrdered)
 {
-  EXPECT_FALSE(count(make_shuffled_ring(42)).is_ordered());
+  // Arrange
+  const auto azimuths = make_shuffled_ring(42);
+
+  // Act
+  const auto counter = count(azimuths);
+
+  // Assert
+  EXPECT_FALSE(counter.is_ordered());
 }
 
 TEST(AzimuthOrderCounterTest, FewBackwardStepsAreTolerated)
 {
-  // 1 backward step every 50 steps (2 %) is below the default 5 %
+  // Arrange
+  // 1 backward step every 50 steps (2 %) is below the 5 % limit
   auto azimuths = make_ring(0.0F, 0.2F, 1000);
   for (size_t i = 25; i + 1 < azimuths.size(); i += 50) {
     std::swap(azimuths[i], azimuths[i + 1]);
   }
+
+  // Act
   const auto counter = count(azimuths);
+
+  // Assert
   EXPECT_GT(counter.backward(), 0U);
   EXPECT_TRUE(counter.is_ordered());
 }
 
 TEST(AzimuthOrderCounterTest, ZeroStepsAreNotCounted)
 {
+  // Arrange
   // Two returns per azimuth, as from a dual-return sensor
   std::vector<float> azimuths;
   for (const float azimuth : make_ring(0.0F, 0.2F, 100)) {
     azimuths.push_back(azimuth);
     azimuths.push_back(azimuth);
   }
+
+  // Act
   const auto counter = count(azimuths);
+
+  // Assert
   EXPECT_EQ(counter.backward(), 0U);
   EXPECT_EQ(counter.forward(), 99U);
   EXPECT_TRUE(counter.is_ordered());
@@ -135,22 +177,40 @@ TEST(AzimuthOrderCounterTest, ZeroStepsAreNotCounted)
 
 TEST(AzimuthOrderCounterTest, TooFewStepsAreNotJudged)
 {
-  AzimuthOrderCounter counter;
+  // Arrange
+  // Half of the steps go backward in both counters, but only the second one reaches min_steps.
+  AzimuthOrderCounter eight_steps;
+  AzimuthOrderCounter ten_steps;
   for (int i = 0; i < 4; ++i) {
-    counter.add(0.1F);
-    counter.add(-0.1F);
+    eight_steps.add(0.1F);
+    eight_steps.add(-0.1F);
   }
-  EXPECT_TRUE(counter.is_ordered());  // 8 steps < min_steps
-  counter.add(0.1F);
-  counter.add(-0.1F);
-  EXPECT_FALSE(counter.is_ordered());  // 10 steps, half backward
+  for (int i = 0; i < 5; ++i) {
+    ten_steps.add(0.1F);
+    ten_steps.add(-0.1F);
+  }
+
+  // Act
+  const bool eight_steps_ordered = eight_steps.is_ordered();
+  const bool ten_steps_ordered = ten_steps.is_ordered();
+
+  // Assert
+  EXPECT_TRUE(eight_steps_ordered);
+  EXPECT_FALSE(ten_steps_ordered);
 }
 
 TEST(AzimuthOrderCounterTest, SamplingEvery8thStepStillDetectsShuffledRing)
 {
+  // Arrange
   // The ring outlier filter feeds the counter with every 8th step only.
-  const auto shuffled_counter = count_sampled(make_shuffled_ring(7));
-  const auto ordered_counter = count_sampled(make_ring(120.0F, -0.2F, 1800));
+  const auto shuffled = make_shuffled_ring(7);
+  const auto ordered = make_ring(120.0F, -0.2F, 1800);
+
+  // Act
+  const auto shuffled_counter = count_sampled(shuffled);
+  const auto ordered_counter = count_sampled(ordered);
+
+  // Assert
   // 1799 steps, one counted out of 8
   EXPECT_EQ(ordered_counter.forward() + ordered_counter.backward(), 225U);
   EXPECT_FALSE(shuffled_counter.is_ordered());

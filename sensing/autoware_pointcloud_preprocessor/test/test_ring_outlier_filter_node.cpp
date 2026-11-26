@@ -18,17 +18,23 @@
 #include <autoware/point_types/types.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <diagnostic_msgs/msg/diagnostic_array.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 
 #include <gtest/gtest.h>
 #include <pcl_conversions/pcl_conversions.h>
 
+#include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <limits>
 #include <memory>
+#include <optional>
+#include <random>
 #include <stdexcept>
 #include <string>
+#include <thread>
 #include <vector>
 
 using autoware::point_types::PointXYZIRC;
@@ -113,6 +119,49 @@ std::vector<PointXYZIRC> extract_points(const sensor_msgs::msg::PointCloud2 & ms
   pcl::PointCloud<PointXYZIRC> cloud;
   pcl::fromROSMsg(msg, cloud);
   return {cloud.points.begin(), cloud.points.end()};
+}
+
+// Runs faster_filter() until this node's status arrives on /diagnostics, and returns it.
+// /diagnostics is volatile, so a status published before the subscription is matched is lost.
+// faster_filter() keeps no state between calls, so it is simply repeated until one arrives.
+std::optional<diagnostic_msgs::msg::DiagnosticStatus> filter_and_get_diagnostics(
+  RingOutlierFilterComponentPublic & node, const pcl::PointCloud<PointXYZIRCAEDT> & cloud)
+{
+  auto listener = std::make_shared<rclcpp::Node>("azimuth_order_diagnostics_listener");
+  const std::string node_name = node.get_fully_qualified_name();
+  std::optional<diagnostic_msgs::msg::DiagnosticStatus> result;
+  const auto subscription = listener->create_subscription<diagnostic_msgs::msg::DiagnosticArray>(
+    "/diagnostics", rclcpp::QoS(10),
+    [&](const diagnostic_msgs::msg::DiagnosticArray::ConstSharedPtr msg) {
+      for (const auto & status : msg->status) {
+        if (status.name.find(node_name) != std::string::npos) {
+          result = status;
+        }
+      }
+    });
+
+  const auto input = to_msg(cloud);
+  for (int attempt = 0; attempt < 100; ++attempt) {  // about 2 s
+    if (result.has_value()) {
+      break;
+    }
+    sensor_msgs::msg::PointCloud2 output;
+    node.faster_filter(input, nullptr, output, TransformInfo{});
+    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    rclcpp::spin_some(listener);
+  }
+  return result;
+}
+
+std::string find_value(
+  const diagnostic_msgs::msg::DiagnosticStatus & status, const std::string & key)
+{
+  for (const auto & key_value : status.values) {
+    if (key_value.key == key) {
+      return key_value.value;
+    }
+  }
+  return "<missing>";
 }
 
 float expected_score(int filled_pixels, int horizontal_bins = default_horizontal_bins)
@@ -513,6 +562,49 @@ TEST(AzimuthOrderDiagnosticsTest, WarnsOnlyWhenARingIsNotInScanOrder)
   ASSERT_TRUE(unordered_status.has_value());
   EXPECT_EQ(unordered_status->first, diagnostic_msgs::msg::DiagnosticStatus::WARN);
   EXPECT_NE(unordered_status->second.find("3 ring(s)"), std::string::npos);
+}
+
+TEST_F(RingOutlierFilterTest, ShuffledRingIsReportedAsNotInScanOrder)
+{
+  // Arrange
+  RingOutlierFilterComponentPublic node(make_node_options());
+  pcl::PointCloud<PointXYZIRCAEDT> cloud;
+  append_arc(cloud, 0, 0.0F, 200);
+  std::mt19937 rng(42);
+  std::shuffle(cloud.points.begin(), cloud.points.end(), rng);  // only ring 0 is in the cloud yet
+  append_arc(cloud, 1, 0.0F, 200);  // ordered control ring in the same cloud
+
+  // Act
+  const auto status = filter_and_get_diagnostics(node, cloud);
+
+  // Assert
+  // The keys are checked, not the level: a slow run can also raise the level (latency WARN).
+  // Only the shuffled ring is counted, so the ordered control ring is not flagged with it.
+  ASSERT_TRUE(status.has_value());
+  EXPECT_EQ(find_value(*status, "Checked ring count"), "2");
+  EXPECT_EQ(find_value(*status, "Ring count not in scan order"), "1");
+}
+
+TEST_F(RingOutlierFilterTest, DecreasingRingAcrossZeroIsInScanOrder)
+{
+  // Arrange
+  // 10 deg down to -9.9 deg, stored in [0, 360) as from a clockwise-scanning sensor. 200 points
+  // give 25 counted steps, so the ring is judged, not skipped as too short.
+  RingOutlierFilterComponentPublic node(make_node_options());
+  pcl::PointCloud<PointXYZIRCAEDT> cloud;
+  for (int i = 0; i < 200; ++i) {
+    float deg = 10.0F - 0.1F * static_cast<float>(i);
+    if (deg < 0.0F) deg += 360.0F;
+    cloud.push_back(make_point(0, deg * deg_to_rad, 5.0F));
+  }
+
+  // Act
+  const auto status = filter_and_get_diagnostics(node, cloud);
+
+  // Assert
+  ASSERT_TRUE(status.has_value());
+  EXPECT_EQ(find_value(*status, "Checked ring count"), "1");
+  EXPECT_EQ(find_value(*status, "Ring count not in scan order"), "0");
 }
 
 int main(int argc, char ** argv)
