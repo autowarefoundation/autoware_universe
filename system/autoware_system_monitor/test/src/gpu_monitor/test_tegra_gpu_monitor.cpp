@@ -354,21 +354,26 @@ TEST_F(GPUMonitorTestSuite, usageErrorTest)
   // Add test file to list
   monitor_->addLoadName(TEST_FILE);
 
-  // Verify error
+  // Verify error (default gpu_usage_error_count is 2)
   {
     // Write error level
     std::ofstream ofs(TEST_FILE);
     ofs << 1000 << std::endl;
 
-    // Publish topic
+    // 1st check reaches WARN (since warn_count=1, error_count=2)
     monitor_->update();
-
-    // Give time to publish
     rclcpp::WallRate(2).sleep();
     rclcpp::spin_some(monitor_->get_node_base_interface());
 
-    // Verify
     DiagStatus status;
+    ASSERT_TRUE(monitor_->findDiagStatus("GPU Usage", status));
+    ASSERT_EQ(status.level, DiagStatus::WARN);
+
+    // 2nd consecutive check reaches ERROR
+    monitor_->update();
+    rclcpp::WallRate(2).sleep();
+    rclcpp::spin_some(monitor_->get_node_base_interface());
+
     ASSERT_TRUE(monitor_->findDiagStatus("GPU Usage", status));
     ASSERT_EQ(status.level, DiagStatus::ERROR);
   }

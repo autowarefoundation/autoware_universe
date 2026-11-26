@@ -27,7 +27,8 @@
 #include <sys/time.h>
 
 #include <algorithm>
-#include <list>
+#include <cstdint>
+#include <map>
 #include <memory>
 #include <set>
 #include <string>
@@ -296,19 +297,14 @@ void GPUMonitor::checkUsage(diagnostic_updater::DiagnosticStatusWrapper & stat)
       return;
     }
 
-    int level = DiagStatus::OK;
-    float usage = static_cast<float>(itr->utilization.gpu) / 100.0;
-    if (usage >= gpu_usage_error_) {
-      level = std::max(level, static_cast<int>(DiagStatus::ERROR));
-    } else if (usage >= gpu_usage_warn_) {
-      level = std::max(level, static_cast<int>(DiagStatus::WARN));
-    }
+    const float usage = static_cast<float>(itr->utilization.gpu) / 100.0f;
+    const int level = checkGpuUsageLevel(static_cast<size_t>(index), usage);
 
     stat.add(fmt::format("GPU {}: status", index), load_dict_.at(level));
     stat.add(fmt::format("GPU {}: name", index), itr->name);
     stat.addf(fmt::format("GPU {}: usage", index), "%d.0%%", itr->utilization.gpu);
 
-    addProcessUsage(index, itr->device, stat);
+    addProcessUsage(index, *itr, stat);
 
     whole_level = std::max(whole_level, level);
   }
@@ -319,93 +315,134 @@ void GPUMonitor::checkUsage(diagnostic_updater::DiagnosticStatusWrapper & stat)
   SystemMonitorUtility::stopMeasurement(t_start, stat);
 }
 
+std::vector<GPUMonitor::ProcessUsageSummary> GPUMonitor::aggregateProcessUtilization(
+  const std::set<unsigned int> & running_pids, const nvmlProcessUtilizationSample_t * samples,
+  unsigned int sample_count,
+  unsigned long long & last_timestamp)  // NOLINT(runtime/int)
+{
+  struct SampleAccumulator
+  {
+    uint64_t sum = 0;
+    uint32_t count = 0;
+  };
+
+  unsigned long long max_timestamp = last_timestamp;  // NOLINT(runtime/int)
+  std::map<unsigned int, SampleAccumulator> stats_by_pid;
+
+  if (samples != nullptr) {
+    for (unsigned int i = 0; i < sample_count; ++i) {
+      if (samples[i].timeStamp > max_timestamp) {
+        max_timestamp = samples[i].timeStamp;
+      }
+      if (samples[i].pid == 0U || running_pids.find(samples[i].pid) == running_pids.end()) {
+        continue;
+      }
+      const unsigned int sm_util = (samples[i].smUtil != UINT32_MAX) ? samples[i].smUtil : 0U;
+      stats_by_pid[samples[i].pid].sum += sm_util;
+      stats_by_pid[samples[i].pid].count += 1U;
+    }
+  }
+
+  last_timestamp = max_timestamp;
+
+  std::vector<ProcessUsageSummary> summaries;
+  summaries.reserve(running_pids.size());
+  for (const auto pid : running_pids) {
+    if (pid == 0U) {
+      continue;
+    }
+    unsigned int avg_sm = 0U;
+    const auto it = stats_by_pid.find(pid);
+    if (it != stats_by_pid.end() && it->second.count > 0U) {
+      avg_sm =
+        static_cast<unsigned int>((it->second.sum + it->second.count / 2U) / it->second.count);
+    }
+    summaries.push_back(ProcessUsageSummary{pid, avg_sm});
+  }
+
+  return summaries;
+}
+
 void GPUMonitor::addProcessUsage(
-  int index, nvmlDevice_t device, diagnostic_updater::DiagnosticStatusWrapper & stat)
+  int index, gpu_info & gpu, diagnostic_updater::DiagnosticStatusWrapper & stat)
 {
   nvmlReturn_t ret{};
-  std::list<uint32_t> running_pid_list;
+  std::set<unsigned int> running_pids;
 
-  // Get Compute Process ID
-  uint32_t info_count = MAX_ARRAY_SIZE;
-  std::unique_ptr<nvmlProcessInfo_t[]> infos;
-  infos = std::make_unique<nvmlProcessInfo_t[]>(MAX_ARRAY_SIZE);
-  ret = nvmlDeviceGetComputeRunningProcesses(device, &info_count, infos.get());
-  if (ret != NVML_SUCCESS) {
-    RCLCPP_WARN(
-      this->get_logger(), "Failed to nvmlDeviceGetComputeRunningProcesses NVML: %s",
-      nvmlErrorString(ret));
+  auto collect_running_pids = [&](auto query_fn, const char * api_name) -> bool {
+    unsigned int info_count = MAX_ARRAY_SIZE;
+    auto infos = std::make_unique<nvmlProcessInfo_t[]>(info_count);
+    ret = query_fn(gpu.device, &info_count, infos.get());
+    if (ret == NVML_ERROR_INSUFFICIENT_SIZE && info_count > 0U) {
+      infos = std::make_unique<nvmlProcessInfo_t[]>(info_count);
+      ret = query_fn(gpu.device, &info_count, infos.get());
+    }
+    if (ret != NVML_SUCCESS) {
+      RCLCPP_WARN(this->get_logger(), "Failed to %s NVML: %s", api_name, nvmlErrorString(ret));
+      return false;
+    }
+    for (unsigned int cnt = 0; cnt < info_count; ++cnt) {
+      if (infos[cnt].pid != 0U) {
+        running_pids.insert(infos[cnt].pid);
+      }
+    }
+    return true;
+  };
+
+  if (!collect_running_pids(
+        nvmlDeviceGetComputeRunningProcesses, "nvmlDeviceGetComputeRunningProcesses")) {
     return;
   }
-  for (uint32_t cnt = 0; cnt < info_count; ++cnt) {
-    running_pid_list.push_back(infos[cnt].pid);
-  }
-
-  // Get Graphics Process ID
-  info_count = MAX_ARRAY_SIZE;
-  infos = std::make_unique<nvmlProcessInfo_t[]>(MAX_ARRAY_SIZE);
-  ret = nvmlDeviceGetGraphicsRunningProcesses(device, &info_count, infos.get());
-  if (ret != NVML_SUCCESS) {
-    RCLCPP_WARN(
-      this->get_logger(), "Failed to nvmlDeviceGetGraphicsRunningProcesses NVML: %s",
-      nvmlErrorString(ret));
+  if (!collect_running_pids(
+        nvmlDeviceGetGraphicsRunningProcesses, "nvmlDeviceGetGraphicsRunningProcesses")) {
     return;
   }
-  for (uint32_t cnt = 0; cnt < info_count; ++cnt) {
-    running_pid_list.push_back(infos[cnt].pid);
+
+  if (running_pids.empty()) {
+    return;
   }
 
-  // Get util_count(1st call of nvmlDeviceGetProcessUtilization)
-  uint32_t util_count = 0;
-  ret = nvmlDeviceGetProcessUtilization(device, NULL, &util_count, current_timestamp_);
-  // This function result will not succeed, because arg[util_count(in)] is 0.
-  if (ret != NVML_ERROR_INSUFFICIENT_SIZE) {
+  // Query sample buffer size since gpu.last_process_timestamp
+  unsigned int util_count = 0;
+  ret =
+    nvmlDeviceGetProcessUtilization(gpu.device, nullptr, &util_count, gpu.last_process_timestamp);
+
+  std::vector<ProcessUsageSummary> summaries;
+  if (ret == NVML_ERROR_NOT_FOUND || (ret == NVML_SUCCESS && util_count == 0U)) {
+    // No non-zero utilization samples since last query; report 0% for active GPU processes.
+    summaries = aggregateProcessUtilization(running_pids, nullptr, 0U, gpu.last_process_timestamp);
+  } else if (ret == NVML_ERROR_INSUFFICIENT_SIZE && util_count > 0U) {
+    auto utils = std::make_unique<nvmlProcessUtilizationSample_t[]>(util_count);
+    ret = nvmlDeviceGetProcessUtilization(
+      gpu.device, utils.get(), &util_count, gpu.last_process_timestamp);
+    if (ret == NVML_SUCCESS) {
+      summaries = aggregateProcessUtilization(
+        running_pids, utils.get(), util_count, gpu.last_process_timestamp);
+    } else if (ret == NVML_ERROR_NOT_FOUND) {
+      summaries =
+        aggregateProcessUtilization(running_pids, nullptr, 0U, gpu.last_process_timestamp);
+    } else {
+      RCLCPP_WARN(
+        this->get_logger(), "Failed to nvmlDeviceGetProcessUtilization(2nd) NVML: %s",
+        nvmlErrorString(ret));
+      return;
+    }
+  } else {
     RCLCPP_WARN(
       this->get_logger(), "Failed to nvmlDeviceGetProcessUtilization(1st) NVML: %s",
       nvmlErrorString(ret));
     return;
   }
-  // Check util_count
-  if (util_count == 0) {
-    RCLCPP_WARN(this->get_logger(), "Illegal util_count: %d", util_count);
-    return;
-  }
 
-  // Get utils data(2nd call of nvmlDeviceGetProcessUtilization)
-  std::unique_ptr<nvmlProcessUtilizationSample_t[]> utils;
-  utils = std::make_unique<nvmlProcessUtilizationSample_t[]>(util_count);
-  ret = nvmlDeviceGetProcessUtilization(device, utils.get(), &util_count, current_timestamp_);
-  if (ret != NVML_SUCCESS) {
-    // NVML_ERROR_NOT_FOUND is expected when no process is running on the GPU.
-    if (ret != NVML_ERROR_NOT_FOUND) {
-      RCLCPP_WARN(
-        this->get_logger(), "Failed to nvmlDeviceGetProcessUtilization(2nd) NVML: %s",
-        nvmlErrorString(ret));
-    }
-    return;
-  }
-
-  // Add data to diagnostic
   int add_cnt = 0;
-  for (uint32_t cnt = 0; cnt < util_count; ++cnt) {
-    for (auto pid : running_pid_list) {
-      // PID check, because it contains illegal PID data. ex) PID:0
-      if (utils[cnt].pid == pid) {
-        char name[MAX_NAME_LENGTH + 1] = {};
-        nvmlSystemGetProcessName(utils[cnt].pid, name, MAX_NAME_LENGTH);
-        stat.add(fmt::format("GPU {0}: process {1}: pid", index, add_cnt), utils[cnt].pid);
-        stat.add(fmt::format("GPU {0}: process {1}: name", index, add_cnt), name);
-        stat.addf(
-          fmt::format("GPU {0}: process {1}: usage", index, add_cnt), "%ld.0%%",
-          ((utils[cnt].smUtil != UINT32_MAX) ? utils[cnt].smUtil : 0));
-        ++add_cnt;
-        break;
-      }
-    }
+  for (const auto & proc : summaries) {
+    char name[MAX_NAME_LENGTH + 1] = {};
+    nvmlSystemGetProcessName(proc.pid, name, MAX_NAME_LENGTH);
+    stat.add(fmt::format("GPU {0}: process {1}: pid", index, add_cnt), proc.pid);
+    stat.add(fmt::format("GPU {0}: process {1}: name", index, add_cnt), name);
+    stat.addf(fmt::format("GPU {0}: process {1}: usage", index, add_cnt), "%u.0%%", proc.sm_util);
+    ++add_cnt;
   }
-
-  // Update timestamp(usec)
-  rclcpp::Clock system_clock(RCL_SYSTEM_TIME);
-  current_timestamp_ = system_clock.now().nanoseconds() / 1000;
 }
 
 void GPUMonitor::checkMemoryUsage(diagnostic_updater::DiagnosticStatusWrapper & stat)

@@ -32,6 +32,8 @@ GPUMonitorBase::GPUMonitorBase(const std::string & node_name, const rclcpp::Node
   temp_error_(declare_parameter<float>("temp_error", 95.0)),
   gpu_usage_warn_(declare_parameter<float>("gpu_usage_warn", 0.90)),
   gpu_usage_error_(declare_parameter<float>("gpu_usage_error", 1.00)),
+  gpu_usage_warn_count_(declare_parameter<int>("gpu_usage_warn_count", 1)),
+  gpu_usage_error_count_(declare_parameter<int>("gpu_usage_error_count", 2)),
   memory_usage_warn_(declare_parameter<float>("memory_usage_warn", 0.95)),
   memory_usage_error_(declare_parameter<float>("memory_usage_error", 0.99))
 {
@@ -126,4 +128,39 @@ void GPUMonitorBase::publishGPUStatus()
     gpu_status.gpus.push_back(gpu_unit);
   }
   pub_gpu_status_->publish(gpu_status);
+}
+
+int GPUMonitorBase::checkGpuUsageLevel(size_t gpu_index, float usage)
+{
+  if (gpu_usage_warn_check_count_.size() <= gpu_index) {
+    gpu_usage_warn_check_count_.resize(gpu_index + 1, 0);
+  }
+  if (gpu_usage_error_check_count_.size() <= gpu_index) {
+    gpu_usage_error_check_count_.resize(gpu_index + 1, 0);
+  }
+
+  int level = DiagStatus::OK;
+  if (usage >= gpu_usage_warn_) {
+    if (gpu_usage_warn_check_count_[gpu_index] < gpu_usage_warn_count_) {
+      gpu_usage_warn_check_count_[gpu_index]++;
+    }
+    if (gpu_usage_warn_check_count_[gpu_index] >= gpu_usage_warn_count_) {
+      level = DiagStatus::WARN;
+    }
+  } else {
+    gpu_usage_warn_check_count_[gpu_index] = 0;
+  }
+
+  if (usage >= gpu_usage_error_) {
+    if (gpu_usage_error_check_count_[gpu_index] < gpu_usage_error_count_) {
+      gpu_usage_error_check_count_[gpu_index]++;
+    }
+    if (gpu_usage_error_check_count_[gpu_index] >= gpu_usage_error_count_) {
+      level = DiagStatus::ERROR;
+    }
+  } else {
+    gpu_usage_error_check_count_[gpu_index] = 0;
+  }
+
+  return level;
 }
