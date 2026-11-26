@@ -144,6 +144,12 @@ obstacle_proximity_checker::Inputs SurroundObstacleCheckerNode::toProximityCheck
 
   if (!pointcloud_ptr_) return inputs;
 
+  // skip the conversion of an empty point cloud to avoid PCL warning spam
+  if (pointcloud_ptr_->width == 0 || pointcloud_ptr_->height == 0) {
+    inputs.pointcloud_in_base_link = std::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
+    return inputs;
+  }
+
   const auto transform_stamped =
     getTransform("base_link", pointcloud_ptr_->header.frame_id, pointcloud_ptr_->header.stamp, 0.5);
 

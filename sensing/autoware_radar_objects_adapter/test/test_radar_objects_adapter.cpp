@@ -144,16 +144,16 @@ std::set<std::string> with(std::set<std::string> fields, const std::set<std::str
   return fields;
 }
 
-// The eight object fields the adapter insists on. Without any one of them it reports the radar as
+// The ten object fields the adapter insists on. Without any one of them it reports the radar as
 // incompatible and converts nothing.
 const std::set<std::string> required_fields = {
-  "existence_probability", "position_x",     "position_y", "velocity_x", "velocity_y",
-  "acceleration_x",        "acceleration_y", "orientation"};
+  "existence_probability", "position_x",     "position_y",  "velocity_x",       "velocity_y",
+  "acceleration_x",        "acceleration_y", "orientation", "orientation_rate", "movement_status"};
 
-// The same eight, in the order the adapter requires (and names) them.
+// The same ten, in the order the adapter requires (and names) them.
 const std::vector<std::string> required_fields_in_order = {
-  "existence_probability", "position_x",     "position_y", "velocity_x", "velocity_y",
-  "acceleration_x",        "acceleration_y", "orientation"};
+  "existence_probability", "position_x",     "position_y",  "velocity_x",       "velocity_y",
+  "acceleration_x",        "acceleration_y", "orientation", "orientation_rate", "movement_status"};
 
 // The optional object fields the adapter looks at: six that are filled from a parameter when
 // undeclared, and the two standard deviations, whose variances then stay zero.
@@ -165,9 +165,8 @@ const std::set<std::string> optional_fields = {
 // continental_ars548_decoder_wrapper.cpp on 2026-09-17). velocity_z, acceleration_z and size_z are
 // not among them, so on the vehicle those three come from the parameters.
 const std::set<std::string> ars548_fields = with(
-  required_fields,
-  {"object_id", "age", "measurement_status", "movement_status", "position_z", "size_x", "size_y",
-   "orientation_std", "orientation_rate", "orientation_rate_std"});
+  required_fields, {"object_id", "age", "measurement_status", "position_z", "size_x", "size_y",
+                    "orientation_std", "orientation_rate_std"});
 
 // Every field the adapter looks at, so that nothing falls back to a parameter.
 const std::set<std::string> all_fields =
@@ -472,7 +471,7 @@ TEST(RadarObjectsAdapter, RadarInfo_AllRequiredFields_ValidAndAllDefaulted)
   EXPECT_EQ(result->defaulted_fields(), all_defaulted);
 }
 
-// Each of the eight required fields is required on its own: leaving out any one of them keeps
+// Each of the ten required fields is required on its own: leaving out any one of them keeps
 // the radar info invalid, and the result names exactly that field.
 TEST(RadarObjectsAdapter, RadarInfo_OneRequiredFieldMissing_InvalidAndNamed)
 {
@@ -506,11 +505,14 @@ TEST(RadarObjectsAdapter, RadarInfo_SeveralRequiredFieldsMissing_AllNamedInRequi
   // Assert
   ASSERT_FALSE(result.has_value());
   const std::vector<std::string> expected = {
-    "existence_probability", "position_y", "velocity_x", "acceleration_x", "acceleration_y"};
+    "existence_probability", "position_y",       "velocity_x",     "acceleration_x",
+    "acceleration_y",        "orientation_rate", "movement_status"};
   EXPECT_EQ(result.error().missing_required_fields(), expected);
   const std::string what = result.error().what();
   EXPECT_NE(
-    what.find("existence_probability, position_y, velocity_x, acceleration_x, acceleration_y"),
+    what.find(
+      "existence_probability, position_y, velocity_x, acceleration_x, acceleration_y, "
+      "orientation_rate, movement_status"),
     std::string::npos)
     << what;
 }
@@ -572,8 +574,7 @@ TEST(RadarObjectsAdapter, RadarInfo_UnknownFields_Ignored)
   // Act
   const auto result = adapter.update_radar_info(make_radar_info(with(
     without(required_fields, "orientation"),
-    {"object_id", "age", "measurement_status", "movement_status", "orientation_rate",
-     "not_a_field"})));
+    {"object_id", "age", "measurement_status", "not_a_field"})));
 
   // Assert
   ASSERT_FALSE(result.has_value());
@@ -596,8 +597,9 @@ TEST(RadarObjectsAdapter, RadarInfo_BeforeValid_PartialMessagesDoNotAddUp)
 
   // Assert: judged on its own, and nothing is converted
   ASSERT_FALSE(result.has_value());
-  const std::vector<std::string> all_but_orientation(
-    required_fields_in_order.begin(), required_fields_in_order.end() - 1);
+  std::vector<std::string> all_but_orientation = required_fields_in_order;
+  all_but_orientation.erase(
+    std::find(all_but_orientation.begin(), all_but_orientation.end(), "orientation"));
   EXPECT_EQ(result.error().missing_required_fields(), all_but_orientation);
   EXPECT_FALSE(adapter.convert(objects).has_value());
 }
