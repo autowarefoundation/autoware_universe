@@ -24,7 +24,7 @@
         "timer_rate": {
           "type": "number",
           "default": 10.0,
-          "description": "timer's update rate."
+          "description": "timer's update rate [Hz]."
         },
         "wait_for_first_topic": {
           "type": "boolean",
@@ -34,12 +34,12 @@
         "control_command_timeout": {
           "type": "number",
           "default": 1.0,
-          "description": "time out check for control command."
+          "description": "time out check for in/pedals_cmd [s]."
         },
         "emergency_stop_timeout": {
           "type": "number",
           "default": 3.0,
-          "description": "time out check for emergency stop command."
+          "description": "time out check for in/heartbeat [s]."
         }
       },
       "required": [
