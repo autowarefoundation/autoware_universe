@@ -17,6 +17,7 @@
 #include "autoware/point_types/types.hpp"
 #include "autoware/pointcloud_preprocessor/diagnostics/latency_diagnostics.hpp"
 #include "autoware/pointcloud_preprocessor/diagnostics/pass_rate_diagnostics.hpp"
+#include "autoware/pointcloud_preprocessor/utility/azimuth.hpp"
 
 #include <sensor_msgs/point_cloud2_iterator.hpp>
 
@@ -179,18 +180,15 @@ void RingOutlierFilterComponent::faster_filter(
 
   // walk range: [walk_first_idx, walk_last_idx]
   int walk_first_idx = 0;
-  int walk_last_idx = -1;
 
   for (const auto & indices : ring2indices) {
     if (indices.size() < 2) continue;
 
     walk_first_idx = 0;
-    walk_last_idx = -1;
 
     for (size_t idx = 0U; idx < indices.size() - 1; ++idx) {
       const size_t & current_data_idx = indices[idx];
       const size_t & next_data_idx = indices[idx + 1];
-      walk_last_idx = idx;
 
       // if(std::abs(iter->distance - (iter+1)->distance) <= std::sqrt(iter->distance) * 0.08)
 
@@ -198,8 +196,8 @@ void RingOutlierFilterComponent::faster_filter(
         *reinterpret_cast<const float *>(&input->data[current_data_idx + input_azimuth_offset]);
       const float & next_azimuth =
         *reinterpret_cast<const float *>(&input->data[next_data_idx + input_azimuth_offset]);
-      float azimuth_diff = next_azimuth - current_azimuth;
-      azimuth_diff = azimuth_diff < 0.f ? azimuth_diff + 2 * M_PI : azimuth_diff;
+      // Unsigned, so that azimuths decreasing along the ring are handled like increasing ones
+      const float azimuth_diff = utils::azimuth_distance(current_azimuth, next_azimuth);
 
       const float & current_distance =
         *reinterpret_cast<const float *>(&input->data[current_data_idx + input_distance_offset]);
@@ -213,6 +211,7 @@ void RingOutlierFilterComponent::faster_filter(
         continue;                               // Determined to be included in the same walk
       }
 
+      const int walk_last_idx = static_cast<int>(idx);
       if (is_cluster(input, std::make_pair(indices[walk_first_idx], indices[walk_last_idx]))) {
         for (int i = walk_first_idx; i <= walk_last_idx; i++) {
           auto output_ptr = reinterpret_cast<OutputPointType *>(&output.data[output_size]);
@@ -245,8 +244,7 @@ void RingOutlierFilterComponent::faster_filter(
         }
       } else if (publish_outlier_pointcloud_) {
         for (int i = walk_first_idx; i <= walk_last_idx; i++) {
-          auto input_ptr =
-            reinterpret_cast<const InputPointType *>(&input->data[indices[walk_first_idx]]);
+          auto input_ptr = reinterpret_cast<const InputPointType *>(&input->data[indices[i]]);
           InputPointType outlier_point = *input_ptr;
 
           if (transform_info.need_transform) {
@@ -264,10 +262,9 @@ void RingOutlierFilterComponent::faster_filter(
       walk_first_idx = idx + 1;
     }
 
-    // The loop visits each point only as the first point of a pair, so the last point of the ring
-    // is not in any walk yet. It ends the last walk: the walk it was joined to in the last
-    // iteration, or a walk of its own if that iteration ended the previous walk.
-    walk_last_idx = static_cast<int>(indices.size()) - 1;
+    // The last point of the ring ends the last walk. It is never empty: walk_first_idx is at most
+    // indices.size() - 1.
+    const int walk_last_idx = static_cast<int>(indices.size()) - 1;
 
     if (is_cluster(input, std::make_pair(indices[walk_first_idx], indices[walk_last_idx]))) {
       for (int i = walk_first_idx; i <= walk_last_idx; i++) {
@@ -300,7 +297,7 @@ void RingOutlierFilterComponent::faster_filter(
         output_size += output.point_step;
       }
     } else if (publish_outlier_pointcloud_) {
-      for (int i = walk_first_idx; i < walk_last_idx; i++) {
+      for (int i = walk_first_idx; i <= walk_last_idx; i++) {
         auto input_ptr = reinterpret_cast<const InputPointType *>(&input->data[indices[i]]);
         InputPointType outlier_point = *input_ptr;
         if (transform_info.need_transform) {

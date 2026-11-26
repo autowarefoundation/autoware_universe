@@ -363,22 +363,64 @@ TEST_F(RingOutlierFilterTest, AzimuthStepJustAboveOneDegreeBreaksWalk)
 {
   // Arrange
   // The float just above 1 degree breaks the walk at every point, so each walk is a single point
-  // of length 0 and is removed.
-  RingOutlierFilterComponentPublic node(make_node_options());
+  // of length 0 and is removed. The threshold applies to the size of the step, so it is the same
+  // for increasing and decreasing azimuths. Starting from 0, the steps are exact in float.
   const float step =
     std::nextafter(static_cast<float>(M_PI / 180.0), std::numeric_limits<float>::infinity());
-  pcl::PointCloud<PointXYZIRCAEDT> cloud;
-  cloud.push_back(make_point(0, 0.0F, 5.0F));
-  cloud.push_back(make_point(0, step, 5.0F));
-  cloud.push_back(make_point(0, 2.0F * step, 5.0F));
-  sensor_msgs::msg::PointCloud2 output;
+  // faster_filter() keeps no state between calls, so one node serves every case.
+  RingOutlierFilterComponentPublic node(make_node_options());
+  for (const float sign : {1.0F, -1.0F}) {
+    pcl::PointCloud<PointXYZIRCAEDT> cloud;
+    for (int i = 0; i < 3; ++i) {
+      cloud.push_back(make_point(0, sign * static_cast<float>(i) * step, 5.0F));
+    }
+    sensor_msgs::msg::PointCloud2 output;
 
-  // Act
-  node.faster_filter(to_msg(cloud), nullptr, output, TransformInfo{});
+    // Act
+    node.faster_filter(to_msg(cloud), nullptr, output, TransformInfo{});
 
-  // Assert
-  // The three points are removed from the output.
-  EXPECT_TRUE(extract_points(output).empty());
+    // Assert
+    // The three points are removed from the output.
+    EXPECT_TRUE(extract_points(output).empty()) << "sign=" << sign;
+  }
+}
+
+TEST_F(RingOutlierFilterTest, ContinuousArcKeepsEveryPointInEitherDirectionAndRange)
+{
+  // Arrange
+  // One continuous arc of 20 points, 0.1 deg apart, in both scan directions. A clockwise-scanning
+  // sensor that reports atan2(y, x) gives azimuths that decrease along the ring. Some arcs cross
+  // the wrap-around point, with azimuths in [0, 2pi) (wraps at 0) or in [-pi, pi) (wraps at pi).
+  // Each arc must stay one walk, and the last point of the ring ends that walk.
+  struct Case
+  {
+    float start_deg;
+    float step_deg;
+    float range_min_deg;
+  };
+  const std::vector<Case> cases = {{30.0F, 0.1F, 0.0F},     {30.0F, -0.1F, 0.0F},
+                                   {359.0F, 0.1F, 0.0F},    {1.0F, -0.1F, 0.0F},
+                                   {179.0F, 0.1F, -180.0F}, {-179.0F, -0.1F, -180.0F}};
+  // faster_filter() keeps no state between calls, so one node serves every case.
+  RingOutlierFilterComponentPublic node(make_node_options());
+  for (const auto & c : cases) {
+    pcl::PointCloud<PointXYZIRCAEDT> cloud;
+    for (int i = 0; i < 20; ++i) {
+      float deg = c.start_deg + c.step_deg * static_cast<float>(i);
+      if (deg < c.range_min_deg) deg += 360.0F;
+      if (deg >= c.range_min_deg + 360.0F) deg -= 360.0F;
+      cloud.push_back(make_point(0, deg * deg_to_rad, 5.0F));
+    }
+    sensor_msgs::msg::PointCloud2 output;
+
+    // Act
+    node.faster_filter(to_msg(cloud), nullptr, output, TransformInfo{});
+
+    // Assert
+    // Every point is kept.
+    EXPECT_EQ(extract_points(output).size(), cloud.size())
+      << "start_deg=" << c.start_deg << " step_deg=" << c.step_deg;
+  }
 }
 
 TEST_F(RingOutlierFilterTest, DistanceRatioBelowThresholdKeepsWalkContinuous)
@@ -404,13 +446,13 @@ TEST_F(RingOutlierFilterTest, DistanceRatioBelowThresholdKeepsWalkContinuous)
 TEST_F(RingOutlierFilterTest, DistanceRatioAtThresholdBreaksWalk)
 {
   // Arrange
-  // The distance goes up and back down by exactly distance_ratio, which is not below it, so each
-  // point is its own walk of length 0 and is removed.
+  // Each distance step is distance_ratio (10.0 -> 10.3 -> 10.609), which is not below it in float,
+  // so each point is its own walk of length 0 and is removed.
   RingOutlierFilterComponentPublic node(make_node_options());
   pcl::PointCloud<PointXYZIRCAEDT> cloud;
   cloud.push_back(make_point(0, 0.0F * deg_to_rad, 10.0F));
   cloud.push_back(make_point(0, 0.1F * deg_to_rad, 10.3F));
-  cloud.push_back(make_point(0, 0.2F * deg_to_rad, 10.0F));
+  cloud.push_back(make_point(0, 0.2F * deg_to_rad, 10.609F));
   sensor_msgs::msg::PointCloud2 output;
 
   // Act

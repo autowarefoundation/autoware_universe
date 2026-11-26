@@ -93,6 +93,15 @@ void add_cluster(pcl::PointCloud<pcl::PointXYZ> & cloud, const double x, const d
     }
   }
 }
+
+// 9 points in a row with 0.1 m spacing and the same y, so that they become one cluster and the
+// lateral position of every point is exact
+void add_row(pcl::PointCloud<pcl::PointXYZ> & cloud, const double x, const double y)
+{
+  for (int i = -4; i <= 4; ++i) {
+    cloud.push_back(pcl::PointXYZ(static_cast<float>(x + 0.1 * i), static_cast<float>(y), 0.5F));
+  }
+}
 }  // namespace
 
 class PointCloudCharacterizationTest : public ::testing::Test
@@ -202,6 +211,25 @@ pcl::PointCloud<pcl::PointXYZ> make_clusters()
   return cloud;
 }
 
+// The polygons of the straight trajectory end at 2.248 m laterally: half of the vehicle width of
+// the test vehicle (0.948 m) + max_lat_margin (1.1 m) + lat_hysteresis_margin (0.2 m). The rows are
+// 0.5 mm inside / outside of the polygons, on both sides.
+pcl::PointCloud<pcl::PointXYZ> make_rows_just_inside_the_polygons()
+{
+  pcl::PointCloud<pcl::PointXYZ> cloud;
+  add_row(cloud, 20.0, 2.2475);
+  add_row(cloud, 60.0, -2.2475);
+  return cloud;
+}
+
+pcl::PointCloud<pcl::PointXYZ> make_rows_just_outside_the_polygons()
+{
+  pcl::PointCloud<pcl::PointXYZ> cloud;
+  add_row(cloud, 40.0, 2.2485);
+  add_row(cloud, 80.0, -2.2485);
+  return cloud;
+}
+
 pcl::PointCloud<pcl::PointXYZ> make_random_points()
 {
   std::mt19937 rng(0);
@@ -228,6 +256,12 @@ const std::vector<Interval> kExpectedForClusters = {
   {21.4475009, 0, 33.21, 0, 7.92500001192},
   {24.1100015259, 0, 36.21, 0, 8},
   {36.1100015259, 0, 48.21, 0, 8},
+};
+
+// two rows of points just inside the polygons of the straight trajectory
+const std::vector<Interval> kExpectedForRowsJustInside = {
+  {43.8099984741, 0, 55.9100007629, 0, 8},
+  {32.0372490978, 0, 43.9100007629, 0, 7.94949998856},
 };
 
 // 200 random points around the curved trajectory
@@ -289,4 +323,20 @@ TEST_F(PointCloudCharacterizationTest, RandomPointsOnCurvedTrajectoryWithoutPrep
   expect_same_intervals(
     plan_for_point_cloud(make_curved_trajectory(), make_random_points(), false),
     kExpectedForRandomPoints);
+}
+
+// The module skips the points outside the polygons, so only the rows just inside become intervals.
+// The points are not removed by the point cloud preprocessing, so it is enough to run without it.
+TEST_F(PointCloudCharacterizationTest, RowsJustInsideThePolygonsOfStraightTrajectory)
+{
+  expect_same_intervals(
+    plan_for_point_cloud(make_straight_trajectory(), make_rows_just_inside_the_polygons(), false),
+    kExpectedForRowsJustInside);
+}
+
+TEST_F(PointCloudCharacterizationTest, RowsJustOutsideThePolygonsOfStraightTrajectory)
+{
+  expect_same_intervals(
+    plan_for_point_cloud(make_straight_trajectory(), make_rows_just_outside_the_polygons(), false),
+    {});
 }
