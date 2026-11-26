@@ -95,16 +95,16 @@ process_monitor:
 
 gpu_monitor:
 
-| Name                  | Type  |  Unit   | Default | Notes                                                                                                          |
-| :-------------------- | :---: | :-----: | :-----: | :------------------------------------------------------------------------------------------------------------- |
-| temp_warn             | float |  DegC   |  90.0   | Generates warning when GPU temperature reaches a specified value or higher.                                    |
-| temp_error            | float |  DegC   |  95.0   | Generates error when GPU temperature reaches a specified value or higher.                                      |
+| Name                  | Type  |  Unit   | Default | Notes                                                                                                           |
+| :-------------------- | :---: | :-----: | :-----: | :-------------------------------------------------------------------------------------------------------------- |
+| temp_warn             | float |  DegC   |  90.0   | Generates warning when GPU temperature reaches a specified value or higher.                                     |
+| temp_error            | float |  DegC   |  95.0   | Generates error when GPU temperature reaches a specified value or higher.                                       |
 | gpu_usage_warn        | float | %(1e-2) |  0.90   | Generates warning when GPU usage reaches a specified value or higher and lasts for gpu_usage_warn_count counts. |
 | gpu_usage_error       | float | %(1e-2) |  1.00   | Generates error when GPU usage reaches a specified value or higher and lasts for gpu_usage_error_count counts.  |
-| gpu_usage_warn_count  |  int  |   n/a   |    1    | Generates warning when GPU usage reaches gpu_usage_warn value or higher and lasts for a specified counts.      |
-| gpu_usage_error_count |  int  |   n/a   |    2    | Generates error when GPU usage reaches gpu_usage_error value or higher and lasts for a specified counts.       |
-| memory_usage_warn     | float | %(1e-2) |  0.90   | Generates warning when GPU memory usage reaches a specified value or higher.                                   |
-| memory_usage_error    | float | %(1e-2) |  1.00   | Generates error when GPU memory usage reaches a specified value or higher.                                     |
+| gpu_usage_warn_count  |  int  |   n/a   |    1    | Generates warning when GPU usage reaches gpu_usage_warn value or higher and lasts for a specified counts.       |
+| gpu_usage_error_count |  int  |   n/a   |    2    | Generates error when GPU usage reaches gpu_usage_error value or higher and lasts for a specified counts.        |
+| memory_usage_warn     | float | %(1e-2) |  0.90   | Generates warning when GPU memory usage reaches a specified value or higher.                                    |
+| memory_usage_error    | float | %(1e-2) |  1.00   | Generates error when GPU memory usage reaches a specified value or higher.                                      |
 
 ## <u>Voltage Monitor</u>
 
