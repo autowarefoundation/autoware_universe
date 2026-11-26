@@ -73,13 +73,7 @@ If any collision is found on predicted path, this module sets `ERROR` level as d
 
 ## Parameters
 
-| Name                | Type     | Description                                        | Default value |
-| :------------------ | :------- | :------------------------------------------------- | :------------ |
-| `delay_time`        | `double` | Delay time of vehicle [s]                          | 0.3           |
-| `footprint_margin`  | `double` | Foot print margin [m]                              | 0.0           |
-| `max_deceleration`  | `double` | Max deceleration for ego vehicle to stop [m/s^2]   | 2.0           |
-| `resample_interval` | `double` | Interval for resampling trajectory [m]             | 0.3           |
-| `search_radius`     | `double` | Search distance from trajectory to point cloud [m] | 5.0           |
+{{ json_to_markdown("control/autoware_obstacle_collision_checker/schema/obstacle_collision_checker.schema.json") }}
 
 ## Assumptions / Known limits
 
