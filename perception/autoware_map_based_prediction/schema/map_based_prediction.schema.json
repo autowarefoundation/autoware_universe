@@ -235,11 +235,11 @@
               "properties": {
                 "dist_ratio_threshold_to_left_bound": {
                   "type": "number",
-                  "default": -0.5
+                  "default": -0.25
                 },
                 "dist_ratio_threshold_to_right_bound": {
                   "type": "number",
-                  "default": 0.5
+                  "default": 0.25
                 },
                 "diff_dist_threshold_to_left_bound": {
                   "type": "number",
