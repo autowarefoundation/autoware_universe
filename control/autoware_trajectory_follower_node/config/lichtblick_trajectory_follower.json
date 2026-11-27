@@ -1,0 +1,416 @@
+{
+  "configById": {
+    "3D!main_3d_view": {
+      "cameraState": {
+        "distance": 68.5,
+        "perspective": true,
+        "phi": 45,
+        "target": [
+          0,
+          0,
+          0
+        ],
+        "targetOffset": [
+          10,
+          0,
+          0
+        ],
+        "targetOrientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "thetaOffset": 102.7,
+        "fovy": 45,
+        "near": 0.5,
+        "far": 5000
+      },
+      "followMode": "follow-pose",
+      "followTf": "base_link",
+      "scene": {},
+      "topics": {
+        "/localization/kinematic_state": {
+          "visible": true,
+          "showEgoVehicle": true
+        },
+        "/planning/trajectory": {
+          "visible": true,
+          "viewPath": "On",
+          "viewDrivableArea": true
+        },
+        "/perception/object_recognition/objects": {
+          "visible": true
+        },
+        "/map/vector_map_marker": {
+          "visible": true
+        },
+        "/map/pointcloud_map": {
+          "visible": false,
+          "pointSize": 2,
+          "colorMode": "flat",
+          "flatColor": "#e3e1e180"
+        }
+      }
+    },
+    "Tab!controller_tabs": {
+      "activeTabId": "lateral",
+      "tabs": [
+        {
+          "id": "lateral",
+          "title": "Lateral Controller",
+          "layout": {
+            "direction": "row",
+            "splitPercentage": 50,
+            "first": {
+              "direction": "column",
+              "splitPercentage": 33.33,
+              "first": "Plot!lateral_error_m",
+              "second": {
+                "direction": "column",
+                "splitPercentage": 50,
+                "first": "Plot!lateral_yaw_rad",
+                "second": "Plot!lateral_path_curvature"
+              }
+            },
+            "second": {
+              "direction": "column",
+              "splitPercentage": 33.33,
+              "first": "Plot!lateral_steering_rad",
+              "second": {
+                "direction": "column",
+                "splitPercentage": 50,
+                "first": "Plot!lateral_angular_velocity_rad_s",
+                "second": "Plot!lateral_velocity_m_s"
+              }
+            }
+          }
+        },
+        {
+          "id": "longitudinal",
+          "title": "Longitudinal Controller",
+          "layout": {
+            "direction": "row",
+            "splitPercentage": 50,
+            "first": {
+              "direction": "column",
+              "splitPercentage": 33.33,
+              "first": "Plot!longitudinal_velocity",
+              "second": {
+                "direction": "column",
+                "splitPercentage": 50,
+                "first": "Plot!longitudinal_pid_breakdown",
+                "second": "Plot!longitudinal_command_pipeline"
+              }
+            },
+            "second": {
+              "direction": "column",
+              "splitPercentage": 50,
+              "first": "Plot!longitudinal_pitch",
+              "second": "Plot!longitudinal_state"
+            }
+          }
+        }
+      ]
+    },
+    "Plot!lateral_error_m": {
+      "title": "Lateral Error [m]",
+      "showLegendValues": true,
+      "paths": [
+        {
+          "value": "/control/trajectory_follower/lateral/diagnostic.data[5]",
+          "label": "lateral error [m]",
+          "timestampMethod": "receiveTime",
+          "visible": true
+        }
+      ]
+    },
+    "Plot!lateral_yaw_rad": {
+      "title": "Yaw Error & State [rad]",
+      "showLegendValues": true,
+      "paths": [
+        {
+          "value": "/control/trajectory_follower/lateral/diagnostic.data[8]",
+          "label": "yaw error [rad]",
+          "timestampMethod": "receiveTime",
+          "visible": true
+        },
+        {
+          "value": "/control/trajectory_follower/lateral/diagnostic.data[6]",
+          "label": "current yaw [rad]",
+          "timestampMethod": "receiveTime",
+          "visible": true
+        },
+        {
+          "value": "/control/trajectory_follower/lateral/diagnostic.data[7]",
+          "label": "desired yaw [rad]",
+          "timestampMethod": "receiveTime",
+          "visible": true
+        }
+      ]
+    },
+    "Plot!lateral_path_curvature": {
+      "title": "Path Curvature [1/m]",
+      "showLegendValues": true,
+      "paths": [
+        {
+          "value": "/control/trajectory_follower/lateral/diagnostic.data[14]",
+          "label": "path curvature (smoothed) [1/m]",
+          "timestampMethod": "receiveTime",
+          "visible": true
+        },
+        {
+          "value": "/control/trajectory_follower/lateral/diagnostic.data[15]",
+          "label": "path curvature (raw) [1/m]",
+          "timestampMethod": "receiveTime",
+          "visible": true
+        }
+      ]
+    },
+    "Plot!lateral_steering_rad": {
+      "title": "Steering [rad]",
+      "showLegendValues": true,
+      "paths": [
+        {
+          "value": "/control/trajectory_follower/lateral/diagnostic.data[0]",
+          "label": "steer cmd (final) [rad]",
+          "timestampMethod": "receiveTime",
+          "visible": true
+        },
+        {
+          "value": "/control/trajectory_follower/lateral/diagnostic.data[1]",
+          "label": "steer cmd (mpc-raw) [rad]",
+          "timestampMethod": "receiveTime",
+          "visible": true
+        },
+        {
+          "value": "/control/trajectory_follower/lateral/diagnostic.data[2]",
+          "label": "steer cmd (FF) [rad]",
+          "timestampMethod": "receiveTime",
+          "visible": true
+        },
+        {
+          "value": "/control/trajectory_follower/lateral/diagnostic.data[4]",
+          "label": "steer measured [rad]",
+          "timestampMethod": "receiveTime",
+          "visible": true
+        }
+      ]
+    },
+    "Plot!lateral_angular_velocity_rad_s": {
+      "title": "Angular Velocity [rad/s]",
+      "showLegendValues": true,
+      "paths": [
+        {
+          "value": "/control/trajectory_follower/lateral/diagnostic.data[12]",
+          "label": "measured [rad/s]",
+          "timestampMethod": "receiveTime",
+          "visible": true
+        },
+        {
+          "value": "/control/trajectory_follower/lateral/diagnostic.data[13]",
+          "label": "target (from path) [rad/s]",
+          "timestampMethod": "receiveTime",
+          "visible": true
+        },
+        {
+          "value": "/control/trajectory_follower/lateral/diagnostic.data[11]",
+          "label": "target (from steer cmd) [rad/s]",
+          "timestampMethod": "receiveTime",
+          "visible": true
+        },
+        {
+          "value": "/control/trajectory_follower/lateral/diagnostic.data[17]",
+          "label": "predicted [rad/s]",
+          "timestampMethod": "receiveTime",
+          "visible": true
+        }
+      ]
+    },
+    "Plot!lateral_velocity_m_s": {
+      "title": "Velocity [m/s]",
+      "showLegendValues": true,
+      "paths": [
+        {
+          "value": "/control/trajectory_follower/lateral/diagnostic.data[10]",
+          "label": "current velocity [m/s]",
+          "timestampMethod": "receiveTime",
+          "visible": true
+        },
+        {
+          "value": "/control/trajectory_follower/lateral/diagnostic.data[9]",
+          "label": "trajectory velocity [m/s]",
+          "timestampMethod": "receiveTime",
+          "visible": true
+        }
+      ]
+    },
+    "Plot!longitudinal_velocity": {
+      "title": "Velocity (Longitudinal)",
+      "showLegendValues": true,
+      "paths": [
+        {
+          "value": "/control/trajectory_follower/longitudinal/diagnostic.data[1]",
+          "label": "current velocity [m/s]",
+          "timestampMethod": "receiveTime",
+          "visible": true
+        },
+        {
+          "value": "/control/trajectory_follower/longitudinal/diagnostic.data[2]",
+          "label": "target velocity [m/s]",
+          "timestampMethod": "receiveTime",
+          "visible": true
+        },
+        {
+          "value": "/control/trajectory_follower/longitudinal/diagnostic.data[4]",
+          "label": "closest velocity [m/s]",
+          "timestampMethod": "receiveTime",
+          "visible": true
+        },
+        {
+          "value": "/control/trajectory_follower/longitudinal/diagnostic.data[24]",
+          "label": "predicted velocity [m/s]",
+          "timestampMethod": "receiveTime",
+          "visible": true
+        }
+      ]
+    },
+    "Plot!longitudinal_pid_breakdown": {
+      "title": "Acceleration Breakdown (PID)",
+      "showLegendValues": true,
+      "paths": [
+        {
+          "value": "/control/trajectory_follower/longitudinal/diagnostic.data[25]",
+          "label": "current acc [m/s^2]",
+          "timestampMethod": "receiveTime",
+          "visible": true
+        },
+        {
+          "value": "/control/trajectory_follower/longitudinal/diagnostic.data[3]",
+          "label": "FF acc [m/s^2]",
+          "timestampMethod": "receiveTime",
+          "visible": true
+        },
+        {
+          "value": "/control/trajectory_follower/longitudinal/diagnostic.data[19]",
+          "label": "FB-P acc [m/s^2]",
+          "timestampMethod": "receiveTime",
+          "visible": true
+        },
+        {
+          "value": "/control/trajectory_follower/longitudinal/diagnostic.data[20]",
+          "label": "FB-I acc [m/s^2]",
+          "timestampMethod": "receiveTime",
+          "visible": true
+        },
+        {
+          "value": "/control/trajectory_follower/longitudinal/diagnostic.data[14]",
+          "label": "FF+FB acc [m/s^2]",
+          "timestampMethod": "receiveTime",
+          "visible": true
+        }
+      ]
+    },
+    "Plot!longitudinal_command_pipeline": {
+      "title": "Acceleration Command Pipeline",
+      "showLegendValues": true,
+      "paths": [
+        {
+          "value": "/control/trajectory_follower/longitudinal/diagnostic.data[14]",
+          "label": "FF+FB acc [m/s^2]",
+          "timestampMethod": "receiveTime",
+          "visible": true
+        },
+        {
+          "value": "/control/trajectory_follower/longitudinal/diagnostic.data[33]",
+          "label": "acc feedback applied [m/s^2]",
+          "timestampMethod": "receiveTime",
+          "visible": true
+        },
+        {
+          "value": "/control/trajectory_follower/longitudinal/diagnostic.data[16]",
+          "label": "jerk filtered acc [m/s^2]",
+          "timestampMethod": "receiveTime",
+          "visible": true
+        },
+        {
+          "value": "/control/trajectory_follower/longitudinal/diagnostic.data[17]",
+          "label": "slope compensated acc [m/s^2]",
+          "timestampMethod": "receiveTime",
+          "visible": true
+        },
+        {
+          "value": "/control/trajectory_follower/longitudinal/diagnostic.data[18]",
+          "label": "final acc [m/s^2]",
+          "timestampMethod": "receiveTime",
+          "visible": true
+        }
+      ]
+    },
+    "Plot!longitudinal_pitch": {
+      "title": "Vehicle State (Pitch)",
+      "showLegendValues": true,
+      "paths": [
+        {
+          "value": "/control/trajectory_follower/longitudinal/diagnostic.data[7]",
+          "label": "using pitch [deg]",
+          "timestampMethod": "receiveTime",
+          "visible": true
+        },
+        {
+          "value": "/control/trajectory_follower/longitudinal/diagnostic.data[26]",
+          "label": "trajectory pitch [deg]",
+          "timestampMethod": "receiveTime",
+          "visible": true
+        },
+        {
+          "value": "/control/trajectory_follower/longitudinal/diagnostic.data[8]",
+          "label": "localization pitch (raw) [deg]",
+          "timestampMethod": "receiveTime",
+          "visible": true
+        },
+        {
+          "value": "/control/trajectory_follower/longitudinal/diagnostic.data[34]",
+          "label": "localization pitch (filtered) [deg]",
+          "timestampMethod": "receiveTime",
+          "visible": true
+        }
+      ]
+    },
+    "Plot!longitudinal_state": {
+      "title": "Controller State",
+      "showLegendValues": true,
+      "paths": [
+        {
+          "value": "/control/trajectory_follower/longitudinal/diagnostic.data[13]",
+          "label": "0:Drive 1:Stopping 2:Stopped 3:Emergency",
+          "timestampMethod": "receiveTime",
+          "visible": true
+        },
+        {
+          "value": "/control/trajectory_follower/longitudinal/diagnostic.data[36]",
+          "label": "smooth stop mode",
+          "timestampMethod": "receiveTime",
+          "visible": true
+        },
+        {
+          "value": "/vehicle/status/control_mode.mode",
+          "label": "Vehicle Mode (1:Auto)",
+          "timestampMethod": "receiveTime",
+          "visible": true
+        }
+      ]
+    }
+  },
+  "globalVariables": {},
+  "userNodes": {},
+  "playbackConfig": {
+    "speed": 1
+  },
+  "layout": {
+    "direction": "row",
+    "splitPercentage": 60,
+    "first": "3D!main_3d_view",
+    "second": "Tab!controller_tabs"
+  }
+}
