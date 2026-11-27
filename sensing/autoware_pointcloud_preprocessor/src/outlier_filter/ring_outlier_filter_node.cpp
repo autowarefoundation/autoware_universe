@@ -180,7 +180,6 @@ void RingOutlierFilterComponent::faster_filter(
 
   // walk range: [walk_first_idx, walk_last_idx]
   int walk_first_idx = 0;
-  int walk_last_idx = -1;
 
   for (const auto & indices : ring2indices) {
     if (indices.size() < 2) continue;
@@ -190,7 +189,6 @@ void RingOutlierFilterComponent::faster_filter(
     for (size_t idx = 0U; idx < indices.size() - 1; ++idx) {
       const size_t & current_data_idx = indices[idx];
       const size_t & next_data_idx = indices[idx + 1];
-      walk_last_idx = idx;
 
       // if(std::abs(iter->distance - (iter+1)->distance) <= std::sqrt(iter->distance) * 0.08)
 
@@ -213,6 +211,7 @@ void RingOutlierFilterComponent::faster_filter(
         continue;                               // Determined to be included in the same walk
       }
 
+      const int walk_last_idx = static_cast<int>(idx);
       if (is_cluster(input, std::make_pair(indices[walk_first_idx], indices[walk_last_idx]))) {
         for (int i = walk_first_idx; i <= walk_last_idx; i++) {
           auto output_ptr = reinterpret_cast<OutputPointType *>(&output.data[output_size]);
@@ -265,7 +264,7 @@ void RingOutlierFilterComponent::faster_filter(
 
     // The last point of the ring ends the last walk. It is never empty: walk_first_idx is at most
     // indices.size() - 1.
-    walk_last_idx = static_cast<int>(indices.size()) - 1;
+    const int walk_last_idx = static_cast<int>(indices.size()) - 1;
 
     if (is_cluster(input, std::make_pair(indices[walk_first_idx], indices[walk_last_idx]))) {
       for (int i = walk_first_idx; i <= walk_last_idx; i++) {
