@@ -23157,6 +23157,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#trajectory-validation-metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Trajectory validation metrics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#other-information" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -23324,6 +23335,7 @@
 <li><a href="#planning-factor-metrics">Planning Factor Metrics</a></li>
 <li><a href="#steering-metrics">Steering Metrics</a></li>
 <li><a href="#blinker-metrics">Blinker Metrics</a></li>
+<li><a href="#trajectory-validation-metrics">Trajectory validation metrics</a></li>
 <li><a href="#other-information">Other Information</a></li>
 </ol>
 <h2 id="detailed-metrics">Detailed Metrics<a class="headerlink" href="#detailed-metrics" title="Permanent link">#</a></h2>
@@ -23621,9 +23633,41 @@ along with the worst value across all objects. You can set <code>obstacle.worst_
 </ul>
 </li>
 </ul>
+<h3 id="trajectory-validation-metrics">Trajectory validation metrics<a class="headerlink" href="#trajectory-validation-metrics" title="Permanent link">#</a></h3>
+<p>Accumulates validation results from <code>autoware_trajectory_validator</code> (<code>ValidationReportArray</code>).</p>
+<p>Metrics are calculated and published only when the node receives a message on <code>~/input/validation_reports</code>.</p>
+<h4 id="implemented-metrics_8">Implemented metrics<a class="headerlink" href="#implemented-metrics_8" title="Permanent link">#</a></h4>
+<ul>
+<li><strong><code>trajectory_validation</code></strong>: Error span statistics for each candidate trajectory and for each metric row reported by validators.<ul>
+<li><strong>Scopes</strong> (prefixed by <code>trajectory_validation/</code> in published names):<ul>
+<li><code>/{generator_name}</code>: whole-trajectory result from <code>ValidationReport.level</code>.</li>
+<li><code>/{generator_name}/{validator_name}/{metric_name}</code>: per-row result from each <code>MetricReport</code> (names matching <code>check_*_&lt;object-uuid&gt;</code> patterns may be excluded; see implementation).</li>
+</ul>
+</li>
+<li>Parameters:<ul>
+<li><code>trajectory_validation.count_other_than_safe_as_error</code>: if <code>true</code>, any level other than SAFE (including LOW_CAUTION) counts as error; if <code>false</code>, HIGH_CAUTION and above count as error.</li>
+</ul>
+</li>
+<li>Sub-metrics to publish (value-based):<ul>
+<li><code>/{scope}/value</code>: instantaneous <code>MetricReport.metric_value</code> for metric-row scopes (<code>trajectory_feasibility</code> excluded; use <code>error_duration</code> instead).</li>
+<li><code>/{scope}/error_duration</code>: current accumulated duration of the active error span for that scope (seconds).</li>
+<li><code>/{scope}/error_count</code>: number of error episodes (transitions into error) for that scope.</li>
+</ul>
+</li>
+<li>Sub-metrics to output:<ul>
+<li><code>/{scope}/error_duration/min</code>, <code>/{scope}/error_duration/max</code>, <code>/{scope}/error_duration/mean</code>: statistics over completed error-span durations.</li>
+<li><code>/{scope}/error_duration/total</code>: sum of all completed error-span durations (seconds).</li>
+<li><code>/{scope}/error_count</code>: total error episodes.</li>
+<li><code>/{scope}/value/min</code>, <code>/{scope}/value/max</code>, <code>/{scope}/value/count</code>: session statistics over published <code>metric_value</code> samples.</li>
+<li><code>/{scope}/value/mean</code>: also output for non-<code>check_*</code> metrics (e.g. speed, DRAC, RSS).</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
 <h3 id="other-information">Other Information<a class="headerlink" href="#other-information" title="Permanent link">#</a></h3>
 <p>Additional useful information related to planning:</p>
-<h4 id="implemented-metrics_8">Implemented metrics<a class="headerlink" href="#implemented-metrics_8" title="Permanent link">#</a></h4>
+<h4 id="implemented-metrics_9">Implemented metrics<a class="headerlink" href="#implemented-metrics_9" title="Permanent link">#</a></h4>
 <ul>
 <li><strong><code>kinematic_state</code></strong>: Current kinematic state of the vehicle<ul>
 <li>Sub-metrics to publish:<ul>
@@ -23708,6 +23752,11 @@ along with the worst value across all objects. You can set <code>obstacle.worst_
 <td>Current blinker status of the vehicle</td>
 </tr>
 <tr>
+<td><code>~/input/validation_reports</code></td>
+<td><code>autoware_trajectory_validator::msg::ValidationReportArray</code></td>
+<td>Trajectory validation reports</td>
+</tr>
+<tr>
 <td><code>{topic_prefix}/{module_name}</code></td>
 <td><code>autoware_internal_planning_msgs::msg::PlanningFactorArray</code></td>
 <td>Planning factors of each module to evaluate</td>
@@ -23761,17 +23810,24 @@ along with the worst value across all objects. You can set <code>obstacle.worst_
 <td>N/A</td>
 </tr>
 <tr>
+<td>initial_<wbr>span_<wbr>duration_<wbr>s</wbr></wbr></wbr></td>
+<td>float</td>
+<td>default duration [s] on the first frame of a span accumulation (error_duration, keep_duration)</td>
+<td>0.1</td>
+<td>N/A</td>
+</tr>
+<tr>
 <td>metrics_<wbr>for_<wbr>publish</wbr></wbr></td>
 <td>array</td>
 <td>metrics to collect and publish</td>
-<td>["curvature", "point_<wbr>interval", "relative_<wbr>angle", "resampled_<wbr>relative_<wbr>angle", "length", "duration", "velocity", "acceleration", "jerk", "lateral_<wbr>deviation", "yaw_<wbr>deviation", "velocity_<wbr>deviation", "lateral_<wbr>trajectory_<wbr>displacement_<wbr>local", "lateral_<wbr>trajectory_<wbr>displacement_<wbr>global", "stability", "stability_<wbr>frechet", "obstacle_<wbr>distance", "obstacle_<wbr>ttc", "obstacle_<wbr>pet", "obstacle_<wbr>drac", "modified_<wbr>goal_<wbr>longitudinal_<wbr>deviation", "modified_<wbr>goal_<wbr>lateral_<wbr>deviation", "modified_<wbr>goal_<wbr>yaw_<wbr>deviation", "stop_<wbr>decision", "abnormal_<wbr>stop_<wbr>decision", "blinker_<wbr>change_<wbr>count", "steer_<wbr>change_<wbr>count"]</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
+<td>["curvature", "point_<wbr>interval", "relative_<wbr>angle", "resampled_<wbr>relative_<wbr>angle", "length", "duration", "velocity", "acceleration", "jerk", "lateral_<wbr>deviation", "yaw_<wbr>deviation", "velocity_<wbr>deviation", "lateral_<wbr>trajectory_<wbr>displacement_<wbr>local", "lateral_<wbr>trajectory_<wbr>displacement_<wbr>global", "stability", "stability_<wbr>frechet", "obstacle_<wbr>distance", "obstacle_<wbr>ttc", "obstacle_<wbr>pet", "obstacle_<wbr>drac", "modified_<wbr>goal_<wbr>longitudinal_<wbr>deviation", "modified_<wbr>goal_<wbr>lateral_<wbr>deviation", "modified_<wbr>goal_<wbr>yaw_<wbr>deviation", "stop_<wbr>decision", "abnormal_<wbr>stop_<wbr>decision", "blinker_<wbr>change_<wbr>count", "steer_<wbr>change_<wbr>count", "trajectory_<wbr>validation"]</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>metrics_<wbr>for_<wbr>output</wbr></wbr></td>
 <td>array</td>
 <td>metrics to output to json file when the node is terminated</td>
-<td>["curvature", "point_<wbr>interval", "relative_<wbr>angle", "resampled_<wbr>relative_<wbr>angle", "length", "duration", "velocity", "acceleration", "jerk", "lateral_<wbr>deviation", "yaw_<wbr>deviation", "velocity_<wbr>deviation", "lateral_<wbr>trajectory_<wbr>displacement_<wbr>local", "lateral_<wbr>trajectory_<wbr>displacement_<wbr>global", "stability", "stability_<wbr>frechet", "obstacle_<wbr>distance", "obstacle_<wbr>ttc", "obstacle_<wbr>pet", "obstacle_<wbr>drac", "modified_<wbr>goal_<wbr>longitudinal_<wbr>deviation", "modified_<wbr>goal_<wbr>lateral_<wbr>deviation", "modified_<wbr>goal_<wbr>yaw_<wbr>deviation", "stop_<wbr>decision", "abnormal_<wbr>stop_<wbr>decision", "blinker_<wbr>change_<wbr>count", "steer_<wbr>change_<wbr>count"]</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
+<td>["curvature", "point_<wbr>interval", "relative_<wbr>angle", "resampled_<wbr>relative_<wbr>angle", "length", "duration", "velocity", "acceleration", "jerk", "lateral_<wbr>deviation", "yaw_<wbr>deviation", "velocity_<wbr>deviation", "lateral_<wbr>trajectory_<wbr>displacement_<wbr>local", "lateral_<wbr>trajectory_<wbr>displacement_<wbr>global", "stability", "stability_<wbr>frechet", "obstacle_<wbr>distance", "obstacle_<wbr>ttc", "obstacle_<wbr>pet", "obstacle_<wbr>drac", "modified_<wbr>goal_<wbr>longitudinal_<wbr>deviation", "modified_<wbr>goal_<wbr>lateral_<wbr>deviation", "modified_<wbr>goal_<wbr>yaw_<wbr>deviation", "stop_<wbr>decision", "abnormal_<wbr>stop_<wbr>decision", "blinker_<wbr>change_<wbr>count", "steer_<wbr>change_<wbr>count", "trajectory_<wbr>validation"]</wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></wbr></td>
 <td>N/A</td>
 </tr>
 <tr>
