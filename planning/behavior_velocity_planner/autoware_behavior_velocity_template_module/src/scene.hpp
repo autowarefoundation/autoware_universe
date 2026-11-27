@@ -41,7 +41,7 @@ public:
    * specific criteria.
    *
    * @param path A pointer to the path containing points to be modified.
-   * @return [bool] wether the path velocity was modified or not.
+   * @return [bool] whether the path velocity was modified or not.
    */
   bool modifyPathVelocity(
     experimental::Trajectory & path, const std::vector<geometry_msgs::msg::Point> & left_bound,
