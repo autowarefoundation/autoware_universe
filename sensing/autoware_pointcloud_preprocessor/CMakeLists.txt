@@ -438,6 +438,10 @@ if(BUILD_TESTING)
     test/test_utilities.cpp
   )
 
+  ament_add_gtest(test_motion_table
+    test/test_motion_table.cpp
+  )
+
   ament_add_gtest(test_distortion_corrector_node
     test/test_distortion_corrector_node.cpp
   )
