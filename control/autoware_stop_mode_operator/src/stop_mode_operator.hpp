@@ -17,6 +17,7 @@
 
 #include "continuous_condition.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_control_msgs/msg/control.hpp>
@@ -38,7 +39,7 @@ using autoware_vehicle_msgs::msg::SteeringReport;
 using autoware_vehicle_msgs::msg::TurnIndicatorsCommand;
 using autoware_vehicle_msgs::msg::VelocityReport;
 
-class StopModeOperator : public rclcpp::Node
+class StopModeOperator : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit StopModeOperator(const rclcpp::NodeOptions & options);
@@ -50,14 +51,14 @@ private:
   void publish_turn_indicators_command();
   void publish_hazard_lights_command();
 
-  rclcpp::TimerBase::SharedPtr timer_;
-  rclcpp::Publisher<Control>::SharedPtr pub_control_;
-  rclcpp::Publisher<GearCommand>::SharedPtr pub_gear_;
-  rclcpp::Publisher<TurnIndicatorsCommand>::SharedPtr pub_turn_indicators_;
-  rclcpp::Publisher<HazardLightsCommand>::SharedPtr pub_hazard_lights_;
-  rclcpp::Subscription<SteeringReport>::SharedPtr sub_steering_;
-  rclcpp::Subscription<VelocityReport>::SharedPtr sub_velocity_;
-  rclcpp::Subscription<RouteState>::SharedPtr sub_route_state_;
+  AUTOWARE_TIMER_PTR timer_;
+  AUTOWARE_PUBLISHER_PTR(Control) pub_control_;
+  AUTOWARE_PUBLISHER_PTR(GearCommand) pub_gear_;
+  AUTOWARE_PUBLISHER_PTR(TurnIndicatorsCommand) pub_turn_indicators_;
+  AUTOWARE_PUBLISHER_PTR(HazardLightsCommand) pub_hazard_lights_;
+  AUTOWARE_SUBSCRIPTION_PTR(SteeringReport) sub_steering_;
+  AUTOWARE_SUBSCRIPTION_PTR(VelocityReport) sub_velocity_;
+  AUTOWARE_SUBSCRIPTION_PTR(RouteState) sub_route_state_;
 
   SteeringReport current_steering_;
   RouteState current_route_state_;
