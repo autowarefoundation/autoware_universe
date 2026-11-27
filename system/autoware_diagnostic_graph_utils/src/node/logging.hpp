@@ -38,7 +38,8 @@ private:
 
   void on_create(DiagGraph::ConstSharedPtr graph);
   void on_timer();
-  void dump_unit(DiagNode * node, int depth, const std::string & indent);
+  void dump_unit(
+    DiagNode * node, int depth, const std::string & indent, DiagUnit::DiagnosticLevel min_level);
 
   DiagGraphSubscription sub_graph_;
   AUTOWARE_PUBLISHER_PTR(StringStamped) pub_error_graph_text_;

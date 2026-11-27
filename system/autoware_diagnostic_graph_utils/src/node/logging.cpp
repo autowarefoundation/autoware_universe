@@ -64,7 +64,7 @@ void LoggingNode::on_timer()
   if (root_node_ && root_node_->level() != DiagUnit::DiagnosticStatus::OK) {
     dump_text_.str("");
     dump_text_.clear(std::stringstream::goodbit);
-    dump_unit(root_node_, 0, "");
+    dump_unit(root_node_, 0, "", DiagUnit::DiagnosticStatus::WARN);
     const auto error_graph_text = dump_text_.str();
 
     // show on terminal
@@ -101,7 +101,8 @@ void LoggingNode::on_timer()
   }
 }
 
-void LoggingNode::dump_unit(DiagNode * node, int depth, const std::string & indent)
+void LoggingNode::dump_unit(
+  DiagNode * node, int depth, const std::string & indent, DiagUnit::DiagnosticLevel min_level)
 {
   const auto text_level = [](DiagUnit::DiagnosticLevel level) {
     if (level == DiagUnit::DiagnosticStatus::OK) return "OK   ";
@@ -125,7 +126,7 @@ void LoggingNode::dump_unit(DiagNode * node, int depth, const std::string & inde
   if (max_depth_ < depth) {
     return;
   }
-  if (node->level() == DiagUnit::DiagnosticStatus::OK) {
+  if (node->level() < min_level) {
     return;
   }
   if (node->is_dependent() && ignore_dependent_error_) {
@@ -137,9 +138,16 @@ void LoggingNode::dump_unit(DiagNode * node, int depth, const std::string & inde
     path = "[anonymous group]";
   }
 
+  auto child_min_level = min_level;
+  if (node->type() == "warn-to-ok") {
+    child_min_level = DiagUnit::DiagnosticStatus::ERROR;
+  } else if (node->type() == "warn-to-error") {
+    child_min_level = DiagUnit::DiagnosticStatus::WARN;
+  }
+
   dump_text_ << indent << "- " + path << " " << text_level(leaf_level(node)) << std::endl;
   for (const auto & child : node->child_nodes()) {
-    dump_unit(child, depth + 1, indent + "    ");
+    dump_unit(child, depth + 1, indent + "    ", child_min_level);
   }
 }
 

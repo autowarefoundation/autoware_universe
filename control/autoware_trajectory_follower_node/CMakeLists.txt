@@ -23,11 +23,13 @@ autoware_agnocast_wrapper_register_node(${CONTROLLER_NODE}
 set(SIMPLE_TRAJECTORY_FOLLOWER_NODE simple_trajectory_follower)
 ament_auto_add_library(${SIMPLE_TRAJECTORY_FOLLOWER_NODE} SHARED
   include/autoware/trajectory_follower_node/simple_trajectory_follower.hpp
+  include/autoware/trajectory_follower_node/simple_trajectory_follower_node.hpp
   src/simple_trajectory_follower.cpp
+  src/simple_trajectory_follower_node.cpp
 )
 
 autoware_agnocast_wrapper_register_node(${SIMPLE_TRAJECTORY_FOLLOWER_NODE}
-  PLUGIN "simple_trajectory_follower::SimpleTrajectoryFollower"
+  PLUGIN "simple_trajectory_follower::SimpleTrajectoryFollowerNode"
   EXECUTABLE ${SIMPLE_TRAJECTORY_FOLLOWER_NODE}_exe
   AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
   ROS2_EXECUTOR SingleThreadedExecutor
@@ -46,6 +48,20 @@ if(BUILD_TESTING)
     test/test_trajectory_follower.cpp
   )
   target_link_libraries(test_trajectory_follower ${CONTROLLER_NODE})
+
+  # unit tests for the ROS-independent SimpleTrajectoryFollower core logic
+  ament_add_gtest(test_simple_trajectory_follower
+    test/test_simple_trajectory_follower.cpp
+  )
+  target_link_libraries(test_simple_trajectory_follower ${SIMPLE_TRAJECTORY_FOLLOWER_NODE})
+
+  # integration (wiring) test for the simple trajectory follower node
+  set(SIMPLE_TRAJECTORY_FOLLOWER_TEST test_simple_trajectory_follower_node)
+  ament_add_ros_isolated_gtest(${SIMPLE_TRAJECTORY_FOLLOWER_TEST}
+    test/test_simple_trajectory_follower_node.cpp
+  )
+  target_link_libraries(
+    ${SIMPLE_TRAJECTORY_FOLLOWER_TEST} ${SIMPLE_TRAJECTORY_FOLLOWER_NODE})
 endif()
 
 ament_auto_package(

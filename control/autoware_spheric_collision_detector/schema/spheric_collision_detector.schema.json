@@ -3,7 +3,7 @@
   "title": "Parameters for spheric collision detector",
   "type": "object",
   "definitions": {
-    "vehicle_cmd_gate": {
+    "spheric_collision_detector": {
       "type": "object",
       "properties": {
         "delay_time": {
