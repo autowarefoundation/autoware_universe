@@ -21,6 +21,8 @@
 
 #include <Eigen/Eigen>
 #include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>
+#include <autoware/agnocast_wrapper/node.hpp>
+#include <autoware/agnocast_wrapper/tf2.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include "tier4_perception_msgs/msg/detected_objects_with_feature.hpp"
@@ -34,7 +36,7 @@
 namespace autoware::low_intensity_cluster_filter
 {
 
-class LowIntensityClusterFilter : public rclcpp::Node
+class LowIntensityClusterFilter : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit LowIntensityClusterFilter(const rclcpp::NodeOptions & node_options);
@@ -48,8 +50,8 @@ private:
   AUTOWARE_PUBLISHER_PTR(tier4_perception_msgs::msg::DetectedObjectsWithFeature) object_pub_;
   AUTOWARE_SUBSCRIPTION_PTR(tier4_perception_msgs::msg::DetectedObjectsWithFeature) object_sub_;
 
-  tf2_ros::Buffer tf_buffer_;
-  tf2_ros::TransformListener tf_listener_;
+  autoware::agnocast_wrapper::Buffer tf_buffer_;
+  autoware::agnocast_wrapper::TransformListener tf_listener_;
   double intensity_threshold_;
   double existence_probability_threshold_;
   double max_x_;
@@ -64,7 +66,8 @@ private:
 
   // debugger
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_{nullptr};
-  std::unique_ptr<autoware_utils::DebugPublisher> debug_publisher_ptr_{nullptr};
+  std::unique_ptr<autoware_utils::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>
+    debug_publisher_ptr_{nullptr};
 };
 
 }  // namespace autoware::low_intensity_cluster_filter
