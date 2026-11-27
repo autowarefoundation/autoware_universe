@@ -24,6 +24,8 @@
 #include <image_transport/image_transport.hpp>
 #include <point_cloud_msg_wrapper/point_cloud_msg_wrapper.hpp>
 
+#include <std_msgs/msg/header.hpp>
+
 #if __has_include(<cv_bridge/cv_bridge.hpp>)
 #include <cv_bridge/cv_bridge.hpp>
 #else
@@ -107,6 +109,11 @@ private:
   void set_up_pointcloud_format(
     const PointCloud2ConstPtr & input, PointCloud2 & formatted_points, size_t points_size);
   void publish_diagnostics(const std::vector<std::shared_ptr<const DiagnosticsBase>> & diagnostics);
+  void warn_rings_not_in_scan_order(int checked_ring_count, int unordered_ring_count);
+  void publish_outlier_pointcloud(
+    const pcl::PointCloud<InputPointType> & outlier_pcl, const std_msgs::msg::Header & header);
+  void publish_debug_times(
+    double cyclic_time_ms, double processing_time_ms, double pipeline_latency_ms);
 
 public:
   PCL_MAKE_ALIGNED_OPERATOR_NEW

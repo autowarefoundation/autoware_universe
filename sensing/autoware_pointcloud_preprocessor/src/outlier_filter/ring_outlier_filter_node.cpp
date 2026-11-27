@@ -15,6 +15,7 @@
 #include "autoware/pointcloud_preprocessor/outlier_filter/ring_outlier_filter_node.hpp"
 
 #include "autoware/point_types/types.hpp"
+#include "autoware/pointcloud_preprocessor/diagnostics/azimuth_order_diagnostics.hpp"
 #include "autoware/pointcloud_preprocessor/diagnostics/latency_diagnostics.hpp"
 #include "autoware/pointcloud_preprocessor/diagnostics/pass_rate_diagnostics.hpp"
 #include "autoware/pointcloud_preprocessor/utility/azimuth.hpp"
@@ -182,10 +183,18 @@ void RingOutlierFilterComponent::faster_filter(
   int walk_first_idx = 0;
   int walk_last_idx = -1;
 
+  // Rings whose points are not in scan order. The walk below compares consecutive points only, so
+  // such input is still processed, but it is reported because valid points may be removed. With one
+  // sample every 8 steps, rings of fewer than about 80 points are not judged (see min_steps).
+  // Counting every step instead costs about 45% of the walk loop.
+  int checked_ring_count = 0;
+  int unordered_ring_count = 0;
+
   for (const auto & indices : ring2indices) {
     if (indices.size() < 2) continue;
 
     walk_first_idx = 0;
+    utils::AzimuthOrderCounter azimuth_order;
 
     for (size_t idx = 0U; idx < indices.size() - 1; ++idx) {
       const size_t & current_data_idx = indices[idx];
@@ -200,6 +209,7 @@ void RingOutlierFilterComponent::faster_filter(
         *reinterpret_cast<const float *>(&input->data[next_data_idx + input_azimuth_offset]);
       // Unsigned, so that azimuths decreasing along the ring are handled like increasing ones
       const float azimuth_diff = utils::azimuth_distance(current_azimuth, next_azimuth);
+      azimuth_order.add_sampled(idx, current_azimuth, next_azimuth);
 
       const float & current_distance =
         *reinterpret_cast<const float *>(&input->data[current_data_idx + input_distance_offset]);
@@ -263,6 +273,9 @@ void RingOutlierFilterComponent::faster_filter(
       walk_first_idx = idx + 1;
     }
 
+    ++checked_ring_count;
+    unordered_ring_count += static_cast<int>(!azimuth_order.is_ordered());
+
     // The last point of the ring ends the last walk. It is never empty: walk_first_idx is at most
     // indices.size() - 1.
     walk_last_idx = static_cast<int>(indices.size()) - 1;
@@ -316,17 +329,9 @@ void RingOutlierFilterComponent::faster_filter(
 
   set_up_pointcloud_format(input, output, output_size);
 
-  if (publish_outlier_pointcloud_) {
-    PointCloud2 outlier;
-    pcl::toROSMsg(*outlier_pcl, outlier);
-    outlier.header = input->header;
-    outlier_pointcloud_publisher_->publish(outlier);
+  warn_rings_not_in_scan_order(checked_ring_count, unordered_ring_count);
 
-    autoware_internal_debug_msgs::msg::Float32Stamped visibility_msg;
-    visibility_msg.data = calculate_visibility_score(outlier);
-    visibility_msg.stamp = input->header.stamp;
-    visibility_pub_->publish(visibility_msg);
-  }
+  publish_outlier_pointcloud(*outlier_pcl, input->header);
 
   const double cyclic_time_ms = stop_watch_ptr_->toc("cyclic_time", true);
   const double processing_time_ms = stop_watch_ptr_->toc("processing_time", true);
@@ -335,15 +340,7 @@ void RingOutlierFilterComponent::faster_filter(
       std::chrono::nanoseconds((this->get_clock()->now() - input->header.stamp).nanoseconds()))
       .count();
 
-  // Debug output
-  if (debug_publisher_) {
-    debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
-      "debug/cyclic_time_ms", cyclic_time_ms);
-    debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
-      "debug/processing_time_ms", processing_time_ms);
-    debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
-      "debug/pipeline_latency_ms", pipeline_latency_ms);
-  }
+  publish_debug_times(cyclic_time_ms, processing_time_ms, pipeline_latency_ms);
 
   auto latency_diagnostics = std::make_shared<LatencyDiagnostics>(
     input->header.stamp, processing_time_ms, pipeline_latency_ms,
@@ -351,7 +348,53 @@ void RingOutlierFilterComponent::faster_filter(
 
   auto pass_rate_diagnostics = std::make_shared<PassRateDiagnostics>(
     static_cast<int>(input->width * input->height), static_cast<int>(output.width * output.height));
-  publish_diagnostics({latency_diagnostics, pass_rate_diagnostics});
+  auto azimuth_order_diagnostics =
+    std::make_shared<AzimuthOrderDiagnostics>(checked_ring_count, unordered_ring_count);
+  publish_diagnostics({latency_diagnostics, pass_rate_diagnostics, azimuth_order_diagnostics});
+}
+
+void RingOutlierFilterComponent::publish_outlier_pointcloud(
+  const pcl::PointCloud<InputPointType> & outlier_pcl, const std_msgs::msg::Header & header)
+{
+  if (!publish_outlier_pointcloud_) {
+    return;
+  }
+  PointCloud2 outlier;
+  pcl::toROSMsg(outlier_pcl, outlier);
+  outlier.header = header;
+  outlier_pointcloud_publisher_->publish(outlier);
+
+  autoware_internal_debug_msgs::msg::Float32Stamped visibility_msg;
+  visibility_msg.data = calculate_visibility_score(outlier);
+  visibility_msg.stamp = header.stamp;
+  visibility_pub_->publish(visibility_msg);
+}
+
+void RingOutlierFilterComponent::publish_debug_times(
+  const double cyclic_time_ms, const double processing_time_ms, const double pipeline_latency_ms)
+{
+  if (!debug_publisher_) {
+    return;
+  }
+  debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
+    "debug/cyclic_time_ms", cyclic_time_ms);
+  debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
+    "debug/processing_time_ms", processing_time_ms);
+  debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
+    "debug/pipeline_latency_ms", pipeline_latency_ms);
+}
+
+void RingOutlierFilterComponent::warn_rings_not_in_scan_order(
+  const int checked_ring_count, const int unordered_ring_count)
+{
+  if (unordered_ring_count == 0) {
+    return;
+  }
+  RCLCPP_WARN_THROTTLE(
+    get_logger(), *get_clock(), 5000,
+    "%d of %d rings are not in scan order: their azimuth goes back and forth. The points of each "
+    "ring must be sorted by azimuth (increasing or decreasing), or valid points may be removed.",
+    unordered_ring_count, checked_ring_count);
 }
 
 void RingOutlierFilterComponent::publish_diagnostics(
