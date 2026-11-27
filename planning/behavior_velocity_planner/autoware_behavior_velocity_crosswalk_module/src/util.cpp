@@ -15,6 +15,8 @@
 #include "autoware/behavior_velocity_crosswalk_module/util.hpp"
 
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
+#include <autoware/lanelet2_utils/conversion.hpp>
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/motion_utils/trajectory/path_with_lane_id.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware/trajectory/utils/crossed.hpp>
@@ -118,51 +120,45 @@ getPathEndPointsOnCrosswalk(
   const PathWithLaneId & ego_path, const lanelet::BasicPolygon2d & polygon,
   const geometry_msgs::msg::Point & ego_pos)
 {
-  std::vector<Point2d> intersects{};
+  auto crossed_s_values =
+    autoware::experimental::trajectory::crossed_with_polygon(ego_path, polygon);
 
-  bool has_collision_twice = false;
-  for (size_t i = 0; i < ego_path.points.size() - 1; ++i) {
-    const auto & p_back = ego_path.points.at(i).point.pose.position;
-    const auto & p_front = ego_path.points.at(i + 1).point.pose.position;
-    const Line2d segment{{p_back.x, p_back.y}, {p_front.x, p_front.y}};
-
-    std::vector<Point2d> tmp_intersects{};
-    bg::intersection(segment, polygon, tmp_intersects);
-
-    for (const auto & p : tmp_intersects) {
-      intersects.push_back(p);
-      if (intersects.size() == 2) {
-        has_collision_twice = true;
-        break;
-      }
-    }
-
-    if (has_collision_twice) {
-      break;
-    }
-  }
-
-  const auto compare = [&](const Point2d & p1, const Point2d & p2) {
-    const auto dist_l1 =
-      calcSignedArcLength(ego_path.points, size_t(0), create_point(p1.x(), p1.y(), ego_pos.z));
-
-    const auto dist_l2 =
-      calcSignedArcLength(ego_path.points, size_t(0), create_point(p2.x(), p2.y(), ego_pos.z));
-
-    return dist_l1 < dist_l2;
-  };
-
-  std::sort(intersects.begin(), intersects.end(), compare);
-
-  if (intersects.empty()) {
+  if (crossed_s_values.empty()) {
     return std::nullopt;
   }
 
-  const auto & front_intersects = intersects.front();
-  const auto & back_intersects = intersects.back();
-  return std::make_pair(
-    create_point(front_intersects.x(), front_intersects.y(), ego_pos.z),
-    create_point(back_intersects.x(), back_intersects.y(), ego_pos.z));
+  std::vector<lanelet::ConstPoint3d> ls_points = {};
+  for (auto & pt : ego_path.points) {
+    ls_points.push_back(autoware::experimental::lanelet2_utils::from_ros(pt.point.pose));
+  }
+
+  auto ls_opt = autoware::experimental::lanelet2_utils::create_safe_linestring(ls_points);
+  if (!ls_opt) {
+    return std::nullopt;
+  }
+
+  const auto ls = *ls_opt;
+
+  // if there is only one collision point - return same point
+  if (crossed_s_values.size() == 1) {
+    crossed_s_values.push_back(crossed_s_values.back());
+  }
+
+  // Already ensure that crossed_s_values.size() >= 2
+  const auto front_intersect_opt =
+    autoware::experimental::lanelet2_utils::interpolate_linestring(ls, crossed_s_values.at(0));
+  const auto back_intersect_opt =
+    autoware::experimental::lanelet2_utils::interpolate_linestring(ls, crossed_s_values.at(1));
+
+  if (front_intersect_opt && back_intersect_opt) {
+    const auto & front_intersect = *front_intersect_opt;
+    const auto & back_intersect = *back_intersect_opt;
+    return std::make_pair(
+      create_point(front_intersect.x(), front_intersect.y(), ego_pos.z),
+      create_point(back_intersect.x(), back_intersect.y(), ego_pos.z));
+  }
+
+  return std::nullopt;
 }
 
 /**
