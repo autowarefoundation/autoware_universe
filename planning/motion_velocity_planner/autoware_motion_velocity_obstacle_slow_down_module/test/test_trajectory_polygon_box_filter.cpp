@@ -67,38 +67,44 @@ std::vector<Polygon2d> make_curved_trajectory_polygons()
 
 TEST(TrajectoryPolygonBoxFilter, KeepsPointsInsideAndOnTheBoundary)
 {
-  const TrajectoryPolygonBoxFilter filter({make_rectangle(1.0, 1.0, 0.0, 2.0, 2.0)});
-  EXPECT_FALSE(filter.is_outside_all_boxes(1.0, 1.0));     // inside
-  EXPECT_FALSE(filter.is_outside_all_boxes(2.0, 1.0));     // on an edge
-  EXPECT_FALSE(filter.is_outside_all_boxes(2.0, 2.0));     // on a vertex
-  EXPECT_FALSE(filter.is_outside_all_boxes(2.0005, 1.0));  // within the 1 mm margin
+  const std::vector<Polygon2d> polygons{make_rectangle(1.0, 1.0, 0.0, 2.0, 2.0)};
+  const TrajectoryPolygonBoxFilter filter(polygons);
+  EXPECT_FALSE(filter.is_outside_all_polygons(1.0, 1.0));  // inside
+  EXPECT_FALSE(filter.is_outside_all_polygons(2.0, 1.0));  // on an edge
+  EXPECT_FALSE(filter.is_outside_all_polygons(2.0, 2.0));  // on a vertex
 }
 
-TEST(TrajectoryPolygonBoxFilter, RejectsPointsOutsideAllTheBoxes)
+TEST(TrajectoryPolygonBoxFilter, RejectsPointsOutsideAllThePolygons)
 {
-  const TrajectoryPolygonBoxFilter filter({make_rectangle(1.0, 1.0, 0.0, 2.0, 2.0)});
-  EXPECT_TRUE(filter.is_outside_all_boxes(2.01, 1.0));
-  EXPECT_TRUE(filter.is_outside_all_boxes(-5.0, -5.0));
+  const std::vector<Polygon2d> polygons{make_rectangle(1.0, 1.0, 0.0, 2.0, 2.0)};
+  const TrajectoryPolygonBoxFilter filter(polygons);
+  EXPECT_TRUE(filter.is_outside_all_polygons(2.0005, 1.0));  // inside the 1 mm margin of the box
+  EXPECT_TRUE(filter.is_outside_all_polygons(2.01, 1.0));
+  EXPECT_TRUE(filter.is_outside_all_polygons(-5.0, -5.0));
 }
 
 TEST(TrajectoryPolygonBoxFilter, RejectsAllPointsWithoutPolygons)
 {
-  const TrajectoryPolygonBoxFilter filter({});
-  EXPECT_TRUE(filter.is_outside_all_boxes(0.0, 0.0));
+  const std::vector<Polygon2d> polygons;
+  const TrajectoryPolygonBoxFilter filter(polygons);
+  EXPECT_TRUE(filter.is_outside_all_polygons(0.0, 0.0));
 }
 
-TEST(TrajectoryPolygonBoxFilter, NeverRejectsPointsWithNonFiniteCoordinates)
+TEST(TrajectoryPolygonBoxFilter, HandlesPointsWithNonFiniteCoordinatesAsBefore)
 {
-  // The pre-filter must not change how such points are handled, so it does not reject them.
-  const TrajectoryPolygonBoxFilter filter({make_rectangle(1.0, 1.0, 0.0, 2.0, 2.0)});
+  // The result is the same as that of the precise filtering before the filter checked the polygons.
+  // The distance to the polygon is 0 only for the point with a NaN y inside the x range of the
+  // polygon, so only that point is kept.
+  const std::vector<Polygon2d> polygons{make_rectangle(1.0, 1.0, 0.0, 2.0, 2.0)};
+  const TrajectoryPolygonBoxFilter filter(polygons);
   const double nan = std::numeric_limits<double>::quiet_NaN();
   const double inf = std::numeric_limits<double>::infinity();
-  EXPECT_FALSE(filter.is_outside_all_boxes(1.0, nan));
-  EXPECT_FALSE(filter.is_outside_all_boxes(5.0, nan));
-  EXPECT_FALSE(filter.is_outside_all_boxes(nan, 1.0));
-  EXPECT_FALSE(filter.is_outside_all_boxes(nan, nan));
-  EXPECT_FALSE(filter.is_outside_all_boxes(inf, 1.0));
-  EXPECT_FALSE(filter.is_outside_all_boxes(1.0, -inf));
+  EXPECT_FALSE(filter.is_outside_all_polygons(1.0, nan));
+  EXPECT_TRUE(filter.is_outside_all_polygons(5.0, nan));
+  EXPECT_TRUE(filter.is_outside_all_polygons(nan, 1.0));
+  EXPECT_TRUE(filter.is_outside_all_polygons(nan, nan));
+  EXPECT_TRUE(filter.is_outside_all_polygons(inf, 1.0));
+  EXPECT_TRUE(filter.is_outside_all_polygons(1.0, -inf));
 }
 
 TEST(TrajectoryPolygonBoxFilter, KeepsEveryVertexOfRotatedPolygons)
@@ -107,7 +113,7 @@ TEST(TrajectoryPolygonBoxFilter, KeepsEveryVertexOfRotatedPolygons)
   const TrajectoryPolygonBoxFilter filter(polygons);
   for (const auto & polygon : polygons) {
     for (const auto & p : polygon.outer()) {
-      EXPECT_FALSE(filter.is_outside_all_boxes(p.x(), p.y()));
+      EXPECT_FALSE(filter.is_outside_all_polygons(p.x(), p.y()));
     }
   }
 }
@@ -122,21 +128,16 @@ TEST(TrajectoryPolygonBoxFilter, NeverRejectsAPointThatThePreciseFilteringKeeps)
   std::uniform_real_distribution<double> x_dist(-10.0, 90.0);
   std::uniform_real_distribution<double> y_dist(-10.0, 60.0);
   int num_rejected = 0;
-  int num_kept_in_box_but_outside_polygons = 0;
   for (int i = 0; i < 20000; ++i) {
     const Point2d point(x_dist(rng), y_dist(rng));
     double min_dist = std::numeric_limits<double>::max();
     for (const auto & polygon : polygons) {
       min_dist = std::min(min_dist, boost::geometry::distance(point, polygon));
     }
-    if (filter.is_outside_all_boxes(point.x(), point.y())) {
+    if (filter.is_outside_all_polygons(point.x(), point.y())) {
       ++num_rejected;
       EXPECT_GT(min_dist, 0.0) << "rejected a point at (" << point.x() << ", " << point.y() << ")";
-    } else if (min_dist > 0.0) {
-      ++num_kept_in_box_but_outside_polygons;
     }
   }
-  // both cases actually occur with these polygons
   EXPECT_GT(num_rejected, 0);
-  EXPECT_GT(num_kept_in_box_but_outside_polygons, 0);
 }

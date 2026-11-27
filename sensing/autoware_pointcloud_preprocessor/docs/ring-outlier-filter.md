@@ -62,6 +62,8 @@ This implementation inherits `autoware::pointcloud_preprocessor::Filter` class, 
 
 This nodes requires that the points of the input point cloud are in chronological order and that individual points follow the memory layout specified by [PointXYZIRCAEDT](https://github.com/autowarefoundation/autoware_core/blob/main/common/autoware_point_types/include/autoware/point_types/types.hpp#L95-L116).
 
+Two consecutive points of a ring are compared by the size of their azimuth step, so the azimuth may either increase or decrease along a ring (for example `atan2(y, x)` of a clockwise-scanning sensor), and it may wrap around anywhere, so both `[0, 2pi)` and `[-pi, pi)` are accepted. Points must still be in scan order within a ring: the filter does not sort them. It checks the order on every 8th step of each ring. When more than 5 % of those steps go against the majority direction, the ring is reported as not in scan order: the filter still runs, but it logs a throttled warning and reports a `WARN` diagnostic, because valid points of such a ring may be removed. Rings with fewer than 10 checked steps (about 80 points) are not judged.
+
 ## (Optional) Error detection and handling
 
 ## (Optional) Performance characterization

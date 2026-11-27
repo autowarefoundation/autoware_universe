@@ -20,6 +20,10 @@
 
 #include <autoware/planning_evaluator/planning_evaluator_node.hpp>
 #include <autoware/planning_factor_interface/planning_factor_interface.hpp>
+#include <autoware_trajectory_validator/msg/metric_report.hpp>
+#include <autoware_trajectory_validator/msg/risk_level.hpp>
+#include <autoware_trajectory_validator/msg/validation_report.hpp>
+#include <autoware_trajectory_validator/msg/validation_report_array.hpp>
 
 #include "autoware_perception_msgs/msg/predicted_objects.hpp"
 #include "autoware_planning_msgs/msg/trajectory.hpp"
@@ -781,7 +785,7 @@ TEST_F(EvalTest, TestStopDecisionDuration)
     rclcpp::spin_some(dummy_node);
     rclcpp::sleep_for(std::chrono::milliseconds(100));
   }
-  EXPECT_NEAR(metric_value_, 0.0, 0.1);
+  EXPECT_NEAR(metric_value_, 0.1, 0.1);
 
   metric_updated_ = false;
   publishStopPlanningFactor(100.0, 100.0, 0.0, 500);
@@ -842,7 +846,7 @@ TEST_F(EvalTest, TestAbnormalStopDecisionDuration)
     rclcpp::spin_some(dummy_node);
     rclcpp::sleep_for(std::chrono::milliseconds(100));
   }
-  EXPECT_NEAR(metric_value_, 0.0, 0.1);
+  EXPECT_NEAR(metric_value_, 0.1, 0.1);
 
   metric_updated_ = false;
   publishStopPlanningFactor(5.0, 5.0, 0.0, 1000);
@@ -948,4 +952,128 @@ TEST_F(EvalTest, TestSteeringChangeCountTimeOut)
     rclcpp::sleep_for(std::chrono::milliseconds(100));
   }
   EXPECT_DOUBLE_EQ(metric_value_, 1.0);
+}
+
+TEST_F(EvalTest, TestTrajectoryValidationNoReaggregationWithoutNewMessage)
+{
+  using autoware_trajectory_validator::msg::MetricReport;
+  using autoware_trajectory_validator::msg::RiskLevel;
+  using autoware_trajectory_validator::msg::ValidationReport;
+  using autoware_trajectory_validator::msg::ValidationReportArray;
+
+  auto validation_pub = rclcpp::create_publisher<ValidationReportArray>(
+    dummy_node, "/planning_evaluator/input/validation_reports", 1);
+
+  std::vector<MetricArrayMsg> received_msgs;
+  auto sub = rclcpp::create_subscription<MetricArrayMsg>(
+    dummy_node, "/planning_evaluator/metrics", 10,
+    [&received_msgs](const MetricArrayMsg::ConstSharedPtr msg) { received_msgs.push_back(*msg); });
+
+  ValidationReportArray msg;
+  ValidationReport report;
+  report.generator_name = "test_generator";
+  report.trajectory_stamp = rclcpp::Time(1, 0);
+  report.risk.level = RiskLevel::SAFE;
+
+  MetricReport metric_row;
+  metric_row.validator_name = "test_validator";
+  metric_row.metric_name = "test_metric";
+  metric_row.risk.level = RiskLevel::SAFE;
+  metric_row.metric_value = 1.5;
+  report.metrics.push_back(metric_row);
+  msg.reports.push_back(report);
+
+  validation_pub->publish(msg);
+
+  // Spin across multiple timer cycles (timer period is 100ms) without publishing new reports
+  for (int i = 0; i < 5; ++i) {
+    rclcpp::spin_some(eval_node->get_node_base_interface());
+    rclcpp::spin_some(dummy_node);
+    rclcpp::sleep_for(std::chrono::milliseconds(110));
+  }
+
+  size_t value_msg_count = 0;
+  for (const auto & metric_array : received_msgs) {
+    for (const auto & m : metric_array.metric_array) {
+      if (m.name == "trajectory_validation/test_generator/test_validator/test_metric/value") {
+        ++value_msg_count;
+        EXPECT_DOUBLE_EQ(std::stod(m.value), 1.5);
+      }
+    }
+  }
+  EXPECT_EQ(value_msg_count, 1u);
+}
+
+TEST_F(EvalTest, TestTrajectoryValidationSafeToErrorToSafe)
+{
+  using autoware_trajectory_validator::msg::MetricReport;
+  using autoware_trajectory_validator::msg::RiskLevel;
+  using autoware_trajectory_validator::msg::ValidationReport;
+  using autoware_trajectory_validator::msg::ValidationReportArray;
+
+  auto validation_pub = rclcpp::create_publisher<ValidationReportArray>(
+    dummy_node, "/planning_evaluator/input/validation_reports", 1);
+
+  std::vector<std::pair<double, uint64_t>> observed_states;
+  auto sub = rclcpp::create_subscription<MetricArrayMsg>(
+    dummy_node, "/planning_evaluator/metrics", 10,
+    [&observed_states](const MetricArrayMsg::ConstSharedPtr msg) {
+      double duration = -1.0;
+      uint64_t count = 0;
+      bool has_duration = false;
+      bool has_count = false;
+      for (const auto & m : msg->metric_array) {
+        if (m.name == "trajectory_validation/test_generator/error_duration") {
+          duration = std::stod(m.value);
+          has_duration = true;
+        } else if (m.name == "trajectory_validation/test_generator/error_count") {
+          count = std::stoull(m.value);
+          has_count = true;
+        }
+      }
+      if (has_duration && has_count) {
+        observed_states.emplace_back(duration, count);
+      }
+    });
+
+  auto publish_report = [&](int32_t sec, uint32_t nanosec, uint8_t level) {
+    ValidationReportArray msg;
+    ValidationReport report;
+    report.generator_name = "test_generator";
+    report.trajectory_stamp = rclcpp::Time(sec, nanosec);
+    report.risk.level = level;
+    msg.reports.push_back(report);
+    validation_pub->publish(msg);
+
+    const size_t prev_size = observed_states.size();
+    for (int i = 0; i < 10 && observed_states.size() == prev_size; ++i) {
+      rclcpp::spin_some(eval_node->get_node_base_interface());
+      rclcpp::spin_some(dummy_node);
+      rclcpp::sleep_for(std::chrono::milliseconds(50));
+    }
+  };
+
+  // 1. SAFE at t = 1.0s -> error_duration = 0.0, error_count = 0
+  publish_report(1, 0, RiskLevel::SAFE);
+  ASSERT_EQ(observed_states.size(), 1u);
+  EXPECT_DOUBLE_EQ(observed_states.back().first, 0.0);
+  EXPECT_EQ(observed_states.back().second, 0u);
+
+  // 2. HIGH_CAUTION at t = 1.2s -> initial_span_duration_s (0.1s), error_count = 1
+  publish_report(1, 200000000, RiskLevel::HIGH_CAUTION);
+  ASSERT_EQ(observed_states.size(), 2u);
+  EXPECT_NEAR(observed_states.back().first, 0.1, epsilon);
+  EXPECT_EQ(observed_states.back().second, 1u);
+
+  // 3. HIGH_CAUTION at t = 1.4s -> 0.1 + 0.2 = 0.3s, error_count = 1
+  publish_report(1, 400000000, RiskLevel::HIGH_CAUTION);
+  ASSERT_EQ(observed_states.size(), 3u);
+  EXPECT_NEAR(observed_states.back().first, 0.3, epsilon);
+  EXPECT_EQ(observed_states.back().second, 1u);
+
+  // 4. SAFE at t = 1.6s -> current_error_duration_s resets to 0.0, error_count remains 1
+  publish_report(1, 600000000, RiskLevel::SAFE);
+  ASSERT_EQ(observed_states.size(), 4u);
+  EXPECT_DOUBLE_EQ(observed_states.back().first, 0.0);
+  EXPECT_EQ(observed_states.back().second, 1u);
 }

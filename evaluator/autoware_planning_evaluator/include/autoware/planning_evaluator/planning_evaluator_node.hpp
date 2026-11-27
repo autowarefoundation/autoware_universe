@@ -26,6 +26,7 @@
 #include <autoware/agnocast_wrapper/polling_subscriber.hpp>
 #include <autoware/agnocast_wrapper/tf2.hpp>
 #include <autoware/route_handler/route_handler.hpp>
+#include <autoware_trajectory_validator/msg/validation_report_array.hpp>
 #include <autoware_utils/math/accumulator.hpp>
 #include <autoware_utils/ros/polling_subscriber.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
@@ -71,6 +72,7 @@ using LaneletMapBin = autoware_map_msgs::msg::LaneletMapBin;
 using autoware_internal_planning_msgs::msg::PlanningFactor;
 using autoware_internal_planning_msgs::msg::PlanningFactorArray;
 using autoware_planning_msgs::msg::LaneletRoute;
+using autoware_trajectory_validator::msg::ValidationReportArray;
 using geometry_msgs::msg::AccelWithCovarianceStamped;
 /**
  * @brief Node for planning evaluation
@@ -135,6 +137,11 @@ public:
   void onPlanningFactors(
     const std::shared_ptr<const PlanningFactorArray> planning_factors,
     const std::string & module_name);
+
+  /**
+   * @brief validation reports from trajectory_validator (remapped ~/input/validation_reports)
+   */
+  void onValidationReports(const ValidationReportArray::ConstSharedPtr reports_msg);
 
   /**
    * @brief add the given metric statistic
@@ -221,6 +228,11 @@ private:
     blinker_sub_ =
       autoware::agnocast_wrapper::polling::create_polling_subscriber<TurnIndicatorsReport>(
         this, "~/input/turn_indicators_status");
+  autoware::agnocast_wrapper::polling::PollingSubscriber<
+    ValidationReportArray, autoware_utils::polling_policy::Newest>::SharedPtr
+    validation_reports_sub_ = autoware::agnocast_wrapper::polling::create_polling_subscriber<
+      ValidationReportArray, autoware_utils::polling_policy::Newest>(
+      this, "~/input/validation_reports");
 
   std::unordered_map<
     std::string,

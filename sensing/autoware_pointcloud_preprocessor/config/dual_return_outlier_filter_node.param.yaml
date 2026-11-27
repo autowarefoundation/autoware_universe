@@ -10,7 +10,7 @@
     max_azimuth_deg: 225.0
     max_distance: 12.0
     vertical_bins: 128
-    max_azimuth_diff: 50.0
+    max_azimuth_diff: 0.5
     weak_first_distance_ratio: 1.004
     general_distance_ratio: 1.03
     weak_first_local_noise_threshold: 2

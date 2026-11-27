@@ -12,27 +12,34 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "autoware/pointcloud_preprocessor/diagnostics/azimuth_order_diagnostics.hpp"
 #include "autoware/pointcloud_preprocessor/outlier_filter/ring_outlier_filter_node.hpp"
 
 #include <autoware/point_types/types.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <diagnostic_msgs/msg/diagnostic_array.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 
 #include <gtest/gtest.h>
 #include <pcl_conversions/pcl_conversions.h>
 
+#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <limits>
 #include <memory>
+#include <optional>
+#include <random>
 #include <stdexcept>
 #include <string>
+#include <thread>
 #include <vector>
 
 using autoware::point_types::PointXYZIRC;
 using autoware::point_types::PointXYZIRCAEDT;
+using autoware::pointcloud_preprocessor::AzimuthOrderDiagnostics;
 using autoware::pointcloud_preprocessor::RingOutlierFilterComponent;
 using autoware::pointcloud_preprocessor::TransformInfo;
 
@@ -147,6 +154,57 @@ std::vector<PointXYZIRCAEDT> filter_and_capture_outliers(
   pcl::PointCloud<PointXYZIRCAEDT> outliers;
   pcl::fromROSMsg(*received, outliers);
   return {outliers.points.begin(), outliers.points.end()};
+}
+
+// Returns the status of the node named node_name in msg, if any.
+std::optional<diagnostic_msgs::msg::DiagnosticStatus> find_status(
+  const diagnostic_msgs::msg::DiagnosticArray & msg, const std::string & node_name)
+{
+  const auto it = std::find_if(msg.status.begin(), msg.status.end(), [&](const auto & status) {
+    return status.name.find(node_name) != std::string::npos;
+  });
+  if (it == msg.status.end()) {
+    return std::nullopt;
+  }
+  return *it;
+}
+
+// Runs faster_filter() until this node's status arrives on /diagnostics, and returns it.
+// /diagnostics is volatile, so a status published before the subscription is matched is lost.
+// faster_filter() keeps no state between calls, so it is simply repeated until one arrives.
+std::optional<diagnostic_msgs::msg::DiagnosticStatus> filter_and_get_diagnostics(
+  RingOutlierFilterComponentPublic & node, const pcl::PointCloud<PointXYZIRCAEDT> & cloud)
+{
+  auto listener = std::make_shared<rclcpp::Node>("azimuth_order_diagnostics_listener");
+  const std::string node_name = node.get_fully_qualified_name();
+  std::optional<diagnostic_msgs::msg::DiagnosticStatus> result;
+  const auto subscription = listener->create_subscription<diagnostic_msgs::msg::DiagnosticArray>(
+    "/diagnostics", rclcpp::QoS(10),
+    [&](const diagnostic_msgs::msg::DiagnosticArray::ConstSharedPtr msg) {
+      if (const auto status = find_status(*msg, node_name)) {
+        result = status;
+      }
+    });
+
+  const auto input = to_msg(cloud);
+  for (int attempt = 0; attempt < 100 && !result.has_value(); ++attempt) {  // about 2 s
+    sensor_msgs::msg::PointCloud2 output;
+    node.faster_filter(input, nullptr, output, TransformInfo{});
+    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    rclcpp::spin_some(listener);
+  }
+  return result;
+}
+
+std::string find_value(
+  const diagnostic_msgs::msg::DiagnosticStatus & status, const std::string & key)
+{
+  for (const auto & key_value : status.values) {
+    if (key_value.key == key) {
+      return key_value.value;
+    }
+  }
+  return "<missing>";
 }
 
 float expected_score(int filled_pixels, int horizontal_bins = default_horizontal_bins)
@@ -399,22 +457,64 @@ TEST_F(RingOutlierFilterTest, AzimuthStepJustAboveOneDegreeBreaksWalk)
 {
   // Arrange
   // The float just above 1 degree breaks the walk at every point, so each walk is a single point
-  // of length 0 and is removed.
-  RingOutlierFilterComponentPublic node(make_node_options());
+  // of length 0 and is removed. The threshold applies to the size of the step, so it is the same
+  // for increasing and decreasing azimuths. Starting from 0, the steps are exact in float.
   const float step =
     std::nextafter(static_cast<float>(M_PI / 180.0), std::numeric_limits<float>::infinity());
-  pcl::PointCloud<PointXYZIRCAEDT> cloud;
-  cloud.push_back(make_point(0, 0.0F, 5.0F));
-  cloud.push_back(make_point(0, step, 5.0F));
-  cloud.push_back(make_point(0, 2.0F * step, 5.0F));
-  sensor_msgs::msg::PointCloud2 output;
+  // faster_filter() keeps no state between calls, so one node serves every case.
+  RingOutlierFilterComponentPublic node(make_node_options());
+  for (const float sign : {1.0F, -1.0F}) {
+    pcl::PointCloud<PointXYZIRCAEDT> cloud;
+    for (int i = 0; i < 3; ++i) {
+      cloud.push_back(make_point(0, sign * static_cast<float>(i) * step, 5.0F));
+    }
+    sensor_msgs::msg::PointCloud2 output;
 
-  // Act
-  node.faster_filter(to_msg(cloud), nullptr, output, TransformInfo{});
+    // Act
+    node.faster_filter(to_msg(cloud), nullptr, output, TransformInfo{});
 
-  // Assert
-  // The three points are removed from the output.
-  EXPECT_TRUE(extract_points(output).empty());
+    // Assert
+    // The three points are removed from the output.
+    EXPECT_TRUE(extract_points(output).empty()) << "sign=" << sign;
+  }
+}
+
+TEST_F(RingOutlierFilterTest, ContinuousArcKeepsEveryPointInEitherDirectionAndRange)
+{
+  // Arrange
+  // One continuous arc of 20 points, 0.1 deg apart, in both scan directions. A clockwise-scanning
+  // sensor that reports atan2(y, x) gives azimuths that decrease along the ring. Some arcs cross
+  // the wrap-around point, with azimuths in [0, 2pi) (wraps at 0) or in [-pi, pi) (wraps at pi).
+  // Each arc must stay one walk, and the last point of the ring ends that walk.
+  struct Case
+  {
+    float start_deg;
+    float step_deg;
+    float range_min_deg;
+  };
+  const std::vector<Case> cases = {{30.0F, 0.1F, 0.0F},     {30.0F, -0.1F, 0.0F},
+                                   {359.0F, 0.1F, 0.0F},    {1.0F, -0.1F, 0.0F},
+                                   {179.0F, 0.1F, -180.0F}, {-179.0F, -0.1F, -180.0F}};
+  // faster_filter() keeps no state between calls, so one node serves every case.
+  RingOutlierFilterComponentPublic node(make_node_options());
+  for (const auto & c : cases) {
+    pcl::PointCloud<PointXYZIRCAEDT> cloud;
+    for (int i = 0; i < 20; ++i) {
+      float deg = c.start_deg + c.step_deg * static_cast<float>(i);
+      if (deg < c.range_min_deg) deg += 360.0F;
+      if (deg >= c.range_min_deg + 360.0F) deg -= 360.0F;
+      cloud.push_back(make_point(0, deg * deg_to_rad, 5.0F));
+    }
+    sensor_msgs::msg::PointCloud2 output;
+
+    // Act
+    node.faster_filter(to_msg(cloud), nullptr, output, TransformInfo{});
+
+    // Assert
+    // Every point is kept.
+    EXPECT_EQ(extract_points(output).size(), cloud.size())
+      << "start_deg=" << c.start_deg << " step_deg=" << c.step_deg;
+  }
 }
 
 TEST_F(RingOutlierFilterTest, DistanceRatioBelowThresholdKeepsWalkContinuous)
@@ -440,13 +540,13 @@ TEST_F(RingOutlierFilterTest, DistanceRatioBelowThresholdKeepsWalkContinuous)
 TEST_F(RingOutlierFilterTest, DistanceRatioAtThresholdBreaksWalk)
 {
   // Arrange
-  // Each distance step is exactly distance_ratio, which is not below it, so each point is its own
-  // walk of length 0 and is removed.
+  // Each distance step is distance_ratio (10.0 -> 10.3 -> 10.609), which is not below it in float,
+  // so each point is its own walk of length 0 and is removed.
   RingOutlierFilterComponentPublic node(make_node_options());
   pcl::PointCloud<PointXYZIRCAEDT> cloud;
   cloud.push_back(make_point(0, 0.0F * deg_to_rad, 10.0F));
   cloud.push_back(make_point(0, 0.1F * deg_to_rad, 10.3F));
-  cloud.push_back(make_point(0, 0.2F * deg_to_rad, 10.6F));
+  cloud.push_back(make_point(0, 0.2F * deg_to_rad, 10.609F));
   sensor_msgs::msg::PointCloud2 output;
 
   // Act
@@ -539,6 +639,68 @@ TEST_F(RingOutlierFilterTest, OutlierCloudContainsLastPointOfTheLastOutlierWalk)
   for (size_t i = 0; i < outliers.size(); ++i) {
     EXPECT_FLOAT_EQ(outliers[i].azimuth, cloud.points[20 + i].azimuth);
   }
+}
+
+TEST(AzimuthOrderDiagnosticsTest, WarnsOnlyWhenARingIsNotInScanOrder)
+{
+  // Arrange
+  const AzimuthOrderDiagnostics ordered(128, 0);
+  const AzimuthOrderDiagnostics unordered(128, 3);
+
+  // Act
+  const auto ordered_status = ordered.evaluate_status();
+  const auto unordered_status = unordered.evaluate_status();
+
+  // Assert
+  // In-order input adds no status. Out-of-order input is a warning, not an error, because the
+  // filter still runs.
+  EXPECT_FALSE(ordered_status.has_value());
+  ASSERT_TRUE(unordered_status.has_value());
+  EXPECT_EQ(unordered_status->first, diagnostic_msgs::msg::DiagnosticStatus::WARN);
+  EXPECT_NE(unordered_status->second.find("3 ring(s)"), std::string::npos);
+}
+
+TEST_F(RingOutlierFilterTest, ShuffledRingIsReportedAsNotInScanOrder)
+{
+  // Arrange
+  RingOutlierFilterComponentPublic node(make_node_options());
+  pcl::PointCloud<PointXYZIRCAEDT> cloud;
+  append_arc(cloud, 0, 0.0F, 200);
+  std::mt19937 rng(42);
+  std::shuffle(cloud.points.begin(), cloud.points.end(), rng);  // only ring 0 is in the cloud yet
+  append_arc(cloud, 1, 0.0F, 200);  // ordered control ring in the same cloud
+
+  // Act
+  const auto status = filter_and_get_diagnostics(node, cloud);
+
+  // Assert
+  // The keys are checked, not the level: a slow run can also raise the level (latency WARN).
+  // Only the shuffled ring is counted, so the ordered control ring is not flagged with it.
+  ASSERT_TRUE(status.has_value());
+  EXPECT_EQ(find_value(*status, "Checked ring count"), "2");
+  EXPECT_EQ(find_value(*status, "Ring count not in scan order"), "1");
+}
+
+TEST_F(RingOutlierFilterTest, DecreasingRingAcrossZeroIsInScanOrder)
+{
+  // Arrange
+  // 10 deg down to -9.9 deg, stored in [0, 360) as from a clockwise-scanning sensor. 200 points
+  // give 25 counted steps, so the ring is judged, not skipped as too short.
+  RingOutlierFilterComponentPublic node(make_node_options());
+  pcl::PointCloud<PointXYZIRCAEDT> cloud;
+  for (int i = 0; i < 200; ++i) {
+    float deg = 10.0F - 0.1F * static_cast<float>(i);
+    if (deg < 0.0F) deg += 360.0F;
+    cloud.push_back(make_point(0, deg * deg_to_rad, 5.0F));
+  }
+
+  // Act
+  const auto status = filter_and_get_diagnostics(node, cloud);
+
+  // Assert
+  ASSERT_TRUE(status.has_value());
+  EXPECT_EQ(find_value(*status, "Checked ring count"), "1");
+  EXPECT_EQ(find_value(*status, "Ring count not in scan order"), "0");
 }
 
 int main(int argc, char ** argv)

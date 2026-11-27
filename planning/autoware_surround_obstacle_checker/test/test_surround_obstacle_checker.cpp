@@ -87,15 +87,16 @@ TEST_F(SurroundObstacleCheckerNodeTest, isStopRequired)
 
   {
     constexpr double THRESHOLD = 1.0;
+    const auto time_before = rclcpp::Clock{RCL_ROS_TIME}.now();
     const auto [is_stop, stop_time] =
       isStopRequired(true, true, State::STOP, LAST_STOP_TIME, THRESHOLD);
+    const auto time_after = rclcpp::Clock{RCL_ROS_TIME}.now();
 
     ASSERT_TRUE(stop_time.has_value());
 
-    const auto time_diff = rclcpp::Clock{RCL_ROS_TIME}.now() - stop_time.value();
-
     EXPECT_TRUE(is_stop);
-    EXPECT_NEAR(time_diff.seconds(), 0.0, 1e-3);
+    EXPECT_GE(stop_time->nanoseconds(), time_before.nanoseconds());
+    EXPECT_LE(stop_time->nanoseconds(), time_after.nanoseconds());
   }
 
   {
@@ -105,10 +106,8 @@ TEST_F(SurroundObstacleCheckerNodeTest, isStopRequired)
 
     ASSERT_TRUE(stop_time.has_value());
 
-    const auto time_diff = rclcpp::Clock{RCL_ROS_TIME}.now() - stop_time.value();
-
     EXPECT_TRUE(is_stop);
-    EXPECT_NEAR(time_diff.seconds(), 0.5, 1e-3);
+    EXPECT_EQ(stop_time->nanoseconds(), LAST_STOP_TIME.nanoseconds());
   }
 
   {

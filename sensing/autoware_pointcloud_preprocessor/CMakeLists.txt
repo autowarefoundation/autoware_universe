@@ -438,6 +438,10 @@ if(BUILD_TESTING)
     test/test_utilities.cpp
   )
 
+  ament_add_gtest(test_azimuth_utils
+    test/test_azimuth_utils.cpp
+  )
+
   ament_add_gtest(test_distortion_corrector_node
     test/test_distortion_corrector_node.cpp
   )
@@ -482,6 +486,10 @@ if(BUILD_TESTING)
     test/test_polar_voxel_noise_filter_node.cpp
   )
 
+  ament_add_gtest(test_dual_return_outlier_filter_utils
+    test/test_dual_return_outlier_filter_utils.cpp
+  )
+
   ament_add_gtest(test_blockage_diag
     test/blockage_diag/test_blockage_diag.cpp
   )
@@ -496,6 +504,11 @@ if(BUILD_TESTING)
       test/test_ring_outlier_filter_node.cpp
     )
     target_link_libraries(test_ring_outlier_filter_node pointcloud_preprocessor_filter)
+
+    ament_add_gtest(test_dual_return_outlier_filter_node
+      test/test_dual_return_outlier_filter_node.cpp
+    )
+    target_link_libraries(test_dual_return_outlier_filter_node pointcloud_preprocessor_filter)
 
     ament_add_gtest(test_blockage_diag_node
       test/blockage_diag/test_blockage_diag_node.cpp

@@ -21,6 +21,7 @@ subscribers:
 publishers:
   - name: perception_analytics
     message_type: tier4_metric_msgs/msg/MetricArray
+    remap_target: ~/perception_analytics
 # parameters
 param_files:
   - name: perception_analytics_publisher_param
