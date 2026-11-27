@@ -192,6 +192,50 @@ InputData make_input_data(
 }
 }  // namespace
 
+TEST(PidLongitudinalController, DepartureDistanceAgreesWithMpcStopLookahead)
+{
+  for (const double distance : {0.5, 0.78, 1.0}) {
+    auto config = make_default_config();
+    config.enable_keep_stopped_until_steer_convergence = true;
+    PidLongitudinalController controller(config);
+
+    auto trajectory = make_straight_trajectory(3, 0.4);
+    trajectory.points[1].pose.position.x = distance / 2.0;
+    trajectory.points[2].pose.position.x = distance;
+    trajectory.points[2].longitudinal_velocity_mps = 0.0f;
+    const auto input = make_input_data(trajectory);
+
+    // Two consecutive convergence reports are required by the PID safety guard.
+    controller.runDetailed(input, make_time(0.0), true);
+    controller.runDetailed(input, make_time(0.03), true);
+    const auto result = controller.runDetailed(input, make_time(0.06), true);
+
+    SCOPED_TRACE(distance);
+    if (distance > config.state_transition_params.drive_state_stop_dist) {
+      EXPECT_EQ(result.control_state, ControlState::DRIVE);
+    } else {
+      EXPECT_EQ(result.control_state, ControlState::STOPPED);
+    }
+  }
+}
+
+TEST(PidLongitudinalController, SteerConvergenceStillBlocksDepartureAtShortStop)
+{
+  auto config = make_default_config();
+  config.enable_keep_stopped_until_steer_convergence = true;
+  PidLongitudinalController controller(config);
+  auto trajectory = make_straight_trajectory(3, 0.4);
+  trajectory.points[1].pose.position.x = 0.39;
+  trajectory.points[2].pose.position.x = 0.78;
+  trajectory.points[2].longitudinal_velocity_mps = 0.0f;
+  const auto input = make_input_data(trajectory);
+
+  for (int n = 0; n < 4; ++n) {
+    const auto result = controller.runDetailed(input, make_time(n * 0.03), false);
+    EXPECT_EQ(result.control_state, ControlState::STOPPED);
+  }
+}
+
 TEST(PidLongitudinalController, StaysStoppedWhenCloseToStopPoint)
 {
   // Arrange

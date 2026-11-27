@@ -17,6 +17,7 @@
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
 #include "autoware/mpc_lateral_controller/qp_solver/qp_solver_osqp.hpp"
 #include "autoware/mpc_lateral_controller/qp_solver/qp_solver_unconstraint_fast.hpp"
+#include "autoware/mpc_lateral_controller/stop_state_utils.hpp"
 #include "autoware/mpc_lateral_controller/vehicle_model/vehicle_model_bicycle_dynamics.hpp"
 #include "autoware/mpc_lateral_controller/vehicle_model/vehicle_model_bicycle_kinematics.hpp"
 #include "autoware/mpc_lateral_controller/vehicle_model/vehicle_model_bicycle_kinematics_no_delay.hpp"
@@ -50,6 +51,7 @@ MpcLateralController::MpcLateralController(
 
   m_stop_state_entry_ego_speed = config.stop_state_entry_ego_speed;
   m_stop_state_entry_target_speed = config.stop_state_entry_target_speed;
+  m_stop_state_entry_distance = config.stop_state_entry_distance;
   m_converged_steer_rad = config.converged_steer_rad;
   m_keep_steer_control_until_converged = config.keep_steer_control_until_converged;
   m_new_traj_duration_time = config.new_traj_duration_time;
@@ -177,21 +179,9 @@ MpcLateralControllerResult MpcLateralController::runDetailed(
   m_current_kinematic_state = input_data.current_odometry;
   m_current_steering = input_data.current_steering;
 
-  m_steering_offset_target_ = std::invoke([&]() {
-    if (!enable_auto_steering_offset_removal_) return 0.0;
-    if (abs(m_steering_offset_target_ - m_steering_offset_filtered_) > 1e-4)
-      return m_steering_offset_target_;
-    const double delta_offset =
-      static_cast<double>(input_data.steering_offset.data) - m_steering_offset_target_;
-    const double delta_offset_clamped =
-      std::clamp(delta_offset, -m_steer_offset_max_update_th_, m_steer_offset_max_update_th_);
-    return m_steering_offset_target_ + delta_offset_clamped;
-  });
-
-  m_steering_offset_filtered_ = enable_auto_steering_offset_removal_
-                                  ? lpf_steer_offset_->filter(m_steering_offset_target_)
-                                  : 0.0;
-  m_current_steering.steering_tire_angle += static_cast<float>(m_steering_offset_filtered_);
+  updateSteeringOffset(input_data.steering_offset.data);
+  auto compensated_steering = m_current_steering;
+  compensated_steering.steering_tire_angle += static_cast<float>(m_steering_offset_filtered_);
 
   const bool is_under_control = input_data.current_operation_mode.is_autoware_control_enabled &&
                                 input_data.current_operation_mode.mode ==
@@ -203,7 +193,7 @@ MpcLateralControllerResult MpcLateralController::runDetailed(
   }
 
   auto mpc_solved_status =
-    m_mpc->calculateMPC(m_current_steering, m_current_kinematic_state, stamp);
+    m_mpc->calculateMPC(compensated_steering, m_current_kinematic_state, stamp);
   Lateral ctrl_cmd = mpc_solved_status.ctrl_cmd;
 
   if (
@@ -219,57 +209,55 @@ MpcLateralControllerResult MpcLateralController::runDetailed(
   // After the recovery, the previous value of the optimization may deviate greatly from
   // the actual steer angle, and it may make the optimization result unstable.
   if (!mpc_solved_status.result || !is_under_control) {
-    m_mpc->resetPrevResult(m_current_steering);
+    m_mpc->resetPrevResult(compensated_steering);
   } else {
     setSteeringToHistory(ctrl_cmd, stamp);
   }
 
-  ctrl_cmd.steering_tire_angle -= static_cast<float>(m_steering_offset_filtered_);
+  // Offset compensation can move an otherwise feasible MPC steering request beyond the
+  // physical steering limit. Publish a reachable command so convergence is attainable.
+  ctrl_cmd.steering_tire_angle = static_cast<float>(clamp_steering_to_vehicle_limit(
+    ctrl_cmd.steering_tire_angle - m_steering_offset_filtered_, m_mpc->m_steer_lim));
 
   result.mpc = mpc_solved_status;
   result.steering_offset.stamp = stamp;
   result.steering_offset.data = static_cast<float>(m_steering_offset_filtered_);
 
-  const auto createLateralOutput =
-    [this, &stamp, &mpc_solved_status](
-      const auto & cmd, const bool is_mpc_solved,
-      const auto & cmd_horizon) -> trajectory_follower::LateralOutput {
-    trajectory_follower::LateralOutput output;
-    output.control_cmd = createCtrlCmdMsg(cmd, stamp);
-    output.control_cmd_horizon = createCtrlCmdHorizonMsg(cmd_horizon, stamp);
-    output.predicted_trajectory = mpc_solved_status.predicted_trajectory;
-    // To be sure current steering of the vehicle is desired steering angle, we need to check
-    // following conditions.
-    // 1. At the last loop, mpc should be solved because command should be optimized output.
-    // 2. The mpc should be converged.
-    // 3. The steer angle should be converged.
-    output.sync_data.is_steer_converged =
-      is_mpc_solved && isMpcConverged() && isSteerConverged(cmd);
-
-    return output;
-  };
-
   if (isStoppedState()) {
-    // Reset input buffer
     AW_MPC_DEBUG_THROTTLE(writer_, 5.0, "Stopped state detected, use previous control command");
-    for (auto & value : m_mpc->m_input_buffer) {
-      value = m_ctrl_cmd_prev.steering_tire_angle;
-    }
-    // Use previous command value as previous raw steer command
-    m_mpc->m_raw_steer_cmd_prev = m_ctrl_cmd_prev.steering_tire_angle;
-    result.output = createLateralOutput(m_ctrl_cmd_prev, false, mpc_solved_status.ctrl_cmd_horizon);
-    return result;
-  }
-
-  if (!mpc_solved_status.result) {
+    const double held_mpc_steer = m_ctrl_cmd_prev.steering_tire_angle + m_steering_offset_filtered_;
+    std::fill(m_mpc->m_input_buffer.begin(), m_mpc->m_input_buffer.end(), held_mpc_steer);
+    m_mpc->m_raw_steer_cmd_prev = held_mpc_steer;
+    ctrl_cmd = m_ctrl_cmd_prev;
+  } else if (!mpc_solved_status.result) {
     AW_MPC_DEBUG_THROTTLE(writer_, 5.0, "MPC is not solved, use stop control command");
     ctrl_cmd = getStopControlCommand();
   }
 
   m_ctrl_cmd_prev = ctrl_cmd;
-  result.output =
-    createLateralOutput(ctrl_cmd, mpc_solved_status.result, mpc_solved_status.ctrl_cmd_horizon);
+  result.output.control_cmd = createCtrlCmdMsg(ctrl_cmd, stamp);
+  result.output.control_cmd_horizon =
+    createCtrlCmdHorizonMsg(mpc_solved_status.ctrl_cmd_horizon, stamp);
+  result.output.predicted_trajectory = mpc_solved_status.predicted_trajectory;
+  result.output.sync_data.is_steer_converged =
+    mpc_solved_status.result && isMpcConverged() && isSteerConverged(ctrl_cmd);
   return result;
+}
+
+void MpcLateralController::updateSteeringOffset(const float measured_offset)
+{
+  if (!enable_auto_steering_offset_removal_) {
+    m_steering_offset_target_ = 0.0;
+    m_steering_offset_filtered_ = 0.0;
+    return;
+  }
+
+  if (std::abs(m_steering_offset_target_ - m_steering_offset_filtered_) <= 1e-4) {
+    m_steering_offset_target_ += std::clamp(
+      static_cast<double>(measured_offset) - m_steering_offset_target_,
+      -m_steer_offset_max_update_th_, m_steer_offset_max_update_th_);
+  }
+  m_steering_offset_filtered_ = lpf_steer_offset_->filter(m_steering_offset_target_);
 }
 
 bool MpcLateralController::isSteerConverged(const Lateral & cmd) const
@@ -383,21 +371,11 @@ bool MpcLateralController::isStoppedState() const
     m_current_trajectory.points, m_current_kinematic_state.pose.pose, m_ego_nearest_dist_threshold,
     m_ego_nearest_yaw_threshold);
 
-  // It is possible that stop is executed earlier than stop point, and velocity controller
-  // will not start when the distance from ego to stop point is less than 0.5 meter.
-  // So we use a distance margin to ensure we can detect stopped state.
-  static constexpr double distance_margin = 1.0;
-  const double target_vel = std::invoke([&]() -> double {
-    auto min_vel = m_current_trajectory.points.at(nearest).longitudinal_velocity_mps;
-    auto covered_distance = 0.0;
-    for (auto i = nearest + 1; i < m_current_trajectory.points.size(); ++i) {
-      min_vel = std::min(min_vel, m_current_trajectory.points.at(i).longitudinal_velocity_mps);
-      covered_distance += autoware_utils::calc_distance2d(
-        m_current_trajectory.points.at(i - 1).pose, m_current_trajectory.points.at(i).pose);
-      if (covered_distance > distance_margin) break;
-    }
-    return min_vel;
-  });
+  // Keep the lookahead consistent with PID's departure threshold (0.5 m by
+  // default). A point beyond the margin must not affect the stopped-state
+  // decision, even when the input trajectory is sparsely sampled.
+  const double target_vel =
+    min_target_velocity_within_distance(m_current_trajectory, nearest, m_stop_state_entry_distance);
 
   return std::fabs(target_vel) < m_stop_state_entry_target_speed;
 }

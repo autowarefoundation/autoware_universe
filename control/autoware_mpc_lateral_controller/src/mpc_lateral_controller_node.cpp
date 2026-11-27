@@ -39,6 +39,20 @@ void publish_processing_time(
   processing_time.data = stop_watch.toc();
   publisher->publish(processing_time);
 }
+
+std::vector<std::pair<double, double>> declareSteeringRateLimits(
+  rclcpp::Node & node, const std::string & limits_param, const std::string & breakpoints_param)
+{
+  constexpr double deg2rad = static_cast<double>(M_PI) / 180.0;
+  const auto limits = node.declare_parameter<std::vector<double>>(limits_param);
+  const auto breakpoints = node.declare_parameter<std::vector<double>>(breakpoints_param);
+  std::vector<std::pair<double, double>> limits_by_breakpoint;
+  limits_by_breakpoint.reserve(limits.size());
+  for (size_t i = 0; i < limits.size(); ++i) {
+    limits_by_breakpoint.emplace_back(breakpoints.at(i), limits[i] * deg2rad);
+  }
+  return limits_by_breakpoint;
+}
 }  // namespace
 
 MpcLateralControllerConfig MpcLateralControllerNode::createConfig(rclcpp::Node & node)
@@ -65,6 +79,8 @@ MpcLateralControllerConfig MpcLateralControllerNode::createConfig(rclcpp::Node &
   /* stop state parameters */
   config.stop_state_entry_ego_speed = dp_double("stop_state_entry_ego_speed");
   config.stop_state_entry_target_speed = dp_double("stop_state_entry_target_speed");
+  config.stop_state_entry_distance =
+    node.declare_parameter<double>("stop_state_entry_distance", 0.5);
   config.converged_steer_rad = dp_double("converged_steer_rad");
   config.keep_steer_control_until_converged = dp_bool("keep_steer_control_until_converged");
   config.new_traj_duration_time = dp_double("new_traj_duration_time");            // [s]
@@ -75,28 +91,10 @@ MpcLateralControllerConfig MpcLateralControllerNode::createConfig(rclcpp::Node &
   const auto vehicle_info = autoware::vehicle_info_utils::VehicleInfoUtils(node).getVehicleInfo();
   config.wheelbase = vehicle_info.wheel_base_m;
   config.steer_lim = vehicle_info.max_steer_angle_rad;
-  constexpr double deg2rad = static_cast<double>(M_PI) / 180.0;
-
-  // steer rate limit depending on curvature
-  const auto steer_rate_lim_dps_list_by_curvature =
-    node.declare_parameter<std::vector<double>>("steer_rate_lim_dps_list_by_curvature");
-  const auto curvature_list_for_steer_rate_lim =
-    node.declare_parameter<std::vector<double>>("curvature_list_for_steer_rate_lim");
-  for (size_t i = 0; i < steer_rate_lim_dps_list_by_curvature.size(); ++i) {
-    config.steer_rate_lim_by_curvature.emplace_back(
-      curvature_list_for_steer_rate_lim.at(i),
-      steer_rate_lim_dps_list_by_curvature.at(i) * deg2rad);
-  }
-
-  // steer rate limit depending on velocity
-  const auto steer_rate_lim_dps_list_by_velocity =
-    node.declare_parameter<std::vector<double>>("steer_rate_lim_dps_list_by_velocity");
-  const auto velocity_list_for_steer_rate_lim =
-    node.declare_parameter<std::vector<double>>("velocity_list_for_steer_rate_lim");
-  for (size_t i = 0; i < steer_rate_lim_dps_list_by_velocity.size(); ++i) {
-    config.steer_rate_lim_by_velocity.emplace_back(
-      velocity_list_for_steer_rate_lim.at(i), steer_rate_lim_dps_list_by_velocity.at(i) * deg2rad);
-  }
+  config.steer_rate_lim_by_curvature = declareSteeringRateLimits(
+    node, "steer_rate_lim_dps_list_by_curvature", "curvature_list_for_steer_rate_lim");
+  config.steer_rate_lim_by_velocity = declareSteeringRateLimits(
+    node, "steer_rate_lim_dps_list_by_velocity", "velocity_list_for_steer_rate_lim");
 
   config.vehicle_model_type = node.declare_parameter<std::string>("vehicle_model_type");
   if (config.vehicle_model_type == "dynamics") {
