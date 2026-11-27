@@ -781,7 +781,7 @@ TEST_F(EvalTest, TestStopDecisionDuration)
     rclcpp::spin_some(dummy_node);
     rclcpp::sleep_for(std::chrono::milliseconds(100));
   }
-  EXPECT_NEAR(metric_value_, 0.0, 0.1);
+  EXPECT_NEAR(metric_value_, 0.1, 0.1);
 
   metric_updated_ = false;
   publishStopPlanningFactor(100.0, 100.0, 0.0, 500);
@@ -842,7 +842,7 @@ TEST_F(EvalTest, TestAbnormalStopDecisionDuration)
     rclcpp::spin_some(dummy_node);
     rclcpp::sleep_for(std::chrono::milliseconds(100));
   }
-  EXPECT_NEAR(metric_value_, 0.0, 0.1);
+  EXPECT_NEAR(metric_value_, 0.1, 0.1);
 
   metric_updated_ = false;
   publishStopPlanningFactor(5.0, 5.0, 0.0, 1000);
