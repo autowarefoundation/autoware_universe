@@ -23,6 +23,7 @@
 #include <gtest/gtest.h>
 #include <pcl_conversions/pcl_conversions.h>
 
+#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <cstddef>
@@ -147,6 +148,81 @@ pcl::PointCloud<PointXYZIRCAEDT> make_cloud_with_one_noisy_bin(float isolated_di
   cloud.push_back(make_point(7.0F, isolated_distance));
   append_arc(cloud, {21.0F, 6});
   return cloud;
+}
+
+// One ring of weak first returns in bin 0 (0 to 10 deg). Two consecutive points are in a segment
+// when their distances are within weak_first_distance_ratio (0.4%) of each other and their azimuth
+// step is below max_azimuth_diff (0.5 deg). A point that is in no segment is noise.
+//   azimuth [deg]  distance [m]   role
+//   1.0 - 1.5      5.0            segment: same distance as the neighbouring points
+//   2.0, 3.0, ...  6.0, 7.2, ...  noise: 20% away from the neighbouring points (num_noise_points)
+pcl::PointCloud<PointXYZIRCAEDT> make_weak_first_ring(int num_noise_points)
+{
+  pcl::PointCloud<PointXYZIRCAEDT> cloud;
+  append_arc(cloud, {1.0F, 6});
+  // Each distance is 1.2 times the previous one, so no two of these points form a segment.
+  float distance = 6.0F;
+  for (int i = 0; i < num_noise_points; ++i) {
+    cloud.push_back(make_point(2.0F + static_cast<float>(i), distance));
+    distance *= 1.2F;
+  }
+  return cloud;
+}
+
+std::vector<PointXYZIRCAEDT> extract_points(const sensor_msgs::msg::PointCloud2 & msg)
+{
+  pcl::PointCloud<PointXYZIRCAEDT> cloud;
+  pcl::fromROSMsg(msg, cloud);
+  return {cloud.points.begin(), cloud.points.end()};
+}
+
+bool contains_distance(const std::vector<PointXYZIRCAEDT> & points, float distance)
+{
+  return std::any_of(points.begin(), points.end(), [distance](const PointXYZIRCAEDT & p) {
+    return std::abs(p.distance - distance) < 1e-4F;
+  });
+}
+
+struct FilterResult
+{
+  std::vector<PointXYZIRCAEDT> output;
+  std::vector<PointXYZIRCAEDT> noise;
+};
+
+// Runs filter() and returns the output cloud and the published noise cloud. Fails the test if the
+// noise cloud is not received.
+FilterResult run_filter_with_noise(
+  const std::string & roi_mode, const pcl::PointCloud<PointXYZIRCAEDT> & cloud)
+{
+  DualReturnOutlierFilterComponentPublic node(make_node_options(roi_mode));
+
+  auto listener = std::make_shared<rclcpp::Node>("noise_listener");
+  sensor_msgs::msg::PointCloud2::SharedPtr received;
+  auto subscription = listener->create_subscription<sensor_msgs::msg::PointCloud2>(
+    "dual_return_outlier_filter/debug/pointcloud_noise", rclcpp::SensorDataQoS(),
+    [&received](sensor_msgs::msg::PointCloud2::SharedPtr msg) { received = msg; });
+
+  rclcpp::executors::SingleThreadedExecutor executor;
+  executor.add_node(listener);
+  const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+  while (subscription->get_publisher_count() == 0 && std::chrono::steady_clock::now() < deadline) {
+    executor.spin_some(std::chrono::milliseconds(10));
+  }
+
+  sensor_msgs::msg::PointCloud2 output;
+  do {
+    node.filter(to_msg(cloud), nullptr, output);
+    executor.spin_some();
+    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+  } while (!received && std::chrono::steady_clock::now() < deadline);
+
+  EXPECT_NE(received, nullptr) << "No noise cloud was published";
+  FilterResult result;
+  result.output = extract_points(output);
+  if (received) {
+    result.noise = extract_points(*received);
+  }
+  return result;
 }
 }  // namespace
 
@@ -381,6 +457,57 @@ TEST(DualReturnOutlierFilterTest, ThrowsWhenAzimuthRoiCrossesZero)
 
   // Act & Assert
   EXPECT_THROW(DualReturnOutlierFilterComponentPublic node(options), std::invalid_argument);
+}
+
+TEST(DualReturnOutlierFilterTest, WeakFirstSegmentInQuietBinIsKept)
+{
+  // Arrange
+  // One noise point in the bin is below weak_first_local_noise_threshold (2), so the bin is quiet
+  // and the segment at 5 m is not noise.
+  const auto cloud = make_weak_first_ring(1);
+
+  // Act
+  const auto result = run_filter_with_noise("No_ROI", cloud);
+
+  // Assert
+  // The segment points are kept in the output, and the noise point is not.
+  ASSERT_FALSE(result.output.empty());
+  for (const auto & p : result.output) {
+    EXPECT_FLOAT_EQ(p.distance, 5.0F);
+  }
+  EXPECT_TRUE(contains_distance(result.output, 5.0F));
+  EXPECT_TRUE(contains_distance(result.noise, 6.0F));
+}
+
+TEST(DualReturnOutlierFilterTest, WeakFirstSegmentInNoisyBinIsNoise)
+{
+  // Arrange
+  // Two noise points in the bin reach weak_first_local_noise_threshold (2), so the bin is noisy.
+  const auto cloud = make_weak_first_ring(2);
+
+  // Act
+  const auto result = run_filter_with_noise("No_ROI", cloud);
+
+  // Assert
+  // The segment points are removed from the output and published as noise.
+  EXPECT_TRUE(result.output.empty());
+  EXPECT_TRUE(contains_distance(result.noise, 5.0F));
+}
+
+TEST(DualReturnOutlierFilterTest, WeakFirstSegmentInsideXyzRoiIsCountedAsNoise)
+{
+  // Arrange
+  // The bin is noisy as above. All points are inside the default xyz ROI: x is 5 to 9 m, y is
+  // below 1 m and z is 1 m, within x (-12, 18), y (-2, 2) and z (0, 10).
+  const auto cloud = make_weak_first_ring(2);
+
+  // Act
+  const auto result = run_filter_with_noise("Fixed_xyz_ROI", cloud);
+
+  // Assert
+  // The segment points inside the ROI are published as noise, as in No_ROI mode.
+  EXPECT_TRUE(result.output.empty());
+  EXPECT_TRUE(contains_distance(result.noise, 5.0F));
 }
 
 int main(int argc, char ** argv)
