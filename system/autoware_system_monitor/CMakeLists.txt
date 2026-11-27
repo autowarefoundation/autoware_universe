@@ -268,6 +268,17 @@ if(BUILD_TESTING)
     "diagnostic_msgs"
   )
 
+  # GPU Monitor unit test (hardware-independent)
+  ament_add_ros_isolated_gtest(test_gpu_monitor_unit
+    test/src/gpu_monitor/test_gpu_monitor_unit.cpp
+  )
+
+  target_include_directories(test_gpu_monitor_unit
+    PRIVATE "include"
+  )
+
+  target_link_libraries(test_gpu_monitor_unit gpu_monitor_lib ${GPU_LIBRARY} ${Boost_LIBRARIES} ${LIBRARIES})
+
 endif()
 
 # TODO(yunus.caliskan): Port the tests to ROS 2, robustify the tests.

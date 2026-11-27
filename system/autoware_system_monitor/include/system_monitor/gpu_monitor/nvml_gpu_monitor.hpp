@@ -39,6 +39,8 @@ struct gpu_info
   nvmlPciInfo_t pci;                            //!< @brief PCI information about a GPU device
   nvmlUtilization_t utilization;                //!< @brief Utilization information for a device
   std::set<unsigned int> supported_gpu_clocks;  //!< @brief list of supported GPU clocks
+  unsigned long long last_process_timestamp =   // NOLINT(runtime/int)
+    0;  //!< @brief latest sample timestamp[usec] for nvmlDeviceGetProcessUtilization()
 };
 
 class GPUMonitor : public GPUMonitorBase
@@ -84,14 +86,34 @@ protected:
   void checkUsage(
     diagnostic_updater::DiagnosticStatusWrapper & stat) override;  // NOLINT(runtime/references)
 
+  struct ProcessUsageSummary
+  {
+    unsigned int pid;
+    unsigned int sm_util;
+  };
+
+  /**
+   * @brief aggregate per-process SM utilization samples and update last seen timestamp
+   * @param [in] running_pids active compute/graphics PIDs on the GPU
+   * @param [in] samples utilization samples returned by NVML (may be nullptr when sample_count is
+   * 0)
+   * @param [in] sample_count number of entries in samples
+   * @param [in,out] last_timestamp last seen sample timestamp in microseconds
+   * @return aggregated SM utilization per active PID
+   */
+  static std::vector<ProcessUsageSummary> aggregateProcessUtilization(
+    const std::set<unsigned int> & running_pids, const nvmlProcessUtilizationSample_t * samples,
+    unsigned int sample_count,
+    unsigned long long & last_timestamp);  // NOLINT(runtime/int)
+
   /**
    * @brief add stat of GPU usage per process
    * @param [in] index GPU index
-   * @param [in] device GPU device
+   * @param [in,out] gpu GPU device info including per-device last sample timestamp
    * @param [out] stat diagnostic message passed directly to diagnostic publish calls
    */
   void addProcessUsage(
-    int index, nvmlDevice_t device, diagnostic_updater::DiagnosticStatusWrapper & stat);
+    int index, gpu_info & gpu, diagnostic_updater::DiagnosticStatusWrapper & stat);
 
   /**
    * @brief check GPU memory usage
@@ -148,8 +170,7 @@ protected:
   static const size_t MAX_ARRAY_SIZE = 64;
   static const size_t MAX_NAME_LENGTH = 128;
 
-  std::vector<gpu_info> gpus_;      //!< @brief list of gpus
-  uint64_t current_timestamp_ = 0;  //!< @brief latest timestamp[usec] of addProcessUsage()
+  std::vector<gpu_info> gpus_;  //!< @brief list of gpus
 
   /**
    * @brief GPU frequency status messages

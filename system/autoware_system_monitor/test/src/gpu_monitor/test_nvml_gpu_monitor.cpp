@@ -294,20 +294,25 @@ TEST_F(GPUMonitorTestSuite, gpuUsageErrorTest)
     ASSERT_EQ(status.level, DiagStatus::OK);
   }
 
-  // Verify error
+  // Verify error (default gpu_usage_error_count is 2)
   {
     // Change error level
     monitor_->changeGPUUsageError(0.0);
 
-    // Publish topic
+    // 1st check stays below ERROR
     monitor_->update();
-
-    // Give time to publish
     rclcpp::WallRate(2).sleep();
     rclcpp::spin_some(monitor_->get_node_base_interface());
 
-    // Verify
     DiagStatus status;
+    ASSERT_TRUE(monitor_->findDiagStatus("GPU Usage", status));
+    ASSERT_NE(status.level, DiagStatus::ERROR);
+
+    // 2nd consecutive check reaches ERROR
+    monitor_->update();
+    rclcpp::WallRate(2).sleep();
+    rclcpp::spin_some(monitor_->get_node_base_interface());
+
     ASSERT_TRUE(monitor_->findDiagStatus("GPU Usage", status));
     ASSERT_EQ(status.level, DiagStatus::ERROR);
   }

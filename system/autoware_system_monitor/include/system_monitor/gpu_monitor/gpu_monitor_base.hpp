@@ -27,6 +27,7 @@
 #include <tier4_external_api_msgs/msg/gpu_unit_status.hpp>
 
 #include <climits>
+#include <cstddef>
 #include <map>
 #include <string>
 #include <vector>
@@ -133,6 +134,14 @@ protected:
    */
   void publishGPUStatus();
 
+  /**
+   * @brief convert GPU usage ratio to diagnostic level with consecutive count filtering
+   * @param [in] gpu_index index of GPU device
+   * @param [in] usage GPU usage ratio in [0.0, 1.0]
+   * @return diagnostic level (OK, WARN, or ERROR)
+   */
+  int checkGpuUsageLevel(size_t gpu_index, float usage);
+
   diagnostic_updater::Updater updater_;  //!< @brief Updater class which advertises to /diagnostics
 
   rclcpp::Publisher<tier4_external_api_msgs::msg::GpuStatus>::SharedPtr
@@ -142,12 +151,18 @@ protected:
 
   char hostname_[HOST_NAME_MAX + 1];  //!< @brief host name
 
-  float temp_warn_;           //!< @brief GPU temperature(DegC) to generate warning
-  float temp_error_;          //!< @brief GPU temperature(DegC) to generate error
-  float gpu_usage_warn_;      //!< @brief GPU usage(%) to generate warning
-  float gpu_usage_error_;     //!< @brief GPU usage(%) to generate error
-  float memory_usage_warn_;   //!< @brief GPU memory usage(%) to generate warning
-  float memory_usage_error_;  //!< @brief GPU memory usage(%) to generate error
+  float temp_warn_;            //!< @brief GPU temperature(DegC) to generate warning
+  float temp_error_;           //!< @brief GPU temperature(DegC) to generate error
+  float gpu_usage_warn_;       //!< @brief GPU usage(%) to generate warning
+  float gpu_usage_error_;      //!< @brief GPU usage(%) to generate error
+  int gpu_usage_warn_count_;   //!< @brief continuous count over gpu_usage_warn_ for warning
+  int gpu_usage_error_count_;  //!< @brief continuous count over gpu_usage_error_ for error
+  float memory_usage_warn_;    //!< @brief GPU memory usage(%) to generate warning
+  float memory_usage_error_;   //!< @brief GPU memory usage(%) to generate error
+  std::vector<int>
+    gpu_usage_warn_check_count_;  //!< @brief GPU list for usage over warn check counter
+  std::vector<int>
+    gpu_usage_error_check_count_;  //!< @brief GPU list for usage over error check counter
 
   /**
    * @brief GPU temperature status messages
