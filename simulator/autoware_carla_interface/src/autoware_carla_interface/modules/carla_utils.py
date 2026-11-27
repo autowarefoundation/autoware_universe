@@ -17,13 +17,14 @@ import math
 import struct
 import sys
 
-import carla
 from geometry_msgs.msg import Point
 from geometry_msgs.msg import Quaternion
 from sensor_msgs.msg import PointCloud2
 from sensor_msgs.msg import PointField
 from transforms3d.euler import euler2quat
 from transforms3d.euler import quat2euler
+
+from ..carla_backend import carla
 
 
 def _get_struct_fmt(is_bigendian, fields, field_names=None):

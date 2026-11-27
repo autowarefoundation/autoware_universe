@@ -4,7 +4,7 @@ import math
 import sys
 import time
 
-import carla
+from autoware_carla_interface.carla_backend import carla
 
 
 def find_ego(world, role_name):
