@@ -139,6 +139,61 @@ auto get_parameters() -> std::shared_ptr<AvoidanceParameters>
   return std::make_shared<AvoidanceParameters>(parameters);
 }
 
+class UnconfiguredClassificationTest : public ::testing::TestWithParam<uint8_t>
+{
+protected:
+  const std::shared_ptr<AvoidanceParameters> parameters = get_parameters();
+
+  ObjectData makeObject() const
+  {
+    ObjectData object;
+    object.object.classification.emplace_back(
+      autoware_perception_msgs::build<ObjectClassification>().label(GetParam()).probability(1.0));
+    return object;
+  }
+};
+
+TEST_P(UnconfiguredClassificationTest, UsesUnknownParameters)
+{
+  const auto & unknown = parameters->getObjectParameter(ObjectClassification::UNKNOWN);
+  EXPECT_EQ(&parameters->getObjectParameter(GetParam()), &unknown);
+  EXPECT_TRUE(filtering_utils::isUnknownTypeObject(makeObject()));
+}
+
+TEST_P(UnconfiguredClassificationTest, UsesUnknownMovingThreshold)
+{
+  auto object = makeObject();
+  object.move_time =
+    parameters->getObjectParameter(ObjectClassification::UNKNOWN).moving_time_threshold + 1.0;
+  EXPECT_TRUE(filtering_utils::isMovingObject(object, parameters));
+}
+
+TEST_P(UnconfiguredClassificationTest, PreservesClassificationAndUsesUnknownTargetPolicy)
+{
+  auto object = makeObject();
+  auto & unknown = parameters->object_parameters.at(ObjectClassification::UNKNOWN);
+  unknown.is_safety_check_target = false;
+  unknown.is_avoidance_target = true;
+
+  EXPECT_TRUE(filtering_utils::isAvoidanceTargetObjectType(object.object, parameters));
+  EXPECT_FALSE(filtering_utils::isSafetyCheckTargetObjectType(object.object, parameters));
+  EXPECT_EQ(object.object.classification.front().label, GetParam());
+}
+
+INSTANTIATE_TEST_SUITE_P(
+  UnknownLabels, UnconfiguredClassificationTest,
+  ::testing::Values(
+    ObjectClassification::HAZARD, ObjectClassification::ANIMAL, ObjectClassification::OVER_DRIVABLE,
+    ObjectClassification::UNDER_DRIVABLE, ObjectClassification::UNKNOWN));
+
+TEST(TestUtils, configuredClassificationRetainsItsParameters)
+{
+  const auto parameters = get_parameters();
+  const auto & truck = parameters->getObjectParameter(ObjectClassification::TRUCK);
+  EXPECT_EQ(&truck, &parameters->object_parameters.at(ObjectClassification::TRUCK));
+  EXPECT_TRUE(truck.is_avoidance_target);
+}
+
 TEST(TestUtils, isMovingObject)
 {
   {

@@ -247,7 +247,7 @@ std::optional<ObjectData> AvoidanceByLaneChange::createObjectData(
   const auto object_closest_index = findNearestIndex(path_points, object_pose.position);
   const auto object_closest_pose = path_points.at(object_closest_index).point.pose;
   const auto t = utils::getHighestProbLabel(object.classification);
-  const auto & object_parameter = avoidance_parameters_->object_parameters.at(t);
+  const auto & object_parameter = avoidance_parameters_->getObjectParameter(t);
 
   ObjectData object_data{};
   // Calc lateral deviation from path to target object.
@@ -305,7 +305,7 @@ double AvoidanceByLaneChange::calcMinAvoidanceLength(const ObjectData & nearest_
   const auto ego_width = getCommonParam().vehicle_width;
   const auto nearest_object_type = utils::getHighestProbLabel(nearest_object.object.classification);
   const auto nearest_object_parameter =
-    avoidance_parameters_->object_parameters.at(nearest_object_type);
+    avoidance_parameters_->getObjectParameter(nearest_object_type);
   const auto lateral_hard_margin = std::max(
     nearest_object_parameter.lateral_hard_margin,
     nearest_object_parameter.lateral_hard_margin_for_parked_vehicle);

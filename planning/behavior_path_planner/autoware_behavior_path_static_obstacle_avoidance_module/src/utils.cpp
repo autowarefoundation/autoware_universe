@@ -39,6 +39,7 @@
 #include <lanelet2_routing/RoutingGraphContainer.h>
 
 #include <algorithm>
+#include <array>
 #include <limits>
 #include <memory>
 #include <optional>
@@ -180,11 +181,7 @@ bool isAvoidanceTargetObjectType(
 {
   const auto object_type = utils::getHighestProbLabel(object.classification);
 
-  if (parameters->object_parameters.count(object_type) == 0) {
-    return false;
-  }
-
-  return parameters->object_parameters.at(object_type).is_avoidance_target;
+  return parameters->getObjectParameter(object_type).is_avoidance_target;
 }
 
 /**
@@ -198,11 +195,7 @@ bool isSafetyCheckTargetObjectType(
 {
   const auto object_type = utils::getHighestProbLabel(object.classification);
 
-  if (parameters->object_parameters.count(object_type) == 0) {
-    return false;
-  }
-
-  return parameters->object_parameters.at(object_type).is_safety_check_target;
+  return parameters->getObjectParameter(object_type).is_safety_check_target;
 }
 
 /**
@@ -214,7 +207,12 @@ bool isSafetyCheckTargetObjectType(
 bool isUnknownTypeObject(const ObjectData & object)
 {
   const auto object_type = utils::getHighestProbLabel(object.object.classification);
-  return object_type == ObjectClassification::UNKNOWN;
+  static constexpr std::array known_labels{
+    ObjectClassification::CAR,        ObjectClassification::TRUCK,
+    ObjectClassification::TRAILER,    ObjectClassification::BUS,
+    ObjectClassification::MOTORCYCLE, ObjectClassification::PEDESTRIAN,
+    ObjectClassification::BICYCLE};
+  return std::find(known_labels.begin(), known_labels.end(), object_type) == known_labels.end();
 }
 
 /**
@@ -249,7 +247,7 @@ bool isMovingObject(
   const ObjectData & object, const std::shared_ptr<AvoidanceParameters> & parameters)
 {
   const auto object_type = utils::getHighestProbLabel(object.object.classification);
-  const auto object_parameter = parameters->object_parameters.at(object_type);
+  const auto object_parameter = parameters->getObjectParameter(object_type);
   return object.move_time > object_parameter.moving_time_threshold;
 }
 
@@ -1239,7 +1237,7 @@ std::optional<double> getAvoidMargin(
 {
   const auto & vehicle_width = planner_data->parameters.vehicle_width;
   const auto object_type = utils::getHighestProbLabel(object.object.classification);
-  const auto object_parameter = parameters->object_parameters.at(object_type);
+  const auto object_parameter = parameters->getObjectParameter(object_type);
   const auto lateral_hard_margin = object.is_parked
                                      ? object_parameter.lateral_hard_margin_for_parked_vehicle
                                      : object_parameter.lateral_hard_margin;
@@ -1724,7 +1722,7 @@ std::vector<DrivableAreaInfo::Obstacle> generateObstaclePolygonsForDrivableArea(
     }
 
     const auto object_type = utils::getHighestProbLabel(object.object.classification);
-    const auto object_parameter = parameters->object_parameters.at(object_type);
+    const auto object_parameter = parameters->getObjectParameter(object_type);
 
     // generate obstacle polygon
     const double diff_poly_buffer =
@@ -1844,7 +1842,7 @@ void fillObjectEnvelopePolygon(
   const std::shared_ptr<AvoidanceParameters> & parameters)
 {
   const auto object_type = utils::getHighestProbLabel(object_data.object.classification);
-  const auto object_parameter = parameters->object_parameters.at(object_type);
+  const auto object_parameter = parameters->getObjectParameter(object_type);
 
   const auto & envelope_buffer_margin =
     object_parameter.envelope_buffer_margin * object_data.distance_factor;
@@ -1918,7 +1916,7 @@ void fillObjectMovingTime(
   const std::shared_ptr<AvoidanceParameters> & parameters)
 {
   const auto object_type = utils::getHighestProbLabel(object_data.object.classification);
-  const auto object_parameter = parameters->object_parameters.at(object_type);
+  const auto object_parameter = parameters->getObjectParameter(object_type);
 
   const auto & object_twist = object_data.object.kinematics.initial_twist_with_covariance.twist;
   const auto object_vel_norm = std::hypot(object_twist.linear.x, object_twist.linear.y);
@@ -1988,7 +1986,7 @@ void fillAvoidanceNecessity(
   const std::shared_ptr<AvoidanceParameters> & parameters)
 {
   const auto object_type = utils::getHighestProbLabel(object_data.object.classification);
-  const auto object_parameter = parameters->object_parameters.at(object_type);
+  const auto object_parameter = parameters->getObjectParameter(object_type);
   const auto lateral_hard_margin = object_data.is_parked
                                      ? object_parameter.lateral_hard_margin_for_parked_vehicle
                                      : object_parameter.lateral_hard_margin;
@@ -2235,7 +2233,7 @@ void updateRoadShoulderDistance(
   for (auto & o : clip_objects) {
     const auto & vehicle_width = planner_data->parameters.vehicle_width;
     const auto object_type = utils::getHighestProbLabel(o.object.classification);
-    const auto object_parameter = parameters->object_parameters.at(object_type);
+    const auto object_parameter = parameters->getObjectParameter(object_type);
     const auto lateral_hard_margin = o.is_parked
                                        ? object_parameter.lateral_hard_margin_for_parked_vehicle
                                        : object_parameter.lateral_hard_margin;
@@ -2585,7 +2583,7 @@ std::vector<ExtendedPredictedObject> getSafetyCheckTargetObjects(
     const auto & object_twist = object.kinematics.initial_twist_with_covariance.twist;
     const auto object_vel_norm = std::hypot(object_twist.linear.x, object_twist.linear.y);
     const auto object_parameter =
-      parameters->object_parameters.at(utils::getHighestProbLabel(object.classification));
+      parameters->getObjectParameter(utils::getHighestProbLabel(object.classification));
     return object_vel_norm > object_parameter.moving_speed_threshold;
   };
 
