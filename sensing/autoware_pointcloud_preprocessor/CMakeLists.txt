@@ -203,6 +203,9 @@ target_link_libraries(pointcloud_preprocessor_filter
   ${Sophus_LIBRARIES}
   ${PCL_LIBRARIES}
   ${tf2_sensor_msgs_LIBRARIES}
+  gmp
+  CGAL::CGAL
+  CGAL::CGAL_Core
 )
 
 target_include_directories(pointcloud_preprocessor_filter PRIVATE
