@@ -14,8 +14,10 @@
 
 """Python interface to the distortion corrector core, for offline use.
 
-Messages are rclpy message objects; they are CDR-serialized and handed to the C++ core. No ROS
-node, executor or clock is involved, so results depend only on the inputs.
+Twists, IMU samples and point clouds are passed serialized, as stored in rosbags, or as rclpy
+message objects, which are serialized first. The C++ core deserializes them. Transforms are passed
+as rclpy message objects. No ROS node, executor or clock is involved, so results depend only on the
+inputs.
 ``undistort_pointcloud`` returns a new point cloud and a status object and leaves its input
 unchanged.
 """
@@ -23,6 +25,7 @@ unchanged.
 from typing import NamedTuple
 from typing import Optional
 from typing import Tuple
+from typing import Union
 
 from geometry_msgs.msg import TransformStamped
 from geometry_msgs.msg import TwistWithCovarianceStamped
@@ -31,6 +34,7 @@ from rclpy.serialization import serialize_message
 from sensor_msgs.msg import Imu
 from sensor_msgs.msg import PointCloud2
 
+from ._serialization import serialized
 from . import _distortion_corrector_pybind as _ext
 
 PointcloudValidity = _ext.PointcloudValidity
@@ -85,19 +89,22 @@ class DistortionCorrector:
         """
         self._impl = _ext.DistortionCorrector(use_3d_distortion_correction)
 
-    def insert_twist(self, twist: TwistWithCovarianceStamped) -> None:
+    def insert_twist(self, twist: Union[bytes, TwistWithCovarianceStamped]) -> None:
         """Queue a twist sample.
 
         Samples are expected in timestamp order. A sample older than the queue front clears the
         queue, and samples older than the newest one by more than 1 s are pruned.
 
         Args:
-            twist: Vehicle twist in the base frame.
+            twist: Vehicle twist in the base frame, as a serialized ``TwistWithCovarianceStamped``
+                in the format that rosbags store (CDR), or as a message object, which is slower
+                since it has to be serialized first.
 
         Raises:
-            TypeError: If ``twist`` is not a ``TwistWithCovarianceStamped``.
+            TypeError: If ``twist`` is neither bytes nor a ``TwistWithCovarianceStamped``.
+            ValueError: If ``twist`` cannot be deserialized as a ``TwistWithCovarianceStamped``.
         """
-        self._impl.insert_twist(_serialize(twist, TwistWithCovarianceStamped))
+        self._impl.insert_twist(serialized(twist, TwistWithCovarianceStamped))
 
     def set_imu_transform(self, imu_to_base_link: TransformStamped) -> None:
         """Set the transform that rotates IMU angular velocities into the base frame.
@@ -113,23 +120,26 @@ class DistortionCorrector:
         """
         self._impl.set_imu_transform(_serialize(imu_to_base_link, TransformStamped))
 
-    def insert_imu(self, imu: Imu) -> None:
+    def insert_imu(self, imu: Union[bytes, Imu]) -> None:
         """Queue an IMU sample's angular velocity, rotated into the base frame.
 
         Ordering and pruning are the same as in :meth:`insert_twist`.
 
         Args:
-            imu: IMU message. Only its angular velocity is used.
+            imu: IMU message, serialized in the format that rosbags store (CDR), or as a message
+                object, which is slower since it has to be serialized first. Only its angular
+                velocity is used.
 
         Raises:
-            TypeError: If ``imu`` is not an ``Imu``.
+            TypeError: If ``imu`` is neither bytes nor an ``Imu``.
+            ValueError: If ``imu`` cannot be deserialized as an ``Imu``.
             RuntimeError: If :meth:`set_imu_transform` has not been called.
         """
-        self._impl.insert_imu(_serialize(imu, Imu))
+        self._impl.insert_imu(serialized(imu, Imu))
 
     def undistort_pointcloud(
         self,
-        pointcloud: PointCloud2,
+        pointcloud: Union[bytes, PointCloud2],
         lidar_to_base_link: TransformStamped,
         use_imu: bool = True,
         update_azimuth_and_distance: bool = False,
@@ -137,7 +147,9 @@ class DistortionCorrector:
         """Undistort a point cloud with the queued twist and IMU samples.
 
         Args:
-            pointcloud: Cloud with the PointXYZIRCAEDT layout. It is not modified.
+            pointcloud: Cloud with the PointXYZIRCAEDT layout, serialized in the format that
+                rosbags store (CDR), or as a message object, which is slower since it has to be
+                serialized first. It is not modified.
             lidar_to_base_link: Transform with ``child_frame_id`` = sensor frame. Equal frame ids
                 mean the cloud is in the base frame.
             use_imu: Use the queued IMU angular velocity instead of the twist's.
@@ -150,11 +162,12 @@ class DistortionCorrector:
 
         Raises:
             TypeError: If an argument has the wrong message type.
+            ValueError: If ``pointcloud`` cannot be deserialized as a ``PointCloud2``.
             RuntimeError: If ``update_azimuth_and_distance`` is set for a cloud in the base frame
                 and an azimuth conversion is available.
         """
         out_bytes, result, angle_conversion_error = self._impl.undistort_pointcloud(
-            _serialize(pointcloud, PointCloud2),
+            serialized(pointcloud, PointCloud2),
             _serialize(lidar_to_base_link, TransformStamped),
             use_imu,
             update_azimuth_and_distance,
