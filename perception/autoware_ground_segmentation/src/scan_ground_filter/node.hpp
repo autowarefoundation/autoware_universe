@@ -136,12 +136,12 @@ private:
     const std::vector<float> & getHeightListRef() const { return height_list; }
   };
 
+  // TODO(taisa1): Temporary Implementation: Remove this overload when all the filter nodes
+  // conform to new API
   void filter(
     const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output) override;
 
-  // TODO(taisa1): Temporary Implementation: Remove this interface when all the filter nodes
-  // conform to new API
-  void faster_filter(
+  void filter(
     const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output,
     const autoware::pointcloud_preprocessor::TransformInfo & transform_info) override;
 

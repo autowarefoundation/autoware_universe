@@ -331,7 +331,7 @@ void ScanGroundFilterComponent::extractObjectPoints(
   }
 }
 
-void ScanGroundFilterComponent::faster_filter(
+void ScanGroundFilterComponent::filter(
   const PointCloud2ConstPtr & input, [[maybe_unused]] const IndicesPtr & indices,
   PointCloud2 & output,
   [[maybe_unused]] const autoware::pointcloud_preprocessor::TransformInfo & transform_info)

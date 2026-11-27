@@ -48,7 +48,7 @@ class RingOutlierFilterComponentPublic : public RingOutlierFilterComponent
 {
 public:
   using RingOutlierFilterComponent::calculate_visibility_score;
-  using RingOutlierFilterComponent::faster_filter;
+  using RingOutlierFilterComponent::filter;
   explicit RingOutlierFilterComponentPublic(const rclcpp::NodeOptions & options)
   : RingOutlierFilterComponent(options)
   {
@@ -134,9 +134,9 @@ std::optional<diagnostic_msgs::msg::DiagnosticStatus> find_status(
   return *it;
 }
 
-// Runs faster_filter() until this node's status arrives on /diagnostics, and returns it.
+// Runs filter() until this node's status arrives on /diagnostics, and returns it.
 // /diagnostics is volatile, so a status published before the subscription is matched is lost.
-// faster_filter() keeps no state between calls, so it is simply repeated until one arrives.
+// filter() keeps no state between calls, so it is simply repeated until one arrives.
 std::optional<diagnostic_msgs::msg::DiagnosticStatus> filter_and_get_diagnostics(
   RingOutlierFilterComponentPublic & node, const pcl::PointCloud<PointXYZIRCAEDT> & cloud)
 {
@@ -154,7 +154,7 @@ std::optional<diagnostic_msgs::msg::DiagnosticStatus> filter_and_get_diagnostics
   const auto input = to_msg(cloud);
   for (int attempt = 0; attempt < 100 && !result.has_value(); ++attempt) {  // about 2 s
     sensor_msgs::msg::PointCloud2 output;
-    node.faster_filter(input, nullptr, output, TransformInfo{});
+    node.filter(input, nullptr, output, TransformInfo{});
     std::this_thread::sleep_for(std::chrono::milliseconds(20));
     rclcpp::spin_some(listener);
   }
@@ -197,7 +197,7 @@ TEST_F(RingOutlierFilterTest, PointsWithRingOutOfRangeAreSkipped)
   sensor_msgs::msg::PointCloud2 output;
 
   // Act
-  node.faster_filter(to_msg(cloud), nullptr, output, TransformInfo{});
+  node.filter(to_msg(cloud), nullptr, output, TransformInfo{});
 
   // Assert
   // Only the points on ring 1 are kept in the output; the other two arcs are skipped.
@@ -222,7 +222,7 @@ TEST_F(RingOutlierFilterTest, TruncatedLastPointIsNotRead)
   sensor_msgs::msg::PointCloud2 output;
 
   // Act
-  node.faster_filter(msg, nullptr, output, TransformInfo{});
+  node.filter(msg, nullptr, output, TransformInfo{});
 
   // Assert
   // The partial point is not read; the 20 points on ring 1 are kept.
@@ -238,7 +238,7 @@ TEST_F(RingOutlierFilterTest, ZeroPointStepGivesEmptyOutput)
   // Arrange
   // Making the input invalid by setting point_step to 0
   // On normal callback FilterBase::is_valid() rejects this as an invalid PointCloud2
-  // Call faster_filter() directly to test local guard behaviour
+  // Call filter() directly to test local guard behaviour
   RingOutlierFilterComponentPublic node(make_node_options());
   pcl::PointCloud<PointXYZIRCAEDT> cloud;
   append_arc(cloud, 1, 10.0F, 20);
@@ -247,7 +247,7 @@ TEST_F(RingOutlierFilterTest, ZeroPointStepGivesEmptyOutput)
   sensor_msgs::msg::PointCloud2 output;
 
   // Act
-  node.faster_filter(msg, nullptr, output, TransformInfo{});
+  node.filter(msg, nullptr, output, TransformInfo{});
 
   // Assert
   // No points are produced
@@ -265,7 +265,7 @@ TEST_F(RingOutlierFilterTest, ChannelAbove255IsKeptInOutput)
   sensor_msgs::msg::PointCloud2 output;
 
   // Act
-  node.faster_filter(to_msg(cloud), nullptr, output, TransformInfo{});
+  node.filter(to_msg(cloud), nullptr, output, TransformInfo{});
 
   // Assert
   // The output points have the same channel as the input points.
@@ -411,7 +411,7 @@ TEST_F(RingOutlierFilterTest, AzimuthStepJustBelowOneDegreeKeepsWalkContinuous)
   sensor_msgs::msg::PointCloud2 output;
 
   // Act
-  node.faster_filter(to_msg(cloud), nullptr, output, TransformInfo{});
+  node.filter(to_msg(cloud), nullptr, output, TransformInfo{});
 
   // Assert
   // The three points are kept in the output.
@@ -426,7 +426,7 @@ TEST_F(RingOutlierFilterTest, AzimuthStepJustAboveOneDegreeBreaksWalk)
   // for increasing and decreasing azimuths. Starting from 0, the steps are exact in float.
   const float step =
     std::nextafter(static_cast<float>(M_PI / 180.0), std::numeric_limits<float>::infinity());
-  // faster_filter() keeps no state between calls, so one node serves every case.
+  // filter() keeps no state between calls, so one node serves every case.
   RingOutlierFilterComponentPublic node(make_node_options());
   for (const float sign : {1.0F, -1.0F}) {
     pcl::PointCloud<PointXYZIRCAEDT> cloud;
@@ -436,7 +436,7 @@ TEST_F(RingOutlierFilterTest, AzimuthStepJustAboveOneDegreeBreaksWalk)
     sensor_msgs::msg::PointCloud2 output;
 
     // Act
-    node.faster_filter(to_msg(cloud), nullptr, output, TransformInfo{});
+    node.filter(to_msg(cloud), nullptr, output, TransformInfo{});
 
     // Assert
     // The three points are removed from the output.
@@ -460,7 +460,7 @@ TEST_F(RingOutlierFilterTest, ContinuousArcKeepsEveryPointInEitherDirectionAndRa
   const std::vector<Case> cases = {{30.0F, 0.1F, 0.0F},     {30.0F, -0.1F, 0.0F},
                                    {359.0F, 0.1F, 0.0F},    {1.0F, -0.1F, 0.0F},
                                    {179.0F, 0.1F, -180.0F}, {-179.0F, -0.1F, -180.0F}};
-  // faster_filter() keeps no state between calls, so one node serves every case.
+  // filter() keeps no state between calls, so one node serves every case.
   RingOutlierFilterComponentPublic node(make_node_options());
   for (const auto & c : cases) {
     pcl::PointCloud<PointXYZIRCAEDT> cloud;
@@ -473,7 +473,7 @@ TEST_F(RingOutlierFilterTest, ContinuousArcKeepsEveryPointInEitherDirectionAndRa
     sensor_msgs::msg::PointCloud2 output;
 
     // Act
-    node.faster_filter(to_msg(cloud), nullptr, output, TransformInfo{});
+    node.filter(to_msg(cloud), nullptr, output, TransformInfo{});
 
     // Assert
     // Every point is kept.
@@ -495,7 +495,7 @@ TEST_F(RingOutlierFilterTest, DistanceRatioBelowThresholdKeepsWalkContinuous)
   sensor_msgs::msg::PointCloud2 output;
 
   // Act
-  node.faster_filter(to_msg(cloud), nullptr, output, TransformInfo{});
+  node.filter(to_msg(cloud), nullptr, output, TransformInfo{});
 
   // Assert
   // The three points are kept in the output.
@@ -515,7 +515,7 @@ TEST_F(RingOutlierFilterTest, DistanceRatioAtThresholdBreaksWalk)
   sensor_msgs::msg::PointCloud2 output;
 
   // Act
-  node.faster_filter(to_msg(cloud), nullptr, output, TransformInfo{});
+  node.filter(to_msg(cloud), nullptr, output, TransformInfo{});
 
   // Assert
   // The three points are removed from the output.
@@ -540,7 +540,7 @@ TEST_F(RingOutlierFilterTest, TransformPathAppliesTranslation)
   sensor_msgs::msg::PointCloud2 output;
 
   // Act
-  node.faster_filter(input_msg, nullptr, output, tf);
+  node.filter(input_msg, nullptr, output, tf);
 
   // Assert
   // The output points are the input points translated by (1.5, -2.0, 0.25).

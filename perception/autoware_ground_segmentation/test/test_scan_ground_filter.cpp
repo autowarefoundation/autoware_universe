@@ -171,7 +171,7 @@ public:
   void filter(sensor_msgs::msg::PointCloud2 & out_cloud)
   {
     autoware::pointcloud_preprocessor::TransformInfo transform_info;
-    scan_ground_filter_->faster_filter(input_msg_ptr_, nullptr, out_cloud, transform_info);
+    scan_ground_filter_->filter(input_msg_ptr_, nullptr, out_cloud, transform_info);
   }
 
   void parse_yaml()
