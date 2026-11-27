@@ -150,11 +150,17 @@ pcl::PointCloud<PointXYZIRCAEDT> make_cloud_with_one_noisy_bin(float isolated_di
   return cloud;
 }
 
-// Six neighbouring points at 5 m, followed by isolated points in the same azimuth bin.
+// One ring of weak first returns in bin 0 (0 to 10 deg). Two consecutive points are in a segment
+// when their distances are within weak_first_distance_ratio (0.4%) of each other and their azimuth
+// step is below max_azimuth_diff (0.5 deg). A point that is in no segment is noise.
+//   azimuth [deg]  distance [m]   role
+//   1.0 - 1.5      5.0            segment: same distance as the neighbouring points
+//   2.0, 3.0, ...  6.0, 7.2, ...  noise: 20% away from the neighbouring points (num_noise_points)
 pcl::PointCloud<PointXYZIRCAEDT> make_weak_first_ring(int num_noise_points)
 {
   pcl::PointCloud<PointXYZIRCAEDT> cloud;
   append_arc(cloud, {1.0F, 6});
+  // Each distance is 1.2 times the previous one, so no two of these points form a segment.
   float distance = 6.0F;
   for (int i = 0; i < num_noise_points; ++i) {
     cloud.push_back(make_point(2.0F + static_cast<float>(i), distance));
