@@ -16,6 +16,8 @@ A detailed description of each filter's algorithm is available in the following 
 | cuda_concatenate_and_time_sync_node | Implements pointcloud concatenation an synchronization following `autoware_pointcloud_preprocessor`'s CPU implementation.                    | [link](docs/cuda-concatenate-data.md)           |
 | cuda_voxel_grid_downsample_filter   | Implements voxel downsample filtering of the `autoware_pointcloud_preprocessor`'s CPU version                                                | [link](docs/cuda-voxel-grid-downsample.md)      |
 | cuda_polar_voxel_outlier_filter     | Implements polar voxel outlier filtering of the `autoware_pointcloud_preprocessor`'s CPU version                                             | [link](docs/cuda-polar-voxel-outlier-filter.md) |
+| cuda_crop_box_filter                | Implements a standalone crop box, the cropping in `cuda_pointcloud_preprocessor` being fused with distortion correction and unusable alone   | [link](docs/cuda-crop-box-filter.md)            |
+| cuda_random_downsample_filter       | Implements random downsampling of the `autoware_pointcloud_preprocessor`'s CPU version                                                      | [link](docs/cuda-random-downsample-filter.md)   |
 
 ## (Optional) Future extensions / Unimplemented parts
 
