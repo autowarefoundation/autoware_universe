@@ -14,6 +14,7 @@
 
 #include "autoware/camera_streampetr/node.hpp"
 
+#include "autoware/camera_streampetr/ego_pose_bindings.hpp"
 #include "autoware/camera_streampetr/network/camera_ego_mask.hpp"
 
 #include <Eigen/Dense>
@@ -55,6 +56,12 @@ std::string format_milliseconds(const double milliseconds)
 }
 
 constexpr std::size_t MAX_CAMERA_MASK_ID = 10;
+
+// No vehicle covers this distance between two inference frames; a larger motion is a localization
+// jump or the cameras stalling while driving, and the memory no longer describes the scene. The
+// head also encodes each memory entry's motion at up to 32 times its size, which overflows FP16
+// past about 2 km and leaves NaN in the memory for good.
+constexpr double MAX_EGO_MOTION_BETWEEN_FRAMES = 50.0;  // [m]
 
 // Per-camera `cameraN/state` values published in the camera-status diagnostics; external
 // monitors match on these strings, so they are part of the node's interface.
@@ -367,6 +374,8 @@ void StreamPetrNode::step(const rclcpp::Time & stamp)
   if (!inference_result.has_value()) {
     return;
   }
+  // The memory now holds this frame, so the next motion is measured from it.
+  previous_map_to_base_ = current_map_to_base_;
 
   const auto & result = inference_result.value();
   publish_detection_results(stamp, result.objects);
@@ -398,9 +407,15 @@ bool StreamPetrNode::validate_camera_sync()
 
 void StreamPetrNode::reset_system_state()
 {
-  network_->wipe_memory();
-  initial_transform_set_ = false;
+  start_new_stream();
   data_store_->restart();
+}
+
+void StreamPetrNode::start_new_stream()
+{
+  // The memory and the pose it is stored relative to are only valid together.
+  network_->wipe_memory();
+  previous_map_to_base_.reset();
 }
 
 bool StreamPetrNode::prepare_inference_data(const rclcpp::Time & stamp)
@@ -409,8 +424,8 @@ bool StreamPetrNode::prepare_inference_data(const rclcpp::Time & stamp)
     data_store_->freeze_updates();
   }
 
-  const auto ego_pose_result = get_ego_pose_vector(stamp);
-  if (!ego_pose_result.has_value()) {
+  const auto map_to_base = lookup_map_to_base(stamp);
+  if (!map_to_base.has_value()) {
     cleanup_on_failure();
     return false;
   }
@@ -422,7 +437,19 @@ bool StreamPetrNode::prepare_inference_data(const rclcpp::Time & stamp)
   }
 
   // Store the results for inference
-  current_ego_pose_ = ego_pose_result.value();
+  current_map_to_base_ = map_to_base.value();
+  if (previous_map_to_base_.has_value()) {
+    const double ego_motion =
+      previous_map_to_base_->getOrigin().distance(current_map_to_base_.getOrigin());
+    if (ego_motion > MAX_EGO_MOTION_BETWEEN_FRAMES) {
+      RCLCPP_WARN(
+        rclcpp::get_logger(logger_name_.c_str()),
+        "The vehicle moved %.1f m since the last inference frame; dropping the temporal memory.",
+        ego_motion);
+      start_new_stream();
+    }
+  }
+  current_ego_pose_ = compute_ego_pose_bindings(previous_map_to_base_, current_map_to_base_);
   current_extrinsics_ = extrinsic_vectors.value();
   current_prediction_timestamp_ = data_store_->get_timestamp();
 
@@ -840,85 +867,21 @@ void StreamPetrNode::append_transform_to_result(
   }
 }
 
-std::optional<std::pair<std::vector<float>, std::vector<float>>>
-StreamPetrNode::get_ego_pose_vector(const rclcpp::Time & stamp)
+std::optional<tf2::Transform> StreamPetrNode::lookup_map_to_base(const rclcpp::Time & stamp)
 {
-  geometry_msgs::msg::TransformStamped current_transform;
+  geometry_msgs::msg::TransformStamped map_to_base;
   try {
     // Get the current transform from map to base_link at the specific timestamp
-    current_transform = tf_buffer_.lookupTransform("map", "base_link", stamp);
+    map_to_base = tf_buffer_.lookupTransform("map", "base_link", stamp);
   } catch (const tf2::TransformException & ex) {
     RCLCPP_ERROR(
       rclcpp::get_logger(logger_name_.c_str()),
       "Could not get transform from map to base_link at timestamp: %s", ex.what());
     return std::nullopt;
   }
-
-  // Set initial transform if not set yet
-  if (!initial_transform_set_) {
-    initial_transform_ = current_transform;
-    initial_transform_set_ = true;
-  }
-
-  // Get initial position
-  tf2::Vector3 initial_translation(
-    initial_transform_.transform.translation.x, initial_transform_.transform.translation.y,
-    initial_transform_.transform.translation.z);
-
-  // Get current transform
-  tf2::Quaternion current_quat(
-    current_transform.transform.rotation.x, current_transform.transform.rotation.y,
-    current_transform.transform.rotation.z, current_transform.transform.rotation.w);
-  tf2::Vector3 current_translation(
-    current_transform.transform.translation.x, current_transform.transform.translation.y,
-    current_transform.transform.translation.z);
-
-  // Calculate relative position (current - initial)
-  tf2::Vector3 relative_translation = current_translation - initial_translation;
-
-  // Use absolute rotation (not relative to initial rotation)
-  tf2::Matrix3x3 relative_rot(current_quat);
-
-  std::vector<float> egopose = {
-    static_cast<float>(relative_rot[0][0]),
-    static_cast<float>(relative_rot[0][1]),
-    static_cast<float>(relative_rot[0][2]),
-    static_cast<float>(relative_translation.x()),
-    static_cast<float>(relative_rot[1][0]),
-    static_cast<float>(relative_rot[1][1]),
-    static_cast<float>(relative_rot[1][2]),
-    static_cast<float>(relative_translation.y()),
-    static_cast<float>(relative_rot[2][0]),
-    static_cast<float>(relative_rot[2][1]),
-    static_cast<float>(relative_rot[2][2]),
-    static_cast<float>(relative_translation.z()),
-    0.0f,
-    0.0f,
-    0.0f,
-    1.0f};
-
-  // Compute inverse transform
-  tf2::Matrix3x3 inverse_rot = relative_rot.transpose();
-  tf2::Vector3 inverse_translation = -(inverse_rot * relative_translation);
-
-  std::vector<float> inverse_egopose = {
-    static_cast<float>(inverse_rot[0][0]),
-    static_cast<float>(inverse_rot[0][1]),
-    static_cast<float>(inverse_rot[0][2]),
-    static_cast<float>(inverse_translation.x()),
-    static_cast<float>(inverse_rot[1][0]),
-    static_cast<float>(inverse_rot[1][1]),
-    static_cast<float>(inverse_rot[1][2]),
-    static_cast<float>(inverse_translation.y()),
-    static_cast<float>(inverse_rot[2][0]),
-    static_cast<float>(inverse_rot[2][1]),
-    static_cast<float>(inverse_rot[2][2]),
-    static_cast<float>(inverse_translation.z()),
-    0.0f,
-    0.0f,
-    0.0f,
-    1.0f};
-  return std::make_pair(egopose, inverse_egopose);
+  tf2::Transform transform;
+  tf2::fromMsg(map_to_base.transform, transform);
+  return transform;
 }
 
 }  // namespace autoware::camera_streampetr
