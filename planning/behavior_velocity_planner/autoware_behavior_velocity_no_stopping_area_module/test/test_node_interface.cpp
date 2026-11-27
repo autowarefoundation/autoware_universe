@@ -23,9 +23,16 @@
 
 namespace autoware::behavior_velocity_planner
 {
-TEST(PlanningModuleInterfaceTest, NodeTestWithExceptionPathWithLaneID)
+class PlanningModuleInterfaceTest : public ::testing::Test
 {
-  rclcpp::init(0, nullptr);
+protected:
+  void SetUp() override { rclcpp::init(0, nullptr); }
+
+  void TearDown() override { (void)rclcpp::shutdown(); }
+};
+
+TEST_F(PlanningModuleInterfaceTest, NodeTestWithExceptionPathWithLaneID)
+{
   auto test_manager = autoware::behavior_velocity_planner::generateTestManager();
   auto test_target_node = autoware::behavior_velocity_planner::generateNode({});
 
@@ -42,13 +49,10 @@ TEST(PlanningModuleInterfaceTest, NodeTestWithExceptionPathWithLaneID)
   // test with empty path_with_lane_id
   ASSERT_NO_THROW_WITH_ERROR_MSG(
     test_manager->testWithAbnormalPathWithLaneId(test_target_node, input_path_with_lane_id_topic));
-  rclcpp::shutdown();
 }
 
-TEST(PlanningModuleInterfaceTest, NodeTestWithOffTrackEgoPose)
+TEST_F(PlanningModuleInterfaceTest, NodeTestWithOffTrackEgoPose)
 {
-  rclcpp::init(0, nullptr);
-
   const auto plugin_info_vec = {autoware::behavior_velocity_planner::PluginInfo{
     "no_stopping_area", "autoware::behavior_velocity_planner::NoStoppingAreaModulePlugin"}};
 
@@ -69,7 +73,5 @@ TEST(PlanningModuleInterfaceTest, NodeTestWithOffTrackEgoPose)
 
   ASSERT_NO_THROW_WITH_ERROR_MSG(
     test_manager->testWithOffTrackOdometry(test_target_node, input_odometry_topic));
-
-  rclcpp::shutdown();
 }
 }  // namespace autoware::behavior_velocity_planner
