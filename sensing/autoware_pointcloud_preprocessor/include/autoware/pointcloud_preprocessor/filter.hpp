@@ -221,6 +221,8 @@ protected:
   std::unique_ptr<autoware_utils::BasicDebugPublisher<NodeT>> debug_publisher_;
   std::unique_ptr<autoware_utils::BasicPublishedTimePublisher<NodeT>> published_time_publisher_;
 
+  // TODO(sykwer): Temporary Implementation: Remove this overload when all the filter nodes conform
+  // to new API.
   /** \brief Virtual abstract filter method. To be implemented by every child.
    * \param input the input point cloud dataset.
    * \param indices a pointer to the vector of point indices to use.
@@ -229,10 +231,17 @@ protected:
   virtual void filter(
     const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output) = 0;
 
-  // TODO(sykwer): Temporary Implementation: Remove this interface when all the filter nodes conform
-  // to new API. It's not pure virtual function so that a child class does not have to implement
-  // this function.
-  virtual void faster_filter(
+  // TODO(sykwer): Temporary Implementation: Make this pure virtual when all the filter nodes
+  // conform to new API. It's not pure virtual function so that a child class does not have to
+  // implement this function.
+  /** \brief Filter method of the new API, called for the nodes that support it.
+   * The input is not transformed in advance: the node applies \a transform_info itself.
+   * \param input the input point cloud dataset.
+   * \param indices a pointer to the vector of point indices to use.
+   * \param output the resultant filtered PointCloud2
+   * \param transform_info the transform from the input frame to the target frame
+   */
+  virtual void filter(
     const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output,
     const TransformInfo & transform_info);  // != 0
 

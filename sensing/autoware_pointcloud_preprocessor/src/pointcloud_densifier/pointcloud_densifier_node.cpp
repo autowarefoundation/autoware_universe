@@ -83,14 +83,14 @@ PointCloudDensifierNode::PointCloudDensifierNode(const rclcpp::NodeOptions & opt
 void PointCloudDensifierNode::filter(
   const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output)
 {
-  // This is not used as we're using faster_filter directly
+  // This is not used: the node is called through the filter() overload that takes TransformInfo
   (void)input;
   (void)indices;
   (void)output;
 }
 
 // Optimized filter implementation using TransformInfo
-void PointCloudDensifierNode::faster_filter(
+void PointCloudDensifierNode::filter(
   const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output,
   const TransformInfo & transform_info)
 {

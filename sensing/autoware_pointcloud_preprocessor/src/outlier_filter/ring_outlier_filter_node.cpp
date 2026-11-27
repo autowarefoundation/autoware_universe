@@ -42,7 +42,7 @@ size_t group_points_by_ring(
   const sensor_msgs::msg::PointCloud2 & input, const size_t channel_offset,
   const size_t max_points_num_per_ring, std::vector<std::vector<size_t>> & ring2indices)
 {
-  // is_valid() already rejects this, but faster_filter() can also be called directly
+  // is_valid() already rejects this, but filter() can also be called directly
   if (input.point_step == 0) {
     return 0;
   }
@@ -140,9 +140,7 @@ RingOutlierFilterComponent::RingOutlierFilterComponent(const rclcpp::NodeOptions
     std::bind(&RingOutlierFilterComponent::param_callback, this, _1));
 }
 
-// TODO(sykwer): Temporary Implementation: Rename this function to `filter()` when all the filter
-// nodes conform to new API. Then delete the old `filter()` defined below.
-void RingOutlierFilterComponent::faster_filter(
+void RingOutlierFilterComponent::filter(
   const PointCloud2ConstPtr & input, const IndicesPtr & unused_indices, PointCloud2 & output,
   const TransformInfo & transform_info)
 {

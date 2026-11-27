@@ -64,12 +64,12 @@ namespace autoware::pointcloud_preprocessor
 class VoxelGridDownsampleFilterComponent : public autoware::pointcloud_preprocessor::AgnocastFilter
 {
 protected:
+  // TODO(atsushi421): Temporary Implementation: Remove this overload when all the filter nodes
+  // conform to new API
   void filter(
     const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output) override;
 
-  // TODO(atsushi421): Temporary Implementation: Remove this interface when all the filter nodes
-  // conform to new API
-  void faster_filter(
+  void filter(
     const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output,
     const TransformInfo & transform_info) override;
 

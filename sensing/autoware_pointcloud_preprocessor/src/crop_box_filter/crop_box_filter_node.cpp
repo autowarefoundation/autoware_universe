@@ -123,9 +123,7 @@ void CropBoxFilterComponent::filter(
   (void)output;
 }
 
-// TODO(sykwer): Temporary Implementation: Rename this function to `filter()` when all the filter
-// nodes conform to new API. Then delete the old `filter()` defined above.
-void CropBoxFilterComponent::faster_filter(
+void CropBoxFilterComponent::filter(
   const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output,
   const TransformInfo & transform_info)
 {

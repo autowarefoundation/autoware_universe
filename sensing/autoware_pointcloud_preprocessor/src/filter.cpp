@@ -482,8 +482,7 @@ void autoware::pointcloud_preprocessor::FilterBase<NodeT>::faster_input_indices_
 
   auto output = allocate_output_message();
 
-  // TODO(sykwer): Change to `filter()` call after when the filter nodes conform to new API.
-  faster_filter(cloud, vindices, *output, transform_info);
+  filter(cloud, vindices, *output, transform_info);
 
   if (!convert_output_costly(output)) return;
 
@@ -492,11 +491,11 @@ void autoware::pointcloud_preprocessor::FilterBase<NodeT>::faster_input_indices_
   published_time_publisher_->publish_if_subscribed(pub_output_, cloud->header.stamp);
 }
 
-// TODO(sykwer): Temporary Implementation: Remove this interface when all the filter nodes conform
+// TODO(sykwer): Temporary Implementation: Make this pure virtual when all the filter nodes conform
 // to new API. It's not a pure virtual function so that a child class does not have to implement
 // this function.
 template <typename NodeT>
-void autoware::pointcloud_preprocessor::FilterBase<NodeT>::faster_filter(
+void autoware::pointcloud_preprocessor::FilterBase<NodeT>::filter(
   const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output,
   const TransformInfo & transform_info)
 {

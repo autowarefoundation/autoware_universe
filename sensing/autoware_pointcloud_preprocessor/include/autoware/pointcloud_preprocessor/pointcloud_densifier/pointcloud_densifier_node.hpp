@@ -35,7 +35,7 @@ protected:
   void filter(
     const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output) override;
 
-  void faster_filter(
+  void filter(
     const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output,
     const TransformInfo & transform_info) override;
 

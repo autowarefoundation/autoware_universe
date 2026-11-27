@@ -74,12 +74,12 @@ class CropBoxFilterComponent : public autoware::pointcloud_preprocessor::Agnocas
   using NodeType = autoware::agnocast_wrapper::Node;
 
 protected:
+  // TODO(sykwer): Temporary Implementation: Remove this overload when all the filter nodes
+  // conform to new API
   void filter(
     const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output) override;
 
-  // TODO(sykwer): Temporary Implementation: Remove this interface when all the filter nodes conform
-  // to new API
-  void faster_filter(
+  void filter(
     const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output,
     const TransformInfo & transform_info) override;
 
