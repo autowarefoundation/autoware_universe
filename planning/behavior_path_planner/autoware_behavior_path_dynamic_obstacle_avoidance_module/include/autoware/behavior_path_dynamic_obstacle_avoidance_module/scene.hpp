@@ -16,6 +16,8 @@
 #define AUTOWARE__BEHAVIOR_PATH_DYNAMIC_OBSTACLE_AVOIDANCE_MODULE__SCENE_HPP_
 
 #include "autoware/behavior_path_planner_common/interface/scene_module_interface.hpp"
+#include "autoware/behavior_path_planner_common/utils/drivable_area_expansion/parameters.hpp"
+#include "autoware/behavior_path_planner_common/utils/drivable_area_expansion/types.hpp"
 
 #include <autoware_utils/geometry/boost_geometry.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -107,6 +109,11 @@ struct DynamicAvoidanceParameters
   bool avoid_bicycle{false};
   bool avoid_motorcycle{false};
   bool avoid_pedestrian{false};
+
+  // Objects separated from the ego path by one of these linestring types are ignored.
+  std::vector<drivable_area_expansion::DrivableAreaExpansionParameters::LinestringType>
+    uncrossable_linestring_types{};
+
   double max_obstacle_vel{0.0};
   double min_obstacle_vel{0.0};
   int successive_num_to_entry_dynamic_avoidance_condition{0};
@@ -393,6 +400,9 @@ private:
   ObjectType getObjectType(const uint8_t label) const;
   void registerRegulatedObjects(const std::vector<DynamicAvoidanceObject> & prev_objects);
   void registerUnregulatedObjects(const std::vector<DynamicAvoidanceObject> & prev_objects);
+  drivable_area_expansion::SegmentRtree extractUncrossableSegments(
+    const std::vector<geometry_msgs::msg::Pose> & ego_path_points,
+    const std::vector<PredictedObject> & objects) const;
   void determineWhetherToAvoidAgainstRegulatedObjects(
     const std::vector<DynamicAvoidanceObject> & prev_objects);
   void determineWhetherToAvoidAgainstUnregulatedObjects(
