@@ -28,6 +28,7 @@
 #include <lanelet2_core/primitives/LineString.h>
 #include <lanelet2_core/primitives/Point.h>
 
+#include <algorithm>
 #include <memory>
 #include <optional>
 #include <string>
@@ -45,8 +46,8 @@ struct hash<unique_identifier_msgs::msg::UUID>
   size_t operator()(const unique_identifier_msgs::msg::UUID & uid) const
   {
     const auto & ids = uid.uuid;
-    boost::uuids::uuid u = {ids[0], ids[1], ids[2],  ids[3],  ids[4],  ids[5],  ids[6],  ids[7],
-                            ids[8], ids[9], ids[10], ids[11], ids[12], ids[13], ids[14], ids[15]};
+    boost::uuids::uuid u{};
+    std::copy(ids.begin(), ids.end(), u.begin());
     return boost::hash<boost::uuids::uuid>()(u);
   }
 };
