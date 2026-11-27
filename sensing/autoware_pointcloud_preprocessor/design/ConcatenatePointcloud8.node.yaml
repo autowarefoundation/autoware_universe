@@ -14,6 +14,9 @@ launch:
 
 # interfaces
 subscribers:
+  - name: ros_transform
+    message_type: tf2_msgs/msg/TFMessage
+    global: /tf
   - name: input1
     message_type: sensor_msgs/msg/PointCloud2
   - name: input2

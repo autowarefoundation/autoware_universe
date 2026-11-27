@@ -14,6 +14,9 @@ launch:
 
 # interfaces
 subscribers:
+  - name: ros_transform
+    message_type: tf2_msgs/msg/TFMessage
+    global: /tf
   - name: twist
     message_type: geometry_msgs/msg/TwistWithCovarianceStamped
   - name: odometry
@@ -67,6 +70,8 @@ processes:
       - on_input: input2
     outcomes:
       - to_trigger: concatenate
+  # Fires when a collector holds every input, or on its one-shot timeout (timeout_sec) after
+  # the first cloud.
   - name: concatenate
     trigger_conditions:
       - on_trigger: update

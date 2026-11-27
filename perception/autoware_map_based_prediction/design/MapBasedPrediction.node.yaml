@@ -1,4 +1,4 @@
-autoware_system_design_format: 0.3.0
+autoware_system_design_format: 0.4.1
 
 # node information
 name: MapBasedPrediction.node
@@ -46,11 +46,18 @@ param_values: []
 
 # processes
 processes:
+  - name: queue_traffic_signals
+    trigger_conditions:
+      - on_input: traffic_signals_topic
+    outcomes:
+      - to_queue: traffic_signals
   - name: update
     trigger_conditions:
       - and:
           - on_input: objects
           - once: vector_map_topic
+    reads:
+      - from_queue: traffic_signals
     outcomes:
       - to_trigger: predict
   - name: predict

@@ -1,4 +1,4 @@
-autoware_system_design_format: 0.4.0
+autoware_system_design_format: 0.4.1
 
 # node information
 name: MultiObjectTracker.node
@@ -49,9 +49,8 @@ subscribers:
   - name: detection12/objects
     message_type: autoware_perception_msgs/msg/DetectedObjects
     description: the detected objects input for channel 12
-  - name: input/odometry
+  - name: odometry
     message_type: nav_msgs/msg/Odometry
-    remap_target: ~/input/odometry
     description: the odometry input for ego vehicle state estimation
   - name: ros_transform
     message_type: tf2_msgs/msg/TFMessage
@@ -148,22 +147,100 @@ param_values:
 
 # processes
 processes:
+  - name: queue_odometry
+    trigger_conditions:
+      - on_input: odometry
+    outcomes:
+      - to_queue: odometry
+  - name: queue_detection01
+    trigger_conditions:
+      - on_input: detection01/objects
+    outcomes:
+      - to_queue: detection01
+  - name: queue_detection02
+    trigger_conditions:
+      - on_input: detection02/objects
+    outcomes:
+      - to_queue: detection02
+  - name: queue_detection03
+    trigger_conditions:
+      - on_input: detection03/objects
+    outcomes:
+      - to_queue: detection03
+  - name: queue_detection04
+    trigger_conditions:
+      - on_input: detection04/objects
+    outcomes:
+      - to_queue: detection04
+  - name: queue_detection05
+    trigger_conditions:
+      - on_input: detection05/objects
+    outcomes:
+      - to_queue: detection05
+  - name: queue_detection06
+    trigger_conditions:
+      - on_input: detection06/objects
+    outcomes:
+      - to_queue: detection06
+  - name: queue_detection07
+    trigger_conditions:
+      - on_input: detection07/objects
+    outcomes:
+      - to_queue: detection07
+  - name: queue_detection08
+    trigger_conditions:
+      - on_input: detection08/objects
+    outcomes:
+      - to_queue: detection08
+  - name: queue_detection09
+    trigger_conditions:
+      - on_input: detection09/objects
+    outcomes:
+      - to_queue: detection09
+  - name: queue_detection10
+    trigger_conditions:
+      - on_input: detection10/objects
+    outcomes:
+      - to_queue: detection10
+  - name: queue_detection11
+    trigger_conditions:
+      - on_input: detection11/objects
+    outcomes:
+      - to_queue: detection11
+  - name: queue_detection12
+    trigger_conditions:
+      - on_input: detection12/objects
+    outcomes:
+      - to_queue: detection12
+  # batch over buffered channels, run on arrival of the latency-reference channel selected at runtime
   - name: update
     trigger_conditions:
       - on_input: detection01/objects
-      - or:
-          - on_input: detection01/objects
-          - on_input: detection02/objects
-          - on_input: detection03/objects
-          - on_input: detection04/objects
-          - on_input: detection05/objects
-          - on_input: detection06/objects
-          - on_input: detection07/objects
-          - on_input: detection08/objects
-          - on_input: detection09/objects
-          - on_input: detection10/objects
-          - on_input: detection11/objects
-          - on_input: detection12/objects
+      - on_input: detection02/objects
+      - on_input: detection03/objects
+      - on_input: detection04/objects
+      - on_input: detection05/objects
+      - on_input: detection06/objects
+      - on_input: detection07/objects
+      - on_input: detection08/objects
+      - on_input: detection09/objects
+      - on_input: detection10/objects
+      - on_input: detection11/objects
+      - on_input: detection12/objects
+    reads:
+      - from_queue: detection01
+      - from_queue: detection02
+      - from_queue: detection03
+      - from_queue: detection04
+      - from_queue: detection05
+      - from_queue: detection06
+      - from_queue: detection07
+      - from_queue: detection08
+      - from_queue: detection09
+      - from_queue: detection10
+      - from_queue: detection11
+      - from_queue: detection12
+      - from_queue: odometry
     outcomes:
       - to_trigger: track
   - name: track
