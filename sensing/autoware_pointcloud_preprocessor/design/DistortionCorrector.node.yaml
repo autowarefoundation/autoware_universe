@@ -14,6 +14,9 @@ launch:
 
 # interfaces
 subscribers:
+  - name: ros_transform
+    message_type: tf2_msgs/msg/TFMessage
+    global: /tf
   - name: pointcloud
     message_type: sensor_msgs/msg/PointCloud2
   - name: twist
@@ -24,6 +27,9 @@ subscribers:
 publishers:
   - name: pointcloud
     message_type: sensor_msgs/msg/PointCloud2
+  - name: diagnostics
+    message_type: diagnostic_msgs/msg/DiagnosticArray
+    global: /diagnostics
 
 # parameters
 param_files:
@@ -58,3 +64,4 @@ processes:
       - from_queue: imu
     outcomes:
       - to_output: pointcloud
+      - to_output: diagnostics

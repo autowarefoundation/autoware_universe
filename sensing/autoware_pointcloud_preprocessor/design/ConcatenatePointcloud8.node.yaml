@@ -14,6 +14,9 @@ launch:
 
 # interfaces
 subscribers:
+  - name: ros_transform
+    message_type: tf2_msgs/msg/TFMessage
+    global: /tf
   - name: input1
     message_type: sensor_msgs/msg/PointCloud2
   - name: input2
@@ -34,6 +37,9 @@ publishers:
   - name: output
     message_type: sensor_msgs/msg/PointCloud2
     remap_target: output
+  - name: diagnostics
+    message_type: diagnostic_msgs/msg/DiagnosticArray
+    global: /diagnostics
 
 # parameters
 param_files:
@@ -71,3 +77,4 @@ processes:
       - periodic: 10.0 # Hz
     outcomes:
       - to_output: output
+      - to_output: diagnostics

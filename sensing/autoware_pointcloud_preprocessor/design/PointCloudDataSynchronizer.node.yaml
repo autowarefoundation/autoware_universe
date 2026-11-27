@@ -1,4 +1,4 @@
-autoware_system_design_format: 0.3.0
+autoware_system_design_format: 0.4.1
 
 # node information
 name: PointCloudDataSynchronizer.node
@@ -20,6 +20,9 @@ launch:
 # input_twist_topic_type: "twist" (TwistWithCovarianceStamped, default) or
 # "odom" (nav_msgs/Odometry) on ~/input/odom.
 subscribers:
+  - name: ros_transform
+    message_type: tf2_msgs/msg/TFMessage
+    global: /tf
   - name: twist
     message_type: geometry_msgs/msg/TwistWithCovarianceStamped
     remap_target: ~/input/twist
@@ -33,6 +36,9 @@ publishers:
     message_type: sensor_msgs/msg/PointCloud2
   - name: output2
     message_type: sensor_msgs/msg/PointCloud2
+  - name: diagnostics
+    message_type: diagnostic_msgs/msg/DiagnosticArray
+    global: /diagnostics
 
 # parameters
 param_files:
@@ -49,10 +55,18 @@ param_values:
 
 # processes
 processes:
+  - name: queue_twist
+    trigger_conditions:
+      - on_input: twist
+    outcomes:
+      - to_queue: twist
   - name: synchronize
     trigger_conditions:
       - on_input: input1
       - on_input: input2
+    reads:
+      - from_queue: twist
     outcomes:
       - to_output: output1
       - to_output: output2
+      - to_output: diagnostics
