@@ -371,7 +371,7 @@ bool PlannerManager::hasPossibleRerouteApprovedModules(
 {
   const auto & approved_module = approved_modules();
   const auto not_possible_reroute_module = [&](const SceneModulePtr m) {
-    if (m->name() == "dynamic_avoidance") {
+    if (m->name() == "dynamic_obstacle_avoidance") {
       return false;
     }
     if (m->name() == "goal_planner" && !utils::isAllowedGoalModification(data->route_handler)) {
