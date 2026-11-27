@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "../../src/vehicle_cmd_filter.hpp"
+#include "common/control_command_filter.hpp"
 
 #include <gtest/gtest.h>
 
@@ -25,17 +25,18 @@
 #define ASSERT_LT_NEAR(x, y) ASSERT_LT(x, y + THRESHOLD)
 #define ASSERT_GT_NEAR(x, y) ASSERT_GT(x, y - THRESHOLD)
 
-using autoware::vehicle_cmd_gate::LimitArray;
+using autoware::control_command_gate::LimitArray;
 using autoware_control_msgs::msg::Control;
 
 constexpr double NOMINAL_INTERVAL = 1.0;
 
 void setFilterParams(
-  autoware::vehicle_cmd_gate::VehicleCmdFilter & f, double v, LimitArray speed_points, LimitArray a,
-  LimitArray j, LimitArray lat_a, LimitArray lat_j, LimitArray steer_diff, LimitArray steer_lim,
-  LimitArray steer_cmd_rate_lim, const double wheelbase, const double lat_jerk_lim_for_steer_rate)
+  autoware::control_command_gate::VehicleCmdFilter & f, double v, LimitArray speed_points,
+  LimitArray a, LimitArray j, LimitArray lat_a, LimitArray lat_j, LimitArray steer_diff,
+  LimitArray steer_lim, LimitArray steer_cmd_rate_lim, const double wheelbase,
+  const double lat_jerk_lim_for_steer_rate)
 {
-  autoware::vehicle_cmd_gate::VehicleCmdFilterParam p;
+  autoware::control_command_gate::VehicleCmdFilterParam p;
   p.vel_lim = v;
   p.wheel_base = wheelbase;
   p.reference_speed_points = speed_points;
@@ -107,7 +108,7 @@ void test_1d_limit(
   const double WHEELBASE = 3.0;
   const double DT = 0.1;  // [s]
 
-  autoware::vehicle_cmd_gate::VehicleCmdFilter filter;
+  autoware::control_command_gate::VehicleCmdFilter filter;
   filter.setCurrentSpeed(ego_v);
   setFilterParams(
     filter, V_LIM, {0.0}, {A_LIM}, {J_LIM}, {LAT_A_LIM}, {LAT_J_LIM}, {STEER_DIFF}, {STEER_LIM},
@@ -316,9 +317,9 @@ TEST(VehicleCmdFilter, VehicleCmdFilter)
 TEST(VehicleCmdFilter, VehicleCmdFilterInterpolate)
 {
   constexpr double WHEELBASE = 2.8;
-  autoware::vehicle_cmd_gate::VehicleCmdFilter filter;
+  autoware::control_command_gate::VehicleCmdFilter filter;
 
-  autoware::vehicle_cmd_gate::VehicleCmdFilterParam p;
+  autoware::control_command_gate::VehicleCmdFilterParam p;
   p.wheel_base = WHEELBASE;
   p.vel_lim = 20.0;
   p.reference_speed_points = std::vector<double>{2.0, 4.0, 10.0};

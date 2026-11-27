@@ -46,6 +46,7 @@ private:
   bool enable_command_limit_filter_;
   bool transition_flag_;
   std::optional<rclcpp::Time> prev_time_;
+  rclcpp::Publisher<IsFilterActivated>::SharedPtr pub_is_filter_activated_;
 };
 
 }  // namespace autoware::control_command_gate

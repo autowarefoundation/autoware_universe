@@ -23,6 +23,8 @@ CommandFilter::CommandFilter(std::unique_ptr<CommandOutput> && output, rclcpp::N
 : CommandBridge(std::move(output)), node_(node), vehicle_status_(node)
 {
   enable_command_limit_filter_ = node_.declare_parameter<bool>("enable_command_limit_filter");
+  pub_is_filter_activated_ =
+    node_.create_publisher<IsFilterActivated>("~/is_filter_activated", rclcpp::QoS(1));
   transition_flag_ = false;
   nominal_filter_.setLogger(node_.get_logger(), node_.get_clock());
   transition_filter_.setLogger(node_.get_logger(), node_.get_clock());
@@ -86,13 +88,12 @@ Control CommandFilter::filter_command(const Control & msg)
   // driving. However, this means that the output command from Gate will always be close to the
   // driving state during manual driving. Here, let autoware publish the stop command when the ego
   // is stopped to intend the autoware is trying to keep stopping.
+
   nominal_filter_.setPrevCmd(prev_command);
   transition_filter_.setPrevCmd(prev_command);
 
-  // TODO(Takagi, Isamu): Publish debug information.
-  // is_filter_activated.stamp = node_.now();
-  // is_filter_activated_pub_->publish(is_filter_activated);
-  // publishMarkers(is_filter_activated);
+  is_filter_activated.stamp = node_.now();
+  pub_is_filter_activated_->publish(is_filter_activated);
 
   return out;
 }
