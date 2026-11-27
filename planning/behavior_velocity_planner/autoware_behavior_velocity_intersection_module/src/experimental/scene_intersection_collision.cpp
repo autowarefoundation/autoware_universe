@@ -82,6 +82,8 @@ void IntersectionModule::updateObjectInfoManagerArea(const PlannerData & planner
   const auto & attention_lanelets = intersection_lanelets.attention();
   const auto & attention_lanelet_stoplines = intersection_lanelets.attention_stoplines();
   const auto & adjacent_lanelets = intersection_lanelets.adjacent();
+  const auto & attention_bounding_boxes = intersection_lanelets.attention_bounding_boxes();
+  const auto & adjacent_bounding_boxes = intersection_lanelets.adjacent_bounding_boxes();
   const auto lanelet_map_ptr = planner_data.route_handler_->getLaneletMapPtr();
   const auto & assigned_lanelet = lanelet_map_ptr->laneletLayer.get(lane_id_);
   const auto intersection_area = util::getIntersectionArea(assigned_lanelet, lanelet_map_ptr);
@@ -111,12 +113,14 @@ void IntersectionModule::updateObjectInfoManagerArea(const PlannerData & planner
       planner_param_.occlusion.ignore_parked_vehicle_speed_threshold;
 
     const auto belong_adjacent_lanelet_id =
-      checkAngleForTargetLanelets(object_direction, adjacent_lanelets, false);
+      checkAngleForTargetLanelets(
+        object_direction, adjacent_lanelets, adjacent_bounding_boxes, false);
     if (belong_adjacent_lanelet_id) {
       continue;
     }
     const auto belong_attention_lanelet_id =
-      checkAngleForTargetLanelets(object_direction, attention_lanelets, is_parked_vehicle);
+      checkAngleForTargetLanelets(
+        object_direction, attention_lanelets, attention_bounding_boxes, is_parked_vehicle);
     const auto & obj_pos = predicted_object.kinematics.initial_pose_with_covariance.pose.position;
     const bool in_intersection_area = [&]() {
       if (!intersection_area) {
@@ -695,15 +699,24 @@ IntersectionModule::CollisionStatus IntersectionModule::detectCollision(
 std::optional<size_t> IntersectionModule::checkAngleForTargetLanelets(
 
   const geometry_msgs::msg::Pose & pose, const lanelet::ConstLanelets & target_lanelets,
+  const std::vector<lanelet::BoundingBox2d> & target_bounding_boxes,
   const bool is_parked_vehicle) const
 {
   const double detection_area_angle_thr = planner_param_.common.attention_area_angle_threshold;
   const bool consider_wrong_direction_vehicle =
     planner_param_.collision_detection.consider_wrong_direction_vehicle;
   const double dist_margin = planner_param_.common.attention_area_margin;
+  const lanelet::BasicPoint2d position(pose.position.x, pose.position.y);
 
   for (unsigned i = 0; i < target_lanelets.size(); ++i) {
     const auto & ll = target_lanelets.at(i);
+    // the distance to the lanelet is at least the distance to its bounding box: skip far ones
+    // before the exact polygon distance
+    if (
+      i < target_bounding_boxes.size() &&
+      target_bounding_boxes.at(i).exteriorDistance(position) > std::fabs(dist_margin)) {
+      continue;
+    }
     if (!autoware::experimental::lanelet2_utils::is_in_lanelet(pose, ll, dist_margin)) {
       continue;
     }

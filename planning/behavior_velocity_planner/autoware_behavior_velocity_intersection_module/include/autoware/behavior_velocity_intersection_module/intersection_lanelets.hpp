@@ -19,6 +19,7 @@
 
 #include <autoware_utils/geometry/boost_geometry.hpp>
 
+#include <lanelet2_core/primitives/BoundingBox.h>
 #include <lanelet2_core/primitives/CompoundPolygon.h>
 #include <lanelet2_core/primitives/Lanelet.h>
 #include <lanelet2_core/primitives/LineString.h>
@@ -43,6 +44,12 @@ public:
     const bool is_prioritized, const InterpolatedPathInfo & interpolated_path_info,
     const autoware_utils::LinearRing2d & footprint, const double vehicle_length);
 
+  /**
+   * compute the 2D bounding boxes of attention_, attention_non_preceding_ and adjacent_ (call once
+   * after they are set)
+   */
+  void calcBoundingBoxes();
+
   const lanelet::ConstLanelets & attention() const
   {
     return is_prioritized_ ? attention_non_preceding_ : attention_;
@@ -51,8 +58,19 @@ public:
   {
     return is_prioritized_ ? attention_non_preceding_stoplines_ : attention_stoplines_;
   }
+  /**
+   * the 2D bounding boxes of attention(), in the same order
+   */
+  const std::vector<lanelet::BoundingBox2d> & attention_bounding_boxes() const
+  {
+    return is_prioritized_ ? attention_non_preceding_bounding_boxes_ : attention_bounding_boxes_;
+  }
   const lanelet::ConstLanelets & conflicting() const { return conflicting_; }
   const lanelet::ConstLanelets & adjacent() const { return adjacent_; }
+  const std::vector<lanelet::BoundingBox2d> & adjacent_bounding_boxes() const
+  {
+    return adjacent_bounding_boxes_;
+  }
   const lanelet::ConstLanelets & occlusion_attention() const
   {
     return is_prioritized_ ? attention_non_preceding_ : occlusion_attention_;
@@ -96,6 +114,7 @@ public:
    */
   lanelet::ConstLanelets attention_;
   std::vector<lanelet::CompoundPolygon3d> attention_area_;
+  std::vector<lanelet::BoundingBox2d> attention_bounding_boxes_;
 
   /**
    * the stop lines for each attention_lanelets associated with traffic lights. At intersection
@@ -108,6 +127,7 @@ public:
    */
   lanelet::ConstLanelets attention_non_preceding_;
   std::vector<lanelet::CompoundPolygon3d> attention_non_preceding_area_;
+  std::vector<lanelet::BoundingBox2d> attention_non_preceding_bounding_boxes_;
 
   /**
    * the stop lines for each attention_non_preceding_
@@ -125,6 +145,7 @@ public:
    */
   lanelet::ConstLanelets adjacent_;
   std::vector<lanelet::CompoundPolygon3d> adjacent_area_;
+  std::vector<lanelet::BoundingBox2d> adjacent_bounding_boxes_;
 
   /**
    * the set of attention lanelets for occlusion detection which is topologically merged

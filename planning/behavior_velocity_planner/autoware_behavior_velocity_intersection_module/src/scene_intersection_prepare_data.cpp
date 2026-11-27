@@ -769,6 +769,7 @@ IntersectionLanelets IntersectionModule::generateObjectiveLanelets(
   result.conflicting_area_ = util::getPolygon3dFromLanelets(result.conflicting_);
   result.adjacent_area_ = util::getPolygon3dFromLanelets(result.adjacent_);
   result.occlusion_attention_area_ = util::getPolygon3dFromLanelets(result.occlusion_attention_);
+  result.calcBoundingBoxes();
   return result;
 }
 

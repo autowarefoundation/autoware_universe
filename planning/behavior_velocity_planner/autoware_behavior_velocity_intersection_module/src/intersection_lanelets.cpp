@@ -17,6 +17,7 @@
 #include "autoware/behavior_velocity_intersection_module/util.hpp"
 
 #include <lanelet2_core/LaneletMap.h>
+#include <lanelet2_core/geometry/Lanelet.h>
 
 #include <string>
 
@@ -45,5 +46,20 @@ void IntersectionLanelets::update(
       first_attention_area_ = attention_non_preceding_area_.at(first.value().second);
     }
   }
+}
+
+void IntersectionLanelets::calcBoundingBoxes()
+{
+  const auto bounding_boxes = [](const lanelet::ConstLanelets & lanelets) {
+    std::vector<lanelet::BoundingBox2d> boxes;
+    boxes.reserve(lanelets.size());
+    for (const auto & lanelet : lanelets) {
+      boxes.push_back(lanelet::geometry::boundingBox2d(lanelet));
+    }
+    return boxes;
+  };
+  attention_bounding_boxes_ = bounding_boxes(attention_);
+  attention_non_preceding_bounding_boxes_ = bounding_boxes(attention_non_preceding_);
+  adjacent_bounding_boxes_ = bounding_boxes(adjacent_);
 }
 }  // namespace autoware::behavior_velocity_planner
