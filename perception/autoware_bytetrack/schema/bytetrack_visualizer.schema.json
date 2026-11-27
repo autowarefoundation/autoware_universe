@@ -1,0 +1,33 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "autoware_bytetrack_visualizer parameter",
+  "type": "object",
+  "definitions": {
+    "bytetrack_visualizer": {
+      "type": "object",
+      "properties": {
+        "use_raw": {
+          "type": "boolean",
+          "description": "The flag for the node to switch `sensor_msgs/Image` or `sensor_msgs/CompressedImage` as input",
+          "default": false
+        }
+      },
+      "required": ["use_raw"],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/bytetrack_visualizer"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}
