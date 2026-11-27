@@ -226,8 +226,8 @@ void ExternalVelocityLimitSelectorNode::setVelocityLimitFromInternal(
 
 void ExternalVelocityLimitSelectorNode::clearVelocityLimit(const std::string & sender)
 {
-  if (velocity_limit_table_.empty()) {
-    RCLCPP_WARN(get_logger(), "no velocity limit has been set from internal.");
+  if (velocity_limit_table_.count(sender) == 0) {
+    RCLCPP_DEBUG(get_logger(), "no velocity limit has been set from internal. sender:%s", sender.c_str());
     updateVelocityLimit();
     return;
   }

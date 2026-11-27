@@ -170,6 +170,41 @@ class TestExternalVelocityLimitSelector(unittest.TestCase):
         self.wait_for_output()
         self.assertEqual(self.velocity_limit_output_.max_velocity, 2.5)
 
+        # Clear command for an unregistered sender when table has active limits:
+        # registered sender's limit should remain
+        self.update_max_vel_param(15.0)
+        self.pub_clear_limit_.publish(clear_cmd)
+        self.wait_for_output()
+        self.pub_api_limit_.publish(self.make_velocity_limit_msg(15.0))
+        self.wait_for_output()
+        self.assertEqual(self.velocity_limit_output_.max_velocity, 15.0)
+        registered_limit = self.make_velocity_limit_msg(8.0)
+        registered_limit.sender = "registered_sender"
+        self.pub_internal_limit_.publish(registered_limit)
+        self.wait_for_output()
+        self.assertEqual(self.velocity_limit_output_.max_velocity, 8.0)
+
+        unregistered_clear_cmd = VelocityLimitClearCommand(
+            command=True, sender="unregistered_sender"
+        )
+        self.pub_clear_limit_.publish(unregistered_clear_cmd)
+        self.wait_for_output()
+        self.assertEqual(self.velocity_limit_output_.max_velocity, 8.0)
+
+        # Clear the registered sender: output should return to max_vel
+        registered_clear_cmd = VelocityLimitClearCommand(
+            command=True, sender="registered_sender"
+        )
+        self.pub_clear_limit_.publish(registered_clear_cmd)
+        self.wait_for_output()
+        self.assertEqual(self.velocity_limit_output_.max_velocity, 15.0)
+
+        # Clear command for an unregistered sender when table is empty:
+        # output should stay at max_vel
+        self.pub_clear_limit_.publish(unregistered_clear_cmd)
+        self.wait_for_output()
+        self.assertEqual(self.velocity_limit_output_.max_velocity, 15.0)
+
 
 @launch_testing.post_shutdown_test()
 class TestProcessOutput(unittest.TestCase):
