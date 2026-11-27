@@ -27,6 +27,13 @@ if(BUILD_TESTING)
   target_include_directories(test_radar_objects_adapter PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
   target_link_libraries(test_radar_objects_adapter ${PROJECT_NAME})
 
+  # Unit tests of the parts the adapter is composed of.
+  foreach(part classification_remapper object_uuid_generator tracked_object_converter)
+    ament_add_gtest(test_${part} test/test_${part}.cpp)
+    target_include_directories(test_${part} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+    target_link_libraries(test_${part} ${PROJECT_NAME})
+  endforeach()
+
   # ROS-based tests can only run while agnocast is disabled: the node's pub/sub then go through rclcpp.
   if(NOT "$ENV{ENABLE_AGNOCAST}" STREQUAL "1")
     # Integration test of the node over its real topics; the conversion is covered by the unit
