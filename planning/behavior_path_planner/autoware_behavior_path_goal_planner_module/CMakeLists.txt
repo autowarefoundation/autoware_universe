@@ -25,6 +25,11 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   src/lane_change.cpp
 )
 
+# std::execution::par in goal_planner_module.cpp runs on TBB in libstdc++. CONFIG: the
+# FindTBB.cmake in mrt_cmake_modules predates oneTBB and cannot find it
+find_package(TBB CONFIG REQUIRED)
+target_link_libraries(${PROJECT_NAME} TBB::tbb)
+
 if(BUILD_EXAMPLES)
   message(STATUS "Building examples")
   include(FetchContent)
