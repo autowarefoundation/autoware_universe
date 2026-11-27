@@ -1,0 +1,19 @@
+/**:
+  ros__parameters:
+    # weight files
+    model_onnx_path: "$(var model_path)/$(var model_name).onnx"
+    model_engine_path: "$(var model_path)/$(var model_name).engine"
+    model_params:
+      max_voxels: 40000
+      max_points_per_voxel: 50
+      # depends on model
+      prob_observe_valid_given_state_valid: 0.9980
+      prob_observe_invalid_given_state_valid: 0.0020
+      prob_observe_valid_given_state_invalid: 0.0326
+      prob_observe_invalid_given_state_invalid: 0.9674
+
+    trt_precision: fp32
+    # input must in this range
+    trt_profile_points_min: 500
+    trt_profile_points_opt: 5000
+    trt_profile_points_max: 10000
