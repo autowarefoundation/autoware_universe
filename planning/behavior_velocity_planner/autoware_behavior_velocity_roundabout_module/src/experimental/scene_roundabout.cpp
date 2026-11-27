@@ -175,8 +175,8 @@ DecisionResult RoundaboutModule::modifyPathVelocityDetail(
   if (!prepare_data) {
     return prepare_data.err();
   }
-  const auto [interpolated_path_info, roundabout_stoplines, path_lanelets] = prepare_data.ok();
-  const auto & roundabout_lanelets = roundabout_lanelets_.value();
+  const auto [interpolated_path_info, roundabout_stoplines, path_lanelets, roundabout_lanelets] =
+    prepare_data.ok();
 
   const auto closest_idx = roundabout_stoplines.closest_idx;
   const auto can_smoothly_stop_at = [&](const auto & stop_line_idx) {
@@ -516,7 +516,8 @@ RoundaboutModule::PassJudgeStatus RoundaboutModule::isOverPassJudgeLinesStatus(
 {
   const auto & current_pose = planner_data.current_odometry->pose;
   const auto closest_idx = roundabout_stoplines.closest_idx;
-  const auto default_stopline_idx = roundabout_stoplines.default_stopline.value();
+  const auto default_stopline_idx =
+    roundabout_stoplines.default_stopline.value_or(roundabout_stoplines.first_pass_judge_line);
   const size_t pass_judge_line_idx = roundabout_stoplines.first_pass_judge_line;
 
   const bool was_safe = std::holds_alternative<Safe>(prev_decision_result_);
