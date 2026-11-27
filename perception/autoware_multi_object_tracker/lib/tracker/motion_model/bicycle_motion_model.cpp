@@ -16,12 +16,13 @@
 
 #include "autoware/multi_object_tracker/tracker/motion_model/bicycle_motion_model.hpp"
 
+#include "autoware/multi_object_tracker/tracker/motion_model/motion_model_math.hpp"
+
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include <autoware_utils_geometry/msg/covariance.hpp>
 #include <autoware_utils_math/normalization.hpp>
 #include <autoware_utils_math/unit_conversion.hpp>
-#include <tf2/LinearMath/Quaternion.hpp>
 
 #include <algorithm>
 
@@ -422,9 +423,7 @@ bool BicycleMotionModel::limitStates()
   ekf_.getP(P_t);
 
   // maximum velocity
-  if (!(-motion_params_.max_vel <= X_t(IDX::U) && X_t(IDX::U) <= motion_params_.max_vel)) {
-    X_t(IDX::U) = X_t(IDX::U) < 0 ? -motion_params_.max_vel : motion_params_.max_vel;
-  }
+  X_t(IDX::U) = motion_model_math::clampSymmetric(X_t(IDX::U), motion_params_.max_vel);
 
   // maximum lateral velocity: limited by the tighter of two physical constraints
   // (1) lateral acceleration: a_lat = vel_long * vel_lat / wheel_base
@@ -627,15 +626,19 @@ bool BicycleMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) c
 
   StateMat Q;
   Q.setZero();
-  Q(IDX::X1, IDX::X1) = (q_cov_long * cos_yaw_sq + q_cov_lat * sin_yaw_sq);
-  Q(IDX::X1, IDX::Y1) = ((q_cov_long - q_cov_lat) * sin_cos_yaw);
-  Q(IDX::Y1, IDX::X1) = Q(IDX::X1, IDX::Y1);
-  Q(IDX::Y1, IDX::Y1) = (q_cov_long * sin_yaw_sq + q_cov_lat * cos_yaw_sq);
+  const auto q_rear =
+    motion_model_math::rotateDiagCov2D(q_cov_long, q_cov_lat, sin_yaw_sq, cos_yaw_sq, sin_cos_yaw);
+  Q(IDX::X1, IDX::X1) = q_rear.xx;
+  Q(IDX::X1, IDX::Y1) = q_rear.xy;
+  Q(IDX::Y1, IDX::X1) = q_rear.xy;
+  Q(IDX::Y1, IDX::Y1) = q_rear.yy;
 
-  Q(IDX::X2, IDX::X2) = (q_cov_long2 * cos_yaw_sq + q_cov_lat2 * sin_yaw_sq);
-  Q(IDX::X2, IDX::Y2) = ((q_cov_long2 - q_cov_lat2) * sin_cos_yaw);
-  Q(IDX::Y2, IDX::X2) = Q(IDX::X2, IDX::Y2);
-  Q(IDX::Y2, IDX::Y2) = (q_cov_long2 * sin_yaw_sq + q_cov_lat2 * cos_yaw_sq);
+  const auto q_front = motion_model_math::rotateDiagCov2D(
+    q_cov_long2, q_cov_lat2, sin_yaw_sq, cos_yaw_sq, sin_cos_yaw);
+  Q(IDX::X2, IDX::X2) = q_front.xx;
+  Q(IDX::X2, IDX::Y2) = q_front.xy;
+  Q(IDX::Y2, IDX::X2) = q_front.xy;
+  Q(IDX::Y2, IDX::Y2) = q_front.yy;
 
   // Front/rear position process noise splits into a common-mode part C (whole-body translation from
   // longitudinal/lateral acceleration, shared identically by both axle points) and a differential
@@ -690,12 +693,7 @@ bool BicycleMotionModel::getPredictedState(
   pose.position.z = z_;
 
   // set orientation
-  tf2::Quaternion quaternion;
-  quaternion.setRPY(0.0, 0.0, yaw);
-  pose.orientation.x = quaternion.x();
-  pose.orientation.y = quaternion.y();
-  pose.orientation.z = quaternion.z();
-  pose.orientation.w = quaternion.w();
+  motion_model_math::setOrientationFromYaw(pose, yaw);
 
   // set twist
   twist.linear.x = X(IDX::U);
@@ -705,7 +703,6 @@ bool BicycleMotionModel::getPredictedState(
   twist.angular.y = 0.0;
   twist.angular.z = X(IDX::V) * wheel_base_inv;
 
-  constexpr double default_cov = 0.1 * 0.1;
   // Set pose covariance
   // Propagate the axle-coordinate covariance [X1, Y1, X2, Y2] through a single Jacobian G so the
   // exported (x, y, yaw) block stays consistent, correctly correlated, and PSD by construction:
@@ -731,17 +728,17 @@ bool BicycleMotionModel::getPredictedState(
   pose_cov[XYZRPY_COV_IDX::Y_YAW] = M(1, 2);
   pose_cov[XYZRPY_COV_IDX::YAW_Y] = M(2, 1);
   pose_cov[XYZRPY_COV_IDX::YAW_YAW] = M(2, 2);
-  pose_cov[XYZRPY_COV_IDX::Z_Z] = default_cov;
-  pose_cov[XYZRPY_COV_IDX::ROLL_ROLL] = default_cov;
-  pose_cov[XYZRPY_COV_IDX::PITCH_PITCH] = default_cov;
+  pose_cov[XYZRPY_COV_IDX::Z_Z] = motion_model_math::kUnobservedCov;
+  pose_cov[XYZRPY_COV_IDX::ROLL_ROLL] = motion_model_math::kUnobservedCov;
+  pose_cov[XYZRPY_COV_IDX::PITCH_PITCH] = motion_model_math::kUnobservedCov;
 
   // set twist covariance
   twist_cov[XYZRPY_COV_IDX::X_X] = P(IDX::U, IDX::U);
   twist_cov[XYZRPY_COV_IDX::Y_Y] = P(IDX::V, IDX::V) / motion_params_.wheel_pos_ratio_sq;
   twist_cov[XYZRPY_COV_IDX::YAW_YAW] = P(IDX::V, IDX::V) * wheel_base_inv_sq;
-  twist_cov[XYZRPY_COV_IDX::Z_Z] = default_cov;
-  twist_cov[XYZRPY_COV_IDX::ROLL_ROLL] = default_cov;
-  twist_cov[XYZRPY_COV_IDX::PITCH_PITCH] = default_cov;
+  twist_cov[XYZRPY_COV_IDX::Z_Z] = motion_model_math::kUnobservedCov;
+  twist_cov[XYZRPY_COV_IDX::ROLL_ROLL] = motion_model_math::kUnobservedCov;
+  twist_cov[XYZRPY_COV_IDX::PITCH_PITCH] = motion_model_math::kUnobservedCov;
 
   return true;
 }

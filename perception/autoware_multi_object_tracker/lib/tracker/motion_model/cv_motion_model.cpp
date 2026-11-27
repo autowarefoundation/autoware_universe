@@ -16,6 +16,8 @@
 
 #include "autoware/multi_object_tracker/tracker/motion_model/cv_motion_model.hpp"
 
+#include "autoware/multi_object_tracker/tracker/motion_model/motion_model_math.hpp"
+
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include <autoware_utils_geometry/msg/covariance.hpp>
@@ -138,12 +140,8 @@ bool CVMotionModel::limitStates()
   StateMat P_t;
   ekf_.getX(X_t);
   ekf_.getP(P_t);
-  if (!(-motion_params_.max_vx <= X_t(IDX::VX) && X_t(IDX::VX) <= motion_params_.max_vx)) {
-    X_t(IDX::VX) = X_t(IDX::VX) < 0 ? -motion_params_.max_vx : motion_params_.max_vx;
-  }
-  if (!(-motion_params_.max_vy <= X_t(IDX::VY) && X_t(IDX::VY) <= motion_params_.max_vy)) {
-    X_t(IDX::VY) = X_t(IDX::VY) < 0 ? -motion_params_.max_vy : motion_params_.max_vy;
-  }
+  X_t(IDX::VX) = motion_model_math::clampSymmetric(X_t(IDX::VX), motion_params_.max_vx);
+  X_t(IDX::VY) = motion_model_math::clampSymmetric(X_t(IDX::VY), motion_params_.max_vy);
   ekf_.init(X_t, P_t);
 
   return true;
@@ -237,50 +235,43 @@ bool CVMotionModel::getPredictedState(
 
   // get yaw for twist rotation from own orientation member
   const double yaw = tf2::getYaw(orientation_);
+  const double cos_yaw = std::cos(yaw);
+  const double sin_yaw = std::sin(yaw);
 
-  // set twist
-  twist.linear.x = X(IDX::VX) * std::cos(-yaw) - X(IDX::VY) * std::sin(-yaw);
-  twist.linear.y = X(IDX::VX) * std::sin(-yaw) + X(IDX::VY) * std::cos(-yaw);
+  // set twist (rotate world-frame velocity into body frame)
+  twist.linear.x = X(IDX::VX) * cos_yaw + X(IDX::VY) * sin_yaw;
+  twist.linear.y = -X(IDX::VX) * sin_yaw + X(IDX::VY) * cos_yaw;
   twist.linear.z = 0.0;
   twist.angular.x = 0.0;
   twist.angular.y = 0.0;
   twist.angular.z = 0.0;
 
   // set pose covariance
-  constexpr double zz_cov = 0.1 * 0.1;   // TODO(yukkysaito) Currently tentative
-  constexpr double rr_cov = 0.1 * 0.1;   // TODO(yukkysaito) Currently tentative
-  constexpr double pp_cov = 0.1 * 0.1;   // TODO(yukkysaito) Currently tentative
-  constexpr double yaw_cov = 0.1 * 0.1;  // TODO(yukkysaito) Currently tentative
   pose_cov[XYZRPY_COV_IDX::X_X] = P(IDX::X, IDX::X);
   pose_cov[XYZRPY_COV_IDX::X_Y] = P(IDX::X, IDX::Y);
   pose_cov[XYZRPY_COV_IDX::Y_X] = P(IDX::Y, IDX::X);
   pose_cov[XYZRPY_COV_IDX::Y_Y] = P(IDX::Y, IDX::Y);
-  pose_cov[XYZRPY_COV_IDX::Z_Z] = zz_cov;
-  pose_cov[XYZRPY_COV_IDX::ROLL_ROLL] = rr_cov;
-  pose_cov[XYZRPY_COV_IDX::PITCH_PITCH] = pp_cov;
-  pose_cov[XYZRPY_COV_IDX::YAW_YAW] = yaw_cov;
+  pose_cov[XYZRPY_COV_IDX::Z_Z] = motion_model_math::kUnobservedCov;
+  pose_cov[XYZRPY_COV_IDX::ROLL_ROLL] = motion_model_math::kUnobservedCov;
+  pose_cov[XYZRPY_COV_IDX::PITCH_PITCH] = motion_model_math::kUnobservedCov;
+  pose_cov[XYZRPY_COV_IDX::YAW_YAW] = motion_model_math::kUnobservedCov;
 
-  // set twist covariance
-  constexpr double vz_cov = 0.1 * 0.1;  // TODO(yukkysaito) Currently tentative
-  constexpr double wx_cov = 0.1 * 0.1;  // TODO(yukkysaito) Currently tentative
-  constexpr double wy_cov = 0.1 * 0.1;  // TODO(yukkysaito) Currently tentative
-  constexpr double wz_cov = 0.1 * 0.1;  // TODO(yukkysaito) Currently tentative
-  // rotate covariance matrix
-  Eigen::Matrix2d twist_cov_rotate;
-  twist_cov_rotate(0, 0) = P(IDX::VX, IDX::VX);
-  twist_cov_rotate(0, 1) = P(IDX::VX, IDX::VY);
-  twist_cov_rotate(1, 0) = P(IDX::VY, IDX::VX);
-  twist_cov_rotate(1, 1) = P(IDX::VY, IDX::VY);
-  Eigen::Matrix2d R_yaw = Eigen::Rotation2Dd(-yaw).toRotationMatrix();
-  Eigen::Matrix2d twist_cov_rotated = R_yaw * twist_cov_rotate * R_yaw.transpose();
+  // set twist covariance (rotate velocity covariance into body frame)
+  Eigen::Matrix2d twist_cov_mat;
+  twist_cov_mat(0, 0) = P(IDX::VX, IDX::VX);
+  twist_cov_mat(0, 1) = P(IDX::VX, IDX::VY);
+  twist_cov_mat(1, 0) = P(IDX::VY, IDX::VX);
+  twist_cov_mat(1, 1) = P(IDX::VY, IDX::VY);
+  const Eigen::Matrix2d twist_cov_rotated =
+    motion_model_math::rotateCov2D(twist_cov_mat, cos_yaw, sin_yaw);
   twist_cov[XYZRPY_COV_IDX::X_X] = twist_cov_rotated(0, 0);
   twist_cov[XYZRPY_COV_IDX::X_Y] = twist_cov_rotated(0, 1);
   twist_cov[XYZRPY_COV_IDX::Y_X] = twist_cov_rotated(1, 0);
   twist_cov[XYZRPY_COV_IDX::Y_Y] = twist_cov_rotated(1, 1);
-  twist_cov[XYZRPY_COV_IDX::Z_Z] = vz_cov;
-  twist_cov[XYZRPY_COV_IDX::ROLL_ROLL] = wx_cov;
-  twist_cov[XYZRPY_COV_IDX::PITCH_PITCH] = wy_cov;
-  twist_cov[XYZRPY_COV_IDX::YAW_YAW] = wz_cov;
+  twist_cov[XYZRPY_COV_IDX::Z_Z] = motion_model_math::kUnobservedCov;
+  twist_cov[XYZRPY_COV_IDX::ROLL_ROLL] = motion_model_math::kUnobservedCov;
+  twist_cov[XYZRPY_COV_IDX::PITCH_PITCH] = motion_model_math::kUnobservedCov;
+  twist_cov[XYZRPY_COV_IDX::YAW_YAW] = motion_model_math::kUnobservedCov;
 
   return true;
 }

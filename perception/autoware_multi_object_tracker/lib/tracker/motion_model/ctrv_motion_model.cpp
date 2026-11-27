@@ -16,12 +16,13 @@
 
 #include "autoware/multi_object_tracker/tracker/motion_model/ctrv_motion_model.hpp"
 
+#include "autoware/multi_object_tracker/tracker/motion_model/motion_model_math.hpp"
+
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include <autoware_utils_geometry/msg/covariance.hpp>
 #include <autoware_utils_math/normalization.hpp>
 #include <autoware_utils_math/unit_conversion.hpp>
-#include <tf2/LinearMath/Quaternion.hpp>
 
 namespace autoware::multi_object_tracker
 {
@@ -111,16 +112,7 @@ bool CTRVMotionModel::updateStatePoseHead(
   constexpr int DIM_Y = 3;
 
   // fix yaw
-  double estimated_yaw = getStateElement(IDX::YAW);
-  double fixed_yaw = yaw;
-  double limiting_delta_yaw = M_PI_2;
-  while (std::fabs(estimated_yaw - fixed_yaw) > limiting_delta_yaw) {
-    if (fixed_yaw < estimated_yaw) {
-      fixed_yaw += 2 * limiting_delta_yaw;
-    } else {
-      fixed_yaw -= 2 * limiting_delta_yaw;
-    }
-  }
+  const double fixed_yaw = motion_model_math::fixYawContinuity(getStateElement(IDX::YAW), yaw);
 
   // update state
   Eigen::Matrix<double, DIM_Y, 1> Y;
@@ -156,16 +148,7 @@ bool CTRVMotionModel::updateStatePoseHeadVel(
   constexpr int DIM_Y = 4;
 
   // fix yaw
-  double estimated_yaw = getStateElement(IDX::YAW);
-  double fixed_yaw = yaw;
-  double limiting_delta_yaw = M_PI_2;
-  while (std::fabs(estimated_yaw - fixed_yaw) > limiting_delta_yaw) {
-    if (fixed_yaw < estimated_yaw) {
-      fixed_yaw += 2 * limiting_delta_yaw;
-    } else {
-      fixed_yaw -= 2 * limiting_delta_yaw;
-    }
-  }
+  const double fixed_yaw = motion_model_math::fixYawContinuity(getStateElement(IDX::YAW), yaw);
 
   // update state
   Eigen::Matrix<double, DIM_Y, 1> Y;
@@ -223,13 +206,9 @@ bool CTRVMotionModel::limitStates()
     X_t(IDX::YAW) = X_t(IDX::YAW) + M_PI;
   }
   // maximum velocity
-  if (!(-motion_params_.max_vel <= X_t(IDX::VEL) && X_t(IDX::VEL) <= motion_params_.max_vel)) {
-    X_t(IDX::VEL) = X_t(IDX::VEL) < 0 ? -motion_params_.max_vel : motion_params_.max_vel;
-  }
+  X_t(IDX::VEL) = motion_model_math::clampSymmetric(X_t(IDX::VEL), motion_params_.max_vel);
   // maximum yaw rate
-  if (!(-motion_params_.max_wz <= X_t(IDX::WZ) && X_t(IDX::WZ) <= motion_params_.max_wz)) {
-    X_t(IDX::WZ) = X_t(IDX::WZ) < 0 ? -motion_params_.max_wz : motion_params_.max_wz;
-  }
+  X_t(IDX::WZ) = motion_model_math::clampSymmetric(X_t(IDX::WZ), motion_params_.max_wz);
   // normalize yaw
   X_t(IDX::YAW) = autoware_utils_math::normalize_radian(X_t(IDX::YAW));
 
@@ -282,7 +261,9 @@ bool CTRVMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) cons
 
   const double cos_yaw = std::cos(X_t(IDX::YAW));
   const double sin_yaw = std::sin(X_t(IDX::YAW));
-  const double sin_2yaw = std::sin(2.0f * X_t(IDX::YAW));
+  const double sin_yaw_sq = sin_yaw * sin_yaw;
+  const double cos_yaw_sq = cos_yaw * cos_yaw;
+  const double sin_cos_yaw = sin_yaw * cos_yaw;
 
   // Predict state vector X t+1
   StateVec X_next_t;                                              // predicted state
@@ -310,10 +291,12 @@ bool CTRVMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) cons
   StateMat Q = StateMat::Zero();
   // Rotate the covariance matrix according to the vehicle yaw
   // because q_cov_x and y are in the vehicle coordinate system.
-  Q(IDX::X, IDX::X) = (q_cov_x * cos_yaw * cos_yaw + q_cov_y * sin_yaw * sin_yaw);
-  Q(IDX::X, IDX::Y) = (0.5f * (q_cov_x - q_cov_y) * sin_2yaw);
-  Q(IDX::Y, IDX::Y) = (q_cov_x * sin_yaw * sin_yaw + q_cov_y * cos_yaw * cos_yaw);
-  Q(IDX::Y, IDX::X) = Q(IDX::X, IDX::Y);
+  const auto q_xy =
+    motion_model_math::rotateDiagCov2D(q_cov_x, q_cov_y, sin_yaw_sq, cos_yaw_sq, sin_cos_yaw);
+  Q(IDX::X, IDX::X) = q_xy.xx;
+  Q(IDX::X, IDX::Y) = q_xy.xy;
+  Q(IDX::Y, IDX::X) = q_xy.xy;
+  Q(IDX::Y, IDX::Y) = q_xy.yy;
   Q(IDX::YAW, IDX::YAW) = q_cov_yaw;
   Q(IDX::VEL, IDX::VEL) = q_cov_vel;
   Q(IDX::WZ, IDX::WZ) = q_cov_wz;
@@ -343,12 +326,7 @@ bool CTRVMotionModel::getPredictedState(
   pose.position.z = z_;
 
   // set orientation
-  tf2::Quaternion quaternion;
-  quaternion.setRPY(0.0, 0.0, X(IDX::YAW));
-  pose.orientation.x = quaternion.x();
-  pose.orientation.y = quaternion.y();
-  pose.orientation.z = quaternion.z();
-  pose.orientation.w = quaternion.w();
+  motion_model_math::setOrientationFromYaw(pose, X(IDX::YAW));
 
   // set twist
   twist.linear.x = X(IDX::VEL);
@@ -359,35 +337,28 @@ bool CTRVMotionModel::getPredictedState(
   twist.angular.z = X(IDX::WZ);
 
   // set pose covariance
-  constexpr double zz_cov = 0.1 * 0.1;  // TODO(yukkysaito) Currently tentative
-  constexpr double rr_cov = 0.1 * 0.1;  // TODO(yukkysaito) Currently tentative
-  constexpr double pp_cov = 0.1 * 0.1;  // TODO(yukkysaito) Currently tentative
   pose_cov[XYZRPY_COV_IDX::X_X] = P(IDX::X, IDX::X);
   pose_cov[XYZRPY_COV_IDX::X_Y] = P(IDX::X, IDX::Y);
   pose_cov[XYZRPY_COV_IDX::Y_X] = P(IDX::Y, IDX::X);
   pose_cov[XYZRPY_COV_IDX::Y_Y] = P(IDX::Y, IDX::Y);
   pose_cov[XYZRPY_COV_IDX::YAW_YAW] = P(IDX::YAW, IDX::YAW);
-  pose_cov[XYZRPY_COV_IDX::Z_Z] = zz_cov;
-  pose_cov[XYZRPY_COV_IDX::ROLL_ROLL] = rr_cov;
-  pose_cov[XYZRPY_COV_IDX::PITCH_PITCH] = pp_cov;
+  pose_cov[XYZRPY_COV_IDX::Z_Z] = motion_model_math::kUnobservedCov;
+  pose_cov[XYZRPY_COV_IDX::ROLL_ROLL] = motion_model_math::kUnobservedCov;
+  pose_cov[XYZRPY_COV_IDX::PITCH_PITCH] = motion_model_math::kUnobservedCov;
 
   // set twist covariance
-  constexpr double vy_cov = 0.1 * 0.1;  // TODO(yukkysaito) Currently tentative
-  constexpr double vz_cov = 0.1 * 0.1;  // TODO(yukkysaito) Currently tentative
-  constexpr double wx_cov = 0.1 * 0.1;  // TODO(yukkysaito) Currently tentative
-  constexpr double wy_cov = 0.1 * 0.1;  // TODO(yukkysaito) Currently tentative
   twist_cov[XYZRPY_COV_IDX::X_X] = P(IDX::VEL, IDX::VEL);
   twist_cov[XYZRPY_COV_IDX::X_Y] = 0.0;
   twist_cov[XYZRPY_COV_IDX::X_YAW] = P(IDX::VEL, IDX::WZ);
   twist_cov[XYZRPY_COV_IDX::Y_X] = 0.0;
-  twist_cov[XYZRPY_COV_IDX::Y_Y] = vy_cov;
+  twist_cov[XYZRPY_COV_IDX::Y_Y] = motion_model_math::kUnobservedCov;
   twist_cov[XYZRPY_COV_IDX::Y_YAW] = 0.0;
   twist_cov[XYZRPY_COV_IDX::YAW_X] = P(IDX::WZ, IDX::VEL);
   twist_cov[XYZRPY_COV_IDX::YAW_Y] = 0.0;
   twist_cov[XYZRPY_COV_IDX::YAW_YAW] = P(IDX::WZ, IDX::WZ);
-  twist_cov[XYZRPY_COV_IDX::Z_Z] = vz_cov;
-  twist_cov[XYZRPY_COV_IDX::ROLL_ROLL] = wx_cov;
-  twist_cov[XYZRPY_COV_IDX::PITCH_PITCH] = wy_cov;
+  twist_cov[XYZRPY_COV_IDX::Z_Z] = motion_model_math::kUnobservedCov;
+  twist_cov[XYZRPY_COV_IDX::ROLL_ROLL] = motion_model_math::kUnobservedCov;
+  twist_cov[XYZRPY_COV_IDX::PITCH_PITCH] = motion_model_math::kUnobservedCov;
 
   return true;
 }
