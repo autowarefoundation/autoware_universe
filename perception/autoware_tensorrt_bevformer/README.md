@@ -47,6 +47,8 @@ The core algorithm, named `BEVFormer`, unifies multi-view images into the BEV pe
 
 ### Trained Model
 
+**Warning:** The download link below no longer works. When checked on 2026-11-22, it redirects to a SharePoint error page (`sharepointerror.aspx?scenario=UnlicensedPersonalSiteArchived`), and the model is not available from any other location listed in this README. See [#13038](https://github.com/autowarefoundation/autoware_universe/issues/13038). Until a new download location is published, the ONNX model has to be prepared by the user.
+
 Download the [`bevformer_small.onnx`](https://multicorewareinc1-my.sharepoint.com/:u:/g/personal/naveen_sathiyaseelan_multicorewareinc_com/ERQSpS-BoAZGh4R4zNZhITcB58aqDW_tu9aKHLpit6aLAg?e=IZ5nZN) model to:
 
 ```bash
